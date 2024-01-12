@@ -7,7 +7,7 @@ use ratatui::{
     prelude::{CrosstermBackend, Stylize, Terminal},
     widgets::Paragraph,
 };
-use std::io::{stderr, stdout, BufWriter, Write};
+use std::io::{stderr, stdout, BufWriter, Result, Write};
 
 #[tokio::main]
 async fn main() -> Result<()> {
