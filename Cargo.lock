@@ -501,6 +501,7 @@ dependencies = [
 name = "teywi"
 version = "0.0.1"
 dependencies = [
+ "bytes",
  "crossterm",
  "ratatui",
  "teywi-server",
@@ -509,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "teywi-server"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-stream",
  "atoi",
