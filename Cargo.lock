@@ -501,11 +501,19 @@ dependencies = [
 name = "teywi"
 version = "0.0.1"
 dependencies = [
+ "teywi-frontend",
+ "teywi-server",
+ "tokio",
+]
+
+[[package]]
+name = "teywi-frontend"
+version = "0.0.1"
+dependencies = [
  "bytes",
  "crossterm",
  "ratatui",
  "teywi-server",
- "tokio",
 ]
 
 [[package]]

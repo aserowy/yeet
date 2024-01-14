@@ -1,11 +1,12 @@
 [package]
-name = "teywi"
+name = "teywi-frontend"
 version = "0.0.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-teywi-frontend = { path = "../teywi-frontend" }
+bytes = "1.5.0"
+crossterm = "0.27.0"
+ratatui = "0.25.0"
 teywi-server = { path = "../teywi-server" }
-tokio = { version = "1.35.1", features = ["full"] }
