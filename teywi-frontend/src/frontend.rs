@@ -23,9 +23,6 @@ pub async fn run(_address: String) -> Result<(), Error> {
     let mut terminal = Terminal::new(CrosstermBackend::new(BufWriter::new(stderr())))?;
     terminal.clear()?;
 
-    // let mut client = Client::connect(address).await?;
-    // client.set("foo", bytes_from_str("bar").unwrap()).await?;
-
     let mut state = AppState::default();
     let mut event_stream = event::start();
 
@@ -47,21 +44,6 @@ pub async fn run(_address: String) -> Result<(), Error> {
     stderr().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
-    // if let Some(value) = client.get("foo").await? {
-    //     if let Ok(string) = str::from_utf8(&value) {
-    //         stdout()
-    //             .lock()
-    //             .write_all(format!("\"{}\"", string).as_bytes())?;
-    //     } else {
-    //         stdout()
-    //             .lock()
-    //             .write_all(format!("{:?}", value).as_bytes())?;
-    //     }
-    // } else {
-    //     stdout().lock().write_all(b"nil")?;
-
-    // let _ = stdout().flush();
-
     Ok(())
 }
 
@@ -76,7 +58,3 @@ fn render(state: &mut AppState, frame: &mut Frame) {
     current_directory::view(state, frame, layout.current_directory);
     parent_directory::view(state, frame, layout.parent_directory);
 }
-
-// fn bytes_from_str(src: &str) -> Result<Bytes, Infallible> {
-//     Ok(Bytes::from(src.to_string()))
-// }
