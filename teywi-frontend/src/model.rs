@@ -4,8 +4,8 @@ use ratatui::widgets::ListState;
 
 #[derive(Debug)]
 pub struct Model {
-    pub current_path: PathBuf,
     pub current_directory: DirectoryListModel,
+    pub current_path: PathBuf,
     pub parent_directory: DirectoryListModel,
 }
 

@@ -32,12 +32,10 @@ pub async fn run(_address: String) -> Result<(), Error> {
             AppEvent::Error => todo!(),
             AppEvent::Key => todo!(),
             AppEvent::Mouse(_) => todo!(),
-            AppEvent::Render => {
-                terminal.draw(|frame| render(&mut state, frame))?;
-            }
             AppEvent::Resize(_, _) => todo!(),
-            AppEvent::Startup => update::update(&mut state, &Message::Refresh),
-            AppEvent::Tick => update::update(&mut state, &Message::Refresh),
+            AppEvent::Startup => {
+                terminal.draw(|frame| render(&mut state, frame, Message::Refresh))?;
+            }
             AppEvent::Quit => break,
         }
     }
@@ -48,9 +46,10 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(state: &mut Model, frame: &mut Frame) {
-    let layout = AppLayout::default(frame.size());
+fn render(model: &mut Model, frame: &mut Frame, message: Message) {
+    update::update(model, message);
 
-    current_directory::view(state, frame, layout.current_directory);
-    parent_directory::view(state, frame, layout.parent_directory);
+    let layout = AppLayout::default(frame.size());
+    current_directory::view(model, frame, layout.current_directory);
+    parent_directory::view(model, frame, layout.parent_directory);
 }

@@ -7,18 +7,18 @@ pub enum Message {
     Refresh,
 }
 
-pub fn update(state: &mut Model, message: &Message) {
+pub fn update(model: &mut Model, message: Message) {
     match message {
         Message::Refresh => {
-            let path = Path::new(&state.current_path);
+            let path = Path::new(&model.current_path);
             let parent = path.parent().unwrap().as_os_str();
 
-            state.parent_directory.paths = std::fs::read_dir(parent)
+            model.parent_directory.paths = std::fs::read_dir(parent)
                 .unwrap()
                 .map(|entry| entry.unwrap().path())
                 .collect();
 
-            state.current_directory.paths = std::fs::read_dir(&state.current_path)
+            model.current_directory.paths = std::fs::read_dir(&model.current_path)
                 .unwrap()
                 .map(|entry| entry.unwrap().path())
                 .collect();
