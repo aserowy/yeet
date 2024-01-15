@@ -10,10 +10,11 @@ use std::io::{stderr, BufWriter};
 use teywi_server::Error;
 
 use crate::{
-    event::{self, Message},
+    event::{self, AppEvent},
     layout::AppLayout,
-    state::AppState,
-    views::{current_directory, parent_directory},
+    model::Model,
+    update::{self, Message},
+    view::{current_directory, parent_directory},
 };
 
 pub async fn run(_address: String) -> Result<(), Error> {
@@ -23,21 +24,21 @@ pub async fn run(_address: String) -> Result<(), Error> {
     let mut terminal = Terminal::new(CrosstermBackend::new(BufWriter::new(stderr())))?;
     terminal.clear()?;
 
-    let mut state = AppState::default();
+    let mut state = Model::default();
     let mut event_stream = event::start();
 
     while let Some(event) = event_stream.recv().await {
         match event {
-            Message::Error => todo!(),
-            Message::Key => todo!(),
-            Message::Mouse(_) => todo!(),
-            Message::Render => {
+            AppEvent::Error => todo!(),
+            AppEvent::Key => todo!(),
+            AppEvent::Mouse(_) => todo!(),
+            AppEvent::Render => {
                 terminal.draw(|frame| render(&mut state, frame))?;
             }
-            Message::Resize(_, _) => todo!(),
-            Message::Startup => update(&mut state, &Message::Startup),
-            Message::Tick => update(&mut state, &Message::Tick),
-            Message::Quit => break,
+            AppEvent::Resize(_, _) => todo!(),
+            AppEvent::Startup => update::update(&mut state, &Message::Refresh),
+            AppEvent::Tick => update::update(&mut state, &Message::Refresh),
+            AppEvent::Quit => break,
         }
     }
 
@@ -47,12 +48,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn update(state: &mut AppState, message: &Message) {
-    current_directory::update(state, message);
-    parent_directory::update(state, message);
-}
-
-fn render(state: &mut AppState, frame: &mut Frame) {
+fn render(state: &mut Model, frame: &mut Frame) {
     let layout = AppLayout::default(frame.size());
 
     current_directory::view(state, frame, layout.current_directory);

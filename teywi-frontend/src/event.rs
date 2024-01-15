@@ -1,11 +1,9 @@
-use std::error::Error;
-
 use crossterm::event::{Event, KeyCode, KeyEventKind, MouseEvent};
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[derive(Clone, Debug)]
-pub enum Message {
+pub enum AppEvent {
     Error,
     Key,
     Mouse(MouseEvent),
@@ -16,7 +14,7 @@ pub enum Message {
     Quit,
 }
 
-pub fn start() -> UnboundedReceiver<Message> {
+pub fn start() -> UnboundedReceiver<AppEvent> {
     let tick_delay = std::time::Duration::from_secs_f64(1.0 / 4.0);
     let render_delay = std::time::Duration::from_secs_f64(1.0 / 60.0);
 
@@ -27,7 +25,7 @@ pub fn start() -> UnboundedReceiver<Message> {
         let mut tick_interval = tokio::time::interval(tick_delay);
         let mut render_interval = tokio::time::interval(render_delay);
 
-        sender.send(Message::Startup).unwrap();
+        sender.send(AppEvent::Startup).unwrap();
 
         loop {
             let tick_delay = tick_interval.tick();
@@ -43,16 +41,16 @@ pub fn start() -> UnboundedReceiver<Message> {
                         }
                     },
                     Some(Err(_)) => {
-                        sender.send(Message::Error).unwrap();
+                        sender.send(AppEvent::Error).unwrap();
                     },
                     None => {},
                 }
               },
               _ = tick_delay => {
-                  sender.send(Message::Tick).unwrap();
+                  sender.send(AppEvent::Tick).unwrap();
               },
               _ = render_delay => {
-                  sender.send(Message::Render).unwrap();
+                  sender.send(AppEvent::Render).unwrap();
               },
             }
         }
@@ -61,22 +59,22 @@ pub fn start() -> UnboundedReceiver<Message> {
     receiver
 }
 
-fn handle_event(event: Event) -> Option<Message> {
+fn handle_event(event: Event) -> Option<AppEvent> {
     match event {
         // TODO: handle in keymap crate and add action to Key message
         Event::Key(key) => {
             if key.kind == KeyEventKind::Press {
                 if key.code == KeyCode::Char('q') {
-                    return Some(Message::Quit);
+                    return Some(AppEvent::Quit);
                 } else {
-                    return Some(Message::Key);
+                    return Some(AppEvent::Key);
                 }
             }
 
             None
         }
-        Event::Mouse(mouse) => Some(Message::Mouse(mouse)),
-        Event::Resize(x, y) => Some(Message::Resize(x, y)),
+        Event::Mouse(mouse) => Some(AppEvent::Mouse(mouse)),
+        Event::Resize(x, y) => Some(AppEvent::Resize(x, y)),
         Event::FocusLost => None,
         Event::FocusGained => None,
         Event::Paste(_s) => None,
