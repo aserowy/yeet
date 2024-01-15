@@ -24,9 +24,9 @@ pub struct DirectoryListState {
 }
 
 pub enum Message {
-    NavigateChild,
-    NavigateDown,
-    NavigateParent,
-    NavigateUp,
+    // NavigateChild,
+    // NavigateDown,
+    // NavigateParent,
+    // NavigateUp,
     Startup,
 }

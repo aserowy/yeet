@@ -4,7 +4,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::prelude::{Constraint, CrosstermBackend, Direction, Layout, Terminal};
+use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::{
     convert::Infallible,
     io::{stderr, stdout, BufWriter, Write},
@@ -12,7 +12,12 @@ use std::{
 };
 use teywi_server::{Client, Error};
 
-use crate::{state::{AppState, Message}, current_directory};
+use crate::{
+    current_directory,
+    layout::AppLayout,
+    parent_directory,
+    state::{AppState, Message},
+};
 
 pub async fn run(address: String) -> Result<(), Error> {
     stderr().execute(EnterAlternateScreen)?;
@@ -27,24 +32,13 @@ pub async fn run(address: String) -> Result<(), Error> {
 
     loop {
         terminal.draw(|frame| {
+            let layout = AppLayout::default(frame.size());
+
             current_directory::update(&mut state, Message::Startup);
+            parent_directory::update(&mut state, Message::Startup);
 
-            // TODO: refactor layout
-            let main = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(1),
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                ])
-                .split(frame.size());
-
-            let files = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
-                .split(main[0]);
-
-            current_directory::view(&mut state, frame, files[0]);
+            current_directory::view(&mut state, frame, layout.current_directory);
+            parent_directory::view(&mut state, frame, layout.parent_directory);
         })?;
 
         if event::poll(std::time::Duration::from_millis(16))? {
