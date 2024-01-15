@@ -24,7 +24,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     let mut terminal = Terminal::new(CrosstermBackend::new(BufWriter::new(stderr())))?;
     terminal.clear()?;
 
-    let mut state = Model::default();
+    let mut model = Model::default();
     let mut event_stream = event::start();
 
     while let Some(event) = event_stream.recv().await {
@@ -34,7 +34,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
             AppEvent::Mouse(_) => todo!(),
             AppEvent::Resize(_, _) => todo!(),
             AppEvent::Startup => {
-                terminal.draw(|frame| render(&mut state, frame, Message::Refresh))?;
+                terminal.draw(|frame| render(&mut model, frame, Message::Refresh))?;
             }
             AppEvent::Quit => break,
         }
