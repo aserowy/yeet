@@ -12,7 +12,7 @@ pub fn update(state: &mut AppState, message: Message) -> Option<Message> {
             // TODO: handle errors and remove unwrap
             state.current_directory_state.paths = std::fs::read_dir(&state.current_directory)
                 .unwrap()
-                .map(|entry| entry.unwrap().path().display().to_string())
+                .map(|entry| entry.unwrap().path())
                 .collect();
         }
         _ => {}
@@ -26,7 +26,7 @@ pub fn view(state: &mut AppState, frame: &mut Frame, rect: Rect) {
         .current_directory_state
         .paths
         .iter()
-        .map(|path| ListItem::new(path.as_str()))
+        .map(|path| ListItem::new(path.file_name().unwrap().to_str().unwrap()))
         .collect();
 
     frame.render_stateful_widget(
