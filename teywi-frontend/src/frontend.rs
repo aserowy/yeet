@@ -4,16 +4,15 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::{
-    prelude::{CrosstermBackend, Stylize, Terminal},
-    widgets::Paragraph,
-};
+use ratatui::prelude::{Constraint, CrosstermBackend, Direction, Layout, Terminal};
 use std::{
     convert::Infallible,
     io::{stderr, stdout, BufWriter, Write},
     str,
 };
 use teywi_server::{Client, Error};
+
+use crate::{state::{AppState, Message}, current_directory};
 
 pub async fn run(address: String) -> Result<(), Error> {
     stderr().execute(EnterAlternateScreen)?;
@@ -24,15 +23,28 @@ pub async fn run(address: String) -> Result<(), Error> {
     let mut client = Client::connect(address).await?;
     client.set("foo", bytes_from_str("bar").unwrap()).await?;
 
+    let mut state = AppState::default();
+
     loop {
         terminal.draw(|frame| {
-            let area = frame.size();
-            frame.render_widget(
-                Paragraph::new("Hello Ratatui! (press 'q' to quit)")
-                    .white()
-                    .on_blue(),
-                area,
-            );
+            current_directory::update(&mut state, Message::Startup);
+
+            // TODO: refactor layout
+            let main = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ])
+                .split(frame.size());
+
+            let files = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
+                .split(main[0]);
+
+            current_directory::view(&mut state, frame, files[0]);
         })?;
 
         if event::poll(std::time::Duration::from_millis(16))? {
