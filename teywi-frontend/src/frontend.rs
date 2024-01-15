@@ -8,15 +8,15 @@ use std::io::{stderr, BufWriter};
 use teywi_server::Error;
 
 use crate::{
-    current_directory,
     layout::AppLayout,
-    parent_directory,
     state::{AppState, Message},
+    views::{current_directory, parent_directory},
 };
 
 pub async fn run(_address: String) -> Result<(), Error> {
     stderr().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
+
     let mut terminal = Terminal::new(CrosstermBackend::new(BufWriter::new(stderr())))?;
     terminal.clear()?;
 
@@ -38,6 +38,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
             parent_directory::view(&mut state, frame, layout.parent_directory);
         })?;
 
+        // TODO: handle input async and introduce fps/tick rates
         if event::poll(std::time::Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
@@ -62,7 +63,6 @@ pub async fn run(_address: String) -> Result<(), Error> {
     //     }
     // } else {
     //     stdout().lock().write_all(b"nil")?;
-
 
     // let _ = stdout().flush();
 
