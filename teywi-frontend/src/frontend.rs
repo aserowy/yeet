@@ -1,15 +1,18 @@
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::prelude::{CrosstermBackend, Terminal};
+use ratatui::{
+    prelude::{CrosstermBackend, Terminal},
+    Frame,
+};
 use std::io::{stderr, BufWriter};
 use teywi_server::Error;
 
 use crate::{
+    event::{self, Message},
     layout::AppLayout,
-    state::{AppState, Message},
+    state::AppState,
     views::{current_directory, parent_directory},
 };
 
@@ -24,27 +27,20 @@ pub async fn run(_address: String) -> Result<(), Error> {
     // client.set("foo", bytes_from_str("bar").unwrap()).await?;
 
     let mut state = AppState::default();
+    let mut event_stream = event::start();
 
-    loop {
-        terminal.draw(|frame| {
-            let layout = AppLayout::default(frame.size());
-
-            // NOTE: update phase
-            current_directory::update(&mut state, Message::Startup);
-            parent_directory::update(&mut state, Message::Startup);
-
-            // NOTE: rendering phase
-            current_directory::view(&mut state, frame, layout.current_directory);
-            parent_directory::view(&mut state, frame, layout.parent_directory);
-        })?;
-
-        // TODO: handle input async and introduce fps/tick rates
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    break;
-                }
+    while let Some(event) = event_stream.recv().await {
+        match event {
+            Message::Error => todo!(),
+            Message::Key => todo!(),
+            Message::Mouse(_) => todo!(),
+            Message::Render => {
+                terminal.draw(|frame| render(&mut state, frame))?;
             }
+            Message::Resize(_, _) => todo!(),
+            Message::Startup => update(&mut state, &Message::Startup),
+            Message::Tick => update(&mut state, &Message::Tick),
+            Message::Quit => break,
         }
     }
 
@@ -67,6 +63,18 @@ pub async fn run(_address: String) -> Result<(), Error> {
     // let _ = stdout().flush();
 
     Ok(())
+}
+
+fn update(state: &mut AppState, message: &Message) {
+    current_directory::update(state, message);
+    parent_directory::update(state, message);
+}
+
+fn render(state: &mut AppState, frame: &mut Frame) {
+    let layout = AppLayout::default(frame.size());
+
+    current_directory::view(state, frame, layout.current_directory);
+    parent_directory::view(state, frame, layout.parent_directory);
 }
 
 // fn bytes_from_str(src: &str) -> Result<Bytes, Infallible> {

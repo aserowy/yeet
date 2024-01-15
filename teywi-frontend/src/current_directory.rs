@@ -4,9 +4,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::{event::Message, state::AppState};
+use crate::state::AppState;
 
-pub fn update(state: &mut AppState, message: &Message) {
+pub fn update(state: &mut AppState, message: Event) -> Option<Event> {
     match message {
         Message::Startup => {
             // TODO: handle errors and remove unwrap
@@ -17,6 +17,8 @@ pub fn update(state: &mut AppState, message: &Message) {
         }
         _ => {}
     }
+
+    None
 }
 
 pub fn view(state: &mut AppState, frame: &mut Frame, rect: Rect) {

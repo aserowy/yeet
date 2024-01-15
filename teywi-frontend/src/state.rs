@@ -24,11 +24,3 @@ pub struct DirectoryListState {
     pub paths: Vec<PathBuf>,
     pub state: ListState,
 }
-
-pub enum Message {
-    // NavigateChild,
-    // NavigateDown,
-    // NavigateParent,
-    // NavigateUp,
-    Startup,
-}
