@@ -29,8 +29,8 @@ pub async fn run(_address: String) -> Result<(), Error> {
 
     while let Some(event) = event_stream.recv().await {
         match event {
+            AppEvent::Action(_) => todo!(),
             AppEvent::Error => todo!(),
-            AppEvent::Key => todo!(),
             AppEvent::Mouse(_) => todo!(),
             AppEvent::Resize(_, _) => todo!(),
             AppEvent::Startup => {

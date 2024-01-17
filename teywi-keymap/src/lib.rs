@@ -54,6 +54,7 @@ pub enum KeyCode {
 impl KeyCode {
     pub fn from_char(c: char) -> KeyCode {
         match c {
+            '\\' => KeyCode::Backslash,
             '|' => KeyCode::Bar,
             '<' => KeyCode::LessThan,
             ' ' => KeyCode::Space,
