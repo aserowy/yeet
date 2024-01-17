@@ -1,11 +1,12 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind, MouseEvent};
 use futures::{FutureExt, StreamExt};
+use teywi_keymap::{conversion, Action};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[derive(Clone, Debug)]
 pub enum AppEvent {
+    Action(Action),
     Error,
-    Key,
     Mouse(MouseEvent),
     Resize(u16, u16),
     Startup,
@@ -48,13 +49,13 @@ pub fn start() -> UnboundedReceiver<AppEvent> {
 
 fn handle_event(event: Event) -> Option<AppEvent> {
     match event {
-        // TODO: handle in keymap crate and add action to Key message
         Event::Key(key) => {
+            let _keypress = conversion::to_keypress(key.clone());
             if key.kind == KeyEventKind::Press {
                 if key.code == KeyCode::Char('q') {
                     return Some(AppEvent::Quit);
                 } else {
-                    return Some(AppEvent::Key);
+                    return Some(AppEvent::Action(Action::NavigateUp));
                 }
             }
 

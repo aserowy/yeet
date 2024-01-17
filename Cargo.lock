@@ -612,8 +612,16 @@ dependencies = [
  "crossterm",
  "futures",
  "ratatui",
+ "teywi-keymap",
  "teywi-server",
  "tokio",
+]
+
+[[package]]
+name = "teywi-keymap"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
 ]
 
 [[package]]

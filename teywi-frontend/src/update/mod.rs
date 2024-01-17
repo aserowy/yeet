@@ -2,7 +2,6 @@ use std::path::Path;
 
 use crate::model::Model;
 
-// TODO: refactor into keymap crate
 pub enum Message {
     Refresh,
 }

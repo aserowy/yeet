@@ -2,5 +2,5 @@
 resolver = "2"
 
 members = [
-    "teywi", "teywi-frontend", "teywi-server",
+    "teywi", "teywi-frontend", "teywi-keymap", "teywi-server",
 ]
