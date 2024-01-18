@@ -1,4 +1,4 @@
-use crate::key::{KeyCode, Key};
+use crate::key::{Key, KeyCode};
 
 #[derive(Debug, Default)]
 pub struct KeyBuffer {
@@ -26,6 +26,11 @@ impl KeyBuffer {
 
 impl ToString for KeyBuffer {
     fn to_string(&self) -> String {
-        todo!()
+        let mut result = String::new();
+        for key in &self.buffer {
+            result.push_str(&key.to_string());
+        }
+
+        result
     }
 }

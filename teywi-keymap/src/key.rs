@@ -6,14 +6,53 @@ pub struct Key {
 
 impl Key {
     pub fn new(key: KeyCode, modifiers: Vec<KeyModifier>) -> Self {
-        Self { code: key, modifiers }
+        Self {
+            code: key,
+            modifiers,
+        }
     }
 }
 
-// impl ToString for KeyStroke {
-//     fn to_string(&self) -> String {
-//     }
-// }
+impl ToString for Key {
+    fn to_string(&self) -> String {
+        let mut modifiers = self.modifiers.clone();
+        modifiers.sort();
+
+        match self.code {
+            KeyCode::Char(_) => {
+                if modifiers.len() == 0 {
+                    self.code.to_string()
+                } else if modifiers.len() == 1 && modifiers[0] == KeyModifier::Shift {
+                    self.code.to_string().to_uppercase()
+                } else if modifiers.contains(&KeyModifier::Shift) {
+                    modifiers.retain(|modifier| *modifier != KeyModifier::Shift);
+                    get_key_string(self.code.to_string().to_uppercase(), modifiers)
+                } else {
+                    get_key_string(self.code.to_string(), modifiers)
+                }
+            }
+            _ => get_key_string(self.code.to_string(), modifiers),
+        }
+    }
+}
+
+fn get_key_string(code: String, modifiers: Vec<KeyModifier>) -> String {
+    let mut result = String::from("<");
+
+    for modifier in modifiers {
+        match modifier {
+            KeyModifier::Alt => result.push_str("A-"),
+            KeyModifier::Command => result.push_str("D-"),
+            KeyModifier::Ctrl => result.push_str("C-"),
+            KeyModifier::Shift => result.push_str("S-"),
+        };
+    }
+
+    result.push_str(&code);
+    result.push_str(">");
+
+    result
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum KeyCode {
@@ -43,6 +82,37 @@ pub enum KeyCode {
     Up,
 }
 
+impl ToString for KeyCode {
+    fn to_string(&self) -> String {
+        match self {
+            KeyCode::Backslash => String::from("bslash"),
+            KeyCode::Backspace => String::from("bs"),
+            KeyCode::Bar => String::from("bar"),
+            KeyCode::Char(c) => c.to_string().to_lowercase(),
+            KeyCode::Delete => String::from("del"),
+            KeyCode::Down => String::from("down"),
+            KeyCode::End => String::from("end"),
+            KeyCode::Enter => String::from("cr"),
+            KeyCode::Esc => String::from("esc"),
+            KeyCode::F(n) => format!("f{}", n),
+            KeyCode::Home => String::from("home"),
+            KeyCode::Help => String::from("help"),
+            KeyCode::Insert => String::from("insert"),
+            KeyCode::Left => String::from("left"),
+            KeyCode::LessThan => String::from("lt"),
+            KeyCode::Null => String::from("nul"),
+            KeyCode::PageDown => String::from("pagedown"),
+            KeyCode::PageUp => String::from("pageup"),
+            KeyCode::Print => String::from("print"),
+            KeyCode::Right => String::from("right"),
+            KeyCode::Space => String::from("space"),
+            KeyCode::Tab => String::from("tab"),
+            KeyCode::Undo => String::from("undo"),
+            KeyCode::Up => String::from("up"),
+        }
+    }
+}
+
 impl KeyCode {
     pub fn from_char(c: char) -> KeyCode {
         match c {
@@ -55,7 +125,7 @@ impl KeyCode {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum KeyModifier {
     Alt,
     Command,

@@ -6,6 +6,12 @@ use crate::model::Model;
 
 pub fn update(model: &mut Model, message: &Action) {
     match message {
+        Action::KeySequenceChanged(sequence) => {
+            model.key_sequence = sequence.clone();
+        }
+        Action::ModeChanged(mode) => {
+            model.mode = mode.clone();
+        }
         Action::Refresh => {
             let path = Path::new(&model.current_path);
             let parent = path.parent().unwrap().as_os_str();
@@ -19,9 +25,6 @@ pub fn update(model: &mut Model, message: &Action) {
                 .unwrap()
                 .map(|entry| entry.unwrap().path())
                 .collect();
-        }
-        Action::Mode(mode) => {
-            model.mode = mode.clone();
         }
         Action::Quit => {}
     }

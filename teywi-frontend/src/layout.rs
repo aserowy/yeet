@@ -15,8 +15,8 @@ impl AppLayout {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
+                Constraint::Max(1),
+                Constraint::Max(1),
             ])
             .split(rect);
 

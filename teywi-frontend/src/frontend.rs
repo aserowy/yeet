@@ -1,4 +1,5 @@
 use crossterm::{
+    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -15,7 +16,7 @@ use crate::{
     layout::AppLayout,
     model::Model,
     update::{self},
-    view::{current_directory, parent_directory, commandline},
+    view::{commandline, current_directory, parent_directory},
 };
 
 pub async fn run(_address: String) -> Result<(), Error> {
@@ -36,12 +37,12 @@ pub async fn run(_address: String) -> Result<(), Error> {
                 if let Some(action) = action_resolver.add_and_resolve(key) {
                     terminal.draw(|frame| render(&mut model, frame, &action))?;
 
-                    match action {
-                        Action::Quit => {
-                            let _ = sender.send(AppEvent::Quit);
-                        }
-                        _ => {}
+                    if action == Action::Quit {
+                        let _ = sender.send(AppEvent::Quit);
                     }
+                } else {
+                    let action = &Action::KeySequenceChanged(action_resolver.get_key_string());
+                    terminal.draw(|frame| render(&mut model, frame, action))?;
                 }
             }
             AppEvent::Resize(_, _) => todo!(),

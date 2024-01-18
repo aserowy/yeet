@@ -1,6 +1,7 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Action {
-    Mode(Mode),
+    KeySequenceChanged(String),
+    ModeChanged(Mode),
     Refresh,
     Quit,
 }

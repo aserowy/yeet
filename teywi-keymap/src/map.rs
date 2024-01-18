@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    key::{KeyCode, KeyModifier, Key},
+    key::{Key, KeyCode, KeyModifier},
     Action, Mode,
 };
 
@@ -32,7 +32,7 @@ impl Default for KeyMap {
         mappings.insert(
             Mode::Normal,
             vec![(
-                vec![Key::new(KeyCode::Char('q'), vec![KeyModifier::Alt])],
+                vec![Key::new(KeyCode::from_char('q'), vec![])],
                 Action::Quit,
             )],
         );

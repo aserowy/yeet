@@ -7,6 +7,7 @@ use teywi_keymap::action::Mode;
 pub struct Model {
     pub current_directory: DirectoryListModel,
     pub current_path: PathBuf,
+    pub key_sequence: String,
     pub mode: Mode,
     pub parent_directory: DirectoryListModel,
 }
@@ -16,6 +17,7 @@ impl Default for Model {
         return Model {
             current_path: PathBuf::from("/home/serowy/"),
             current_directory: DirectoryListModel::default(),
+            key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: DirectoryListModel::default(),
         };

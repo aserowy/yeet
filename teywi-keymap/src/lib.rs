@@ -26,7 +26,7 @@ impl ActionResolver {
         if let Some(action) = action {
             self.buffer.clear();
 
-            if let Action::Mode(mode) = &action {
+            if let Action::ModeChanged(mode) = &action {
                 self.mode = mode.clone();
             }
 
@@ -36,5 +36,7 @@ impl ActionResolver {
         None
     }
 
-    // TODO: add ToString and show value on command line left
+    pub fn get_key_string(&self) -> String {
+        self.buffer.to_string()
+    }
 }
