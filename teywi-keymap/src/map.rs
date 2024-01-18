@@ -11,6 +11,13 @@ pub struct KeyStroke {
     pub modifiers: Vec<KeyModifier>,
 }
 
+impl KeyStroke {
+    pub fn new(key: KeyCode, modifiers: Vec<KeyModifier>) -> Self {
+        Self { key, modifiers }
+    }
+}
+
+#[derive(Debug)]
 pub struct KeyMap {
     mappings: HashMap<Mode, Vec<(Vec<KeyStroke>, Action)>>,
 }
@@ -32,11 +39,16 @@ impl KeyMap {
 
 impl Default for KeyMap {
     fn default() -> Self {
-        let mappings = HashMap::new();
+        let mut mappings = HashMap::new();
+        mappings.insert(
+            Mode::Normal,
+            vec![(
+                vec![KeyStroke::new(KeyCode::Char('q'), vec![])],
+                Action::Quit,
+            )],
+        );
 
-        Self {
-            mappings,
-        }
+        Self { mappings }
     }
 }
 

@@ -39,6 +39,8 @@
               nodePackages.markdownlint-cli
               nodePackages.prettier
             ];
+
+            RUST_BACKTRACE = "full";
           };
         };
     };

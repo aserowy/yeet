@@ -3,7 +3,7 @@ use crate::{
     map::KeyStroke,
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct KeyBuffer {
     buffer: Vec<Key>,
 }

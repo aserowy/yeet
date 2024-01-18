@@ -9,6 +9,7 @@ pub mod conversion;
 pub mod key;
 mod map;
 
+#[derive(Debug, Default)]
 pub struct ActionResolver {
     buffer: KeyBuffer,
     map: KeyMap,

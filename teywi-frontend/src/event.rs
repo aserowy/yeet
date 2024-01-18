@@ -1,25 +1,25 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind, MouseEvent};
+use crossterm::event::Event;
 use futures::{FutureExt, StreamExt};
-use teywi_keymap::{action::Action, conversion};
-use tokio::sync::mpsc::{self, UnboundedReceiver};
+use teywi_keymap::{conversion, key::Key};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 #[derive(Clone, Debug)]
 pub enum AppEvent {
-    Action(Action),
     Error,
-    Mouse(MouseEvent),
+    Key(Key),
     Resize(u16, u16),
     Startup,
     Quit,
 }
 
-pub fn start() -> UnboundedReceiver<AppEvent> {
+pub fn start() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
     let (sender, receiver) = mpsc::unbounded_channel();
+    let internal_sender = sender.clone();
 
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        sender.send(AppEvent::Startup).unwrap();
+        internal_sender.send(AppEvent::Startup).unwrap();
 
         loop {
             let crossterm_event = reader.next().fuse();
@@ -31,11 +31,11 @@ pub fn start() -> UnboundedReceiver<AppEvent> {
                     match event {
                         Some(Ok(event)) => {
                             if let Some(message) = handle_event(event) {
-                                sender.send(message).unwrap();
+                                internal_sender.send(message).unwrap();
                             }
                         },
                         Some(Err(_)) => {
-                            sender.send(AppEvent::Error).unwrap();
+                            internal_sender.send(AppEvent::Error).unwrap();
                         },
                         None => {},
                     }
@@ -44,28 +44,23 @@ pub fn start() -> UnboundedReceiver<AppEvent> {
         }
     });
 
-    receiver
+    (sender, receiver)
 }
 
 fn handle_event(event: Event) -> Option<AppEvent> {
     match event {
         Event::Key(key) => {
-            let _keypress = conversion::to_key(key.clone());
-            if key.kind == KeyEventKind::Press {
-                if key.code == KeyCode::Char('q') {
-                    return Some(AppEvent::Quit);
-                } else {
-                    return Some(AppEvent::Action(Action::Refresh));
-                }
+            if let Some(key) = conversion::to_key(key.clone()) {
+                return Some(AppEvent::Key(key));
             }
 
             None
         }
-        Event::Mouse(mouse) => Some(AppEvent::Mouse(mouse)),
         Event::Resize(x, y) => Some(AppEvent::Resize(x, y)),
         Event::FocusLost => None,
         Event::FocusGained => None,
         Event::Paste(_s) => None,
+        Event::Mouse(_) => None,
     }
 }
 

@@ -4,7 +4,7 @@ use teywi_keymap::action::Action;
 
 use crate::model::Model;
 
-pub fn update(model: &mut Model, message: Action) {
+pub fn update(model: &mut Model, message: &Action) {
     match message {
         Action::Refresh => {
             let path = Path::new(&model.current_path);
@@ -20,7 +20,7 @@ pub fn update(model: &mut Model, message: Action) {
                 .map(|entry| entry.unwrap().path())
                 .collect();
         }
-        Action::Mode(_) => todo!(),
-        Action::Quit => todo!(),
+        Action::Mode(_) => {}
+        Action::Quit => {}
     }
 }

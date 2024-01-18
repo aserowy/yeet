@@ -10,3 +10,9 @@ pub enum Mode {
     Normal,
     Command,
 }
+
+impl Default for Mode {
+    fn default() -> Self {
+        Mode::Normal
+    }
+}

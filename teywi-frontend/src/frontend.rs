@@ -6,8 +6,8 @@ use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     Frame,
 };
-use teywi_keymap::action::Action;
 use std::io::{stderr, BufWriter};
+use teywi_keymap::action::Action;
 use teywi_server::Error;
 
 use crate::{
@@ -26,16 +26,26 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    let mut event_stream = event::start();
+    let (sender, mut receiver) = event::start();
 
-    while let Some(event) = event_stream.recv().await {
+    while let Some(event) = receiver.recv().await {
         match event {
-            AppEvent::Action(_) => todo!(),
             AppEvent::Error => todo!(),
-            AppEvent::Mouse(_) => todo!(),
+            AppEvent::Key(key) => {
+                if let Some(action) = model.action_resolver.add_and_resolve(key) {
+                    terminal.draw(|frame| render(&mut model, frame, &action))?;
+
+                    match action {
+                        Action::Quit => {
+                            let _ = sender.send(AppEvent::Quit);
+                        }
+                        _ => {}
+                    }
+                }
+            }
             AppEvent::Resize(_, _) => todo!(),
             AppEvent::Startup => {
-                terminal.draw(|frame| render(&mut model, frame, Action::Refresh))?;
+                terminal.draw(|frame| render(&mut model, frame, &Action::Refresh))?;
             }
             AppEvent::Quit => break,
         }
@@ -47,7 +57,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(model: &mut Model, frame: &mut Frame, message: Action) {
+fn render(model: &mut Model, frame: &mut Frame, message: &Action) {
     update::update(model, message);
 
     let layout = AppLayout::default(frame.size());
