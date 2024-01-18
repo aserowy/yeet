@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind, MouseEvent};
 use futures::{FutureExt, StreamExt};
-use teywi_keymap::{conversion, Action};
+use teywi_keymap::{action::Action, conversion};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[derive(Clone, Debug)]
@@ -50,12 +50,12 @@ pub fn start() -> UnboundedReceiver<AppEvent> {
 fn handle_event(event: Event) -> Option<AppEvent> {
     match event {
         Event::Key(key) => {
-            let _keypress = conversion::to_keypress(key.clone());
+            let _keypress = conversion::to_key(key.clone());
             if key.kind == KeyEventKind::Press {
                 if key.code == KeyCode::Char('q') {
                     return Some(AppEvent::Quit);
                 } else {
-                    return Some(AppEvent::Action(Action::NavigateUp));
+                    return Some(AppEvent::Action(Action::Refresh));
                 }
             }
 

@@ -6,6 +6,7 @@ use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     Frame,
 };
+use teywi_keymap::action::Action;
 use std::io::{stderr, BufWriter};
 use teywi_server::Error;
 
@@ -13,7 +14,7 @@ use crate::{
     event::{self, AppEvent},
     layout::AppLayout,
     model::Model,
-    update::{self, Message},
+    update::{self},
     view::{current_directory, parent_directory},
 };
 
@@ -34,7 +35,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
             AppEvent::Mouse(_) => todo!(),
             AppEvent::Resize(_, _) => todo!(),
             AppEvent::Startup => {
-                terminal.draw(|frame| render(&mut model, frame, Message::Refresh))?;
+                terminal.draw(|frame| render(&mut model, frame, Action::Refresh))?;
             }
             AppEvent::Quit => break,
         }
@@ -46,7 +47,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(model: &mut Model, frame: &mut Frame, message: Message) {
+fn render(model: &mut Model, frame: &mut Frame, message: Action) {
     update::update(model, message);
 
     let layout = AppLayout::default(frame.size());

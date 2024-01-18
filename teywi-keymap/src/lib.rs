@@ -1,108 +1,37 @@
-pub mod buffer;
+use action::{Action, Mode};
+use buffer::KeyBuffer;
+use key::Key;
+use map::KeyMap;
+
+pub mod action;
+mod buffer;
 pub mod conversion;
+pub mod key;
+mod map;
 
-#[derive(Clone, Debug)]
-pub enum Action {
-    Mode(Mode),
-    NavigateUp,
-    NavigateDown,
-    NavigateParent,
-    NavigateChild,
-    Quit,
+pub struct ActionResolver {
+    buffer: KeyBuffer,
+    map: KeyMap,
+    pub mode: Mode,
 }
 
-#[derive(Clone, Debug)]
-pub enum Mode {
-    Normal,
-    Command,
-}
+impl ActionResolver {
+    pub fn add_and_resolve(&mut self, key: Key) -> Option<Action> {
+        self.buffer.add_key(key);
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum KeyPress {
-    Key(KeyCode),
-    Modifier(KeyModifier, bool),
-}
+        let keystrokes = self.buffer.get_keystrokes();
+        let action = self.map.get_action(&self.mode, &keystrokes);
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum KeyCode {
-    Backslash,
-    Backspace,
-    Bar,
-    Char(char),
-    Delete,
-    Down,
-    End,
-    Enter,
-    Esc,
-    F(u8),
-    Home,
-    Help,
-    Insert,
-    Left,
-    LessThan,
-    Null,
-    PageDown,
-    PageUp,
-    Print,
-    Right,
-    Space,
-    Tab,
-    Undo,
-    Up,
-}
+        if let Some(action) = action {
+            self.buffer.clear();
 
-impl KeyCode {
-    pub fn from_char(c: char) -> KeyCode {
-        match c {
-            '\\' => KeyCode::Backslash,
-            '|' => KeyCode::Bar,
-            '<' => KeyCode::LessThan,
-            ' ' => KeyCode::Space,
-            passed => KeyCode::Char(passed),
+            if let Action::Mode(mode) = &action {
+                self.mode = mode.clone();
+            }
+
+            return Some(action);
         }
-    }
 
-    pub fn to_string(&self, modifier: Vec<KeyModifier>) -> String {
-        match self {
-            KeyCode::Backslash => format!("<bslash>"),
-            KeyCode::Backspace => format!("<bs>"),
-            KeyCode::Bar => format!("<bar>"),
-            KeyCode::Char(_) => todo!(),
-            KeyCode::Delete => todo!(),
-            KeyCode::Down => todo!(),
-            KeyCode::End => todo!(),
-            KeyCode::Enter => todo!(),
-            KeyCode::Esc => todo!(),
-            KeyCode::F(_) => todo!(),
-            KeyCode::Home => todo!(),
-            KeyCode::Help => todo!(),
-            KeyCode::Insert => todo!(),
-            KeyCode::Left => todo!(),
-            KeyCode::LessThan => todo!(),
-            KeyCode::Null => todo!(),
-            KeyCode::PageDown => todo!(),
-            KeyCode::PageUp => todo!(),
-            KeyCode::Print => todo!(),
-            KeyCode::Right => todo!(),
-            KeyCode::Space => todo!(),
-            KeyCode::Tab => todo!(),
-            KeyCode::Undo => todo!(),
-            KeyCode::Up => todo!(),
-        }
+        None
     }
 }
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum KeyModifier {
-    Alt,
-    Command,
-    Ctrl,
-    Shift,
-}
-
-#[derive(Default)]
-pub struct KeyMap {
-    mappings: Vec<(String, Action)>,
-}
-
-impl KeyMap {}

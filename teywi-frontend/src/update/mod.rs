@@ -1,14 +1,12 @@
 use std::path::Path;
 
+use teywi_keymap::action::Action;
+
 use crate::model::Model;
 
-pub enum Message {
-    Refresh,
-}
-
-pub fn update(model: &mut Model, message: Message) {
+pub fn update(model: &mut Model, message: Action) {
     match message {
-        Message::Refresh => {
+        Action::Refresh => {
             let path = Path::new(&model.current_path);
             let parent = path.parent().unwrap().as_os_str();
 
@@ -22,5 +20,7 @@ pub fn update(model: &mut Model, message: Message) {
                 .map(|entry| entry.unwrap().path())
                 .collect();
         }
+        Action::Mode(_) => todo!(),
+        Action::Quit => todo!(),
     }
 }

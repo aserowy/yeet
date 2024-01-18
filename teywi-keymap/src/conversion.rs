@@ -1,8 +1,8 @@
 use crossterm::event::{self, KeyEvent, KeyEventKind, ModifierKeyCode};
 
-use crate::{KeyCode, KeyPress, KeyModifier};
+use crate::key::{Key, KeyCode, KeyModifier};
 
-pub fn to_keypress(event: KeyEvent) -> Option<KeyPress> {
+pub fn to_key(event: KeyEvent) -> Option<Key> {
     match event.code {
         // event::KeyCode::Backspace => resolve_keypress_for_key(event.kind, KeyCode::),
         event::KeyCode::Enter => resolve_keypress_for_key(event.kind, KeyCode::Enter),
@@ -35,31 +35,31 @@ pub fn to_keypress(event: KeyEvent) -> Option<KeyPress> {
     }
 }
 
-fn resolve_keypress_for_key(kind: KeyEventKind, code: KeyCode) -> Option<KeyPress> {
+fn resolve_keypress_for_key(kind: KeyEventKind, code: KeyCode) -> Option<Key> {
     if kind != KeyEventKind::Press {
         return None;
     }
 
-    Some(KeyPress::Key(code))
+    Some(Key::Code(code))
 }
 
-fn resolve_keypress_for_mod(kind: KeyEventKind, modifier: ModifierKeyCode) -> Option<KeyPress> {
+fn resolve_keypress_for_mod(kind: KeyEventKind, modifier: ModifierKeyCode) -> Option<Key> {
     let active = kind == KeyEventKind::Press;
 
     match modifier {
-        ModifierKeyCode::LeftShift => Some(KeyPress::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::LeftControl => Some(KeyPress::Modifier(KeyModifier::Ctrl, active)),
-        ModifierKeyCode::LeftAlt => Some(KeyPress::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::LeftSuper => Some(KeyPress::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::LeftHyper => Some(KeyPress::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::LeftMeta => Some(KeyPress::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::RightShift => Some(KeyPress::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::RightControl => Some(KeyPress::Modifier(KeyModifier::Ctrl, active)),
-        ModifierKeyCode::RightAlt => Some(KeyPress::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::RightSuper => Some(KeyPress::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::RightHyper => Some(KeyPress::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::RightMeta => Some(KeyPress::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::IsoLevel3Shift => Some(KeyPress::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::IsoLevel5Shift => Some(KeyPress::Modifier(KeyModifier::Shift, active)),
+        ModifierKeyCode::LeftShift => Some(Key::Modifier(KeyModifier::Shift, active)),
+        ModifierKeyCode::LeftControl => Some(Key::Modifier(KeyModifier::Ctrl, active)),
+        ModifierKeyCode::LeftAlt => Some(Key::Modifier(KeyModifier::Alt, active)),
+        ModifierKeyCode::LeftSuper => Some(Key::Modifier(KeyModifier::Command, active)),
+        ModifierKeyCode::LeftHyper => Some(Key::Modifier(KeyModifier::Command, active)),
+        ModifierKeyCode::LeftMeta => Some(Key::Modifier(KeyModifier::Alt, active)),
+        ModifierKeyCode::RightShift => Some(Key::Modifier(KeyModifier::Shift, active)),
+        ModifierKeyCode::RightControl => Some(Key::Modifier(KeyModifier::Ctrl, active)),
+        ModifierKeyCode::RightAlt => Some(Key::Modifier(KeyModifier::Alt, active)),
+        ModifierKeyCode::RightSuper => Some(Key::Modifier(KeyModifier::Command, active)),
+        ModifierKeyCode::RightHyper => Some(Key::Modifier(KeyModifier::Command, active)),
+        ModifierKeyCode::RightMeta => Some(Key::Modifier(KeyModifier::Alt, active)),
+        ModifierKeyCode::IsoLevel3Shift => Some(Key::Modifier(KeyModifier::Shift, active)),
+        ModifierKeyCode::IsoLevel5Shift => Some(Key::Modifier(KeyModifier::Shift, active)),
     }
 }
