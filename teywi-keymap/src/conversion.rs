@@ -1,11 +1,19 @@
-use crossterm::event::{self, KeyEvent, KeyEventKind, ModifierKeyCode};
+use crossterm::event::{self, KeyEvent, KeyEventKind};
 
-use crate::key::{Key, KeyCode, KeyModifier};
+use crate::key::{KeyCode, KeyModifier, Key};
 
 pub fn to_key(event: KeyEvent) -> Option<Key> {
+    let modifier = event
+        .modifiers
+        .iter_names()
+        .map(|(s, _)| to_modifier(s))
+        .filter(|m| m.is_some())
+        .flatten()
+        .collect();
+
     match event.code {
         // event::KeyCode::Backspace => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Enter => resolve_keypress_for_key(event.kind, KeyCode::Enter),
+        event::KeyCode::Enter => resolve_keypress_for_key(event.kind, KeyCode::Enter, modifier),
         // event::KeyCode::Left => resolve_keypress_for_key(event.kind, KeyCode::),
         // event::KeyCode::Right => resolve_keypress_for_key(event.kind, KeyCode::),
         // event::KeyCode::Up => resolve_keypress_for_key(event.kind, KeyCode::),
@@ -19,9 +27,11 @@ pub fn to_key(event: KeyEvent) -> Option<Key> {
         // event::KeyCode::Delete => resolve_keypress_for_key(event.kind, KeyCode::),
         // event::KeyCode::Insert => resolve_keypress_for_key(event.kind, KeyCode::),
         // event::KeyCode::F(_) => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Char(c) => resolve_keypress_for_key(event.kind, KeyCode::from_char(c)),
+        event::KeyCode::Char(c) => {
+            resolve_keypress_for_key(event.kind, KeyCode::from_char(c), modifier)
+        }
         // event::KeyCode::Null => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Esc => resolve_keypress_for_key(event.kind, KeyCode::Esc),
+        event::KeyCode::Esc => resolve_keypress_for_key(event.kind, KeyCode::Esc, modifier),
         // event::KeyCode::CapsLock => todo!(),
         // event::KeyCode::ScrollLock => None,
         // event::KeyCode::NumLock => resolve_keypress_for_key(event.kind, KeyCode::),
@@ -30,36 +40,30 @@ pub fn to_key(event: KeyEvent) -> Option<Key> {
         // event::KeyCode::Menu => resolve_keypress_for_key(event.kind, KeyCode::),
         // event::KeyCode::KeypadBegin => None,
         // event::KeyCode::Media(_) => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Modifier(m) => resolve_keypress_for_mod(event.kind, m),
         _ => None,
     }
 }
 
-fn resolve_keypress_for_key(kind: KeyEventKind, code: KeyCode) -> Option<Key> {
+fn resolve_keypress_for_key(
+    kind: KeyEventKind,
+    code: KeyCode,
+    modifier: Vec<KeyModifier>,
+) -> Option<Key> {
     if kind != KeyEventKind::Press {
         return None;
     }
 
-    Some(Key::Code(code))
+    Some(Key::new(code, modifier))
 }
 
-fn resolve_keypress_for_mod(kind: KeyEventKind, modifier: ModifierKeyCode) -> Option<Key> {
-    let active = kind == KeyEventKind::Press;
-
+fn to_modifier(modifier: &str) -> Option<KeyModifier> {
     match modifier {
-        ModifierKeyCode::LeftShift => Some(Key::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::LeftControl => Some(Key::Modifier(KeyModifier::Ctrl, active)),
-        ModifierKeyCode::LeftAlt => Some(Key::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::LeftSuper => Some(Key::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::LeftHyper => Some(Key::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::LeftMeta => Some(Key::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::RightShift => Some(Key::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::RightControl => Some(Key::Modifier(KeyModifier::Ctrl, active)),
-        ModifierKeyCode::RightAlt => Some(Key::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::RightSuper => Some(Key::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::RightHyper => Some(Key::Modifier(KeyModifier::Command, active)),
-        ModifierKeyCode::RightMeta => Some(Key::Modifier(KeyModifier::Alt, active)),
-        ModifierKeyCode::IsoLevel3Shift => Some(Key::Modifier(KeyModifier::Shift, active)),
-        ModifierKeyCode::IsoLevel5Shift => Some(Key::Modifier(KeyModifier::Shift, active)),
+        "ALT" => Some(KeyModifier::Alt),
+        "CONTROL" => Some(KeyModifier::Ctrl),
+        "HYPER" => Some(KeyModifier::Command),
+        "META" => Some(KeyModifier::Alt),
+        "SHIFT" => Some(KeyModifier::Shift),
+        "SUPER" => Some(KeyModifier::Command),
+        _ => None,
     }
 }

@@ -31,6 +31,7 @@
           devShells.default = with pkgs; mkShell {
             buildInputs = [
               self'.packages.rust-stable
+              vscode-extensions.vadimcn.vscode-lldb
 
               gh
               nil
@@ -39,6 +40,10 @@
               nodePackages.markdownlint-cli
               nodePackages.prettier
             ];
+            shellHook = ''
+              export PATH=~/.cargo/bin:$PATH
+              export PATH=${vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter:$PATH
+            '';
 
             RUST_BACKTRACE = "full";
           };

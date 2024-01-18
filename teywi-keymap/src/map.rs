@@ -1,38 +1,27 @@
 use std::collections::HashMap;
 
 use crate::{
-    key::{KeyCode, KeyModifier},
+    key::{KeyCode, KeyModifier, Key},
     Action, Mode,
 };
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct KeyStroke {
-    pub key: KeyCode,
-    pub modifiers: Vec<KeyModifier>,
-}
-
-impl KeyStroke {
-    pub fn new(key: KeyCode, modifiers: Vec<KeyModifier>) -> Self {
-        Self { key, modifiers }
-    }
-}
-
 #[derive(Debug)]
 pub struct KeyMap {
-    mappings: HashMap<Mode, Vec<(Vec<KeyStroke>, Action)>>,
+    mappings: HashMap<Mode, Vec<(Vec<Key>, Action)>>,
 }
 
 impl KeyMap {
-    pub fn get_action(&self, mode: &Mode, keystrokes: &Vec<KeyStroke>) -> Option<Action> {
+    pub fn get_action(&self, mode: &Mode, keys: &Vec<Key>) -> Option<Action> {
         if let Some(mappings) = self.mappings.get(mode) {
-            for (mapping_keystrokes, action) in mappings {
-                if mapping_keystrokes.len() == keystrokes.len() {
-                    if compare_keystrokes(mapping_keystrokes, keystrokes) {
+            for (mapping_keys, action) in mappings {
+                if mapping_keys.len() == keys.len() {
+                    if compare_keys(mapping_keys, keys) {
                         return Some(action.clone());
                     }
                 }
             }
         }
+
         None
     }
 }
@@ -43,7 +32,7 @@ impl Default for KeyMap {
         mappings.insert(
             Mode::Normal,
             vec![(
-                vec![KeyStroke::new(KeyCode::Char('q'), vec![])],
+                vec![Key::new(KeyCode::Char('q'), vec![KeyModifier::Alt])],
                 Action::Quit,
             )],
         );
@@ -52,14 +41,14 @@ impl Default for KeyMap {
     }
 }
 
-fn compare_keystrokes(a: &Vec<KeyStroke>, b: &Vec<KeyStroke>) -> bool {
+fn compare_keys(a: &Vec<Key>, b: &Vec<Key>) -> bool {
     if a.len() != b.len() {
         return false;
     }
 
     let zipped = a.iter().zip(b.iter());
     for (a, b) in zipped {
-        if a.key != b.key {
+        if a.code != b.code {
             return false;
         }
         if !compare_modifiers(&a.modifiers, &b.modifiers) {

@@ -1,8 +1,19 @@
 #[derive(Clone, Debug, PartialEq)]
-pub enum Key {
-    Code(KeyCode),
-    Modifier(KeyModifier, bool),
+pub struct Key {
+    pub code: KeyCode,
+    pub modifiers: Vec<KeyModifier>,
 }
+
+impl Key {
+    pub fn new(key: KeyCode, modifiers: Vec<KeyModifier>) -> Self {
+        Self { code: key, modifiers }
+    }
+}
+
+// impl ToString for KeyStroke {
+//     fn to_string(&self) -> String {
+//     }
+// }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum KeyCode {

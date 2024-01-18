@@ -20,8 +20,8 @@ impl ActionResolver {
     pub fn add_and_resolve(&mut self, key: Key) -> Option<Action> {
         self.buffer.add_key(key);
 
-        let keystrokes = self.buffer.get_keystrokes();
-        let action = self.map.get_action(&self.mode, &keystrokes);
+        let keys = self.buffer.get_keys();
+        let action = self.map.get_action(&self.mode, &keys);
 
         if let Some(action) = action {
             self.buffer.clear();
