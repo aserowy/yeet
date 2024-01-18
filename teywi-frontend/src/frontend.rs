@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 use std::io::{stderr, BufWriter};
-use teywi_keymap::action::Action;
+use teywi_keymap::{action::Action, ActionResolver};
 use teywi_server::Error;
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     layout::AppLayout,
     model::Model,
     update::{self},
-    view::{current_directory, parent_directory},
+    view::{current_directory, parent_directory, commandline},
 };
 
 pub async fn run(_address: String) -> Result<(), Error> {
@@ -26,13 +26,14 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
+    let mut action_resolver = ActionResolver::default();
     let (sender, mut receiver) = event::start();
 
     while let Some(event) = receiver.recv().await {
         match event {
             AppEvent::Error => todo!(),
             AppEvent::Key(key) => {
-                if let Some(action) = model.action_resolver.add_and_resolve(key) {
+                if let Some(action) = action_resolver.add_and_resolve(key) {
                     terminal.draw(|frame| render(&mut model, frame, &action))?;
 
                     match action {
@@ -63,4 +64,5 @@ fn render(model: &mut Model, frame: &mut Frame, message: &Action) {
     let layout = AppLayout::default(frame.size());
     current_directory::view(model, frame, layout.current_directory);
     parent_directory::view(model, frame, layout.parent_directory);
+    commandline::view(model, frame, layout.statusline);
 }

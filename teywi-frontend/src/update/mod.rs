@@ -20,7 +20,9 @@ pub fn update(model: &mut Model, message: &Action) {
                 .map(|entry| entry.unwrap().path())
                 .collect();
         }
-        Action::Mode(_) => {}
+        Action::Mode(mode) => {
+            model.mode = mode.clone();
+        }
         Action::Quit => {}
     }
 }
