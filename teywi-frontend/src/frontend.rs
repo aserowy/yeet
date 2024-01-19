@@ -1,5 +1,4 @@
 use crossterm::{
-    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -12,7 +11,7 @@ use teywi_keymap::{action::Action, ActionResolver};
 use teywi_server::Error;
 
 use crate::{
-    event::{self, AppEvent},
+    event::{self},
     layout::AppLayout,
     model::Model,
     update::{self},
@@ -28,28 +27,14 @@ pub async fn run(_address: String) -> Result<(), Error> {
 
     let mut model = Model::default();
     let mut action_resolver = ActionResolver::default();
-    let (sender, mut receiver) = event::start();
+    let (_, mut receiver) = event::listen_crossterm();
 
     while let Some(event) = receiver.recv().await {
-        match event {
-            AppEvent::Error => todo!(),
-            AppEvent::Key(key) => {
-                if let Some(action) = action_resolver.add_and_resolve(key) {
-                    terminal.draw(|frame| render(&mut model, frame, &action))?;
+        let action = event::process_appevent(event, &mut action_resolver);
+        terminal.draw(|frame| render(&mut model, frame, &action))?;
 
-                    if action == Action::Quit {
-                        let _ = sender.send(AppEvent::Quit);
-                    }
-                } else {
-                    let action = &Action::KeySequenceChanged(action_resolver.get_key_string());
-                    terminal.draw(|frame| render(&mut model, frame, action))?;
-                }
-            }
-            AppEvent::Resize(_, _) => todo!(),
-            AppEvent::Startup => {
-                terminal.draw(|frame| render(&mut model, frame, &Action::Refresh))?;
-            }
-            AppEvent::Quit => break,
+        if action == Action::Quit {
+            break;
         }
     }
 

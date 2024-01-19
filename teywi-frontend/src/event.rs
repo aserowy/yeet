@@ -1,18 +1,17 @@
 use crossterm::event::Event;
 use futures::{FutureExt, StreamExt};
-use teywi_keymap::{conversion, key::Key};
+use teywi_keymap::{action::Action, conversion, key::Key, ActionResolver};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AppEvent {
     Error,
     Key(Key),
     Resize(u16, u16),
     Startup,
-    Quit,
 }
 
-pub fn start() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
+pub fn listen_crossterm() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
     let (sender, receiver) = mpsc::unbounded_channel();
     let internal_sender = sender.clone();
 
@@ -47,10 +46,25 @@ pub fn start() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
     (sender, receiver)
 }
 
+pub fn process_appevent(event: AppEvent, action_resolver: &mut ActionResolver) -> Action {
+    match event {
+        AppEvent::Error => todo!(),
+        AppEvent::Key(key) => {
+            if let Some(action) = action_resolver.add_and_resolve(key) {
+                action
+            } else {
+                Action::KeySequenceChanged(action_resolver.get_key_string())
+            }
+        }
+        AppEvent::Resize(_, _) => todo!(),
+        AppEvent::Startup => Action::Refresh,
+    }
+}
+
 fn handle_event(event: Event) -> Option<AppEvent> {
     match event {
         Event::Key(key) => {
-            if let Some(key) = conversion::to_key(key.clone()) {
+            if let Some(key) = conversion::to_key(&key) {
                 return Some(AppEvent::Key(key));
             }
 

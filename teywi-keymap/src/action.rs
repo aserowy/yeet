@@ -2,6 +2,7 @@
 pub enum Action {
     KeySequenceChanged(String),
     ModeChanged(Mode),
+    MoveCursorDown,
     Refresh,
     Quit,
 }

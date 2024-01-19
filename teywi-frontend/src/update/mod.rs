@@ -12,6 +12,9 @@ pub fn update(model: &mut Model, message: &Action) {
         Action::ModeChanged(mode) => {
             model.mode = mode.clone();
         }
+        Action::MoveCursorDown => {
+            model.key_sequence = String::new();
+        }
         Action::Refresh => {
             let path = Path::new(&model.current_path);
             let parent = path.parent().unwrap().as_os_str();

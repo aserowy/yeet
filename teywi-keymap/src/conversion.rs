@@ -2,7 +2,7 @@ use crossterm::event::{self, KeyEvent, KeyEventKind};
 
 use crate::key::{KeyCode, KeyModifier, Key};
 
-pub fn to_key(event: KeyEvent) -> Option<Key> {
+pub fn to_key(event: &KeyEvent) -> Option<Key> {
     let modifier = event
         .modifiers
         .iter_names()
