@@ -32,8 +32,14 @@ pub struct DirectoryListModel {
 
 #[derive(Debug, Default)]
 pub struct Buffer {
-    pub cursor: (CursorPosition, usize),
+    pub cursor: Cursor,
     pub lines: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct Cursor {
+    pub horizontial_position: CursorPosition,
+    pub line_number: usize,
 }
 
 #[derive(Debug)]

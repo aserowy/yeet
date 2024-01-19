@@ -31,10 +31,20 @@ impl Default for KeyMap {
         let mut mappings = HashMap::new();
         mappings.insert(
             Mode::Normal,
-            vec![(
-                vec![Key::new(KeyCode::from_char('q'), vec![])],
-                Action::Quit,
-            )],
+            vec![
+                (
+                    vec![Key::new(KeyCode::from_char('j'), vec![])],
+                    Action::MoveCursorDown,
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('l'), vec![])],
+                    Action::MoveCursorRight,
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('q'), vec![])],
+                    Action::Quit,
+                ),
+            ],
         );
 
         Self { mappings }

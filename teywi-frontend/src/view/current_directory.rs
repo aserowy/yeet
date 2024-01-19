@@ -5,5 +5,5 @@ use crate::model::Model;
 use super::buffer;
 
 pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
-    buffer::view(&model.current_directory, frame, rect);
+    buffer::view(&model.mode, &model.current_directory, frame, rect);
 }

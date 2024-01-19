@@ -2,7 +2,9 @@
 pub enum Action {
     KeySequenceChanged(String),
     ModeChanged(Mode),
+    // TODO: refactor move actions int MoveCursor(enum)
     MoveCursorDown,
+    MoveCursorRight,
     Refresh,
     Quit,
 }

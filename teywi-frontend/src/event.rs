@@ -56,7 +56,7 @@ pub fn process_appevent(event: AppEvent, action_resolver: &mut ActionResolver) -
                 Action::KeySequenceChanged(action_resolver.get_key_string())
             }
         }
-        AppEvent::Resize(_, _) => todo!(),
+        AppEvent::Resize(_, _) => Action::Refresh,
         AppEvent::Startup => Action::Refresh,
     }
 }

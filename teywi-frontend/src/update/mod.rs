@@ -16,7 +16,10 @@ pub fn update(model: &mut Model, message: &Action) {
         }
         Action::MoveCursorDown => {
             model.key_sequence = String::new();
-
+            update_current_directory(model, message);
+        }
+        Action::MoveCursorRight => {
+            model.key_sequence = String::new();
             update_current_directory(model, message);
         }
         Action::Refresh => {
