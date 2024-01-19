@@ -120,7 +120,7 @@ impl KeyCode {
             '|' => KeyCode::Bar,
             '<' => KeyCode::LessThan,
             ' ' => KeyCode::Space,
-            passed => KeyCode::Char(passed),
+            passed => KeyCode::Char(passed.to_ascii_lowercase()),
         }
     }
 }

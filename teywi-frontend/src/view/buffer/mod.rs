@@ -58,7 +58,7 @@ fn get_style_expansions(
                     i.clone()
                 }
             }
-            CursorPosition::_End => length - 1,
+            CursorPosition::End => length - 1,
         };
 
         positions.push((0, PositionType::CursorLine));

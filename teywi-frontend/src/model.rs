@@ -45,7 +45,7 @@ pub struct Cursor {
 #[derive(Debug)]
 pub enum CursorPosition {
     Absolute(usize),
-    _End,
+    End,
 }
 
 impl Default for CursorPosition {

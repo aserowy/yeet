@@ -14,11 +14,7 @@ pub fn update(model: &mut Model, message: &Action) {
         Action::ModeChanged(mode) => {
             model.mode = mode.clone();
         }
-        Action::MoveCursorDown => {
-            model.key_sequence = String::new();
-            update_current_directory(model, message);
-        }
-        Action::MoveCursorRight => {
+        Action::MoveCursor(_) => {
             model.key_sequence = String::new();
             update_current_directory(model, message);
         }

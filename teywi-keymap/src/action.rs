@@ -2,11 +2,21 @@
 pub enum Action {
     KeySequenceChanged(String),
     ModeChanged(Mode),
-    // TODO: refactor move actions int MoveCursor(enum)
-    MoveCursorDown,
-    MoveCursorRight,
+    MoveCursor(Direction),
     Refresh,
     Quit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Direction {
+    Bottom,
+    Down,
+    Left,
+    LineEnd,
+    LineStart,
+    Right,
+    Top,
+    Up,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

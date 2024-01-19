@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    action::Direction,
     key::{Key, KeyCode, KeyModifier},
     Action, Mode,
 };
@@ -33,12 +34,39 @@ impl Default for KeyMap {
             Mode::Normal,
             vec![
                 (
+                    vec![Key::new(KeyCode::from_char('0'), vec![])],
+                    Action::MoveCursor(Direction::LineStart),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('$'), vec![])],
+                    Action::MoveCursor(Direction::LineEnd),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
+                    Action::MoveCursor(Direction::Bottom),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                    ],
+                    Action::MoveCursor(Direction::Top),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('h'), vec![])],
+                    Action::MoveCursor(Direction::Left),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('j'), vec![])],
-                    Action::MoveCursorDown,
+                    Action::MoveCursor(Direction::Down),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('k'), vec![])],
+                    Action::MoveCursor(Direction::Up),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
-                    Action::MoveCursorRight,
+                    Action::MoveCursor(Direction::Right),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('q'), vec![])],
