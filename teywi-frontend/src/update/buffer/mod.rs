@@ -4,8 +4,8 @@ use crate::model::{Buffer, CursorPosition};
 
 pub fn update(model: &mut Buffer, message: &Action) {
     match message {
-        Action::KeySequenceChanged(_) => {}
-        Action::ModeChanged(_) => {}
+        Action::ChangeKeySequence(_) => {}
+        Action::ChangeMode(_) => {}
         Action::MoveCursor(direction) => match direction {
             Direction::Bottom => {
                 model.cursor.line_number = model.lines.len() - 1;

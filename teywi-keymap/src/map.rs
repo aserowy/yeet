@@ -34,6 +34,10 @@ impl Default for KeyMap {
             Mode::Normal,
             vec![
                 (
+                    vec![Key::new(KeyCode::Esc, vec![])],
+                    Action::ChangeMode(Mode::Normal),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Action::MoveCursor(Direction::LineStart),
                 ),

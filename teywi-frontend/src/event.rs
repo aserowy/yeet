@@ -53,7 +53,7 @@ pub fn process_appevent(event: AppEvent, action_resolver: &mut ActionResolver) -
             if let Some(action) = action_resolver.add_and_resolve(key) {
                 action
             } else {
-                Action::KeySequenceChanged(action_resolver.get_key_string())
+                Action::ChangeKeySequence(action_resolver.get_key_string())
             }
         }
         AppEvent::Resize(_, _) => Action::Refresh,

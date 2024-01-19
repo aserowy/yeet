@@ -8,10 +8,10 @@ mod buffer;
 
 pub fn update(model: &mut Model, message: &Action) {
     match message {
-        Action::KeySequenceChanged(sequence) => {
+        Action::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
         }
-        Action::ModeChanged(mode) => {
+        Action::ChangeMode(mode) => {
             model.mode = mode.clone();
         }
         Action::MoveCursor(_) => {

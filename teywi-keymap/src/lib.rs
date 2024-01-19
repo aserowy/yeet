@@ -26,7 +26,7 @@ impl ActionResolver {
         if let Some(action) = action {
             self.buffer.clear();
 
-            if let Action::ModeChanged(mode) = &action {
+            if let Action::ChangeMode(mode) = &action {
                 self.mode = mode.clone();
             }
 
