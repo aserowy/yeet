@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    action::Direction,
+    action::CursorDirection,
     key::{Key, KeyCode, KeyModifier},
     tree::KeyTree,
     Action, Mode,
@@ -36,38 +36,38 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
-                    Action::MoveCursor(Direction::LineStart),
+                    Action::MoveCursor(CursorDirection::LineStart),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
-                    Action::MoveCursor(Direction::LineEnd),
+                    Action::MoveCursor(CursorDirection::LineEnd),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
-                    Action::MoveCursor(Direction::Bottom),
+                    Action::MoveCursor(CursorDirection::Bottom),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('g'), vec![]),
                     ],
-                    Action::MoveCursor(Direction::Top),
+                    Action::MoveCursor(CursorDirection::Top),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
-                    Action::MoveCursor(Direction::Left),
+                    Action::MoveCursor(CursorDirection::Left),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('j'), vec![])],
-                    Action::MoveCursor(Direction::Down),
+                    Action::MoveCursor(CursorDirection::Down),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('k'), vec![])],
-                    Action::MoveCursor(Direction::Up),
+                    Action::MoveCursor(CursorDirection::Up),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
-                    Action::MoveCursor(Direction::Right),
+                    Action::MoveCursor(CursorDirection::Right),
                 ),
                 (
                     // TODO: remove q and implement :q

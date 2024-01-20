@@ -7,8 +7,8 @@ pub struct Buffer {
 
 #[derive(Debug, Default)]
 pub struct Cursor {
-    pub horizontial_position: CursorPosition,
-    pub line_number: usize,
+    pub horizontial_index: CursorPosition,
+    pub vertical_index: usize,
 }
 
 #[derive(Debug)]
@@ -25,8 +25,8 @@ impl Default for CursorPosition {
 
 #[derive(Debug, Default)]
 pub struct ViewPort {
-    pub x: usize,
-    pub y: usize,
+    pub horizontal_index: usize,
+    pub vertical_index: usize,
     pub height: usize,
     pub width: usize,
 }

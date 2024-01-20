@@ -2,11 +2,11 @@ use std::path::Path;
 
 use teywi_keymap::action::Action;
 
-use crate::model::Model;
+use crate::{layout::AppLayout, model::Model};
 
 mod buffer;
 
-pub fn update(model: &mut Model, message: &Action) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
     match message {
         Action::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
@@ -16,18 +16,21 @@ pub fn update(model: &mut Model, message: &Action) {
         }
         Action::MoveCursor(_) => {
             model.key_sequence = String::new();
-            update_current_directory(model, message);
+            update_current_directory(model, layout, message);
         }
         Action::Refresh => {
-            update_current_directory(model, message);
+            update_current_directory(model, layout, message);
             update_parent_directory(model);
         }
         Action::Quit => {}
     }
 }
 
-fn update_current_directory(model: &mut Model, message: &Action) {
+fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
     let path = Path::new(&model.current_path);
+
+    model.current_directory.view_port.height = usize::from(layout.current_directory.height);
+    model.current_directory.view_port.width = usize::from(layout.current_directory.width);
 
     model.current_directory.lines = std::fs::read_dir(path)
         .unwrap()

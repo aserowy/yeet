@@ -46,10 +46,10 @@ pub async fn run(_address: String) -> Result<(), Error> {
 }
 
 fn render(model: &mut Model, frame: &mut Frame, message: &Action) {
-    update::update(model, message);
-
     let layout = AppLayout::default(frame.size());
+    update::update(model, &layout, message);
+
     current_directory::view(model, frame, layout.current_directory);
     parent_directory::view(model, frame, layout.parent_directory);
-    commandline::view(model, frame, layout.statusline);
+    commandline::view(model, frame, layout.commandline);
 }

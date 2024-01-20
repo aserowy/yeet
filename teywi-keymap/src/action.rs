@@ -2,13 +2,13 @@
 pub enum Action {
     ChangeKeySequence(String),
     ChangeMode(Mode),
-    MoveCursor(Direction),
+    MoveCursor(CursorDirection),
     Refresh,
     Quit,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Direction {
+pub enum CursorDirection {
     Bottom,
     Down,
     Left,

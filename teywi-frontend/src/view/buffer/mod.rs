@@ -9,19 +9,19 @@ use teywi_keymap::action::Mode;
 
 use crate::model::buffer::{Buffer, CursorPosition};
 
-pub fn view(mode: &Mode, buffer: &Buffer, frame: &mut Frame, rect: Rect) {
-    let lines = update_lines(mode, buffer);
+mod viewport;
 
-    frame.render_widget(Paragraph::new(lines), rect);
-}
+pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
+    let viewport_lines = viewport::get_lines(model);
 
-fn update_lines<'a>(mode: &Mode, model: &'a Buffer) -> Vec<Line<'a>> {
     let mut lines = Vec::new();
-    for (i, line) in model.lines.iter().enumerate() {
-        lines.push(update_line(i, line, mode, model));
+    for (i, line) in viewport_lines.iter().enumerate() {
+        let i_corrected = i + model.view_port.vertical_index;
+
+        lines.push(update_line(i_corrected, line, mode, model));
     }
 
-    lines
+    frame.render_widget(Paragraph::new(lines), rect);
 }
 
 fn update_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buffer) -> Line<'a> {
@@ -50,8 +50,8 @@ fn get_style_expansions(
     model: &Buffer,
 ) -> Vec<(usize, usize, Style)> {
     let mut positions = Vec::new();
-    if model.cursor.line_number == index {
-        let cursor_index = match &model.cursor.horizontial_position {
+    if model.cursor.vertical_index == index {
+        let cursor_index = match &model.cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
                 if i >= &length {
                     length - 1

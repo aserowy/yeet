@@ -3,6 +3,7 @@ use teywi_keymap::action::Action;
 use crate::model::buffer::Buffer;
 
 mod direction;
+mod viewport;
 
 pub fn update(model: &mut Buffer, message: &Action) {
     match message {
