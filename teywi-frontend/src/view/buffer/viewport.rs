@@ -12,9 +12,7 @@ pub fn get_lines(model: &Buffer) -> Vec<String> {
 
 fn correct_line_length<'a>(line: &'a str, width: usize) -> String {
     let mut line = line.to_string();
-    if line.chars().count() < width {
-        line.push_str(&" ".repeat(width - line.chars().count()));
-    } else if line.chars().count() > width {
+    if line.chars().count() > width {
         line = line.chars().take(width).collect();
     }
 

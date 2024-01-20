@@ -17,7 +17,6 @@ pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     let mut lines = Vec::new();
     for (i, line) in viewport_lines.iter().enumerate() {
         let i_corrected = i + model.view_port.vertical_index;
-
         lines.push(update_line(i_corrected, line, mode, model));
     }
 
@@ -30,7 +29,16 @@ fn update_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buffer) 
     let mut spans = Vec::new();
 
     for (start, end, style) in style_expansion {
-        spans.push(Span::styled(&line[start..end], style));
+        if end > line_length {
+            let filler_count = end - line_length;
+            let mut filler = String::with_capacity(filler_count);
+            filler.push_str(&" ".repeat(filler_count));
+
+            spans.push(Span::styled(&line[start..line_length], style));
+            spans.push(Span::styled(filler, style));
+        } else {
+            spans.push(Span::styled(&line[start..end], style));
+        }
     }
 
     Line::from(spans)
@@ -63,7 +71,7 @@ fn get_style_expansions(
         };
 
         positions.push((0, PositionType::CursorLine));
-        positions.push((length, PositionType::CursorLine));
+        positions.push((model.view_port.width, PositionType::CursorLine));
 
         positions.push((cursor_index, PositionType::Cursor));
         positions.push((cursor_index + 1, PositionType::Cursor));
