@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     action::Direction,
     key::{Key, KeyCode, KeyModifier},
+    tree::KeyTree,
     Action, Mode,
 };
 
@@ -12,18 +13,14 @@ pub struct KeyMap {
 }
 
 impl KeyMap {
-    pub fn get_action(&self, mode: &Mode, keys: &Vec<Key>) -> Option<Action> {
-        if let Some(mappings) = self.mappings.get(mode) {
-            for (mapping_keys, action) in mappings {
-                if mapping_keys.len() == keys.len() {
-                    if compare_keys(mapping_keys, keys) {
-                        return Some(action.clone());
-                    }
-                }
+    pub fn into_tree(self) -> KeyTree {
+        let mut tree = KeyTree::new();
+        for (mode, mappings) in self.mappings {
+            for (keys, action) in mappings {
+                tree.add_mapping(&mode, keys, action);
             }
         }
-
-        None
+        tree
     }
 }
 
@@ -81,36 +78,4 @@ impl Default for KeyMap {
 
         Self { mappings }
     }
-}
-
-fn compare_keys(a: &Vec<Key>, b: &Vec<Key>) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    let zipped = a.iter().zip(b.iter());
-    for (a, b) in zipped {
-        if a.code != b.code {
-            return false;
-        }
-        if !compare_modifiers(&a.modifiers, &b.modifiers) {
-            return false;
-        }
-    }
-
-    true
-}
-
-fn compare_modifiers(a: &Vec<KeyModifier>, b: &Vec<KeyModifier>) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    for modifier in a {
-        if !b.contains(modifier) {
-            return false;
-        }
-    }
-
-    true
 }

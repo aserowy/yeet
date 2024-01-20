@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash)]
 pub struct Key {
     pub code: KeyCode,
     pub modifiers: Vec<KeyModifier>,
@@ -10,6 +10,26 @@ impl Key {
             code: key,
             modifiers,
         }
+    }
+}
+
+impl PartialEq for Key {
+    fn eq(&self, other: &Self) -> bool {
+        if self.code != other.code {
+            return false;
+        }
+
+        if self.modifiers.len() != other.modifiers.len() {
+            return false;
+        }
+
+        for modifier in &self.modifiers {
+            if !other.modifiers.contains(&modifier) {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -54,7 +74,7 @@ fn get_key_string(code: String, modifiers: Vec<KeyModifier>) -> String {
     result
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum KeyCode {
     Backslash,
     Backspace,
@@ -125,7 +145,7 @@ impl KeyCode {
     }
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum KeyModifier {
     Alt,
     Command,
