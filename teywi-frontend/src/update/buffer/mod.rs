@@ -1,6 +1,6 @@
 use teywi_keymap::action::{Action, Direction};
 
-use crate::model::{Buffer, CursorPosition};
+use crate::model::buffer::{Buffer, CursorPosition};
 
 pub fn update(model: &mut Buffer, message: &Action) {
     match message {

@@ -7,7 +7,7 @@ use ratatui::{
 };
 use teywi_keymap::action::Mode;
 
-use crate::model::{Buffer, CursorPosition};
+use crate::model::buffer::{Buffer, CursorPosition};
 
 pub fn view(mode: &Mode, buffer: &Buffer, frame: &mut Frame, rect: Rect) {
     let lines = update_lines(mode, buffer);

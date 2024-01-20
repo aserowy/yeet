@@ -3,6 +3,10 @@ use std::path::PathBuf;
 use ratatui::widgets::ListState;
 use teywi_keymap::action::Mode;
 
+use self::buffer::Buffer;
+
+pub mod buffer;
+
 #[derive(Debug)]
 pub struct Model {
     pub current_directory: Buffer,
@@ -28,28 +32,4 @@ impl Default for Model {
 pub struct DirectoryListModel {
     pub paths: Vec<PathBuf>,
     pub state: ListState,
-}
-
-#[derive(Debug, Default)]
-pub struct Buffer {
-    pub cursor: Cursor,
-    pub lines: Vec<String>,
-}
-
-#[derive(Debug, Default)]
-pub struct Cursor {
-    pub horizontial_position: CursorPosition,
-    pub line_number: usize,
-}
-
-#[derive(Debug)]
-pub enum CursorPosition {
-    Absolute(usize),
-    End,
-}
-
-impl Default for CursorPosition {
-    fn default() -> Self {
-        CursorPosition::Absolute(0)
-    }
 }
