@@ -31,7 +31,7 @@ fn get_cursor_line_positions(
     if &model.cursor.vertical_index == index {
         let cursor_index = match &model.cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
-                if i >= &length {
+                if i >= length {
                     length - 1
                 } else {
                     *i
