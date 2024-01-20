@@ -25,7 +25,8 @@ fn update_lines<'a>(mode: &Mode, model: &'a Buffer) -> Vec<Line<'a>> {
 }
 
 fn update_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buffer) -> Line<'a> {
-    let style_expansion = get_style_expansions(index, line.chars().count(), mode, model);
+    let line_length = line.chars().count();
+    let style_expansion = get_style_expansions(index, line_length, mode, model);
     let mut spans = Vec::new();
 
     for (start, end, style) in style_expansion {

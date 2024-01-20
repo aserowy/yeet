@@ -2,6 +2,7 @@
 pub struct Buffer {
     pub cursor: Cursor,
     pub lines: Vec<String>,
+    pub view_port: ViewPort,
 }
 
 #[derive(Debug, Default)]
@@ -20,4 +21,12 @@ impl Default for CursorPosition {
     fn default() -> Self {
         CursorPosition::Absolute(0)
     }
+}
+
+#[derive(Debug, Default)]
+pub struct ViewPort {
+    pub x: usize,
+    pub y: usize,
+    pub height: usize,
+    pub width: usize,
 }
