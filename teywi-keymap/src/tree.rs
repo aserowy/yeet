@@ -33,7 +33,7 @@ impl KeyTree {
         }
     }
 
-    pub fn get_node(&self, mode: &Mode, keys: &Vec<Key>) -> Option<Node> {
+    pub fn get_node(&self, mode: &Mode, keys: &[Key]) -> Option<Node> {
         if let Some(node) = self.modes.get(mode) {
             let mut key_iter = keys.iter();
             if let Some(key) = key_iter.next() {

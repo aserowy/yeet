@@ -70,6 +70,7 @@ impl Default for KeyMap {
                     Action::MoveCursor(Direction::Right),
                 ),
                 (
+                    // TODO: remove q and implement :q
                     vec![Key::new(KeyCode::from_char('q'), vec![])],
                     Action::Quit,
                 ),

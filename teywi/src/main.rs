@@ -1,5 +1,4 @@
-use teywi_frontend::frontend;
-use teywi_server::Error;
+use teywi_frontend::frontend::{self, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

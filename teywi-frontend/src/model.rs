@@ -14,13 +14,13 @@ pub struct Model {
 
 impl Default for Model {
     fn default() -> Self {
-        return Model {
+        Self {
             current_path: PathBuf::from("/home/serowy/"),
             current_directory: Buffer::default(),
             key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: DirectoryListModel::default(),
-        };
+        }
     }
 }
 

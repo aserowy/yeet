@@ -19,8 +19,9 @@ pub enum Direction {
     Up,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub enum Mode {
+    #[default]
     Normal,
     Command,
 }
@@ -28,14 +29,8 @@ pub enum Mode {
 impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
-            Mode::Normal => format!("normal"),
-            Mode::Command => format!("command"),
+            Mode::Normal => "normal".to_string(),
+            Mode::Command => "command".to_string(),
         }
-    }
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::Normal
     }
 }

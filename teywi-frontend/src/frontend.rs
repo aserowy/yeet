@@ -8,7 +8,6 @@ use ratatui::{
 };
 use std::io::{stderr, BufWriter};
 use teywi_keymap::{action::Action, ActionResolver};
-use teywi_server::Error;
 
 use crate::{
     event::{self},
@@ -17,6 +16,8 @@ use crate::{
     update::{self},
     view::{commandline, current_directory, parent_directory},
 };
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
 pub async fn run(_address: String) -> Result<(), Error> {
     stderr().execute(EnterAlternateScreen)?;

@@ -13,11 +13,7 @@ impl AppLayout {
     pub fn default(rect: Rect) -> Self {
         let main = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(1),
-                Constraint::Max(1),
-                Constraint::Max(1),
-            ])
+            .constraints([Constraint::Min(1), Constraint::Max(1), Constraint::Max(1)])
             .split(rect);
 
         let files = Layout::default()
@@ -25,12 +21,12 @@ impl AppLayout {
             .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
             .split(main[0]);
 
-        return AppLayout {
+        Self {
             parent_directory: files[0],
             current_directory: files[1],
             preview: files[2],
             statusline: main[1],
             commandline: main[2],
-        };
+        }
     }
 }

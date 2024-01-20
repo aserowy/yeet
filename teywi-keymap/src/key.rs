@@ -1,4 +1,6 @@
-#[derive(Clone, Debug, Eq, Hash)]
+use std::hash::Hash;
+
+#[derive(Clone, Debug, Eq)]
 pub struct Key {
     pub code: KeyCode,
     pub modifiers: Vec<KeyModifier>,
@@ -13,6 +15,12 @@ impl Key {
     }
 }
 
+impl Hash for Key {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
+    }
+}
+
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
         if self.code != other.code {
@@ -24,7 +32,7 @@ impl PartialEq for Key {
         }
 
         for modifier in &self.modifiers {
-            if !other.modifiers.contains(&modifier) {
+            if !other.modifiers.contains(modifier) {
                 return false;
             }
         }
@@ -40,7 +48,7 @@ impl ToString for Key {
 
         match self.code {
             KeyCode::Char(_) => {
-                if modifiers.len() == 0 {
+                if modifiers.is_empty() {
                     self.code.to_string()
                 } else if modifiers.len() == 1 && modifiers[0] == KeyModifier::Shift {
                     self.code.to_string().to_uppercase()
@@ -69,7 +77,7 @@ fn get_key_string(code: String, modifiers: Vec<KeyModifier>) -> String {
     }
 
     result.push_str(&code);
-    result.push_str(">");
+    result.push('>');
 
     result
 }

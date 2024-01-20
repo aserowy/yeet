@@ -55,7 +55,7 @@ fn get_style_expansions(
                 if i >= &length {
                     length - 1
                 } else {
-                    i.clone()
+                    *i
                 }
             }
             CursorPosition::End => length - 1,
@@ -104,10 +104,8 @@ fn get_sorted_positions(positions: Vec<(usize, PositionType)>) -> Vec<(usize, Ve
     for (index, position_type) in positions {
         if !result.iter().any(|(i, _)| i == &index) {
             result.push((index, vec![position_type]));
-        } else {
-            if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
-                position_types.push(position_type);
-            }
+        } else if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
+            position_types.push(position_type);
         }
     }
 
@@ -116,7 +114,7 @@ fn get_sorted_positions(positions: Vec<(usize, PositionType)>) -> Vec<(usize, Ve
     result
 }
 
-fn get_style(mode: &Mode, types: &Vec<PositionType>) -> Style {
+fn get_style(mode: &Mode, types: &[PositionType]) -> Style {
     match (
         mode,
         types.contains(&PositionType::CursorLine),
