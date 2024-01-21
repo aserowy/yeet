@@ -1,4 +1,4 @@
-use teywi_keymap::action::Action;
+use yate_keymap::action::Action;
 
 use crate::model::buffer::Buffer;
 

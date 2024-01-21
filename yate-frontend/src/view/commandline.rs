@@ -4,7 +4,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use teywi_keymap::action::Mode;
+use yate_keymap::action::Mode;
 
 use crate::model::Model;
 

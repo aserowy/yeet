@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 use std::io::{stderr, BufWriter};
-use teywi_keymap::{action::Action, ActionResolver};
+use yate_keymap::{action::Action, ActionResolver};
 
 use crate::{
     event::{self},

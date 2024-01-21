@@ -295,7 +295,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "teywi-server"
+name = "yate-server"
 version = "0.0.1"
 dependencies = [
  "async-stream",

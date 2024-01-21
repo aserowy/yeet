@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use teywi_keymap::action::Action;
+use yate_keymap::action::Action;
 
 use crate::{layout::AppLayout, model::Model};
 

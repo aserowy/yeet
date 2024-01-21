@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use ratatui::widgets::ListState;
-use teywi_keymap::action::Mode;
+use yate_keymap::action::Mode;
 
 use self::buffer::Buffer;
 

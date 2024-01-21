@@ -1,4 +1,4 @@
-use teywi_keymap::action::CursorDirection;
+use yate_keymap::action::CursorDirection;
 
 use crate::model::buffer::{Buffer, CursorPosition};
 

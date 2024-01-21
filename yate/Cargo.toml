@@ -1,9 +1,10 @@
 [package]
-name = "teywi-keymap"
+name = "yate"
 version = "0.0.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crossterm = "0.27.0"
+yate-frontend = { path = "../yate-frontend" }
+tokio = { version = "1.35.1", features = ["full"] }

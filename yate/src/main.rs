@@ -1,4 +1,4 @@
-use teywi_frontend::frontend::{self, Error};
+use yate_frontend::frontend::{self, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

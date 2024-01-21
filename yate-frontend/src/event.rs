@@ -1,6 +1,6 @@
 use crossterm::event::Event;
 use futures::{FutureExt, StreamExt};
-use teywi_keymap::{action::Action, conversion, key::Key, ActionResolver};
+use yate_keymap::{action::Action, conversion, key::Key, ActionResolver};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 #[derive(Clone, Debug, PartialEq)]
