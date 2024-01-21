@@ -5,50 +5,52 @@ use crate::model::buffer::{Buffer, CursorPosition};
 use super::viewport;
 
 pub fn update(model: &mut Buffer, direction: &CursorDirection) {
-    match direction {
-        CursorDirection::Bottom => {
-            model.cursor.vertical_index = model.lines.len() - 1;
-        }
-        CursorDirection::Down => {
-            if model.lines.len() - 1 > model.cursor.vertical_index {
-                model.cursor.vertical_index += 1;
+    if let Some(cursor) = &mut model.cursor {
+        match direction {
+            CursorDirection::Bottom => {
+                cursor.vertical_index = model.lines.len() - 1;
             }
-        }
-        CursorDirection::Left => {
-            let cursor_index = match model.cursor.horizontial_index {
-                CursorPosition::Absolute(n) => n,
-                CursorPosition::End => model.lines[model.cursor.vertical_index].chars().count() - 1,
-            };
+            CursorDirection::Down => {
+                if model.lines.len() - 1 > cursor.vertical_index {
+                    cursor.vertical_index += 1;
+                }
+            }
+            CursorDirection::Left => {
+                let cursor_index = match cursor.horizontial_index {
+                    CursorPosition::Absolute(n) => n,
+                    CursorPosition::End => model.lines[cursor.vertical_index].chars().count() - 1,
+                };
 
-            if cursor_index > 0 {
-                model.cursor.horizontial_index = CursorPosition::Absolute(cursor_index - 1);
+                if cursor_index > 0 {
+                    cursor.horizontial_index = CursorPosition::Absolute(cursor_index - 1);
+                }
             }
-        }
-        CursorDirection::LineEnd => {
-            model.cursor.horizontial_index = CursorPosition::End;
-        }
-        CursorDirection::LineStart => {
-            model.cursor.horizontial_index = CursorPosition::Absolute(0);
-        }
-        CursorDirection::Right => {
-            let cursor_index = match model.cursor.horizontial_index {
-                CursorPosition::Absolute(n) => n,
-                CursorPosition::End => return,
-            };
+            CursorDirection::LineEnd => {
+                cursor.horizontial_index = CursorPosition::End;
+            }
+            CursorDirection::LineStart => {
+                cursor.horizontial_index = CursorPosition::Absolute(0);
+            }
+            CursorDirection::Right => {
+                let cursor_index = match cursor.horizontial_index {
+                    CursorPosition::Absolute(n) => n,
+                    CursorPosition::End => return,
+                };
 
-            if model.lines[model.cursor.vertical_index].chars().count() - 1 > cursor_index {
-                model.cursor.horizontial_index = CursorPosition::Absolute(cursor_index + 1);
+                if model.lines[cursor.vertical_index].chars().count() - 1 > cursor_index {
+                    cursor.horizontial_index = CursorPosition::Absolute(cursor_index + 1);
+                }
+            }
+            CursorDirection::Top => {
+                cursor.vertical_index = 0;
+            }
+            CursorDirection::Up => {
+                if cursor.vertical_index > 0 {
+                    cursor.vertical_index -= 1;
+                }
             }
         }
-        CursorDirection::Top => {
-            model.cursor.vertical_index = 0;
-        }
-        CursorDirection::Up => {
-            if model.cursor.vertical_index > 0 {
-                model.cursor.vertical_index -= 1;
-            }
-        }
+
+        viewport::update_by_cursor(model);
     }
-
-    viewport::update_by_cursor(model);
 }

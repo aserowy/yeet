@@ -1,6 +1,6 @@
 use yate_keymap::action::Action;
 
-use crate::model::buffer::Buffer;
+use crate::model::buffer::{Buffer, Cursor};
 
 mod direction;
 mod viewport;
@@ -12,10 +12,14 @@ pub fn update(model: &mut Buffer, message: &Action) {
         Action::MoveCursor(direction) => direction::update(model, direction),
         Action::Refresh => {}
         Action::SelectCurrent => {
-            model.cursor = Default::default();
+            if model.cursor.is_some() {
+                model.cursor = Some(Cursor::default());
+            }
         }
         Action::SelectParent => {
-            model.cursor = Default::default();
+            if model.cursor.is_some() {
+                model.cursor = Some(Cursor::default());
+            }
         }
         Action::Quit => {}
     }

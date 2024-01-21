@@ -28,8 +28,12 @@ fn get_cursor_line_positions(
     length: &usize,
     model: &Buffer,
 ) -> Vec<(usize, PositionType)> {
-    if &model.cursor.vertical_index == index {
-        let cursor_index = match &model.cursor.horizontial_index {
+    if let Some(cursor) = &model.cursor {
+        if &cursor.vertical_index != index {
+            return vec![];
+        }
+
+        let cursor_index = match &cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
                 if i >= length {
                     length - 1
@@ -40,15 +44,15 @@ fn get_cursor_line_positions(
             CursorPosition::End => length - 1,
         };
 
-        vec![
+        return vec![
             (0, PositionType::CursorLine),
             (model.view_port.width, PositionType::CursorLine),
             (cursor_index, PositionType::Cursor),
             (cursor_index + 1, PositionType::Cursor),
-        ]
-    } else {
-        vec![]
+        ];
     }
+
+    vec![]
 }
 
 fn get_sorted_positions(positions: Vec<(usize, PositionType)>) -> Vec<(usize, Vec<PositionType>)> {

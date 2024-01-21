@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use ratatui::widgets::ListState;
 use yate_keymap::action::Mode;
 
-use self::buffer::Buffer;
+use self::buffer::{Buffer, Cursor};
 
 pub mod buffer;
 
@@ -22,7 +22,11 @@ impl Default for Model {
 
         Self {
             current_path,
-            current_directory: Buffer::default(),
+            current_directory: Buffer {
+                cursor: Some(Cursor::default()),
+                lines: Default::default(),
+                view_port: Default::default(),
+            },
             key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: DirectoryListModel::default(),

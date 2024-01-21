@@ -1,6 +1,6 @@
 #[derive(Debug, Default)]
 pub struct Buffer {
-    pub cursor: Cursor,
+    pub cursor: Option<Cursor>,
     pub lines: Vec<String>,
     pub view_port: ViewPort,
 }
@@ -15,6 +15,7 @@ pub struct Cursor {
 pub enum CursorPosition {
     Absolute(usize),
     End,
+    // TODO: none
 }
 
 impl Default for CursorPosition {
