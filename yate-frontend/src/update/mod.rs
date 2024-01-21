@@ -41,11 +41,11 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
         Action::SelectParent => {
             if let Some(parent) = &model.current_path.parent() {
                 model.current_path = parent.to_path_buf();
-            }
 
-            update_current_directory(model, layout, message);
-            update_parent_directory(model);
-            update_preview(model, layout, message);
+                update_current_directory(model, layout, message);
+                update_parent_directory(model);
+                update_preview(model, layout, message);
+            }
         }
         Action::Quit => {}
     }
@@ -56,24 +56,7 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
 
     model.current_directory.view_port.height = usize::from(layout.current_directory.height);
     model.current_directory.view_port.width = usize::from(layout.current_directory.width);
-
-    let mut content: Vec<_> = std::fs::read_dir(path)
-        .unwrap()
-        .map(|entry| {
-            entry
-                .unwrap()
-                .path()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
-        })
-        .collect();
-
-    content.sort_unstable();
-
-    model.current_directory.lines = content;
+    model.current_directory.lines = get_directory_content(&path);
 
     buffer::update(&mut model.current_directory, message);
 }
@@ -102,23 +85,7 @@ fn update_preview(model: &mut Model, layout: &AppLayout, message: &Action) {
         model.preview.view_port.width = usize::from(layout.current_directory.width);
 
         let content = if target.is_dir() {
-            let mut content: Vec<_> = std::fs::read_dir(target)
-                .unwrap()
-                .map(|entry| {
-                    entry
-                        .unwrap()
-                        .path()
-                        .file_name()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .to_string()
-                })
-                .collect();
-
-            content.sort_unstable();
-
-            content
+            get_directory_content(&target)
         } else {
             Vec::new()
         };
@@ -143,4 +110,24 @@ fn get_target_path(model: &Model) -> Option<PathBuf> {
     } else {
         None
     }
+}
+
+fn get_directory_content(path: &Path) -> Vec<String> {
+    let mut content: Vec<_> = std::fs::read_dir(path)
+        .unwrap()
+        .map(|entry| {
+            entry
+                .unwrap()
+                .path()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+
+    content.sort_unstable();
+
+    content
 }
