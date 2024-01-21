@@ -52,7 +52,7 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
     model.current_directory.view_port.height = usize::from(layout.current_directory.height);
     model.current_directory.view_port.width = usize::from(layout.current_directory.width);
 
-    model.current_directory.lines = std::fs::read_dir(path)
+    let mut content: Vec<_> = std::fs::read_dir(path)
         .unwrap()
         .map(|entry| {
             entry
@@ -66,6 +66,10 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
         })
         .collect();
 
+    content.sort_unstable();
+
+    model.current_directory.lines = content;
+
     buffer::update(&mut model.current_directory, message);
 }
 
@@ -74,10 +78,14 @@ fn update_parent_directory(model: &mut Model) {
 
     match path.parent() {
         Some(parent) => {
-            model.parent_directory.paths = std::fs::read_dir(parent)
+            let mut content: Vec<_> = std::fs::read_dir(parent)
                 .unwrap()
                 .map(|entry| entry.unwrap().path())
                 .collect();
+
+            content.sort_unstable();
+
+            model.parent_directory.paths = content;
         }
         None => model.parent_directory.paths = vec![],
     }
