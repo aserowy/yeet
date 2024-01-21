@@ -22,6 +22,14 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
             update_current_directory(model, layout, message);
             update_parent_directory(model);
         }
+        Action::SelectParent => {
+            if let Some(parent) = &model.current_path.parent() {
+                model.current_path = parent.to_path_buf();
+            }
+
+            update_current_directory(model, layout, message);
+            update_parent_directory(model);
+        }
         Action::Quit => {}
     }
 }
@@ -51,10 +59,14 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
 
 fn update_parent_directory(model: &mut Model) {
     let path = Path::new(&model.current_path);
-    let parent = path.parent().unwrap().as_os_str();
 
-    model.parent_directory.paths = std::fs::read_dir(parent)
-        .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .collect();
+    match path.parent() {
+        Some(parent) => {
+            model.parent_directory.paths = std::fs::read_dir(parent)
+                .unwrap()
+                .map(|entry| entry.unwrap().path())
+                .collect();
+        }
+        None => model.parent_directory.paths = vec![],
+    }
 }

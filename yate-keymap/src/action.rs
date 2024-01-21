@@ -3,6 +3,7 @@ pub enum Action {
     ChangeKeySequence(String),
     ChangeMode(Mode),
     MoveCursor(CursorDirection),
+    SelectParent,
     Refresh,
     Quit,
 }
