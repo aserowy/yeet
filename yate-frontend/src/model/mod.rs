@@ -1,6 +1,5 @@
 use std::{env, path::PathBuf};
 
-use ratatui::widgets::ListState;
 use yate_keymap::action::Mode;
 
 use self::buffer::{Buffer, Cursor};
@@ -13,7 +12,7 @@ pub struct Model {
     pub current_path: PathBuf,
     pub key_sequence: String,
     pub mode: Mode,
-    pub parent_directory: DirectoryListModel,
+    pub parent_directory: Buffer,
     pub preview: Buffer,
 }
 
@@ -30,16 +29,10 @@ impl Default for Model {
             },
             key_sequence: String::new(),
             mode: Mode::default(),
-            parent_directory: DirectoryListModel::default(),
+            parent_directory: Buffer::default(),
             preview: Buffer::default(),
         }
     }
-}
-
-#[derive(Debug, Default)]
-pub struct DirectoryListModel {
-    pub paths: Vec<PathBuf>,
-    pub state: ListState,
 }
 
 fn get_current_path() -> PathBuf {

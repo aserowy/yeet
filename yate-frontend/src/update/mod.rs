@@ -22,7 +22,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
         }
         Action::Refresh => {
             update_current_directory(model, layout, message);
-            update_parent_directory(model);
+            update_parent_directory(model, layout, message);
             update_preview(model, layout, message);
         }
         Action::SelectCurrent => {
@@ -34,7 +34,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
                 model.current_path = target;
 
                 update_current_directory(model, layout, message);
-                update_parent_directory(model);
+                update_parent_directory(model, layout, message);
                 update_preview(model, layout, message);
             }
         }
@@ -43,7 +43,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
                 model.current_path = parent.to_path_buf();
 
                 update_current_directory(model, layout, message);
-                update_parent_directory(model);
+                update_parent_directory(model, layout, message);
                 update_preview(model, layout, message);
             }
         }
@@ -61,21 +61,17 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
     buffer::update(&mut model.current_directory, message);
 }
 
-fn update_parent_directory(model: &mut Model) {
+fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
     let path = Path::new(&model.current_path);
-
     match path.parent() {
         Some(parent) => {
-            let mut content: Vec<_> = std::fs::read_dir(parent)
-                .unwrap()
-                .map(|entry| entry.unwrap().path())
-                .collect();
+            model.parent_directory.view_port.height = usize::from(layout.parent_directory.height);
+            model.parent_directory.view_port.width = usize::from(layout.parent_directory.width);
+            model.parent_directory.lines = get_directory_content(&parent);
 
-            content.sort_unstable();
-
-            model.parent_directory.paths = content;
+            buffer::update(&mut model.parent_directory, message);
         }
-        None => model.parent_directory.paths = vec![],
+        None => model.parent_directory.lines = vec![],
     }
 }
 
