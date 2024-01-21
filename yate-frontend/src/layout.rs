@@ -5,7 +5,7 @@ pub struct AppLayout {
     pub parent_directory: Rect,
     pub current_directory: Rect,
     pub preview: Rect,
-    // pub statusline: Rect,
+    pub statusline: Rect,
     pub commandline: Rect,
 }
 
@@ -13,8 +13,7 @@ impl AppLayout {
     pub fn default(rect: Rect) -> Self {
         let main = Layout::default()
             .direction(Direction::Vertical)
-            // .constraints([Constraint::Min(1), Constraint::Max(1), Constraint::Max(1)])
-            .constraints([Constraint::Min(1), Constraint::Max(1)])
+            .constraints([Constraint::Min(1), Constraint::Max(1), Constraint::Max(1)])
             .split(rect);
 
         let files = Layout::default()
@@ -26,9 +25,8 @@ impl AppLayout {
             parent_directory: files[0],
             current_directory: files[1],
             preview: files[2],
-            commandline: main[1],
-            // statusline: main[1],
-            // commandline: main[2],
+            statusline: main[1],
+            commandline: main[2],
         }
     }
 }

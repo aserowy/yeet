@@ -14,7 +14,7 @@ use crate::{
     layout::AppLayout,
     model::Model,
     update::{self},
-    view::{commandline, current_directory, parent_directory},
+    view::{commandline, current_directory, parent_directory, statusline},
 };
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -51,5 +51,6 @@ fn render(model: &mut Model, frame: &mut Frame, message: &Action) {
 
     current_directory::view(model, frame, layout.current_directory);
     parent_directory::view(model, frame, layout.parent_directory);
+    statusline::view(model, frame, layout.statusline);
     commandline::view(model, frame, layout.commandline);
 }
