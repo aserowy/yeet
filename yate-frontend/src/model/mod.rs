@@ -14,6 +14,7 @@ pub struct Model {
     pub key_sequence: String,
     pub mode: Mode,
     pub parent_directory: DirectoryListModel,
+    pub preview: Buffer,
 }
 
 impl Default for Model {
@@ -30,6 +31,7 @@ impl Default for Model {
             key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: DirectoryListModel::default(),
+            preview: Buffer::default(),
         }
     }
 }

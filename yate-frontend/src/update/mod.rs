@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use yate_keymap::action::Action;
 
@@ -16,24 +16,26 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
         }
         Action::MoveCursor(_) => {
             model.key_sequence = String::new();
+
             update_current_directory(model, layout, message);
+            update_preview(model, layout, message);
         }
         Action::Refresh => {
             update_current_directory(model, layout, message);
             update_parent_directory(model);
+            update_preview(model, layout, message);
         }
         Action::SelectCurrent => {
-            let buffer = &model.current_directory;
-            if let Some(cursor) = &buffer.cursor {
-                let current = &buffer.lines[cursor.vertical_index];
-                let target = model.current_path.join(current);
-
-                if target.is_dir() {
-                    model.current_path = target;
-
-                    update_current_directory(model, layout, message);
-                    update_parent_directory(model);
+            if let Some(target) = get_target_path(model) {
+                if !target.is_dir() {
+                    return;
                 }
+
+                model.current_path = target;
+
+                update_current_directory(model, layout, message);
+                update_parent_directory(model);
+                update_preview(model, layout, message);
             }
         }
         Action::SelectParent => {
@@ -43,6 +45,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
 
             update_current_directory(model, layout, message);
             update_parent_directory(model);
+            update_preview(model, layout, message);
         }
         Action::Quit => {}
     }
@@ -90,5 +93,54 @@ fn update_parent_directory(model: &mut Model) {
             model.parent_directory.paths = content;
         }
         None => model.parent_directory.paths = vec![],
+    }
+}
+
+fn update_preview(model: &mut Model, layout: &AppLayout, message: &Action) {
+    if let Some(target) = get_target_path(model) {
+        model.preview.view_port.height = usize::from(layout.current_directory.height);
+        model.preview.view_port.width = usize::from(layout.current_directory.width);
+
+        let content = if target.is_dir() {
+            let mut content: Vec<_> = std::fs::read_dir(target)
+                .unwrap()
+                .map(|entry| {
+                    entry
+                        .unwrap()
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string()
+                })
+                .collect();
+
+            content.sort_unstable();
+
+            content
+        } else {
+            Vec::new()
+        };
+
+        model.preview.lines = content;
+
+        buffer::update(&mut model.preview, message);
+    }
+}
+
+fn get_target_path(model: &Model) -> Option<PathBuf> {
+    let buffer = &model.current_directory;
+    if let Some(cursor) = &buffer.cursor {
+        let current = &buffer.lines[cursor.vertical_index];
+        let target = model.current_path.join(current);
+
+        if target.exists() {
+            Some(target)
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
