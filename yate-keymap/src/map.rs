@@ -70,6 +70,10 @@ impl Default for KeyMap {
                     Action::MoveCursor(CursorDirection::Up),
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Ctrl])],
+                    Action::SelectCurrent,
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Action::MoveCursor(CursorDirection::Right),
                 ),

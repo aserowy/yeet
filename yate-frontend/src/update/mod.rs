@@ -22,6 +22,18 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
             update_current_directory(model, layout, message);
             update_parent_directory(model);
         }
+        Action::SelectCurrent => {
+            let buffer = &model.current_directory;
+            let current = &buffer.lines[buffer.cursor.vertical_index];
+            let target = model.current_path.join(current);
+
+            if target.is_dir() {
+                model.current_path = target;
+            }
+
+            update_current_directory(model, layout, message);
+            update_parent_directory(model);
+        }
         Action::SelectParent => {
             if let Some(parent) = &model.current_path.parent() {
                 model.current_path = parent.to_path_buf();
