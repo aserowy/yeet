@@ -72,7 +72,7 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Acti
                 &mut model.parent_directory,
                 &layout.parent_directory,
                 message,
-                &parent,
+                parent,
             );
         }
         None => model.parent_directory.lines = vec![],
@@ -90,7 +90,7 @@ fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Action,
     buffer.view_port.width = usize::from(layout.width);
 
     let content = if path.is_dir() {
-        get_directory_content(&path)
+        get_directory_content(path)
     } else {
         Vec::new()
     };
