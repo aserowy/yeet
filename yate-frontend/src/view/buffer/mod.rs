@@ -17,13 +17,13 @@ pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     let mut lines = Vec::new();
     for (i, line) in viewport_lines.iter().enumerate() {
         let i_corrected = i + model.view_port.vertical_index;
-        lines.push(update_line(i_corrected, line, mode, model));
+        lines.push(get_styled_line(i_corrected, line, mode, model));
     }
 
     frame.render_widget(Paragraph::new(lines), rect);
 }
 
-fn update_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buffer) -> Line<'a> {
+fn get_styled_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buffer) -> Line<'a> {
     let line_length = line.chars().count();
     let style_expansion = style::get_span_styles(index, line_length, mode, model);
     let mut spans = Vec::new();

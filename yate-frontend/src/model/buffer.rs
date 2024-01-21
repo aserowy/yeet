@@ -15,6 +15,7 @@ pub struct Cursor {
 pub enum CursorPosition {
     Absolute(usize),
     End,
+    None,
     // TODO: none
 }
 

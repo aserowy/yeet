@@ -29,7 +29,11 @@ impl Default for Model {
             },
             key_sequence: String::new(),
             mode: Mode::default(),
-            parent_directory: Buffer::default(),
+            parent_directory: Buffer {
+                cursor: Some(Cursor::default()),
+                lines: Default::default(),
+                view_port: Default::default(),
+            },
             preview: Buffer::default(),
         }
     }

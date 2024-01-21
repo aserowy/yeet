@@ -19,6 +19,7 @@ pub fn update(model: &mut Buffer, direction: &CursorDirection) {
                 let cursor_index = match cursor.horizontial_index {
                     CursorPosition::Absolute(n) => n,
                     CursorPosition::End => model.lines[cursor.vertical_index].chars().count() - 1,
+                    CursorPosition::None => return,
                 };
 
                 if cursor_index > 0 {
@@ -35,6 +36,7 @@ pub fn update(model: &mut Buffer, direction: &CursorDirection) {
                 let cursor_index = match cursor.horizontial_index {
                     CursorPosition::Absolute(n) => n,
                     CursorPosition::End => return,
+                    CursorPosition::None => return,
                 };
 
                 if model.lines[cursor.vertical_index].chars().count() - 1 > cursor_index {

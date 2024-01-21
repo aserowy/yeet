@@ -13,6 +13,7 @@ pub fn update_by_cursor(model: &mut Buffer) {
         let cursor_index = match cursor.horizontial_index {
             CursorPosition::Absolute(n) => n,
             CursorPosition::End => model.lines[cursor.vertical_index].chars().count() - 1,
+            CursorPosition::None => return,
         };
 
         if viewport.horizontal_index > cursor_index {

@@ -5,7 +5,10 @@ use yate_keymap::action::Action;
 
 use crate::{
     layout::AppLayout,
-    model::{buffer::Buffer, Model},
+    model::{
+        buffer::{Buffer, Cursor, CursorPosition},
+        Model,
+    },
 };
 
 mod buffer;
@@ -74,6 +77,18 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Acti
                 message,
                 parent,
             );
+
+            if let Some(index) = model
+                .parent_directory
+                .lines
+                .iter()
+                .position(|line| line == path.file_name().unwrap().to_str().unwrap())
+            {
+                model.parent_directory.cursor = Some(Cursor {
+                    horizontial_index: CursorPosition::None,
+                    vertical_index: index,
+                });
+            }
         }
         None => model.parent_directory.lines = vec![],
     }

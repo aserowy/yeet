@@ -33,6 +33,11 @@ fn get_cursor_line_positions(
             return vec![];
         }
 
+        let mut cursor_positions = vec![
+            (0, PositionType::CursorLine),
+            (model.view_port.width, PositionType::CursorLine),
+        ];
+
         let cursor_index = match &cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
                 if i >= length {
@@ -42,14 +47,15 @@ fn get_cursor_line_positions(
                 }
             }
             CursorPosition::End => length - 1,
+            CursorPosition::None => return cursor_positions,
         };
 
-        return vec![
-            (0, PositionType::CursorLine),
-            (model.view_port.width, PositionType::CursorLine),
+        cursor_positions.extend(vec![
             (cursor_index, PositionType::Cursor),
             (cursor_index + 1, PositionType::Cursor),
-        ];
+        ]);
+
+        return cursor_positions;
     }
 
     vec![]
