@@ -62,12 +62,12 @@ fn get_cursor_line_positions(
 }
 
 fn get_sorted_positions(positions: Vec<(usize, PositionType)>) -> Vec<(usize, Vec<PositionType>)> {
-    let mut result = Vec::new();
+    let mut result: Vec<(usize, Vec<PositionType>)> = Vec::new();
     for (index, position_type) in positions {
-        if !result.iter().any(|(i, _)| i == &index) {
-            result.push((index, vec![position_type]));
-        } else if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
+        if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
             position_types.push(position_type);
+        } else {
+            result.push((index, vec![position_type]));
         }
     }
 
