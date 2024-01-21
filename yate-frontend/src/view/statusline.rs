@@ -9,11 +9,7 @@ use ratatui::{
 use crate::model::Model;
 
 pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
-    let content = match model.current_path.to_str() {
-        Some(str) => str,
-        None => "",
-    };
-
+    let content = model.current_path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Green);
     let span = Span::styled(content, style);
 

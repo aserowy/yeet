@@ -56,7 +56,7 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
 
     model.current_directory.view_port.height = usize::from(layout.current_directory.height);
     model.current_directory.view_port.width = usize::from(layout.current_directory.width);
-    model.current_directory.lines = get_directory_content(&path);
+    model.current_directory.lines = get_directory_content(path);
 
     buffer::update(&mut model.current_directory, message);
 }
@@ -67,7 +67,7 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Acti
         Some(parent) => {
             model.parent_directory.view_port.height = usize::from(layout.parent_directory.height);
             model.parent_directory.view_port.width = usize::from(layout.parent_directory.width);
-            model.parent_directory.lines = get_directory_content(&parent);
+            model.parent_directory.lines = get_directory_content(parent);
 
             buffer::update(&mut model.parent_directory, message);
         }
