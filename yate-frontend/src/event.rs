@@ -1,7 +1,7 @@
 use crossterm::event::Event;
 use futures::{FutureExt, StreamExt};
-use yate_keymap::{action::Action, conversion, key::Key, ActionResolver};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use yate_keymap::{message::Message, conversion, key::Key, MessageResolver};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AppEvent {
@@ -46,18 +46,18 @@ pub fn listen_crossterm() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEv
     (sender, receiver)
 }
 
-pub fn process_appevent(event: AppEvent, action_resolver: &mut ActionResolver) -> Action {
+pub fn process_appevent(event: AppEvent, message_resolver: &mut MessageResolver) -> Vec<Message> {
     match event {
         AppEvent::Error => todo!(),
         AppEvent::Key(key) => {
-            if let Some(action) = action_resolver.add_and_resolve(key) {
-                action
+            if let Some(message) = message_resolver.add_and_resolve(key) {
+                message
             } else {
-                Action::ChangeKeySequence(action_resolver.get_key_string())
+                vec![Message::ChangeKeySequence(message_resolver.get_key_string())]
             }
         }
-        AppEvent::Resize(_, _) => Action::Refresh,
-        AppEvent::Startup => Action::Refresh,
+        AppEvent::Resize(_, _) => vec![Message::Refresh],
+        AppEvent::Startup => vec![Message::Refresh],
     }
 }
 

@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 use std::io::{stderr, BufWriter};
-use yate_keymap::{action::Action, ActionResolver};
+use yate_keymap::{message::Message, MessageResolver};
 
 use crate::{
     event::{self},
@@ -27,14 +27,14 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    let mut action_resolver = ActionResolver::default();
+    let mut message_resolver = MessageResolver::default();
     let (_, mut receiver) = event::listen_crossterm();
 
     while let Some(event) = receiver.recv().await {
-        let action = event::process_appevent(event, &mut action_resolver);
-        terminal.draw(|frame| render(&mut model, frame, &action))?;
+        let messages = event::process_appevent(event, &mut message_resolver);
+        terminal.draw(|frame| render(&mut model, frame, &messages))?;
 
-        if action == Action::Quit {
+        if messages.contains(&Message::Quit) {
             break;
         }
     }
@@ -45,8 +45,11 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(model: &mut Model, frame: &mut Frame, message: &Action) {
+fn render(model: &mut Model, frame: &mut Frame, messages: &Vec<Message>) {
     let layout = AppLayout::default(frame.size());
-    update::update(model, &layout, message);
+    for message in messages {
+        update::update(model, &layout, message);
+    }
+
     view::view(model, frame, &layout);
 }

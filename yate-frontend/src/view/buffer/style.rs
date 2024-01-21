@@ -1,5 +1,5 @@
 use ratatui::style::{Color, Modifier, Style};
-use yate_keymap::action::Mode;
+use yate_keymap::message::Mode;
 
 use crate::model::buffer::{Buffer, CursorPosition};
 
@@ -55,10 +55,10 @@ fn get_cursor_line_positions(
             (cursor_index + 1, PositionType::Cursor),
         ]);
 
-        return cursor_positions;
+        cursor_positions
+    } else {
+        vec![]
     }
-
-    vec![]
 }
 
 fn get_sorted_positions(positions: Vec<(usize, PositionType)>) -> Vec<(usize, Vec<PositionType>)> {
@@ -96,10 +96,10 @@ fn convert_sorted_positions_to_span_styles(
         };
 
         for pt in types {
-            if !active_position_types.contains(&pt) {
-                active_position_types.push(pt);
-            } else {
+            if active_position_types.contains(&pt) {
                 active_position_types.retain(|t| t != &pt);
+            } else {
+                active_position_types.push(pt);
             }
         }
     }

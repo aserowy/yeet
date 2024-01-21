@@ -1,8 +1,8 @@
 use std::{env, path::PathBuf};
 
-use yate_keymap::action::Mode;
+use yate_keymap::message::Mode;
 
-use self::buffer::{Buffer, Cursor};
+use self::buffer::{Buffer, Cursor, CursorPosition};
 
 pub mod buffer;
 
@@ -30,7 +30,10 @@ impl Default for Model {
             key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: Buffer {
-                cursor: Some(Cursor::default()),
+                cursor: Some(Cursor {
+                    horizontial_index: CursorPosition::None,
+                    vertical_index: 0,
+                }),
                 lines: Default::default(),
                 view_port: Default::default(),
             },

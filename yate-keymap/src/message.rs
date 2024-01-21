@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, PartialEq)]
-pub enum Action {
+pub enum Message {
     ChangeKeySequence(String),
     ChangeMode(Mode),
     MoveCursor(CursorDirection),

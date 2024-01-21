@@ -1,7 +1,7 @@
 use std::{collections::HashMap, slice::Iter};
 
 use crate::{
-    action::{Action, Mode},
+    message::{Message, Mode},
     key::Key,
 };
 
@@ -13,11 +13,11 @@ pub struct KeyTree {
 #[derive(Clone, Debug)]
 pub enum Node {
     Key(HashMap<Key, Node>),
-    Action(Action),
+    Message(Message),
 }
 
 impl KeyTree {
-    pub fn add_mapping(&mut self, mode: &Mode, keys: Vec<Key>, action: Action) {
+    pub fn add_mapping(&mut self, mode: &Mode, keys: Vec<Key>, message: Message) {
         if !self.modes.contains_key(mode) {
             self.modes.insert(mode.clone(), HashMap::new());
         }
@@ -28,7 +28,7 @@ impl KeyTree {
                 self.modes.get_mut(mode).unwrap(),
                 key,
                 &mut key_iter,
-                action,
+                message,
             );
         }
     }
@@ -55,7 +55,7 @@ fn add_mapping_node(
     nodes: &mut HashMap<Key, Node>,
     key: &Key,
     key_iter: &mut Iter<'_, Key>,
-    action: Action,
+    message: Message,
 ) {
     if !nodes.contains_key(key) {
         nodes.insert(key.clone(), Node::Key(HashMap::new()));
@@ -63,9 +63,9 @@ fn add_mapping_node(
 
     if let Some(Node::Key(hm)) = nodes.get_mut(key) {
         if let Some(next_key) = key_iter.next() {
-            add_mapping_node(hm, next_key, key_iter, action)
+            add_mapping_node(hm, next_key, key_iter, message)
         } else {
-            nodes.insert(key.clone(), Node::Action(action));
+            nodes.insert(key.clone(), Node::Message(message));
         }
     }
 }

@@ -1,24 +1,24 @@
-use action::{Action, Mode};
 use buffer::KeyBuffer;
 use key::Key;
 use map::KeyMap;
+use message::{Message, Mode};
 use tree::{KeyTree, Node};
 
-pub mod action;
 mod buffer;
 pub mod conversion;
 pub mod key;
 mod map;
+pub mod message;
 mod tree;
 
 #[derive(Debug)]
-pub struct ActionResolver {
+pub struct MessageResolver {
     buffer: KeyBuffer,
     tree: KeyTree,
     pub mode: Mode,
 }
 
-impl Default for ActionResolver {
+impl Default for MessageResolver {
     fn default() -> Self {
         Self {
             buffer: KeyBuffer::default(),
@@ -28,8 +28,8 @@ impl Default for ActionResolver {
     }
 }
 
-impl ActionResolver {
-    pub fn add_and_resolve(&mut self, key: Key) -> Option<Action> {
+impl MessageResolver {
+    pub fn add_and_resolve(&mut self, key: Key) -> Option<Vec<Message>> {
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
@@ -38,14 +38,14 @@ impl ActionResolver {
         match node {
             Some(nd) => match nd {
                 Node::Key(_) => None,
-                Node::Action(action) => {
+                Node::Message(message) => {
                     self.buffer.clear();
 
-                    if let Action::ChangeMode(mode) = &action {
+                    if let Message::ChangeMode(mode) = &message {
                         self.mode = mode.clone();
                     }
 
-                    Some(action)
+                    Some(vec![message])
                 }
             },
             None => {

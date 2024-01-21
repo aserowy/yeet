@@ -66,7 +66,6 @@ impl ToString for Key {
 
 fn get_key_string(code: String, modifiers: Vec<KeyModifier>) -> String {
     let mut result = String::from("<");
-
     for modifier in modifiers {
         match modifier {
             KeyModifier::Alt => result.push_str("A-"),

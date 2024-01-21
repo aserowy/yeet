@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 
 use crate::{
-    action::CursorDirection,
+    message::CursorDirection,
     key::{Key, KeyCode, KeyModifier},
     tree::KeyTree,
-    Action, Mode,
+    Message, Mode,
 };
 
 #[derive(Debug)]
 pub struct KeyMap {
-    mappings: HashMap<Mode, Vec<(Vec<Key>, Action)>>,
+    mappings: HashMap<Mode, Vec<(Vec<Key>, Message)>>,
 }
 
 impl KeyMap {
     pub fn into_tree(self) -> KeyTree {
         let mut tree = KeyTree::new();
         for (mode, mappings) in self.mappings {
-            for (keys, action) in mappings {
-                tree.add_mapping(&mode, keys, action);
+            for (keys, message) in mappings {
+                tree.add_mapping(&mode, keys, message);
             }
         }
         tree
@@ -32,55 +32,55 @@ impl Default for KeyMap {
             vec![
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
-                    Action::ChangeMode(Mode::Normal),
+                    Message::ChangeMode(Mode::Normal),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
-                    Action::MoveCursor(CursorDirection::LineStart),
+                    Message::MoveCursor(CursorDirection::LineStart),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
-                    Action::MoveCursor(CursorDirection::LineEnd),
+                    Message::MoveCursor(CursorDirection::LineEnd),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
-                    Action::MoveCursor(CursorDirection::Bottom),
+                    Message::MoveCursor(CursorDirection::Bottom),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('g'), vec![]),
                     ],
-                    Action::MoveCursor(CursorDirection::Top),
+                    Message::MoveCursor(CursorDirection::Top),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![KeyModifier::Ctrl])],
-                    Action::SelectParent,
+                    Message::SelectParent,
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
-                    Action::MoveCursor(CursorDirection::Left),
+                    Message::MoveCursor(CursorDirection::Left),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('j'), vec![])],
-                    Action::MoveCursor(CursorDirection::Down),
+                    Message::MoveCursor(CursorDirection::Down),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('k'), vec![])],
-                    Action::MoveCursor(CursorDirection::Up),
+                    Message::MoveCursor(CursorDirection::Up),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Ctrl])],
-                    Action::SelectCurrent,
+                    Message::SelectCurrent,
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
-                    Action::MoveCursor(CursorDirection::Right),
+                    Message::MoveCursor(CursorDirection::Right),
                 ),
                 (
                     // TODO: remove q and implement :q
                     vec![Key::new(KeyCode::from_char('q'), vec![])],
-                    Action::Quit,
+                    Message::Quit,
                 ),
             ],
         );

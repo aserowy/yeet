@@ -1,4 +1,4 @@
-use yate_keymap::action::CursorDirection;
+use yate_keymap::message::CursorDirection;
 
 use crate::model::buffer::{Buffer, CursorPosition};
 

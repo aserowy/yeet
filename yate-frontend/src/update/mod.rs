@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::prelude::Rect;
-use yate_keymap::action::Action;
+use yate_keymap::message::Message;
 
 use crate::{
     layout::AppLayout,
@@ -13,26 +13,26 @@ use crate::{
 
 mod buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     match message {
-        Action::ChangeKeySequence(sequence) => {
+        Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
         }
-        Action::ChangeMode(mode) => {
+        Message::ChangeMode(mode) => {
             model.mode = mode.clone();
         }
-        Action::MoveCursor(_) => {
+        Message::MoveCursor(_) => {
             model.key_sequence = String::new();
 
             update_current_directory(model, layout, message);
             update_preview(model, layout, message);
         }
-        Action::Refresh => {
+        Message::Refresh => {
             update_current_directory(model, layout, message);
             update_parent_directory(model, layout, message);
             update_preview(model, layout, message);
         }
-        Action::SelectCurrent => {
+        Message::SelectCurrent => {
             if let Some(target) = get_target_path(model) {
                 if !target.is_dir() {
                     return;
@@ -45,7 +45,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
                 update_preview(model, layout, message);
             }
         }
-        Action::SelectParent => {
+        Message::SelectParent => {
             if let Some(parent) = &model.current_path.parent() {
                 model.current_path = parent.to_path_buf();
 
@@ -54,11 +54,11 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
                 update_preview(model, layout, message);
             }
         }
-        Action::Quit => {}
+        Message::Quit => {}
     }
 }
 
-fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
+fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Message) {
     update_buffer_with_path(
         &mut model.current_directory,
         &layout.current_directory,
@@ -67,7 +67,7 @@ fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Act
     );
 }
 
-fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
+fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Message) {
     let path = Path::new(&model.current_path);
     match path.parent() {
         Some(parent) => {
@@ -84,23 +84,27 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Acti
                 .iter()
                 .position(|line| line == path.file_name().unwrap().to_str().unwrap())
             {
-                model.parent_directory.cursor = Some(Cursor {
-                    horizontial_index: CursorPosition::None,
-                    vertical_index: index,
-                });
+                if let Some(cursor) = &mut model.parent_directory.cursor {
+                    cursor.vertical_index = index;
+                } else {
+                    model.parent_directory.cursor = Some(Cursor {
+                        horizontial_index: CursorPosition::None,
+                        vertical_index: index,
+                    });
+                }
             }
         }
         None => model.parent_directory.lines = vec![],
     }
 }
 
-fn update_preview(model: &mut Model, layout: &AppLayout, message: &Action) {
+fn update_preview(model: &mut Model, layout: &AppLayout, message: &Message) {
     if let Some(target) = get_target_path(model) {
         update_buffer_with_path(&mut model.preview, &layout.preview, message, &target);
     }
 }
 
-fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Action, path: &Path) {
+fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Message, path: &Path) {
     buffer.view_port.height = usize::from(layout.height);
     buffer.view_port.width = usize::from(layout.width);
 
