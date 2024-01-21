@@ -1,8 +1,8 @@
 use buffer::KeyBuffer;
-use key::Key;
+use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Message, Mode};
-use tree::{KeyTree, Node};
+use message::{Binding, Message, Mode};
+use tree::KeyTree;
 
 mod buffer;
 pub mod conversion;
@@ -29,33 +29,71 @@ impl Default for MessageResolver {
 }
 
 impl MessageResolver {
-    pub fn add_and_resolve(&mut self, key: Key) -> Option<Vec<Message>> {
+    pub fn add_and_resolve(&mut self, key: Key) -> Vec<Message> {
+        let keys = self.buffer.get_keys();
+        if &key.code == &KeyCode::Esc && !keys.is_empty() {
+            self.buffer.clear();
+            return vec![Message::ChangeKeySequence(self.buffer.to_string())];
+        }
+
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
-        let node = self.tree.get_node(&self.mode, &keys);
+        let (bindings, node) = self.tree.get_bindings(&self.mode, &keys);
 
-        match node {
-            Some(nd) => match nd {
-                Node::Key(_) => None,
-                Node::Message(message) => {
+        match (bindings, node) {
+            (_, Some(_)) => vec![Message::ChangeKeySequence(self.buffer.to_string())],
+            (bindings, None) => {
+                if bindings.is_empty() {
                     self.buffer.clear();
-
-                    if let Message::ChangeMode(mode) = &message {
-                        self.mode = mode.clone();
-                    }
-
-                    Some(vec![message])
+                    return vec![Message::ChangeKeySequence(self.buffer.to_string())];
                 }
-            },
-            None => {
-                self.buffer.clear();
-                None
+
+                let messages = get_messages_from_bindings(bindings, &mut self.mode);
+                if messages.is_empty() {
+                    vec![Message::ChangeKeySequence(self.buffer.to_string())]
+                } else {
+                    self.buffer.clear();
+                    messages
+                }
             }
         }
     }
+}
 
-    pub fn get_key_string(&self) -> String {
-        self.buffer.to_string()
+fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Message> {
+    let mut repeat = None;
+    let mut messages = Vec::new();
+    for binding in bindings {
+        match binding {
+            Binding::Message(msg) => {
+                if let Message::ChangeMode(md) = &msg {
+                    *mode = md.clone();
+                }
+
+                match repeat {
+                    Some(rpt) => {
+                        for _ in 0..rpt {
+                            messages.push(msg.clone());
+                        }
+                        repeat = None;
+                    }
+                    None => messages.push(msg),
+                }
+            }
+            Binding::Repeat(rpt) => match repeat {
+                Some(r) => repeat = Some(r * 10 + rpt),
+                None => repeat = Some(rpt),
+            },
+            Binding::Motion(mtn) => match repeat {
+                Some(rpt) => {
+                    messages.push(Message::MoveCursor(rpt, mtn));
+                    repeat = None;
+                }
+                None => messages.push(Message::MoveCursor(1, mtn)),
+            },
+        }
     }
+
+    messages
 }

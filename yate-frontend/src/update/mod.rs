@@ -21,7 +21,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Message::ChangeMode(mode) => {
             model.mode = mode.clone();
         }
-        Message::MoveCursor(_) => {
+        Message::MoveCursor(_, _) => {
             model.key_sequence = String::new();
 
             update_current_directory(model, layout, message);

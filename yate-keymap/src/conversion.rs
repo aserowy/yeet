@@ -1,6 +1,6 @@
 use crossterm::event::{self, KeyEvent, KeyEventKind};
 
-use crate::key::{KeyCode, KeyModifier, Key};
+use crate::key::{Key, KeyCode, KeyModifier};
 
 pub fn to_key(event: &KeyEvent) -> Option<Key> {
     let modifier = event

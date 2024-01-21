@@ -1,8 +1,15 @@
 #[derive(Clone, Debug, PartialEq)]
+pub enum Binding {
+    Message(Message),
+    Motion(CursorDirection),
+    Repeat(usize),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     ChangeKeySequence(String),
     ChangeMode(Mode),
-    MoveCursor(CursorDirection),
+    MoveCursor(usize, CursorDirection),
     SelectCurrent,
     SelectParent,
     Refresh,

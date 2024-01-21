@@ -9,7 +9,7 @@ pub fn update(model: &mut Buffer, message: &Message) {
     match message {
         Message::ChangeKeySequence(_) => {}
         Message::ChangeMode(_) => {}
-        Message::MoveCursor(direction) => direction::update(model, direction),
+        Message::MoveCursor(count, direction) => direction::update(model, count, direction),
         Message::Refresh => {}
         Message::SelectCurrent => {
             if model.cursor.is_some() {

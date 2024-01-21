@@ -1,8 +1,8 @@
 use std::{collections::HashMap, slice::Iter};
 
 use crate::{
-    message::{Message, Mode},
     key::Key,
+    message::{Binding, Mode},
 };
 
 #[derive(Debug)]
@@ -13,11 +13,11 @@ pub struct KeyTree {
 #[derive(Clone, Debug)]
 pub enum Node {
     Key(HashMap<Key, Node>),
-    Message(Message),
+    Binding(Binding),
 }
 
 impl KeyTree {
-    pub fn add_mapping(&mut self, mode: &Mode, keys: Vec<Key>, message: Message) {
+    pub fn add_mapping(&mut self, mode: &Mode, keys: Vec<Key>, binding: Binding) {
         if !self.modes.contains_key(mode) {
             self.modes.insert(mode.clone(), HashMap::new());
         }
@@ -28,20 +28,30 @@ impl KeyTree {
                 self.modes.get_mut(mode).unwrap(),
                 key,
                 &mut key_iter,
-                message,
+                binding,
             );
         }
     }
 
-    pub fn get_node(&self, mode: &Mode, keys: &[Key]) -> Option<Node> {
+    pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> (Vec<Binding>, Option<Node>) {
         if let Some(node) = self.modes.get(mode) {
-            let mut key_iter = keys.iter();
-            if let Some(key) = key_iter.next() {
-                return get_node_from_tree(node, key, &mut key_iter);
-            }
-        }
+            let mut bindings = Vec::new();
 
-        None
+            let mut key_iter = keys.iter();
+            while let Some(key) = key_iter.next() {
+                match get_node_from_tree(node, key, &mut key_iter) {
+                    Some(node) => match node {
+                        Node::Key(_) => return (bindings, Some(node)),
+                        Node::Binding(binding) => bindings.push(binding),
+                    },
+                    None => return (vec![], None),
+                }
+            }
+
+            (bindings, None)
+        } else {
+            (vec![], None)
+        }
     }
 
     pub fn new() -> Self {
@@ -55,7 +65,7 @@ fn add_mapping_node(
     nodes: &mut HashMap<Key, Node>,
     key: &Key,
     key_iter: &mut Iter<'_, Key>,
-    message: Message,
+    binding: Binding,
 ) {
     if !nodes.contains_key(key) {
         nodes.insert(key.clone(), Node::Key(HashMap::new()));
@@ -63,9 +73,9 @@ fn add_mapping_node(
 
     if let Some(Node::Key(hm)) = nodes.get_mut(key) {
         if let Some(next_key) = key_iter.next() {
-            add_mapping_node(hm, next_key, key_iter, message)
+            add_mapping_node(hm, next_key, key_iter, binding)
         } else {
-            nodes.insert(key.clone(), Node::Message(message));
+            nodes.insert(key.clone(), Node::Binding(binding));
         }
     }
 }
@@ -76,14 +86,18 @@ fn get_node_from_tree(
     key_iter: &mut Iter<'_, Key>,
 ) -> Option<Node> {
     if let Some(node) = nodes.get(key) {
+        if let Node::Binding(_) = node {
+            return Some(node.clone());
+        }
+
         if let Some(next_key) = key_iter.next() {
             if let Node::Key(hm) = node {
                 return get_node_from_tree(hm, next_key, key_iter);
             }
         }
 
-        return Some(node.clone());
+        Some(node.clone())
+    } else {
+        None
     }
-
-    None
 }
