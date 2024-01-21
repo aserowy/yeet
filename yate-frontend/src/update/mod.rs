@@ -1,8 +1,12 @@
 use std::path::{Path, PathBuf};
 
+use ratatui::prelude::Rect;
 use yate_keymap::action::Action;
 
-use crate::{layout::AppLayout, model::Model};
+use crate::{
+    layout::AppLayout,
+    model::{buffer::Buffer, Model},
+};
 
 mod buffer;
 
@@ -52,24 +56,24 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Action) {
 }
 
 fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
-    let path = Path::new(&model.current_path);
-
-    model.current_directory.view_port.height = usize::from(layout.current_directory.height);
-    model.current_directory.view_port.width = usize::from(layout.current_directory.width);
-    model.current_directory.lines = get_directory_content(path);
-
-    buffer::update(&mut model.current_directory, message);
+    update_buffer_with_path(
+        &mut model.current_directory,
+        &layout.current_directory,
+        message,
+        &model.current_path,
+    );
 }
 
 fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Action) {
     let path = Path::new(&model.current_path);
     match path.parent() {
         Some(parent) => {
-            model.parent_directory.view_port.height = usize::from(layout.parent_directory.height);
-            model.parent_directory.view_port.width = usize::from(layout.parent_directory.width);
-            model.parent_directory.lines = get_directory_content(parent);
-
-            buffer::update(&mut model.parent_directory, message);
+            update_buffer_with_path(
+                &mut model.parent_directory,
+                &layout.parent_directory,
+                message,
+                &parent,
+            );
         }
         None => model.parent_directory.lines = vec![],
     }
@@ -77,19 +81,23 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Acti
 
 fn update_preview(model: &mut Model, layout: &AppLayout, message: &Action) {
     if let Some(target) = get_target_path(model) {
-        model.preview.view_port.height = usize::from(layout.current_directory.height);
-        model.preview.view_port.width = usize::from(layout.current_directory.width);
-
-        let content = if target.is_dir() {
-            get_directory_content(&target)
-        } else {
-            Vec::new()
-        };
-
-        model.preview.lines = content;
-
-        buffer::update(&mut model.preview, message);
+        update_buffer_with_path(&mut model.preview, &layout.preview, message, &target);
     }
+}
+
+fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Action, path: &Path) {
+    buffer.view_port.height = usize::from(layout.height);
+    buffer.view_port.width = usize::from(layout.width);
+
+    let content = if path.is_dir() {
+        get_directory_content(&path)
+    } else {
+        Vec::new()
+    };
+
+    buffer.lines = content;
+
+    buffer::update(buffer, message);
 }
 
 fn get_target_path(model: &Model) -> Option<PathBuf> {
