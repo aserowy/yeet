@@ -40,13 +40,21 @@ fn get_cursor_line_positions(
 
         let cursor_index = match &cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
-                if i >= length {
+                if length == &0 {
+                    0
+                } else if i >= length {
                     length - 1
                 } else {
                     *i
                 }
             }
-            CursorPosition::End => length - 1,
+            CursorPosition::End => {
+                if length == &0 {
+                    0
+                } else {
+                    length - 1
+                }
+            }
             CursorPosition::None => return cursor_positions,
         };
 

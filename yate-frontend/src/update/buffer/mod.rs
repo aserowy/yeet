@@ -24,6 +24,7 @@ pub fn update(model: &mut Buffer, message: &Message) {
 fn reset_cursor(cursor: &mut Option<Cursor>) {
     if let Some(cursor) = cursor {
         cursor.vertical_index = 0;
+
         cursor.horizontial_index = match &cursor.horizontial_index {
             CursorPosition::Absolute(_) => CursorPosition::Absolute(0),
             CursorPosition::End => CursorPosition::End,

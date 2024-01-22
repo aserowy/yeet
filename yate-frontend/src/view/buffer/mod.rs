@@ -12,7 +12,10 @@ mod style;
 mod viewport;
 
 pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
-    let viewport_lines = viewport::get_lines(model);
+    let mut viewport_lines = viewport::get_lines(model);
+    if viewport_lines.is_empty() {
+        viewport_lines.push(String::from(""));
+    }
 
     let mut lines = Vec::new();
     for (i, line) in viewport_lines.iter().enumerate() {
@@ -34,7 +37,9 @@ fn get_styled_line<'a>(index: usize, line: &'a str, mode: &Mode, model: &'a Buff
             let mut filler = String::with_capacity(filler_count);
             filler.push_str(&" ".repeat(filler_count));
 
-            spans.push(Span::styled(&line[start..line_length], style));
+            if line_length > 0 {
+                spans.push(Span::styled(&line[start..line_length], style));
+            }
             spans.push(Span::styled(filler, style));
         } else {
             spans.push(Span::styled(&line[start..end], style));

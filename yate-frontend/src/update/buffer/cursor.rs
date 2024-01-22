@@ -3,6 +3,10 @@ use yate_keymap::message::CursorDirection;
 use crate::model::buffer::{Buffer, CursorPosition};
 
 pub fn update_by_direction(model: &mut Buffer, count: &usize, direction: &CursorDirection) {
+    if model.lines.is_empty() {
+        return;
+    }
+
     if let Some(cursor) = &mut model.cursor {
         for _ in 0..*count {
             match direction {

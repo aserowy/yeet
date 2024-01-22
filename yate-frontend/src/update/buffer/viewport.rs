@@ -3,6 +3,10 @@ use yate_keymap::message::ViewPortDirection;
 use crate::model::buffer::{Buffer, CursorPosition};
 
 pub fn update_by_cursor(model: &mut Buffer) {
+    if model.lines.is_empty() {
+        return;
+    }
+
     if let Some(cursor) = &model.cursor {
         let viewport = &mut model.view_port;
 
@@ -27,6 +31,10 @@ pub fn update_by_cursor(model: &mut Buffer) {
 }
 
 pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
+    if model.lines.is_empty() {
+        return;
+    }
+
     match direction {
         ViewPortDirection::BottomOnCursor => {
             if let Some(cursor) = &model.cursor {
@@ -89,6 +97,6 @@ pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
             if let Some(cursor) = &model.cursor {
                 model.view_port.vertical_index = cursor.vertical_index;
             }
-        },
+        }
     }
 }
