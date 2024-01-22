@@ -27,6 +27,11 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             update_current_directory(model, layout, message);
             update_preview(model, layout, message);
         }
+        Message::MoveViewPort(_) => {
+            model.key_sequence = String::new();
+
+            update_current_directory(model, layout, message);
+        }
         Message::Refresh => {
             update_current_directory(model, layout, message);
             update_parent_directory(model, layout, message);
@@ -93,6 +98,8 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Mess
                     });
                 }
             }
+
+            // update viewport of parent directory?
         }
         None => model.parent_directory.lines = vec![],
     }

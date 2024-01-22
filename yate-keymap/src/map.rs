@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Binding, CursorDirection},
+    message::{Binding, CursorDirection, ViewPortDirection},
     tree::KeyTree,
     Message, Mode,
 };
@@ -79,6 +79,10 @@ impl Default for KeyMap {
                     Binding::Motion(CursorDirection::LineEnd),
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('d'), vec![KeyModifier::Ctrl])],
+                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageDown)),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
                     Binding::Motion(CursorDirection::Bottom),
                 ),
@@ -112,6 +116,17 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding::Motion(CursorDirection::Right),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
+                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageUp)),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('z'), vec![]),
+                        Key::new(KeyCode::from_char('z'), vec![]),
+                    ],
+                    Binding::Message(Message::MoveViewPort(ViewPortDirection::CenterOnCursor)),
                 ),
                 (
                     // TODO: remove q and implement :q

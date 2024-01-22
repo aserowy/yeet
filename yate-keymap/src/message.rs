@@ -10,6 +10,7 @@ pub enum Message {
     ChangeKeySequence(String),
     ChangeMode(Mode),
     MoveCursor(usize, CursorDirection),
+    MoveViewPort(ViewPortDirection),
     SelectCurrent,
     SelectParent,
     Refresh,
@@ -42,4 +43,11 @@ impl ToString for Mode {
             Mode::Command => "command".to_string(),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ViewPortDirection {
+    CenterOnCursor,
+    HalfPageDown,
+    HalfPageUp,
 }

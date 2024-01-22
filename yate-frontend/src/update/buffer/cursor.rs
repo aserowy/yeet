@@ -2,9 +2,7 @@ use yate_keymap::message::CursorDirection;
 
 use crate::model::buffer::{Buffer, CursorPosition};
 
-use super::viewport;
-
-pub fn update(model: &mut Buffer, count: &usize, direction: &CursorDirection) {
+pub fn update_by_direction(model: &mut Buffer, count: &usize, direction: &CursorDirection) {
     if let Some(cursor) = &mut model.cursor {
         for _ in 0..*count {
             match direction {
@@ -56,7 +54,5 @@ pub fn update(model: &mut Buffer, count: &usize, direction: &CursorDirection) {
                 }
             }
         }
-
-        viewport::update_by_cursor(model);
     }
 }

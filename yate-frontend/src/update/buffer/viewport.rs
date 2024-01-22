@@ -1,3 +1,5 @@
+use yate_keymap::message::ViewPortDirection;
+
 use crate::model::buffer::{Buffer, CursorPosition};
 
 pub fn update_by_cursor(model: &mut Buffer) {
@@ -21,5 +23,22 @@ pub fn update_by_cursor(model: &mut Buffer) {
         } else if viewport.horizontal_index + viewport.width < cursor_index {
             viewport.horizontal_index = cursor_index - viewport.width;
         }
+    }
+}
+
+pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
+    match direction {
+        ViewPortDirection::CenterOnCursor => {
+            if let Some(cursor) = &model.cursor {
+                let index_offset = model.view_port.height / 2;
+                if cursor.vertical_index < index_offset {
+                    model.view_port.vertical_index = 0;
+                } else {
+                    model.view_port.vertical_index = cursor.vertical_index - index_offset;
+                }
+            }
+        }
+        ViewPortDirection::HalfPageDown => todo!(),
+        ViewPortDirection::HalfPageUp => todo!(),
     }
 }
