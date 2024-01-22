@@ -129,6 +129,20 @@ impl Default for KeyMap {
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
+                        Key::new(KeyCode::from_char('b'), vec![]),
+                    ],
+                    Binding::Message(Message::MoveViewPort(ViewPortDirection::BottomOnCursor)),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('z'), vec![]),
+                        Key::new(KeyCode::from_char('t'), vec![]),
+                    ],
+                    Binding::Message(Message::MoveViewPort(ViewPortDirection::TopOnCursor)),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('z'), vec![]),
                     ],
                     Binding::Message(Message::MoveViewPort(ViewPortDirection::CenterOnCursor)),

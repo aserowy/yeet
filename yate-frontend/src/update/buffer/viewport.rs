@@ -28,6 +28,16 @@ pub fn update_by_cursor(model: &mut Buffer) {
 
 pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
     match direction {
+        ViewPortDirection::BottomOnCursor => {
+            if let Some(cursor) = &model.cursor {
+                if cursor.vertical_index < model.view_port.height {
+                    model.view_port.vertical_index = 0;
+                } else {
+                    let index = cursor.vertical_index - model.view_port.height + 1;
+                    model.view_port.vertical_index = index;
+                }
+            }
+        }
         ViewPortDirection::CenterOnCursor => {
             if let Some(cursor) = &model.cursor {
                 let index_offset = model.view_port.height / 2;
@@ -75,5 +85,10 @@ pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
                 }
             }
         }
+        ViewPortDirection::TopOnCursor => {
+            if let Some(cursor) = &model.cursor {
+                model.view_port.vertical_index = cursor.vertical_index;
+            }
+        },
     }
 }

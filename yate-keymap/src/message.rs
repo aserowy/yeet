@@ -47,7 +47,9 @@ impl ToString for Mode {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ViewPortDirection {
+    BottomOnCursor,
     CenterOnCursor,
     HalfPageDown,
     HalfPageUp,
+    TopOnCursor,
 }
