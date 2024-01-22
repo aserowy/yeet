@@ -38,7 +38,44 @@ pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
                 }
             }
         }
-        ViewPortDirection::HalfPageDown => todo!(),
-        ViewPortDirection::HalfPageUp => todo!(),
+        ViewPortDirection::HalfPageDown => {
+            let index_offset = model.view_port.height / 2;
+            let viewport_end_index = model.view_port.vertical_index + (model.view_port.height - 1);
+            let viewport_end_after_move_index = viewport_end_index + index_offset;
+
+            if viewport_end_after_move_index < model.lines.len() {
+                model.view_port.vertical_index += index_offset;
+            } else {
+                if model.view_port.height > model.lines.len() {
+                    model.view_port.vertical_index = 0;
+                } else {
+                    model.view_port.vertical_index = model.lines.len() - model.view_port.height;
+                }
+            }
+
+            if let Some(cursor) = &mut model.cursor {
+                if cursor.vertical_index + index_offset >= model.lines.len() {
+                    cursor.vertical_index = model.lines.len() - 1;
+                } else {
+                    cursor.vertical_index += index_offset;
+                }
+            }
+        }
+        ViewPortDirection::HalfPageUp => {
+            let index_offset = model.view_port.height / 2;
+            if model.view_port.vertical_index < index_offset {
+                model.view_port.vertical_index = 0;
+            } else {
+                model.view_port.vertical_index -= index_offset;
+            }
+
+            if let Some(cursor) = &mut model.cursor {
+                if cursor.vertical_index < index_offset {
+                    cursor.vertical_index = 0;
+                } else {
+                    cursor.vertical_index -= index_offset;
+                }
+            }
+        }
     }
 }
