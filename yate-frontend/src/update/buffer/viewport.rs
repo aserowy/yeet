@@ -45,12 +45,10 @@ pub fn update_by_direction(model: &mut Buffer, direction: &ViewPortDirection) {
 
             if viewport_end_after_move_index < model.lines.len() {
                 model.view_port.vertical_index += index_offset;
+            } else if model.view_port.height > model.lines.len() {
+                model.view_port.vertical_index = 0;
             } else {
-                if model.view_port.height > model.lines.len() {
-                    model.view_port.vertical_index = 0;
-                } else {
-                    model.view_port.vertical_index = model.lines.len() - model.view_port.height;
-                }
+                model.view_port.vertical_index = model.lines.len() - model.view_port.height;
             }
 
             if let Some(cursor) = &mut model.cursor {

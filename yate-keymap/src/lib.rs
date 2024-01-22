@@ -33,7 +33,7 @@ impl MessageResolver {
         let default_result = vec![Message::ChangeKeySequence(self.buffer.to_string())];
 
         let keys = self.buffer.get_keys();
-        if &key.code == &KeyCode::Esc && !keys.is_empty() {
+        if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
             return default_result;
         }

@@ -22,14 +22,10 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             model.mode = mode.clone();
         }
         Message::MoveCursor(_, _) => {
-            model.key_sequence = String::new();
-
             update_current_directory(model, layout, message);
             update_preview(model, layout, message);
         }
         Message::MoveViewPort(_) => {
-            model.key_sequence = String::new();
-
             update_current_directory(model, layout, message);
         }
         Message::Refresh => {

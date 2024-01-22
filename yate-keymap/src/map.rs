@@ -14,7 +14,7 @@ pub struct KeyMap {
 
 impl KeyMap {
     pub fn into_tree(self) -> KeyTree {
-        let mut tree = KeyTree::new();
+        let mut tree = KeyTree::default();
         for (mode, mappings) in self.mappings {
             for (keys, message) in mappings {
                 tree.add_mapping(&mode, keys, message);
@@ -30,6 +30,7 @@ impl Default for KeyMap {
         mappings.insert(
             Mode::Normal,
             vec![
+                // TODO: delete (for testing only)
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding::Message(Message::SelectCurrent),

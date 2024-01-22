@@ -5,7 +5,7 @@ use crate::{
     message::{Binding, Mode},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct KeyTree {
     modes: HashMap<Mode, HashMap<Key, Node>>,
 }
@@ -51,12 +51,6 @@ impl KeyTree {
             (bindings, None)
         } else {
             (vec![], None)
-        }
-    }
-
-    pub fn new() -> Self {
-        Self {
-            modes: HashMap::default(),
         }
     }
 }
