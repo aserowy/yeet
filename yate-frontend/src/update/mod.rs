@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::prelude::Rect;
-use yate_keymap::message::Message;
+use yate_keymap::message::{Message, ViewPortDirection};
 
 use crate::{
     layout::AppLayout,
@@ -83,11 +83,12 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Mess
                 parent,
             );
 
+            let current_filename = path.file_name().unwrap().to_str().unwrap();
             if let Some(index) = model
                 .parent_directory
                 .lines
                 .iter()
-                .position(|line| line == path.file_name().unwrap().to_str().unwrap())
+                .position(|line| line == current_filename)
             {
                 if let Some(cursor) = &mut model.parent_directory.cursor {
                     cursor.vertical_index = index;
@@ -99,7 +100,10 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Mess
                 }
             }
 
-            // update viewport of parent directory?
+            buffer::update(
+                &mut model.parent_directory,
+                &Message::MoveViewPort(ViewPortDirection::CenterOnCursor),
+            );
         }
         None => model.parent_directory.lines = vec![],
     }
@@ -128,6 +132,10 @@ fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Message
 
 fn get_target_path(model: &Model) -> Option<PathBuf> {
     let buffer = &model.current_directory;
+    if buffer.lines.is_empty() {
+        return None;
+    }
+
     if let Some(cursor) = &buffer.cursor {
         let current = &buffer.lines[cursor.vertical_index];
         let target = model.current_path.join(current);

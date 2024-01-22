@@ -1,6 +1,6 @@
 use yate_keymap::message::Message;
 
-use crate::model::buffer::{Buffer, Cursor};
+use crate::model::buffer::{Buffer, Cursor, CursorPosition};
 
 mod cursor;
 mod viewport;
@@ -15,16 +15,19 @@ pub fn update(model: &mut Buffer, message: &Message) {
         }
         Message::MoveViewPort(direction) => viewport::update_by_direction(model, direction),
         Message::Refresh => {}
-        Message::SelectCurrent => {
-            if model.cursor.is_some() {
-                model.cursor = Some(Cursor::default());
-            }
-        }
-        Message::SelectParent => {
-            if model.cursor.is_some() {
-                model.cursor = Some(Cursor::default());
-            }
-        }
+        Message::SelectCurrent => reset_cursor(&mut model.cursor),
+        Message::SelectParent => reset_cursor(&mut model.cursor),
         Message::Quit => {}
+    }
+}
+
+fn reset_cursor(cursor: &mut Option<Cursor>) {
+    if let Some(cursor) = cursor {
+        cursor.vertical_index = 0;
+        cursor.horizontial_index = match &cursor.horizontial_index {
+            CursorPosition::Absolute(_) => CursorPosition::Absolute(0),
+            CursorPosition::End => CursorPosition::End,
+            CursorPosition::None => CursorPosition::None,
+        }
     }
 }

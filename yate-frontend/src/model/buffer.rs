@@ -16,7 +16,6 @@ pub enum CursorPosition {
     Absolute(usize),
     End,
     None,
-    // TODO: none
 }
 
 impl Default for CursorPosition {
