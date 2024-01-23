@@ -91,7 +91,13 @@ fn get_empty_buffer_lines<'a>(
     let spans = if let Some(mut positions) = cursor_styles {
         positions.1.extend(default_positions);
 
-        get_styled_line(view_port, mode, "".to_string(), positions.1)
+        let line_number_style = line_number::get_style_position(view_port, 0, cursor);
+        positions.1.extend(line_number_style);
+
+        let mut line = prefix::get_line_number(view_port, 0, cursor);
+        line.push_str(" ");
+
+        get_styled_line(view_port, mode, line, positions.1)
     } else {
         get_styled_line(view_port, mode, "".to_string(), default_positions)
     };

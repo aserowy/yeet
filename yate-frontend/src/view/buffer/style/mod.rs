@@ -90,7 +90,7 @@ pub fn get_spans<'a>(
             let mut filler = String::with_capacity(filler_count);
             filler.push_str(&" ".repeat(filler_count));
 
-            if line_length > 0 {
+            if line_length > start {
                 let part = line
                     .clone()
                     .skip(start)
