@@ -2,22 +2,25 @@ use crate::model::buffer::{Cursor, CursorPosition, ViewPort};
 
 use super::{PositionType, StylePositionByLineIndex};
 
-pub fn get_cursor_style_span(
+pub fn get_cursor_style_positions(
     view_port: &ViewPort,
     cursor: &Option<Cursor>,
     lines: &[String],
 ) -> Option<StylePositionByLineIndex> {
     if let Some(cursor) = cursor {
+        let offset = view_port.get_offset_width();
+        let width = offset + view_port.content_width;
+
         let mut cursor_positions = vec![
-            (0, PositionType::CursorLine),
-            (view_port.width, PositionType::CursorLine),
+            (offset, PositionType::CursorLine),
+            (width, PositionType::CursorLine),
         ];
 
         let line_index = cursor.vertical_index - view_port.vertical_index;
         let line = &lines[line_index][view_port.horizontal_index..];
 
-        let line_length = if line.chars().count() > view_port.width {
-            view_port.width
+        let line_length = if line.chars().count() > view_port.content_width {
+            view_port.content_width
         } else {
             let length = line.chars().count();
             if length == 0 {
@@ -41,8 +44,8 @@ pub fn get_cursor_style_span(
         };
 
         cursor_positions.extend(vec![
-            (cursor_index, PositionType::Cursor),
-            (cursor_index + 1, PositionType::Cursor),
+            (offset + cursor_index, PositionType::Cursor),
+            (offset + cursor_index + 1, PositionType::Cursor),
         ]);
 
         Some((cursor.vertical_index, cursor_positions))

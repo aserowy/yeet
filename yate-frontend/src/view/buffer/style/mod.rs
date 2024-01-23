@@ -4,9 +4,10 @@ use ratatui::{
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::ViewPort;
+use crate::model::buffer::{LineNumber, ViewPort};
 
-pub mod line;
+pub mod cursor;
+pub mod line_number;
 
 pub type StylePosition = (usize, PositionType);
 type StylePositionByLineIndex = (usize, Vec<StylePosition>);
@@ -18,6 +19,7 @@ pub enum PositionType {
     Cursor,
     CursorLine,
     Default,
+    LineNumber(LineNumber),
 }
 
 pub fn get_sorted_positions(positions: Vec<StylePosition>) -> Vec<StylePositionGroup> {
@@ -68,15 +70,16 @@ pub fn convert_sorted_positions_to_span_styles(
 
 pub fn get_spans<'a>(
     view_port: &ViewPort,
-    line: &'a str,
+    line: String,
     span_to_styles: Vec<StyleSpan>,
 ) -> Vec<Span<'a>> {
-    let line = &line[view_port.horizontal_index..];
+    let line = line.chars().skip(view_port.horizontal_index);
 
-    let line_length = if line.chars().count() > view_port.width {
-        view_port.width
+    let line_count = line.clone().count();
+    let line_length = if line_count > view_port.content_width {
+        view_port.content_width
     } else {
-        line.chars().count()
+        line_count
     };
 
     let mut spans = Vec::new();
@@ -87,11 +90,24 @@ pub fn get_spans<'a>(
             filler.push_str(&" ".repeat(filler_count));
 
             if line_length > 0 {
-                spans.push(Span::styled(&line[start..line_length], style));
+                let part = line
+                    .clone()
+                    .skip(start)
+                    .take(line_length - start)
+                    .collect::<String>();
+
+                spans.push(Span::styled(part, style));
             }
+
             spans.push(Span::styled(filler, style));
         } else {
-            spans.push(Span::styled(&line[start..end], style));
+            let part = line
+                .clone()
+                .skip(start)
+                .take(end - start)
+                .collect::<String>();
+
+            spans.push(Span::styled(part, style));
         }
     }
 
@@ -99,6 +115,8 @@ pub fn get_spans<'a>(
 }
 
 fn get_style(mode: &Mode, types: &[PositionType]) -> Style {
+    // TODO: add line number styles
+
     match (
         mode,
         types.contains(&PositionType::CursorLine),

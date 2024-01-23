@@ -1,15 +1,20 @@
-use ratatui::{prelude::Rect, text::Line, widgets::Paragraph, Frame};
+use ratatui::{
+    prelude::Rect,
+    text::{Line, Span},
+    widgets::Paragraph,
+    Frame,
+};
 use yate_keymap::message::Mode;
 
 use crate::model::buffer::{Buffer, Cursor, ViewPort};
 
-use self::style::{line, PositionType, StylePosition};
+use self::style::{cursor, line_number, PositionType, StylePosition};
 
 mod style;
 
 pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     let rendered = get_rendered_lines(model);
-    let styled = get_styled_lines(&model.view_port, mode, &model.cursor, &rendered);
+    let styled = get_styled_lines(&model.view_port, mode, &model.cursor, rendered);
 
     frame.render_widget(Paragraph::new(styled), rect);
 }
@@ -28,28 +33,25 @@ pub fn get_styled_lines<'a>(
     view_port: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
-    lines: &'a Vec<String>,
+    lines: Vec<String>,
 ) -> Vec<Line<'a>> {
-    let default_positions = vec![
-        (0, PositionType::Default),
-        (view_port.width, PositionType::Default),
-    ];
+    let width = view_port.get_offset_width() + view_port.content_width;
+    let default_positions = vec![(0, PositionType::Default), (width, PositionType::Default)];
 
     if lines.is_empty() {
         return get_empty_buffer_lines(view_port, mode, cursor, default_positions);
     }
 
     // NOTE: add buffer styles like selection here
-    let positions_by_index: Vec<_> = vec![line::get_cursor_style_span(view_port, cursor, lines)]
-        .into_iter()
-        .flatten()
-        .collect();
-
-    // TODO: offset with relative line numbers string for signs and number not
-    // here! special functions for signs and numbers
+    let positions_by_index: Vec<_> = vec![cursor::get_cursor_style_positions(
+        view_port, cursor, &lines,
+    )]
+    .into_iter()
+    .flatten()
+    .collect();
 
     let mut result = Vec::new();
-    for (index, line) in lines.iter().enumerate() {
+    for (index, content) in lines.iter().enumerate() {
         let corrected_index = index + view_port.vertical_index;
         let mut positions: Vec<_> = positions_by_index
             .iter()
@@ -59,8 +61,14 @@ pub fn get_styled_lines<'a>(
 
         // NOTE: add line specific styles here to positions with extend
         positions.extend(default_positions.clone());
+        positions.extend(line_number::get_style_position(view_port, index, cursor));
 
-        result.push(get_styled_line(view_port, mode, line, positions));
+        // NOTE: add line expansions here
+        let line = format!("{:3} {}", index, content);
+
+        result.push(Line::from(get_styled_line(
+            view_port, mode, line, positions,
+        )));
     }
 
     result
@@ -73,24 +81,27 @@ fn get_empty_buffer_lines<'a>(
     default_positions: Vec<StylePosition>,
 ) -> Vec<Line<'a>> {
     let empty = vec!["".to_string()];
-    let cursor_styles = line::get_cursor_style_span(view_port, cursor, &empty);
+    let cursor_styles = cursor::get_cursor_style_positions(view_port, cursor, &empty);
 
-    if let Some(mut positions) = cursor_styles {
+    let spans = if let Some(mut positions) = cursor_styles {
         positions.1.extend(default_positions);
-        return vec![get_styled_line(view_port, mode, "", positions.1)];
-    }
 
-    vec![get_styled_line(view_port, mode, "", default_positions)]
+        get_styled_line(view_port, mode, "".to_string(), positions.1)
+    } else {
+        get_styled_line(view_port, mode, "".to_string(), default_positions)
+    };
+
+    vec![Line::from(spans)]
 }
 
 fn get_styled_line<'a>(
     view_port: &ViewPort,
     mode: &Mode,
-    line: &'a str,
+    line: String,
     positions: Vec<StylePosition>,
-) -> Line<'a> {
+) -> Vec<Span<'a>> {
     let sorted_positions = style::get_sorted_positions(positions);
     let span_to_styles = style::convert_sorted_positions_to_span_styles(mode, sorted_positions);
 
-    Line::from(style::get_spans(view_port, line, span_to_styles))
+    style::get_spans(view_port, line, span_to_styles)
 }

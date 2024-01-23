@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use yate_keymap::message::Mode;
 
-use self::buffer::{Buffer, Cursor, CursorPosition};
+use self::buffer::{Buffer, Cursor, CursorPosition, LineNumber};
 
 pub mod buffer;
 
@@ -25,7 +25,11 @@ impl Default for Model {
             current_directory: Buffer {
                 cursor: Some(Cursor::default()),
                 lines: Default::default(),
-                view_port: Default::default(),
+                view_port: buffer::ViewPort {
+                    line_number: LineNumber::Relative,
+                    line_number_width: 3,
+                    ..Default::default()
+                },
             },
             key_sequence: String::new(),
             mode: Mode::default(),
