@@ -30,35 +30,36 @@ impl Default for MessageResolver {
 
 impl MessageResolver {
     pub fn add_and_resolve(&mut self, key: Key) -> Vec<Message> {
-        let default_result = vec![Message::ChangeKeySequence(self.buffer.to_string())];
-
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
-            return default_result;
+            return vec![Message::ChangeKeySequence(self.buffer.to_string())];
         }
 
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
         let (bindings, node) = self.tree.get_bindings(&self.mode, &keys);
-        match (bindings, node) {
-            (_, Some(_)) => default_result,
+        let mut messages = match (bindings, node) {
+            (_, Some(_)) => Vec::new(),
             (bindings, None) => {
                 if bindings.is_empty() {
                     self.buffer.clear();
-                    return default_result;
-                }
-
-                let messages = get_messages_from_bindings(bindings, &mut self.mode);
-                if messages.is_empty() {
-                    default_result
+                    Vec::new()
                 } else {
-                    self.buffer.clear();
-                    messages
+                    let messages = get_messages_from_bindings(bindings, &mut self.mode);
+                    if messages.is_empty() {
+                        Vec::new()
+                    } else {
+                        self.buffer.clear();
+                        messages
+                    }
                 }
             }
-        }
+        };
+
+        messages.push(Message::ChangeKeySequence(self.buffer.to_string()));
+        messages
     }
 }
 
