@@ -116,9 +116,9 @@ pub fn get_spans<'a>(
 }
 
 fn get_style(mode: &Mode, types: &[PositionType]) -> Style {
-    if let Some(_) = types
+    if types
         .iter()
-        .find(|tp| tp == &&PositionType::LineNumberRelative)
+        .any(|tp| tp == &PositionType::LineNumberRelative)
     {
         return Style::default().fg(Color::DarkGray);
     }

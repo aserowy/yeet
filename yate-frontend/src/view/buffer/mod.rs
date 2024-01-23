@@ -67,7 +67,7 @@ pub fn get_styled_lines<'a>(
         // NOTE: add line expansions here
         let line = format!(
             "{} {}",
-            prefix::get_line_number(view_port, index, cursor),
+            prefix::get_line_number(view_port, corrected_index, cursor),
             content
         );
 

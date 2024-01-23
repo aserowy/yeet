@@ -16,14 +16,14 @@ pub fn get_style_position(
     }
 
     if let Some(cursor) = cursor {
-        if cursor.vertical_index == index {
+        if cursor.vertical_index - view_port.vertical_index == index {
             vec![
                 (0, PositionType::LineNumberAbsolute),
                 (width, PositionType::LineNumberAbsolute),
             ]
         } else {
             let position_type = match view_port.line_number {
-                LineNumber::Absolute => PositionType::LineNumberAbsolute,
+                LineNumber::_Absolute => PositionType::LineNumberAbsolute,
                 LineNumber::None => unreachable!(),
                 LineNumber::Relative => PositionType::LineNumberRelative,
             };

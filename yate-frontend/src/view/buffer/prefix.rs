@@ -22,7 +22,7 @@ pub fn get_line_number(view_port: &ViewPort, index: usize, cursor: &Option<Curso
     }
 
     match view_port.line_number {
-        LineNumber::Absolute => format!("{:>width$} ", number),
+        LineNumber::_Absolute => format!("{:>width$} ", number),
         LineNumber::None => "".to_string(),
         LineNumber::Relative => {
             if let Some(cursor) = cursor {
