@@ -99,7 +99,7 @@ impl Default for KeyMap {
                     Binding::Motion(CursorDirection::Top),
                 ),
                 (
-                    vec![Key::new(KeyCode::from_char('h'), vec![KeyModifier::Ctrl])],
+                    vec![Key::new(KeyCode::from_char('h'), vec![KeyModifier::Shift])],
                     Binding::Message(Message::SelectParent),
                 ),
                 (
@@ -115,7 +115,7 @@ impl Default for KeyMap {
                     Binding::Motion(CursorDirection::Up),
                 ),
                 (
-                    vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Ctrl])],
+                    vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Shift])],
                     Binding::Message(Message::SelectCurrent),
                 ),
                 (

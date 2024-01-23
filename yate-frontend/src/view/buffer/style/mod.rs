@@ -1,67 +1,32 @@
 use ratatui::{
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::Span,
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{Cursor, ViewPort};
+use crate::model::buffer::ViewPort;
 
-mod line;
+pub mod line;
 
-type StyleSpan = (usize, Vec<(usize, PositionType)>);
+pub type StylePosition = (usize, PositionType);
+type StylePositionByLineIndex = (usize, Vec<StylePosition>);
+type StylePositionGroup = (usize, Vec<PositionType>);
+type StyleSpan = (usize, usize, Style);
 
 #[derive(Clone, Debug, PartialEq)]
-enum PositionType {
+pub enum PositionType {
     Cursor,
     CursorLine,
     Default,
 }
 
-pub fn get_styled_lines<'a>(
-    view_port: &ViewPort,
-    mode: &Mode,
-    cursor: &Option<Cursor>,
-    lines: &'a Vec<String>,
-) -> Vec<Line<'a>> {
-    let default_positions = vec![
-        (0, PositionType::Default),
-        (view_port.width, PositionType::Default),
-    ];
-
-    let positions_by_index: Vec<_> = vec![line::get_cursor_style_span(view_port, cursor, &lines)]
-        .into_iter()
-        .flat_map(|span| span)
-        .collect();
-
-    let mut result = Vec::new();
-    for (index, line) in lines.iter().enumerate() {
-        let corrected_index = index + view_port.vertical_index;
-        let mut positions: Vec<_> = positions_by_index
-            .iter()
-            .filter(|(i, _)| i == &corrected_index)
-            .flat_map(|(_, positions)| positions)
-            .collect();
-
-        positions.extend(default_positions.iter());
-
-        // NOTE: add line specific styles here to positions with extend
-
-        let sorted_positions = get_sorted_positions(positions);
-        let span_to_styles = convert_sorted_positions_to_span_styles(mode, sorted_positions);
-
-        result.push(Line::from(get_spans(view_port, line, span_to_styles)));
-    }
-
-    result
-}
-
-fn get_sorted_positions(positions: Vec<&(usize, PositionType)>) -> Vec<(usize, Vec<PositionType>)> {
-    let mut result: Vec<(usize, Vec<PositionType>)> = Vec::new();
+pub fn get_sorted_positions(positions: Vec<StylePosition>) -> Vec<StylePositionGroup> {
+    let mut result: Vec<StylePositionGroup> = Vec::new();
     for (index, position_type) in positions {
-        if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == index) {
+        if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
             position_types.push(position_type.clone());
         } else {
-            result.push((*index, vec![position_type.clone()]));
+            result.push((index, vec![position_type.clone()]));
         }
     }
 
@@ -70,10 +35,10 @@ fn get_sorted_positions(positions: Vec<&(usize, PositionType)>) -> Vec<(usize, V
     result
 }
 
-fn convert_sorted_positions_to_span_styles(
+pub fn convert_sorted_positions_to_span_styles(
     mode: &Mode,
-    sorted_positions: Vec<(usize, Vec<PositionType>)>,
-) -> Vec<(usize, usize, Style)> {
+    sorted_positions: Vec<StylePositionGroup>,
+) -> Vec<StyleSpan> {
     let mut expansions = Vec::new();
     let mut last_position_index = None;
     let mut active_position_types = Vec::new();
@@ -101,10 +66,10 @@ fn convert_sorted_positions_to_span_styles(
     expansions
 }
 
-fn get_spans<'a>(
+pub fn get_spans<'a>(
     view_port: &ViewPort,
     line: &'a str,
-    span_to_styles: Vec<(usize, usize, Style)>,
+    span_to_styles: Vec<StyleSpan>,
 ) -> Vec<Span<'a>> {
     let line = &line[view_port.horizontal_index..];
 
