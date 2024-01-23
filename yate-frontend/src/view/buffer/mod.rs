@@ -10,6 +10,7 @@ use crate::model::buffer::{Buffer, Cursor, ViewPort};
 
 use self::style::{cursor, line_number, PositionType, StylePosition};
 
+mod prefix;
 mod style;
 
 pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
@@ -64,7 +65,11 @@ pub fn get_styled_lines<'a>(
         positions.extend(line_number::get_style_position(view_port, index, cursor));
 
         // NOTE: add line expansions here
-        let line = format!("{:3} {}", index, content);
+        let line = format!(
+            "{} {}",
+            prefix::get_line_number(view_port, index, cursor),
+            content
+        );
 
         result.push(Line::from(get_styled_line(
             view_port, mode, line, positions,

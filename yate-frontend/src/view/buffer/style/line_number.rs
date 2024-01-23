@@ -18,17 +18,22 @@ pub fn get_style_position(
     if let Some(cursor) = cursor {
         if cursor.vertical_index == index {
             vec![
-                (0, PositionType::LineNumber(LineNumber::Absolute)),
-                (width, PositionType::LineNumber(LineNumber::Absolute)),
+                (0, PositionType::LineNumberAbsolute),
+                (width, PositionType::LineNumberAbsolute),
             ]
         } else {
-            let position_type = PositionType::LineNumber(view_port.line_number.clone());
+            let position_type = match view_port.line_number {
+                LineNumber::Absolute => PositionType::LineNumberAbsolute,
+                LineNumber::None => unreachable!(),
+                LineNumber::Relative => PositionType::LineNumberRelative,
+            };
+
             vec![(0, position_type.clone()), (width, position_type)]
         }
     } else {
         vec![
-            (0, PositionType::LineNumber(LineNumber::Absolute)),
-            (width, PositionType::LineNumber(LineNumber::Absolute)),
+            (0, PositionType::LineNumberAbsolute),
+            (width, PositionType::LineNumberAbsolute),
         ]
     }
 }

@@ -4,7 +4,7 @@ use ratatui::{
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{LineNumber, ViewPort};
+use crate::model::buffer::ViewPort;
 
 pub mod cursor;
 pub mod line_number;
@@ -19,7 +19,8 @@ pub enum PositionType {
     Cursor,
     CursorLine,
     Default,
-    LineNumber(LineNumber),
+    LineNumberAbsolute,
+    LineNumberRelative,
 }
 
 pub fn get_sorted_positions(positions: Vec<StylePosition>) -> Vec<StylePositionGroup> {
@@ -115,7 +116,12 @@ pub fn get_spans<'a>(
 }
 
 fn get_style(mode: &Mode, types: &[PositionType]) -> Style {
-    // TODO: add line number styles
+    if let Some(_) = types
+        .iter()
+        .find(|tp| tp == &&PositionType::LineNumberRelative)
+    {
+        return Style::default().fg(Color::DarkGray);
+    }
 
     match (
         mode,
