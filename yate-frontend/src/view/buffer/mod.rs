@@ -140,8 +140,8 @@ fn get_styled_line<'a>(
             let split_end = if &l_e < s_end { &l_e } else { s_end };
 
             let mixed_style = match l_style {
-                ForegroundStyle::Color(clr) => s_style.clone().fg(clr.clone()),
-                ForegroundStyle::_Modifier(mdfr) => s_style.clone().add_modifier(mdfr.clone()),
+                ForegroundStyle::Color(clr) => s_style.fg(*clr),
+                ForegroundStyle::_Modifier(mdfr) => s_style.add_modifier(*mdfr),
             };
 
             if split_start == s_start && split_end == s_end {
