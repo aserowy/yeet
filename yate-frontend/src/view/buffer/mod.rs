@@ -6,7 +6,9 @@ use ratatui::{
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{Buffer, BufferLine, Cursor, ViewPort};
+use crate::model::buffer::{
+    Buffer, BufferLine, Cursor, ForegroundStyle, ForgroundStyleSpan, ViewPort,
+};
 
 use self::style::{cursor, line_number, PositionType, StylePosition};
 
@@ -52,7 +54,7 @@ pub fn get_styled_lines<'a>(
     .collect();
 
     let mut result = Vec::new();
-    for (index, content) in lines.iter().enumerate() {
+    for (index, bl) in lines.iter().enumerate() {
         let corrected_index = index + view_port.vertical_index;
         let mut positions: Vec<_> = positions_by_index
             .iter()
@@ -68,11 +70,11 @@ pub fn get_styled_lines<'a>(
         let line = format!(
             "{} {}",
             prefix::get_line_number(view_port, corrected_index, cursor),
-            content.content
+            bl.content
         );
 
         result.push(Line::from(get_styled_line(
-            view_port, mode, line, positions,
+            view_port, mode, line, positions, &bl.style,
         )));
     }
 
@@ -101,9 +103,11 @@ fn get_empty_buffer_lines<'a>(
         let mut line = prefix::get_line_number(view_port, 0, cursor);
         line.push(' ');
 
-        get_styled_line(view_port, mode, line, positions.1)
+        get_styled_line(view_port, mode, line, positions.1, &Vec::new())
     } else {
-        get_styled_line(view_port, mode, "".to_string(), default_positions)
+        let line = "".to_string();
+
+        get_styled_line(view_port, mode, line, default_positions, &Vec::new())
     };
 
     vec![Line::from(spans)]
@@ -114,9 +118,51 @@ fn get_styled_line<'a>(
     mode: &Mode,
     line: String,
     positions: Vec<StylePosition>,
+    line_styles: &Vec<ForgroundStyleSpan>,
 ) -> Vec<Span<'a>> {
     let sorted_positions = style::get_sorted_positions(positions);
-    let span_to_styles = style::convert_sorted_positions_to_span_styles(mode, sorted_positions);
+    let span_styles = style::convert_sorted_positions_to_span_styles(mode, sorted_positions);
 
-    style::get_spans(view_port, line, span_to_styles)
+    let mut styles = Vec::new();
+    for (s_start, s_end, s_style) in &span_styles {
+        let mut processed = false;
+        for (l_start, l_end, l_style) in line_styles {
+            let l_s = l_start + view_port.get_offset_width();
+            let l_e = l_end + view_port.get_offset_width();
+
+            if &l_s > s_end || &l_e < s_start {
+                continue;
+            }
+
+            processed = true;
+
+            let split_start = if &l_s > s_start { &l_s } else { s_start };
+            let split_end = if &l_e < s_end { &l_e } else { s_end };
+
+            let mixed_style = match l_style {
+                ForegroundStyle::Color(clr) => s_style.clone().fg(clr.clone()),
+                ForegroundStyle::_Modifier(mdfr) => s_style.clone().add_modifier(mdfr.clone()),
+            };
+
+            if split_start == s_start && split_end == s_end {
+                styles.push((*split_start, *split_end, mixed_style));
+            } else if split_start == s_start {
+                styles.push((*s_start, *split_end, mixed_style));
+                styles.push((*split_end, *s_end, *s_style));
+            } else if split_end == s_end {
+                styles.push((*s_start, *split_start, *s_style));
+                styles.push((*split_start, *s_end, mixed_style));
+            } else {
+                styles.push((*s_start, *split_start, *s_style));
+                styles.push((*split_start, *split_end, mixed_style));
+                styles.push((*split_end, *s_end, *s_style));
+            }
+        }
+
+        if !processed {
+            styles.push((*s_start, *s_end, *s_style));
+        }
+    }
+
+    style::get_spans(view_port, line, styles)
 }

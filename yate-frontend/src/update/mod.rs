@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use ratatui::prelude::Rect;
+use ratatui::{prelude::Rect, style::Color};
 use yate_keymap::message::{Message, ViewPortDirection};
 
 use crate::{
     layout::AppLayout,
     model::{
-        buffer::{Buffer, BufferLine, Cursor, CursorPosition},
+        buffer::{Buffer, BufferLine, Cursor, CursorPosition, ForegroundStyle},
         Model,
     },
 };
@@ -150,23 +150,25 @@ fn get_target_path(model: &Model) -> Option<PathBuf> {
 fn get_directory_content(path: &Path) -> Vec<BufferLine> {
     let mut content: Vec<_> = std::fs::read_dir(path)
         .unwrap()
-        .map(|entry| {
-            entry
-                .unwrap()
-                .path()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
-        })
-        .map(|content| BufferLine {
-            content,
-            ..Default::default()
-        })
+        .map(|entry| get_bufferline_by_path(&entry.unwrap().path()))
         .collect();
 
     content.sort_unstable_by(|a, b| a.content.cmp(&b.content));
 
     content
+}
+
+fn get_bufferline_by_path(path: &Path) -> BufferLine {
+    let content = path.file_name().unwrap().to_str().unwrap().to_string();
+    let style = if path.is_dir() {
+        vec![(
+            0,
+            content.chars().count(),
+            ForegroundStyle::Color(Color::LightBlue),
+        )]
+    } else {
+        vec![]
+    };
+
+    BufferLine { content, style }
 }
