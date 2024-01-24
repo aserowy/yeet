@@ -113,7 +113,7 @@ fn update_preview(model: &mut Model, layout: &AppLayout, message: &Message) {
 
 fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Message, path: &Path) {
     buffer.view_port.height = usize::from(layout.height);
-    buffer.view_port.content_width = usize::from(layout.width) - buffer.view_port.line_number_width;
+    buffer.view_port.content_width = usize::from(layout.width) - buffer.view_port.get_offset_width();
 
     let content = if path.is_dir() {
         get_directory_content(path)
