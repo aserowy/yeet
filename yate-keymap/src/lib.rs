@@ -83,15 +83,19 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                     None => messages.push(msg),
                 }
             }
-            Binding::Repeat(rpt) => match repeat {
-                Some(r) => repeat = Some(r * 10 + rpt),
-                None => repeat = Some(rpt),
-            },
             Binding::Motion(mtn) => match repeat {
                 Some(rpt) => {
                     messages.push(Message::MoveCursor(rpt, mtn));
                     repeat = None;
                 }
+                None => messages.push(Message::MoveCursor(1, mtn)),
+            },
+            Binding::Repeat(rpt) => match repeat {
+                Some(r) => repeat = Some(r * 10 + rpt),
+                None => repeat = Some(rpt),
+            },
+            Binding::RepeatOrMotion(rpt, mtn) => match repeat {
+                Some(r) => repeat = Some(r * 10 + rpt),
                 None => messages.push(Message::MoveCursor(1, mtn)),
             },
         }

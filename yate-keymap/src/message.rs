@@ -3,6 +3,7 @@ pub enum Binding {
     Message(Message),
     Motion(CursorDirection),
     Repeat(usize),
+    RepeatOrMotion(usize, CursorDirection),
 }
 
 #[derive(Clone, Debug, PartialEq)]

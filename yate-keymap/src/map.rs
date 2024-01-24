@@ -41,7 +41,7 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
-                    Binding::Repeat(0),
+                    Binding::RepeatOrMotion(0, CursorDirection::LineStart),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('1'), vec![])],
@@ -78,10 +78,6 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('9'), vec![])],
                     Binding::Repeat(9),
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('^'), vec![])],
-                    Binding::Motion(CursorDirection::LineStart),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
