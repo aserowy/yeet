@@ -6,7 +6,7 @@ use ratatui::{
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{Buffer, Cursor, ViewPort};
+use crate::model::buffer::{Buffer, BufferLine, Cursor, ViewPort};
 
 use self::style::{cursor, line_number, PositionType, StylePosition};
 
@@ -20,7 +20,7 @@ pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(styled), rect);
 }
 
-pub fn get_rendered_lines(model: &Buffer) -> Vec<String> {
+pub fn get_rendered_lines(model: &Buffer) -> Vec<BufferLine> {
     model
         .lines
         .iter()
@@ -34,7 +34,7 @@ pub fn get_styled_lines<'a>(
     view_port: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
-    lines: Vec<String>,
+    lines: Vec<BufferLine>,
 ) -> Vec<Line<'a>> {
     let width = view_port.get_offset_width() + view_port.content_width;
     let default_positions = vec![(0, PositionType::Default), (width, PositionType::Default)];
@@ -68,7 +68,7 @@ pub fn get_styled_lines<'a>(
         let line = format!(
             "{} {}",
             prefix::get_line_number(view_port, corrected_index, cursor),
-            content
+            content.content
         );
 
         result.push(Line::from(get_styled_line(
@@ -85,7 +85,11 @@ fn get_empty_buffer_lines<'a>(
     cursor: &Option<Cursor>,
     default_positions: Vec<StylePosition>,
 ) -> Vec<Line<'a>> {
-    let empty = vec!["".to_string()];
+    let empty = vec![BufferLine {
+        content: "".to_string(),
+        style: Vec::new(),
+    }];
+
     let cursor_styles = cursor::get_cursor_style_positions(view_port, cursor, &empty);
 
     let spans = if let Some(mut positions) = cursor_styles {
@@ -95,7 +99,7 @@ fn get_empty_buffer_lines<'a>(
         positions.1.extend(line_number_style);
 
         let mut line = prefix::get_line_number(view_port, 0, cursor);
-        line.push_str(" ");
+        line.push(' ');
 
         get_styled_line(view_port, mode, line, positions.1)
     } else {

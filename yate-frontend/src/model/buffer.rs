@@ -1,7 +1,9 @@
+use ratatui::style::{Color, Modifier};
+
 #[derive(Debug, Default)]
 pub struct Buffer {
     pub cursor: Option<Cursor>,
-    pub lines: Vec<String>,
+    pub lines: Vec<BufferLine>,
     pub view_port: ViewPort,
 }
 
@@ -21,6 +23,26 @@ pub enum CursorPosition {
 impl Default for CursorPosition {
     fn default() -> Self {
         CursorPosition::Absolute(0)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct BufferLine {
+    pub content: String,
+    pub style: Vec<ForgroundStyleSpan>,
+}
+
+pub type ForgroundStyleSpan = (usize, usize, ForegroundStyle);
+
+#[derive(Clone, Debug)]
+pub enum ForegroundStyle {
+    Color(Color),
+    _Modifier(Modifier),
+}
+
+impl Default for ForegroundStyle {
+    fn default() -> Self {
+        ForegroundStyle::Color(Color::White)
     }
 }
 

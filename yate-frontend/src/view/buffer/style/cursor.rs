@@ -1,11 +1,11 @@
-use crate::model::buffer::{Cursor, CursorPosition, ViewPort};
+use crate::model::buffer::{BufferLine, Cursor, CursorPosition, ViewPort};
 
 use super::{PositionType, StylePositionByLineIndex};
 
 pub fn get_cursor_style_positions(
     view_port: &ViewPort,
     cursor: &Option<Cursor>,
-    lines: &[String],
+    lines: &[BufferLine],
 ) -> Option<StylePositionByLineIndex> {
     if let Some(cursor) = cursor {
         let offset = view_port.get_offset_width();
@@ -17,7 +17,7 @@ pub fn get_cursor_style_positions(
         ];
 
         let line_index = cursor.vertical_index - view_port.vertical_index;
-        let line = &lines[line_index][view_port.horizontal_index..];
+        let line = &lines[line_index].content[view_port.horizontal_index..];
 
         let line_length = if line.chars().count() > view_port.content_width {
             view_port.content_width

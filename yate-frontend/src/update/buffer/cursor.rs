@@ -22,7 +22,7 @@ pub fn update_by_direction(model: &mut Buffer, count: &usize, direction: &Cursor
                     let cursor_index = match cursor.horizontial_index {
                         CursorPosition::Absolute(n) => n,
                         CursorPosition::End => {
-                            model.lines[cursor.vertical_index].chars().count() - 1
+                            model.lines[cursor.vertical_index].content.chars().count() - 1
                         }
                         CursorPosition::None => return,
                     };
@@ -44,7 +44,8 @@ pub fn update_by_direction(model: &mut Buffer, count: &usize, direction: &Cursor
                         CursorPosition::None => return,
                     };
 
-                    if model.lines[cursor.vertical_index].chars().count() - 1 > cursor_index {
+                    if model.lines[cursor.vertical_index].content.chars().count() - 1 > cursor_index
+                    {
                         cursor.horizontial_index = CursorPosition::Absolute(cursor_index + 1);
                     }
                 }

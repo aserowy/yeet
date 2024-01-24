@@ -6,7 +6,7 @@ use yate_keymap::message::{Message, ViewPortDirection};
 use crate::{
     layout::AppLayout,
     model::{
-        buffer::{Buffer, Cursor, CursorPosition},
+        buffer::{Buffer, BufferLine, Cursor, CursorPosition},
         Model,
     },
 };
@@ -84,7 +84,7 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Mess
                 .parent_directory
                 .lines
                 .iter()
-                .position(|line| line == current_filename)
+                .position(|line| line.content == current_filename)
             {
                 if let Some(cursor) = &mut model.parent_directory.cursor {
                     cursor.vertical_index = index;
@@ -113,7 +113,8 @@ fn update_preview(model: &mut Model, layout: &AppLayout, message: &Message) {
 
 fn update_buffer_with_path(buffer: &mut Buffer, layout: &Rect, message: &Message, path: &Path) {
     buffer.view_port.height = usize::from(layout.height);
-    buffer.view_port.content_width = usize::from(layout.width) - buffer.view_port.get_offset_width();
+    buffer.view_port.content_width =
+        usize::from(layout.width) - buffer.view_port.get_offset_width();
 
     let content = if path.is_dir() {
         get_directory_content(path)
@@ -134,7 +135,7 @@ fn get_target_path(model: &Model) -> Option<PathBuf> {
 
     if let Some(cursor) = &buffer.cursor {
         let current = &buffer.lines[cursor.vertical_index];
-        let target = model.current_path.join(current);
+        let target = model.current_path.join(&current.content);
 
         if target.exists() {
             Some(target)
@@ -146,7 +147,7 @@ fn get_target_path(model: &Model) -> Option<PathBuf> {
     }
 }
 
-fn get_directory_content(path: &Path) -> Vec<String> {
+fn get_directory_content(path: &Path) -> Vec<BufferLine> {
     let mut content: Vec<_> = std::fs::read_dir(path)
         .unwrap()
         .map(|entry| {
@@ -159,9 +160,13 @@ fn get_directory_content(path: &Path) -> Vec<String> {
                 .unwrap()
                 .to_string()
         })
+        .map(|content| BufferLine {
+            content,
+            ..Default::default()
+        })
         .collect();
 
-    content.sort_unstable();
+    content.sort_unstable_by(|a, b| a.content.cmp(&b.content));
 
     content
 }

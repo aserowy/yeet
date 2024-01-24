@@ -10,8 +10,8 @@ mod statusline;
 
 pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
     commandline::view(model, frame, layout.commandline);
-    directory::view_current(model, frame, layout.current_directory);
-    directory::view_parent(model, frame, layout.parent_directory);
+    directory::view_current(model, frame, layout);
+    directory::view_parent(model, frame, layout);
     preview::view(model, frame, layout.preview);
     statusline::view(model, frame, layout.statusline);
 }
