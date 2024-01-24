@@ -67,11 +67,15 @@ pub fn get_styled_lines<'a>(
         positions.extend(line_number::get_style_position(view_port, index, cursor));
 
         // NOTE: add line expansions here
-        let line = format!(
-            "{} {}",
-            prefix::get_line_number(view_port, corrected_index, cursor),
-            bl.content
-        );
+        let line = if view_port.get_offset_width() > 0 {
+            format!(
+                "{} {}",
+                prefix::get_line_number(view_port, corrected_index, cursor),
+                bl.content
+            )
+        } else {
+            bl.content.to_string()
+        };
 
         result.push(Line::from(get_styled_line(
             view_port, mode, line, positions, &bl.style,
@@ -123,6 +127,7 @@ fn get_styled_line<'a>(
     let sorted_positions = style::get_sorted_positions(positions);
     let span_styles = style::convert_sorted_positions_to_span_styles(mode, sorted_positions);
 
+    // TODO: refactor into own function
     let mut styles = Vec::new();
     for (s_start, s_end, s_style) in &span_styles {
         let mut processed = false;

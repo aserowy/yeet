@@ -58,7 +58,12 @@ pub struct ViewPort {
 
 impl ViewPort {
     pub fn get_offset_width(&self) -> usize {
-        self.get_line_number_width() + 1
+        let offset = self.get_line_number_width();
+        if offset > 0 {
+            offset + 1
+        } else {
+            0
+        }
     }
 
     pub fn get_line_number_width(&self) -> usize {
