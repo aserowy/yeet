@@ -6,11 +6,12 @@ use ratatui::{
 };
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{
-    Buffer, BufferLine, Cursor, ForegroundStyle, ForgroundStyleSpan, ViewPort,
-};
+use crate::model::buffer::{Buffer, BufferLine, Cursor, ForgroundStyleSpan, ViewPort};
 
-use self::style::{cursor, line_number, PositionType, StylePosition};
+use self::style::{
+    cursor, line_number,
+    position::{self, PositionType, StylePosition},
+};
 
 mod prefix;
 mod style;
@@ -66,8 +67,8 @@ pub fn get_styled_lines<'a>(
         positions.extend(default_positions.clone());
         positions.extend(line_number::get_style_position(view_port, index, cursor));
 
-        // NOTE: add line expansions here
         let line = if view_port.get_offset_width() > 0 {
+            // NOTE: add line expansions here
             format!(
                 "{} {}",
                 prefix::get_line_number(view_port, corrected_index, cursor),
@@ -122,52 +123,11 @@ fn get_styled_line<'a>(
     mode: &Mode,
     line: String,
     positions: Vec<StylePosition>,
-    line_styles: &Vec<ForgroundStyleSpan>,
+    line_styles: &[ForgroundStyleSpan],
 ) -> Vec<Span<'a>> {
-    let sorted_positions = style::get_sorted_positions(positions);
-    let span_styles = style::convert_sorted_positions_to_span_styles(mode, sorted_positions);
-
-    // TODO: refactor into own function
-    let mut styles = Vec::new();
-    for (s_start, s_end, s_style) in &span_styles {
-        let mut processed = false;
-        for (l_start, l_end, l_style) in line_styles {
-            let l_s = l_start + view_port.get_offset_width();
-            let l_e = l_end + view_port.get_offset_width();
-
-            if &l_s > s_end || &l_e < s_start {
-                continue;
-            }
-
-            processed = true;
-
-            let split_start = if &l_s > s_start { &l_s } else { s_start };
-            let split_end = if &l_e < s_end { &l_e } else { s_end };
-
-            let mixed_style = match l_style {
-                ForegroundStyle::Color(clr) => s_style.fg(*clr),
-                ForegroundStyle::_Modifier(mdfr) => s_style.add_modifier(*mdfr),
-            };
-
-            if split_start == s_start && split_end == s_end {
-                styles.push((*split_start, *split_end, mixed_style));
-            } else if split_start == s_start {
-                styles.push((*s_start, *split_end, mixed_style));
-                styles.push((*split_end, *s_end, *s_style));
-            } else if split_end == s_end {
-                styles.push((*s_start, *split_start, *s_style));
-                styles.push((*split_start, *s_end, mixed_style));
-            } else {
-                styles.push((*s_start, *split_start, *s_style));
-                styles.push((*split_start, *split_end, mixed_style));
-                styles.push((*split_end, *s_end, *s_style));
-            }
-        }
-
-        if !processed {
-            styles.push((*s_start, *s_end, *s_style));
-        }
-    }
+    let sorted_positions = position::get_sorted_positions(positions);
+    let span_styles = position::convert_sorted_positions_to_span_styles(mode, sorted_positions);
+    let styles = style::merge_styles(view_port, span_styles, line_styles);
 
     style::get_spans(view_port, line, styles)
 }

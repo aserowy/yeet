@@ -1,9 +1,9 @@
 use crate::{
     model::buffer::{Cursor, LineNumber, ViewPort},
-    view::buffer::style::PositionType,
+    view::buffer::style::position::PositionType,
 };
 
-use super::StylePosition;
+use super::position::StylePosition;
 
 pub fn get_style_position(
     view_port: &ViewPort,

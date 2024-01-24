@@ -1,6 +1,6 @@
 use crate::model::buffer::{BufferLine, Cursor, CursorPosition, ViewPort};
 
-use super::{PositionType, StylePositionByLineIndex};
+use super::position::{PositionType, StylePositionByLineIndex};
 
 pub fn get_cursor_style_positions(
     view_port: &ViewPort,

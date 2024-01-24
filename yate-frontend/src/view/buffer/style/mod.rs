@@ -1,72 +1,60 @@
-use ratatui::{
-    style::{Color, Modifier, Style},
-    text::Span,
-};
-use yate_keymap::message::Mode;
+use ratatui::{style::Style, text::Span};
 
-use crate::model::buffer::ViewPort;
+use crate::model::buffer::{ForegroundStyle, ViewPort};
 
 pub mod cursor;
 pub mod line_number;
+pub mod position;
 
-pub type StylePosition = (usize, PositionType);
-type StylePositionByLineIndex = (usize, Vec<StylePosition>);
-type StylePositionGroup = (usize, Vec<PositionType>);
 type StyleSpan = (usize, usize, Style);
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum PositionType {
-    Cursor,
-    CursorLine,
-    Default,
-    LineNumberAbsolute,
-    LineNumberRelative,
-}
+pub fn merge_styles(
+    view_port: &ViewPort,
+    span_styles: Vec<(usize, usize, Style)>,
+    line_styles: &[(usize, usize, ForegroundStyle)],
+) -> Vec<(usize, usize, Style)> {
+    let mut styles = Vec::new();
+    for (s_start, s_end, s_style) in &span_styles {
+        let mut processed = false;
+        for (l_start, l_end, l_style) in line_styles {
+            let l_s = l_start + view_port.get_offset_width();
+            let l_e = l_end + view_port.get_offset_width();
 
-pub fn get_sorted_positions(positions: Vec<StylePosition>) -> Vec<StylePositionGroup> {
-    let mut result: Vec<StylePositionGroup> = Vec::new();
-    for (index, position_type) in positions {
-        if let Some((_, position_types)) = result.iter_mut().find(|(i, _)| i == &index) {
-            position_types.push(position_type.clone());
-        } else {
-            result.push((index, vec![position_type.clone()]));
-        }
-    }
-
-    result.sort_by(|(a, _), (b, _)| a.cmp(b));
-
-    result
-}
-
-pub fn convert_sorted_positions_to_span_styles(
-    mode: &Mode,
-    sorted_positions: Vec<StylePositionGroup>,
-) -> Vec<StyleSpan> {
-    let mut expansions = Vec::new();
-    let mut last_position_index = None;
-    let mut active_position_types = Vec::new();
-
-    for (index, types) in sorted_positions {
-        match last_position_index {
-            Some(lpi) => {
-                let style = get_style(mode, &active_position_types);
-
-                expansions.push((lpi, index, style));
-                last_position_index = Some(index);
+            if &l_s > s_end || &l_e < s_start {
+                continue;
             }
-            None => last_position_index = Some(index),
-        };
 
-        for pt in types {
-            if active_position_types.contains(&pt) {
-                active_position_types.retain(|t| t != &pt);
+            processed = true;
+
+            let split_start = if &l_s > s_start { &l_s } else { s_start };
+            let split_end = if &l_e < s_end { &l_e } else { s_end };
+
+            let mixed_style = match l_style {
+                ForegroundStyle::Color(clr) => s_style.fg(*clr),
+                ForegroundStyle::_Modifier(mdfr) => s_style.add_modifier(*mdfr),
+            };
+
+            if split_start == s_start && split_end == s_end {
+                styles.push((*split_start, *split_end, mixed_style));
+            } else if split_start == s_start {
+                styles.push((*s_start, *split_end, mixed_style));
+                styles.push((*split_end, *s_end, *s_style));
+            } else if split_end == s_end {
+                styles.push((*s_start, *split_start, *s_style));
+                styles.push((*split_start, *s_end, mixed_style));
             } else {
-                active_position_types.push(pt);
+                styles.push((*s_start, *split_start, *s_style));
+                styles.push((*split_start, *split_end, mixed_style));
+                styles.push((*split_end, *s_end, *s_style));
             }
+        }
+
+        if !processed {
+            styles.push((*s_start, *s_end, *s_style));
         }
     }
 
-    expansions
+    styles
 }
 
 pub fn get_spans<'a>(
@@ -113,24 +101,4 @@ pub fn get_spans<'a>(
     }
 
     spans
-}
-
-fn get_style(mode: &Mode, types: &[PositionType]) -> Style {
-    if types
-        .iter()
-        .any(|tp| tp == &PositionType::LineNumberRelative)
-    {
-        return Style::default().fg(Color::DarkGray);
-    }
-
-    match (
-        mode,
-        types.contains(&PositionType::CursorLine),
-        types.contains(&PositionType::Cursor),
-    ) {
-        (Mode::Normal, true, true) => Style::default().add_modifier(Modifier::REVERSED),
-        (Mode::Normal, true, false) => Style::default().bg(Color::DarkGray),
-        (Mode::Command, true, _) => Style::default().bg(Color::DarkGray),
-        (_, _, _) => Style::default(),
-    }
 }

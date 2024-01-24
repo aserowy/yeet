@@ -30,11 +30,6 @@ impl Default for KeyMap {
         mappings.insert(
             Mode::Normal,
             vec![
-                // TODO: delete (for testing only)
-                (
-                    vec![Key::new(KeyCode::Enter, vec![])],
-                    Binding::Message(Message::SelectCurrent),
-                ),
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding::Message(Message::ChangeMode(Mode::Normal)),
