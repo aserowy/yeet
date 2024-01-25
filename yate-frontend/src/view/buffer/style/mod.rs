@@ -1,67 +1,82 @@
-use ratatui::{style::Style, text::Span};
+use ratatui::{
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+};
 
-use crate::model::buffer::{ForegroundStyle, ViewPort};
+use crate::model::buffer::{StylePartial, StylePartialSpan, ViewPort};
 
 pub mod cursor;
 pub mod line_number;
-pub mod position;
 
 type StyleSpan = (usize, usize, Style);
 
-pub fn merge_styles(
-    view_port: &ViewPort,
-    span_styles: Vec<(usize, usize, Style)>,
-    line_styles: &[(usize, usize, ForegroundStyle)],
-) -> Vec<(usize, usize, Style)> {
-    let mut styles = Vec::new();
-    for (s_start, s_end, s_style) in &span_styles {
-        let mut processed = false;
-        for (l_start, l_end, l_style) in line_styles {
-            let l_s = l_start + view_port.get_offset_width();
-            let l_e = l_end + view_port.get_offset_width();
+const CURSOR_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
+const CURSORLINE_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
+const LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::White);
+const LINE_NUMBER_RELATIVE_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::DarkGray);
 
-            if &l_s > s_end || &l_e < s_start {
+pub fn get_line<'a>(
+    vp: &ViewPort,
+    line: String,
+    style_partials: Vec<StylePartialSpan>,
+) -> Line<'a> {
+    let style_spans = merge_style_partial_spans(vp, style_partials);
+    let spans = get_spans(vp, line, style_spans);
+
+    Line::from(spans)
+}
+
+fn merge_style_partial_spans(
+    view_port: &ViewPort,
+    style_partials: Vec<StylePartialSpan>,
+) -> Vec<StyleSpan> {
+    let mut result = vec![(
+        0,
+        view_port.get_offset_width() + view_port.content_width,
+        Style::default(),
+    )];
+
+    for (sp_start, sp_end, sp_style) in &style_partials {
+        let mut styles = Vec::new();
+        for (start, end, style) in &result {
+            if sp_start > end || sp_end < start {
+                styles.push((*start, *end, *style));
                 continue;
             }
 
-            processed = true;
+            let split_start = if sp_start > start { sp_start } else { start };
+            let split_end = if sp_end < end { sp_end } else { end };
 
-            let split_start = if &l_s > s_start { &l_s } else { s_start };
-            let split_end = if &l_e < s_end { &l_e } else { s_end };
-
-            let mixed_style = match l_style {
-                ForegroundStyle::Color(clr) => s_style.fg(*clr),
-                ForegroundStyle::_Modifier(mdfr) => s_style.add_modifier(*mdfr),
+            let mixed_style = match sp_style {
+                StylePartial::Foreground(clr) => style.fg(*clr),
+                StylePartial::Modifier(mdfr) => style.add_modifier(*mdfr),
+                StylePartial::Background(clr) => style.bg(*clr),
             };
 
-            if split_start == s_start && split_end == s_end {
+            if split_start == start && split_end == end {
                 styles.push((*split_start, *split_end, mixed_style));
-            } else if split_start == s_start {
-                styles.push((*s_start, *split_end, mixed_style));
-                styles.push((*split_end, *s_end, *s_style));
-            } else if split_end == s_end {
-                styles.push((*s_start, *split_start, *s_style));
-                styles.push((*split_start, *s_end, mixed_style));
+            } else if split_start == start {
+                styles.push((*start, *split_end, mixed_style));
+                styles.push((*split_end, *end, *style));
+            } else if split_end == end {
+                styles.push((*start, *split_start, *style));
+                styles.push((*split_start, *end, mixed_style));
             } else {
-                styles.push((*s_start, *split_start, *s_style));
+                styles.push((*start, *split_start, *style));
                 styles.push((*split_start, *split_end, mixed_style));
-                styles.push((*split_end, *s_end, *s_style));
+                styles.push((*split_end, *end, *style));
             }
         }
 
-        if !processed {
-            styles.push((*s_start, *s_end, *s_style));
+        if !styles.is_empty() {
+            result = styles;
         }
     }
 
-    styles
+    result
 }
 
-pub fn get_spans<'a>(
-    view_port: &ViewPort,
-    line: String,
-    span_to_styles: Vec<StyleSpan>,
-) -> Vec<Span<'a>> {
+fn get_spans<'a>(view_port: &ViewPort, line: String, style_spans: Vec<StyleSpan>) -> Vec<Span<'a>> {
     let line = line.chars().skip(view_port.horizontal_index);
 
     let line_count = line.clone().count();
@@ -72,7 +87,7 @@ pub fn get_spans<'a>(
     };
 
     let mut spans = Vec::new();
-    for (start, end, style) in span_to_styles {
+    for (start, end, style) in style_spans {
         if end > line_length {
             let filler_count = end - line_length;
             let mut filler = String::with_capacity(filler_count);

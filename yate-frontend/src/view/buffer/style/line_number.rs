@@ -1,39 +1,31 @@
 use crate::{
-    model::buffer::{Cursor, LineNumber, ViewPort},
-    view::buffer::style::position::PositionType,
+    model::buffer::{Cursor, LineNumber, StylePartialSpan, ViewPort},
+    view::buffer::style::{LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL, LINE_NUMBER_RELATIVE_STYLE_PARTIAL},
 };
 
-use super::position::StylePosition;
-
-pub fn get_style_position(
+pub fn get_style_partials(
     view_port: &ViewPort,
-    index: usize,
     cursor: &Option<Cursor>,
-) -> Vec<StylePosition> {
+    index: &usize,
+) -> Vec<StylePartialSpan> {
     let width = view_port.get_line_number_width();
     if width == 0 {
         return Vec::new();
     }
 
     if let Some(cursor) = cursor {
-        if cursor.vertical_index - view_port.vertical_index == index {
-            vec![
-                (0, PositionType::LineNumberAbsolute),
-                (width, PositionType::LineNumberAbsolute),
-            ]
+        if cursor.vertical_index - view_port.vertical_index == *index {
+            vec![(0, width, LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL.clone())]
         } else {
-            let position_type = match view_port.line_number {
-                LineNumber::_Absolute => PositionType::LineNumberAbsolute,
+            let style_partial = match view_port.line_number {
+                LineNumber::_Absolute => LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL.clone(),
                 LineNumber::None => unreachable!(),
-                LineNumber::Relative => PositionType::LineNumberRelative,
+                LineNumber::Relative => LINE_NUMBER_RELATIVE_STYLE_PARTIAL.clone(),
             };
 
-            vec![(0, position_type.clone()), (width, position_type)]
+            vec![(0, width, style_partial)]
         }
     } else {
-        vec![
-            (0, PositionType::LineNumberAbsolute),
-            (width, PositionType::LineNumberAbsolute),
-        ]
+        vec![(0, width, LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL.clone())]
     }
 }

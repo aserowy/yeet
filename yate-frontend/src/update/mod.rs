@@ -6,7 +6,7 @@ use yate_keymap::message::{Message, ViewPortDirection};
 use crate::{
     layout::AppLayout,
     model::{
-        buffer::{Buffer, BufferLine, Cursor, CursorPosition, ForegroundStyle},
+        buffer::{Buffer, BufferLine, Cursor, CursorPosition, StylePartial},
         Model,
     },
 };
@@ -169,7 +169,7 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
         vec![(
             0,
             content.chars().count(),
-            ForegroundStyle::Color(Color::LightBlue),
+            StylePartial::Foreground(Color::LightBlue),
         )]
     } else {
         vec![]

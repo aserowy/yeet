@@ -29,20 +29,21 @@ impl Default for CursorPosition {
 #[derive(Clone, Debug, Default)]
 pub struct BufferLine {
     pub content: String,
-    pub style: Vec<ForgroundStyleSpan>,
+    pub style: Vec<StylePartialSpan>,
 }
 
-pub type ForgroundStyleSpan = (usize, usize, ForegroundStyle);
+pub type StylePartialSpan = (usize, usize, StylePartial);
 
 #[derive(Clone, Debug)]
-pub enum ForegroundStyle {
-    Color(Color),
-    _Modifier(Modifier),
+pub enum StylePartial {
+    Background(Color),
+    Foreground(Color),
+    Modifier(Modifier),
 }
 
-impl Default for ForegroundStyle {
+impl Default for StylePartial {
     fn default() -> Self {
-        ForegroundStyle::Color(Color::White)
+        StylePartial::Foreground(Color::White)
     }
 }
 

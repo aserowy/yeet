@@ -1,26 +1,27 @@
-use crate::model::buffer::{BufferLine, Cursor, CursorPosition, ViewPort};
+use yate_keymap::message::Mode;
 
-use super::position::{PositionType, StylePositionByLineIndex};
+use crate::model::buffer::{BufferLine, Cursor, CursorPosition, StylePartialSpan, ViewPort};
 
-pub fn get_cursor_style_positions(
-    view_port: &ViewPort,
+use super::{CURSORLINE_STYLE_PARTIAL, CURSOR_STYLE_PARTIAL};
+
+pub fn get_style_partials(
+    vp: &ViewPort,
+    mode: &Mode,
     cursor: &Option<Cursor>,
-    lines: &[BufferLine],
-) -> Option<StylePositionByLineIndex> {
+    index: &usize,
+    line: &BufferLine,
+) -> Vec<StylePartialSpan> {
     if let Some(cursor) = cursor {
-        let offset = view_port.get_offset_width();
-        let width = offset + view_port.content_width;
+        if cursor.vertical_index - vp.vertical_index != *index {
+            return Vec::new();
+        }
 
-        let mut cursor_positions = vec![
-            (offset, PositionType::CursorLine),
-            (width, PositionType::CursorLine),
-        ];
+        let offset = vp.get_offset_width();
+        let width = offset + vp.content_width;
 
-        let line_index = cursor.vertical_index - view_port.vertical_index;
-        let line = &lines[line_index].content[view_port.horizontal_index..];
-
-        let line_length = if line.chars().count() > view_port.content_width {
-            view_port.content_width
+        let line = &line.content[vp.horizontal_index..];
+        let line_length = if line.chars().count() > vp.content_width {
+            vp.content_width
         } else {
             let length = line.chars().count();
             if length == 0 {
@@ -30,26 +31,32 @@ pub fn get_cursor_style_positions(
             }
         };
 
+        let mut spans = vec![(offset, width, CURSORLINE_STYLE_PARTIAL.clone())];
+        if mode != &Mode::Normal {
+            return spans;
+        }
+
         let cursor_index = match &cursor.horizontial_index {
             CursorPosition::Absolute(i) => {
-                let corrected_index = *i - view_port.horizontal_index;
+                let corrected_index = *i - vp.horizontal_index;
                 if corrected_index < line_length {
                     corrected_index
                 } else {
                     line_length - 1
                 }
             }
-            CursorPosition::End => line_length - view_port.horizontal_index - 1,
-            CursorPosition::None => return Some((cursor.vertical_index, cursor_positions)),
+            CursorPosition::End => line_length - vp.horizontal_index - 1,
+            CursorPosition::None => return spans,
         };
 
-        cursor_positions.extend(vec![
-            (offset + cursor_index, PositionType::Cursor),
-            (offset + cursor_index + 1, PositionType::Cursor),
-        ]);
+        spans.push((
+            offset + cursor_index,
+            offset + cursor_index + 1,
+            CURSOR_STYLE_PARTIAL.clone(),
+        ));
 
-        Some((cursor.vertical_index, cursor_positions))
+        spans
     } else {
-        None
+        Vec::new()
     }
 }
