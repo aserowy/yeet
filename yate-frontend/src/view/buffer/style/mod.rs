@@ -30,11 +30,7 @@ fn merge_style_partial_spans(
     view_port: &ViewPort,
     style_partials: Vec<StylePartialSpan>,
 ) -> Vec<StyleSpan> {
-    let mut result = vec![(
-        0,
-        view_port.get_offset_width() + view_port.content_width,
-        Style::default(),
-    )];
+    let mut result = vec![(0, view_port.width, Style::default())];
 
     for (sp_start, sp_end, sp_style) in &style_partials {
         let mut styles = Vec::new();
@@ -80,8 +76,8 @@ fn get_spans<'a>(view_port: &ViewPort, line: String, style_spans: Vec<StyleSpan>
     let line = line.chars().skip(view_port.horizontal_index);
 
     let line_count = line.clone().count();
-    let line_length = if line_count > view_port.content_width {
-        view_port.content_width
+    let line_length = if line_count > view_port.width {
+        view_port.width
     } else {
         line_count
     };

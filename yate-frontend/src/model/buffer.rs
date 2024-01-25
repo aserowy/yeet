@@ -49,22 +49,25 @@ impl Default for StylePartial {
 
 #[derive(Debug, Default)]
 pub struct ViewPort {
-    pub content_width: usize,
     pub height: usize,
     pub horizontal_index: usize,
     pub line_number: LineNumber,
     pub line_number_width: usize,
     pub vertical_index: usize,
+    pub width: usize,
 }
 
 impl ViewPort {
-    pub fn get_offset_width(&self) -> usize {
-        let offset = self.get_line_number_width();
-        if offset > 0 {
-            offset + 1
+    pub fn get_border_width(&self) -> usize {
+        if self.get_prefix_width() > 0 {
+            1
         } else {
             0
         }
+    }
+
+    pub fn get_content_width(&self) -> usize {
+        self.width - self.get_offset_width()
     }
 
     pub fn get_line_number_width(&self) -> usize {
@@ -73,6 +76,14 @@ impl ViewPort {
             LineNumber::None => 0,
             LineNumber::Relative => self.line_number_width,
         }
+    }
+
+    pub fn get_offset_width(&self) -> usize {
+        self.get_line_number_width() + self.get_border_width()
+    }
+
+    pub fn get_prefix_width(&self) -> usize {
+        self.get_line_number_width()
     }
 }
 

@@ -17,11 +17,10 @@ pub fn get_style_partials(
         }
 
         let offset = vp.get_offset_width();
-        let width = offset + vp.content_width;
-
+        let content_width = vp.width - offset;
         let line = &line.content[vp.horizontal_index..];
-        let line_length = if line.chars().count() > vp.content_width {
-            vp.content_width
+        let line_length = if line.chars().count() > content_width {
+            content_width
         } else {
             let length = line.chars().count();
             if length == 0 {
@@ -31,7 +30,7 @@ pub fn get_style_partials(
             }
         };
 
-        let mut spans = vec![(offset, width, CURSORLINE_STYLE_PARTIAL.clone())];
+        let mut spans = vec![(offset, vp.width, CURSORLINE_STYLE_PARTIAL.clone())];
         if mode != &Mode::Normal {
             return spans;
         }

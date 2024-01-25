@@ -24,8 +24,8 @@ pub fn update_by_cursor(model: &mut Buffer) {
 
         if viewport.horizontal_index > cursor_index {
             viewport.horizontal_index = cursor_index;
-        } else if viewport.horizontal_index + viewport.content_width < cursor_index {
-            viewport.horizontal_index = cursor_index - viewport.content_width;
+        } else if viewport.horizontal_index + viewport.get_content_width() < cursor_index {
+            viewport.horizontal_index = cursor_index - viewport.get_content_width()
         }
     }
 }

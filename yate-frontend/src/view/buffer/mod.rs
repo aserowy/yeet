@@ -37,23 +37,22 @@ fn get_styled_lines<'a>(
         lines
     };
 
-    let offset = vp.get_offset_width();
     let mut result = Vec::new();
-    for (index, bl) in lines.iter().enumerate() {
-        let corrected_index = index + vp.vertical_index;
+    for (i, bl) in lines.iter().enumerate() {
+        let corrected_index = i + vp.vertical_index;
 
-        let mut style_partials: Vec<_> = Vec::new();
-        // NOTE: higher order (higher index) styles take precedence
-        style_partials.extend(line_number::get_style_partials(vp, cursor, &index));
-        style_partials.extend(cursor::get_style_partials(vp, mode, cursor, &index, bl));
-        style_partials.extend(correct_index(&offset, &bl.style));
-
+        let mut spans: Vec<_> = Vec::new();
         let mut content = String::new();
+        spans.extend(line_number::get_style_partials(vp, cursor, &i));
         content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
-        content.push_str(&prefix::get_border(&offset));
+        content.push_str(&prefix::get_border(vp));
+
+        // NOTE: higher order (higher index) styles take precedence
+        spans.extend(cursor::get_style_partials(vp, mode, cursor, &i, bl));
+        spans.extend(correct_index(&content.chars().count(), &bl.style));
         content.push_str(&bl.content);
 
-        result.push(style::get_line(vp, content, style_partials));
+        result.push(style::get_line(vp, content, spans));
     }
 
     result
