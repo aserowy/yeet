@@ -3,8 +3,7 @@ use yate_keymap::message::Mode;
 
 use crate::model::buffer::{Buffer, BufferLine, Cursor, StylePartialSpan, ViewPort};
 
-use self::style::{cursor, line_number};
-
+mod line;
 mod prefix;
 mod style;
 
@@ -43,12 +42,12 @@ fn get_styled_lines<'a>(
 
         let mut spans: Vec<_> = Vec::new();
         let mut content = String::new();
-        spans.extend(line_number::get_style_partials(vp, cursor, &i));
+        spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
         content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
         content.push_str(&prefix::get_border(vp));
 
         // NOTE: higher order (higher index) styles take precedence
-        spans.extend(cursor::get_style_partials(vp, mode, cursor, &i, bl));
+        spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
         spans.extend(correct_index(&content.chars().count(), &bl.style));
         content.push_str(&bl.content);
 

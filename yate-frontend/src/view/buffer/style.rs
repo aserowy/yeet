@@ -5,15 +5,12 @@ use ratatui::{
 
 use crate::model::buffer::{StylePartial, StylePartialSpan, ViewPort};
 
-pub mod cursor;
-pub mod line_number;
-
 type StyleSpan = (usize, usize, Style);
 
-const CURSOR_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
-const CURSORLINE_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
-const LINE_NUMBER_ABSOLUTE_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::White);
-const LINE_NUMBER_RELATIVE_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::DarkGray);
+pub const CURSOR_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
+pub const CURSORLINE_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
+pub const LINE_NUMBER_ABS_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::White);
+pub const LINE_NUMBER_REL_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::DarkGray);
 
 pub fn get_line<'a>(
     vp: &ViewPort,

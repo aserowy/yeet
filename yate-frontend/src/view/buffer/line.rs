@@ -2,9 +2,9 @@ use yate_keymap::message::Mode;
 
 use crate::model::buffer::{BufferLine, Cursor, CursorPosition, StylePartialSpan, ViewPort};
 
-use super::{CURSORLINE_STYLE_PARTIAL, CURSOR_STYLE_PARTIAL};
+use super::style::{CURSORLINE_STYLE_PARTIAL, CURSOR_STYLE_PARTIAL};
 
-pub fn get_style_partials(
+pub fn get_cursor_style_partials(
     vp: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
