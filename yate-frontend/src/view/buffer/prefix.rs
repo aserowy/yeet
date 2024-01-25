@@ -39,3 +39,11 @@ pub fn get_line_number(view_port: &ViewPort, index: usize, cursor: &Option<Curso
         }
     }
 }
+
+pub fn get_border(offset: &usize) -> String {
+    if offset == &0 {
+        String::new()
+    } else {
+        ' '.to_string()
+    }
+}

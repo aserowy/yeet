@@ -46,47 +46,38 @@ fn get_styled_lines<'a>(
         style_partials.extend(cursor::get_style_partials(vp, mode, cursor, &index, bl));
         style_partials.extend(correct_index(&offset, &bl.style));
 
-        let line = if offset > 0 {
-            let mut content = String::new();
-            content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
-            content.push(' ');
-            content.push_str(&bl.content);
+        let mut content = String::new();
+        content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
+        content.push_str(&prefix::get_border(&offset));
+        content.push_str(&bl.content);
 
-            content
-        } else {
-            bl.content.to_string()
-        };
-
-        result.push(style::get_line(vp, line, style_partials));
+        result.push(style::get_line(vp, content, style_partials));
     }
 
     result
 }
 
 fn get_empty_buffer_lines<'a>(
-    view_port: &ViewPort,
+    vp: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
 ) -> Vec<Line<'a>> {
-    let empty = BufferLine {
-        content: "".to_string(),
-        style: Vec::new(),
-    };
+    let default = BufferLine::default();
+    let mut cursor_styles = cursor::get_style_partials(vp, mode, cursor, &0, &default);
 
-    let mut cursor_styles = cursor::get_style_partials(view_port, mode, cursor, &0, &empty);
-    let spans = if cursor_styles.is_empty() {
-        style::get_line(view_port, "".to_string(), Vec::new())
+    let line = if cursor_styles.is_empty() {
+        style::get_line(vp, default.content, Vec::new())
     } else {
-        let line_number_style = line_number::get_style_partials(view_port, cursor, &0);
+        let line_number_style = line_number::get_style_partials(vp, cursor, &0);
         cursor_styles.extend(line_number_style);
 
-        let mut line = prefix::get_line_number(view_port, 0, cursor);
-        line.push(' ');
+        let mut line = prefix::get_line_number(vp, 0, cursor);
+        line.push_str(&prefix::get_border(&vp.get_offset_width()));
 
-        style::get_line(view_port, line, cursor_styles)
+        style::get_line(vp, line, cursor_styles)
     };
 
-    vec![spans]
+    vec![line]
 }
 
 fn correct_index(offset: &usize, style_partials: &Vec<StylePartialSpan>) -> Vec<StylePartialSpan> {
