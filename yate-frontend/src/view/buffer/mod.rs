@@ -31,9 +31,11 @@ fn get_styled_lines<'a>(
     cursor: &Option<Cursor>,
     lines: Vec<BufferLine>,
 ) -> Vec<Line<'a>> {
-    if lines.is_empty() {
-        return get_empty_buffer_lines(vp, mode, cursor);
-    }
+    let lines = if lines.is_empty() {
+        vec![BufferLine::default()]
+    } else {
+        lines
+    };
 
     let offset = vp.get_offset_width();
     let mut result = Vec::new();
@@ -55,29 +57,6 @@ fn get_styled_lines<'a>(
     }
 
     result
-}
-
-fn get_empty_buffer_lines<'a>(
-    vp: &ViewPort,
-    mode: &Mode,
-    cursor: &Option<Cursor>,
-) -> Vec<Line<'a>> {
-    let default = BufferLine::default();
-    let mut cursor_styles = cursor::get_style_partials(vp, mode, cursor, &0, &default);
-
-    let line = if cursor_styles.is_empty() {
-        style::get_line(vp, default.content, Vec::new())
-    } else {
-        let line_number_style = line_number::get_style_partials(vp, cursor, &0);
-        cursor_styles.extend(line_number_style);
-
-        let mut line = prefix::get_line_number(vp, 0, cursor);
-        line.push_str(&prefix::get_border(&vp.get_offset_width()));
-
-        style::get_line(vp, line, cursor_styles)
-    };
-
-    vec![line]
 }
 
 fn correct_index(offset: &usize, style_partials: &Vec<StylePartialSpan>) -> Vec<StylePartialSpan> {
