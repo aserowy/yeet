@@ -2,7 +2,7 @@ use yate_keymap::message::Mode;
 
 use crate::model::buffer::{BufferLine, Cursor, CursorPosition, StylePartialSpan, ViewPort};
 
-use super::style::{CURSORLINE_STYLE_PARTIAL, CURSOR_STYLE_PARTIAL};
+use super::style::{CURSORLINE_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL};
 
 pub fn get_cursor_style_partials(
     vp: &ViewPort,
@@ -30,7 +30,11 @@ pub fn get_cursor_style_partials(
             }
         };
 
-        let mut spans = vec![(offset, vp.width, CURSORLINE_STYLE_PARTIAL.clone())];
+        let mut spans = Vec::new();
+        if !cursor.hide_cursor_line {
+            spans.push((offset, vp.width, CURSORLINE_STYLE_PARTIAL.clone()));
+        }
+
         if mode != &Mode::Normal {
             return spans;
         }
@@ -51,7 +55,7 @@ pub fn get_cursor_style_partials(
         spans.push((
             offset + cursor_index,
             offset + cursor_index + 1,
-            CURSOR_STYLE_PARTIAL.clone(),
+            CURSOR_NORMAL_STYLE_PARTIAL.clone(),
         ));
 
         spans

@@ -44,8 +44,15 @@ impl MessageResolver {
             (_, Some(_)) => Vec::new(),
             (bindings, None) => {
                 if bindings.is_empty() {
+                    let messages = if get_passthrough_by_mode(&self.mode) {
+                        // TODO: key to string missing
+                        vec![Message::PassthroughKeys("a".to_string())]
+                    } else {
+                        Vec::new()
+                    };
+
                     self.buffer.clear();
-                    Vec::new()
+                    messages
                 } else {
                     let messages = get_messages_from_bindings(bindings, &mut self.mode);
                     if messages.is_empty() {
@@ -68,19 +75,19 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
     let mut messages = Vec::new();
     for binding in bindings {
         match binding {
-            Binding::Message(msg) => {
-                if let Message::ChangeMode(md) = &msg {
-                    *mode = md.clone();
-                }
-
-                match repeat {
-                    Some(rpt) => {
-                        for _ in 0..rpt {
-                            messages.push(msg.clone());
-                        }
-                        repeat = None;
+            Binding::Message(msg) => match repeat {
+                Some(rpt) => {
+                    for _ in 0..rpt {
+                        messages.push(msg.clone());
                     }
-                    None => messages.push(msg),
+                    repeat = None;
+                }
+                None => messages.push(msg),
+            },
+            Binding::Mode(md) => {
+                if md != *mode {
+                    messages.push(Message::ChangeMode(mode.clone(), md.clone()));
+                    *mode = md;
                 }
             }
             Binding::Motion(mtn) => match repeat {
@@ -102,4 +109,11 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
     }
 
     messages
+}
+
+fn get_passthrough_by_mode(mode: &Mode) -> bool {
+    match mode {
+        Mode::Normal => false,
+        Mode::Command => true,
+    }
 }

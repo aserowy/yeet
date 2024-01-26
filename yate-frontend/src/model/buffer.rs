@@ -10,6 +10,7 @@ pub struct Buffer {
 #[derive(Debug, Default)]
 pub struct Cursor {
     pub horizontial_index: CursorPosition,
+    pub hide_cursor_line: bool,
     pub vertical_index: usize,
 }
 

@@ -8,12 +8,14 @@ mod viewport;
 pub fn update(model: &mut Buffer, message: &Message) {
     match message {
         Message::ChangeKeySequence(_) => {}
-        Message::ChangeMode(_) => {}
+        Message::ChangeMode(_, _) => {}
+        Message::ExecuteCommand => todo!(),
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(model, count, direction);
             viewport::update_by_cursor(model);
         }
         Message::MoveViewPort(direction) => viewport::update_by_direction(model, direction),
+        Message::PassthroughKeys(raw) => model.lines[0].content.push_str(raw),
         Message::Refresh => {}
         Message::SelectCurrent => reset_view(&mut model.view_port, &mut model.cursor),
         Message::SelectParent => reset_view(&mut model.view_port, &mut model.cursor),

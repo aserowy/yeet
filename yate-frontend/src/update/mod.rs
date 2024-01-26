@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::{prelude::Rect, style::Color};
-use yate_keymap::message::{Message, ViewPortDirection};
+use yate_keymap::message::{Message, Mode, ViewPortDirection};
 
 use crate::{
     layout::AppLayout,
@@ -18,9 +18,12 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
         }
-        Message::ChangeMode(mode) => {
-            model.mode = mode.clone();
+        Message::ChangeMode(_, to) => {
+            model.mode = to.clone();
+
+            update_commandline(model, layout, message);
         }
+        Message::ExecuteCommand => todo!(),
         Message::MoveCursor(_, _) => {
             update_current_directory(model, layout, message);
             update_preview(model, layout, message);
@@ -28,6 +31,10 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Message::MoveViewPort(_) => {
             update_current_directory(model, layout, message);
         }
+        Message::PassthroughKeys(_) => match model.mode {
+            Mode::Normal => {}
+            Mode::Command => update_commandline(model, layout, message),
+        },
         Message::Refresh => {
             update_current_directory(model, layout, message);
             update_parent_directory(model, layout, message);
@@ -57,6 +64,31 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         }
         Message::Quit => {}
     }
+}
+
+fn update_commandline(model: &mut Model, layout: &AppLayout, message: &Message) {
+    let buffer = &mut model.commandline;
+    let layout = &layout.commandline;
+
+    buffer.view_port.height = usize::from(layout.height);
+    buffer.view_port.width = usize::from(layout.width);
+
+    if let Message::ChangeMode(from, to) = message {
+        match (from, to) {
+            (Mode::Command, _) => {
+                buffer.lines = vec![BufferLine::default()];
+            }
+            (_, Mode::Command) => {
+                let mut bufferline = BufferLine::default();
+                bufferline.content = ":".to_string();
+
+                buffer.lines = vec![bufferline];
+            }
+            (_, _) => {}
+        }
+    }
+
+    buffer::update(buffer, message);
 }
 
 fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Message) {
@@ -92,6 +124,7 @@ fn update_parent_directory(model: &mut Model, layout: &AppLayout, message: &Mess
                     model.parent_directory.cursor = Some(Cursor {
                         horizontial_index: CursorPosition::None,
                         vertical_index: index,
+                        ..Default::default()
                     });
                 }
             }

@@ -8,8 +8,11 @@ use yate_keymap::message::Mode;
 
 use crate::model::Model;
 
+use super::buffer;
+
 pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
     if model.mode == Mode::Command {
+        buffer::view(&model.mode, &model.commandline, frame, rect);
     } else {
         let key_sequence = model.key_sequence.clone();
         let sequence_len = key_sequence.chars().count() as u16;

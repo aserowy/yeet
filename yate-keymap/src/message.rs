@@ -1,6 +1,7 @@
 #[derive(Clone, Debug, PartialEq)]
 pub enum Binding {
     Message(Message),
+    Mode(Mode),
     Motion(CursorDirection),
     Repeat(usize),
     RepeatOrMotion(usize, CursorDirection),
@@ -9,9 +10,11 @@ pub enum Binding {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     ChangeKeySequence(String),
-    ChangeMode(Mode),
+    ChangeMode(Mode, Mode),
+    ExecuteCommand,
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
+    PassthroughKeys(String),
     SelectCurrent,
     SelectParent,
     Refresh,

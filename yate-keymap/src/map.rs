@@ -28,11 +28,24 @@ impl Default for KeyMap {
     fn default() -> Self {
         let mut mappings = HashMap::new();
         mappings.insert(
+            Mode::Command,
+            vec![
+                (
+                    vec![Key::new(KeyCode::Enter, vec![])],
+                    Binding::Message(Message::ExecuteCommand),
+                ),
+                (
+                    vec![Key::new(KeyCode::Esc, vec![])],
+                    Binding::Mode(Mode::Normal),
+                ),
+            ],
+        );
+        mappings.insert(
             Mode::Normal,
             vec![
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
-                    Binding::Message(Message::ChangeMode(Mode::Normal)),
+                    Binding::Mode(Mode::Normal),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
@@ -73,6 +86,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('9'), vec![])],
                     Binding::Repeat(9),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char(':'), vec![])],
+                    Binding::Mode(Mode::Command),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],

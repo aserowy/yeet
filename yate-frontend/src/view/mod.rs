@@ -4,14 +4,26 @@ use crate::{layout::AppLayout, model::Model};
 
 mod buffer;
 mod commandline;
-mod directory;
 mod preview;
 mod statusline;
 
 pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
     commandline::view(model, frame, layout.commandline);
-    directory::view_current(model, frame, layout);
-    directory::view_parent(model, frame, layout);
+
+    buffer::view(
+        &model.mode,
+        &model.current_directory,
+        frame,
+        layout.current_directory,
+    );
+
+    buffer::view(
+        &model.mode,
+        &model.parent_directory,
+        frame,
+        layout.parent_directory,
+    );
+
     preview::view(model, frame, layout.preview);
     statusline::view(model, frame, layout.statusline);
 }
