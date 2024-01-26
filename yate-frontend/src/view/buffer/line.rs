@@ -49,7 +49,7 @@ pub fn get_cursor_style_partials(
                 if corrected_index < line_length {
                     corrected_index
                 } else {
-                    line_length - 1
+                    line_length - get_cursor_offset(mode)
                 }
             }
             CursorPosition::End => line_length - vp.horizontal_index - 1,
@@ -65,6 +65,13 @@ pub fn get_cursor_style_partials(
         spans
     } else {
         Vec::new()
+    }
+}
+
+fn get_cursor_offset(mode: &Mode) -> usize {
+    match mode {
+        Mode::Normal => 1,
+        Mode::Command => 0,
     }
 }
 

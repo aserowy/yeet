@@ -57,6 +57,7 @@ fn update_line(model: &mut Buffer, raw: &str) {
 
         let index = match cursor.horizontial_index {
             CursorPosition::Absolute(n) => n,
+            // FIX: count > 0 checks
             CursorPosition::End => line.content.chars().count() - 1,
             CursorPosition::None => unreachable!(),
         };
