@@ -6,7 +6,7 @@ use super::style::{CURSORLINE_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL};
 
 pub fn get_cursor_style_partials(
     vp: &ViewPort,
-    mode: &Mode,
+    _mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
     line: &BufferLine,
@@ -16,7 +16,7 @@ pub fn get_cursor_style_partials(
             return Vec::new();
         }
 
-        let offset = vp.get_offset_width();
+        let offset = vp.get_offset_width(line);
         let content_width = vp.width - offset;
         let line = &line.content[vp.horizontal_index..];
         let line_length = if line.chars().count() > content_width {
@@ -35,7 +35,7 @@ pub fn get_cursor_style_partials(
             spans.push((offset, vp.width, CURSORLINE_STYLE_PARTIAL.clone()));
         }
 
-        if mode != &Mode::Normal {
+        if cursor.hide_cursor {
             return spans;
         }
 

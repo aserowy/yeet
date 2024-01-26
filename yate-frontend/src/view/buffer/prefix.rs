@@ -1,10 +1,18 @@
 use crate::{
-    model::buffer::{Cursor, LineNumber, StylePartialSpan, ViewPort},
+    model::buffer::{BufferLine, Cursor, LineNumber, StylePartialSpan, ViewPort},
     view::buffer::style::{LINE_NUMBER_ABS_STYLE_PARTIAL, LINE_NUMBER_REL_STYLE_PARTIAL},
 };
 
 pub fn get_border(vp: &ViewPort) -> String {
     " ".repeat(vp.get_border_width()).to_string()
+}
+
+pub fn get_custom_prefix(line: &BufferLine) -> String {
+    if let Some(prefix) = &line.prefix {
+        prefix.to_owned()
+    } else {
+        "".to_string()
+    }
 }
 
 pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> String {

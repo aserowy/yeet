@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use yate_keymap::message::Mode;
 
-use self::buffer::{Buffer, BufferLine, Cursor, CursorPosition, LineNumber};
+use self::buffer::{Buffer, Cursor, CursorPosition, LineNumber};
 
 pub mod buffer;
 
@@ -24,22 +24,22 @@ impl Default for Model {
         Self {
             commandline: Buffer {
                 cursor: Some(Cursor {
-                    horizontial_index: CursorPosition::None,
+                    hide_cursor: true,
                     hide_cursor_line: true,
                     vertical_index: 0,
+                    ..Default::default()
                 }),
-                lines: vec![BufferLine::default()],
-                view_port: Default::default(),
+                ..Default::default()
             },
             current_path,
             current_directory: Buffer {
                 cursor: Some(Cursor::default()),
-                lines: Default::default(),
                 view_port: buffer::ViewPort {
                     line_number: LineNumber::Relative,
                     line_number_width: 3,
                     ..Default::default()
                 },
+                ..Default::default()
             },
             key_sequence: String::new(),
             mode: Mode::default(),
@@ -49,8 +49,7 @@ impl Default for Model {
                     vertical_index: 0,
                     ..Default::default()
                 }),
-                lines: Default::default(),
-                view_port: Default::default(),
+                ..Default::default()
             },
             preview: Buffer::default(),
         }

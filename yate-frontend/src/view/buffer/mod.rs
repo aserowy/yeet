@@ -44,6 +44,7 @@ fn get_styled_lines<'a>(
         let mut content = String::new();
         spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
         content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
+        content.push_str(&prefix::get_custom_prefix(bl));
         content.push_str(&prefix::get_border(vp));
 
         // NOTE: higher order (higher index) styles take precedence

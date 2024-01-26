@@ -9,8 +9,9 @@ pub struct Buffer {
 
 #[derive(Debug, Default)]
 pub struct Cursor {
-    pub horizontial_index: CursorPosition,
+    pub hide_cursor: bool,
     pub hide_cursor_line: bool,
+    pub horizontial_index: CursorPosition,
     pub vertical_index: usize,
 }
 
@@ -29,6 +30,7 @@ impl Default for CursorPosition {
 
 #[derive(Clone, Debug, Default)]
 pub struct BufferLine {
+    pub prefix: Option<String>,
     pub content: String,
     pub style: Vec<StylePartialSpan>,
 }
@@ -67,8 +69,8 @@ impl ViewPort {
         }
     }
 
-    pub fn get_content_width(&self) -> usize {
-        self.width - self.get_offset_width()
+    pub fn get_content_width(&self, line: &BufferLine) -> usize {
+        self.width - self.get_offset_width(line)
     }
 
     pub fn get_line_number_width(&self) -> usize {
@@ -79,8 +81,14 @@ impl ViewPort {
         }
     }
 
-    pub fn get_offset_width(&self) -> usize {
-        self.get_line_number_width() + self.get_border_width()
+    pub fn get_offset_width(&self, line: &BufferLine) -> usize {
+        let custom_prefix_width = if let Some(prefix) = &line.prefix {
+            prefix.chars().count()
+        } else {
+            0
+        };
+
+        self.get_line_number_width() + self.get_border_width() + custom_prefix_width
     }
 
     pub fn get_prefix_width(&self) -> usize {

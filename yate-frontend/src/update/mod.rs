@@ -79,8 +79,10 @@ fn update_commandline(model: &mut Model, layout: &AppLayout, message: &Message) 
                 buffer.lines = vec![BufferLine::default()];
             }
             (_, Mode::Command) => {
-                let mut bufferline = BufferLine::default();
-                bufferline.content = ":".to_string();
+                let bufferline = BufferLine {
+                    prefix: Some(":".to_string()),
+                    ..Default::default()
+                };
 
                 buffer.lines = vec![bufferline];
             }
@@ -207,5 +209,9 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
         vec![]
     };
 
-    BufferLine { content, style }
+    BufferLine {
+        content,
+        style,
+        ..Default::default()
+    }
 }
