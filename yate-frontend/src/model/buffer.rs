@@ -15,7 +15,7 @@ pub struct Cursor {
     pub vertical_index: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CursorPosition {
     Absolute(usize),
     End,

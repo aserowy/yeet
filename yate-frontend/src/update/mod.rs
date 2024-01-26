@@ -42,18 +42,30 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             }
         }
         Message::ExecuteCommand => todo!(),
-        Message::MoveCursor(_, _) => {
-            update_current_directory(model, layout, message);
-            update_preview(model, layout, message);
-        }
-        Message::MoveViewPort(_) => {
-            update_current_directory(model, layout, message);
-        }
+        Message::MoveCursor(_, _) => match model.mode {
+            Mode::Normal => {
+                update_current_directory(model, layout, message);
+                update_preview(model, layout, message);
+            }
+            Mode::Command => {
+                update_commandline(model, layout, message);
+            }
+        },
+        Message::MoveViewPort(_) => match model.mode {
+            Mode::Normal => {
+                update_current_directory(model, layout, message);
+                update_preview(model, layout, message);
+            }
+            Mode::Command => {
+                update_commandline(model, layout, message);
+            }
+        },
         Message::PassthroughKeys(_) => match model.mode {
             Mode::Normal => {}
             Mode::Command => update_commandline(model, layout, message),
         },
         Message::Refresh => {
+            update_commandline(model, layout, message);
             update_current_directory(model, layout, message);
             update_parent_directory(model, layout, message);
             update_preview(model, layout, message);
@@ -97,6 +109,8 @@ fn update_commandline(model: &mut Model, layout: &AppLayout, message: &Message) 
         }
 
         if from != &Mode::Command && to == &Mode::Command {
+            buffer::reset_view(&mut buffer.view_port, &mut buffer.cursor);
+
             let bufferline = BufferLine {
                 prefix: Some(":".to_string()),
                 ..Default::default()
