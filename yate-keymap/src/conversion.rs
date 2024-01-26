@@ -12,43 +12,37 @@ pub fn to_key(event: &KeyEvent) -> Option<Key> {
         .collect();
 
     match event.code {
-        // event::KeyCode::Backspace => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Enter => resolve_keypress_for_key(event.kind, KeyCode::Enter, modifier),
-        // event::KeyCode::Left => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Right => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Up => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Down => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Home => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::End => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::PageUp => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::PageDown => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Tab => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::BackTab => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Delete => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Insert => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::F(_) => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Char(c) => {
-            resolve_keypress_for_key(event.kind, KeyCode::from_char(c), modifier)
-        }
-        // event::KeyCode::Null => resolve_keypress_for_key(event.kind, KeyCode::),
-        event::KeyCode::Esc => resolve_keypress_for_key(event.kind, KeyCode::Esc, modifier),
+        event::KeyCode::Backspace => resolve(event.kind, KeyCode::Backspace, modifier),
+        event::KeyCode::Enter => resolve(event.kind, KeyCode::Enter, modifier),
+        event::KeyCode::Left => resolve(event.kind, KeyCode::Left, modifier),
+        event::KeyCode::Right => resolve(event.kind, KeyCode::Right, modifier),
+        event::KeyCode::Up => resolve(event.kind, KeyCode::Up, modifier),
+        event::KeyCode::Down => resolve(event.kind, KeyCode::Down, modifier),
+        // event::KeyCode::Home => resolve(event.kind, KeyCode::),
+        // event::KeyCode::End => resolve(event.kind, KeyCode::),
+        // event::KeyCode::PageUp => resolve(event.kind, KeyCode::),
+        // event::KeyCode::PageDown => resolve(event.kind, KeyCode::),
+        event::KeyCode::Tab => resolve(event.kind, KeyCode::Tab, modifier),
+        // event::KeyCode::BackTab => resolve(event.kind, KeyCode::),
+        event::KeyCode::Delete => resolve(event.kind, KeyCode::Delete, modifier),
+        // event::KeyCode::Insert => resolve(event.kind, KeyCode::),
+        // event::KeyCode::F(_) => resolve(event.kind, KeyCode::),
+        event::KeyCode::Char(c) => resolve(event.kind, KeyCode::from_char(c), modifier),
+        // event::KeyCode::Null => resolve(event.kind, KeyCode::),
+        event::KeyCode::Esc => resolve(event.kind, KeyCode::Esc, modifier),
         // event::KeyCode::CapsLock => todo!(),
         // event::KeyCode::ScrollLock => None,
-        // event::KeyCode::NumLock => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::PrintScreen => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Pause => resolve_keypress_for_key(event.kind, KeyCode::),
-        // event::KeyCode::Menu => resolve_keypress_for_key(event.kind, KeyCode::),
+        // event::KeyCode::NumLock => resolve(event.kind, KeyCode::),
+        // event::KeyCode::PrintScreen => resolve(event.kind, KeyCode::),
+        // event::KeyCode::Pause => resolve(event.kind, KeyCode::),
+        // event::KeyCode::Menu => resolve(event.kind, KeyCode::),
         // event::KeyCode::KeypadBegin => None,
-        // event::KeyCode::Media(_) => resolve_keypress_for_key(event.kind, KeyCode::),
+        // event::KeyCode::Media(_) => resolve(event.kind, KeyCode::),
         _ => None,
     }
 }
 
-fn resolve_keypress_for_key(
-    kind: KeyEventKind,
-    code: KeyCode,
-    modifier: Vec<KeyModifier>,
-) -> Option<Key> {
+fn resolve(kind: KeyEventKind, code: KeyCode, modifier: Vec<KeyModifier>) -> Option<Key> {
     if kind != KeyEventKind::Press {
         return None;
     }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Binding, CursorDirection, ViewPortDirection},
+    message::{Binding, CursorDirection, TextModification, ViewPortDirection},
     tree::KeyTree,
     Message, Mode,
 };
@@ -30,6 +30,10 @@ impl Default for KeyMap {
         mappings.insert(
             Mode::Command,
             vec![
+                (
+                    vec![Key::new(KeyCode::Backspace, vec![])],
+                    Binding::Message(Message::Modification(TextModification::DeleteCharOnCursor)),
+                ),
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding::Message(Message::ExecuteCommand),

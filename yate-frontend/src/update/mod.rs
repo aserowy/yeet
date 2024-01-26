@@ -13,6 +13,7 @@ use crate::{
 
 mod buffer;
 
+// TODO: refactor file!!!!1111eleven
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     match message {
         Message::ChangeKeySequence(sequence) => {
@@ -42,6 +43,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             }
         }
         Message::ExecuteCommand => todo!(),
+        Message::Modification(_) => match model.mode {
+            Mode::Normal => {
+                // NOTE: add file modification handling
+                update_current_directory(model, layout, message);
+            }
+            Mode::Command => {
+                update_commandline(model, layout, message);
+            }
+        },
         Message::MoveCursor(_, _) => match model.mode {
             Mode::Normal => {
                 update_current_directory(model, layout, message);
@@ -59,10 +69,6 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             Mode::Command => {
                 update_commandline(model, layout, message);
             }
-        },
-        Message::PassthroughKeys(_) => match model.mode {
-            Mode::Normal => {}
-            Mode::Command => update_commandline(model, layout, message),
         },
         Message::Refresh => {
             update_commandline(model, layout, message);

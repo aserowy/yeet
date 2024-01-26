@@ -1,4 +1,4 @@
-use yate_keymap::message::Message;
+use yate_keymap::message::{Message, TextModification};
 
 use crate::model::buffer::{Buffer, BufferLine, Cursor, CursorPosition, ViewPort};
 
@@ -10,12 +10,12 @@ pub fn update(model: &mut Buffer, message: &Message) {
         Message::ChangeKeySequence(_) => {}
         Message::ChangeMode(_, _) => {}
         Message::ExecuteCommand => todo!(),
+        Message::Modification(modification) => update_line(model, modification),
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(model, count, direction);
             viewport::update_by_cursor(model);
         }
         Message::MoveViewPort(direction) => viewport::update_by_direction(model, direction),
-        Message::PassthroughKeys(raw) => update_line(model, raw),
         Message::Refresh => {}
         Message::SelectCurrent => reset_view(&mut model.view_port, &mut model.cursor),
         Message::SelectParent => reset_view(&mut model.view_port, &mut model.cursor),
@@ -38,7 +38,7 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
     }
 }
 
-fn update_line(model: &mut Buffer, raw: &str) {
+fn update_line(model: &mut Buffer, modification: &TextModification) {
     if let Some(cursor) = &mut model.cursor {
         if cursor.horizontial_index == CursorPosition::None {
             return;
@@ -62,13 +62,26 @@ fn update_line(model: &mut Buffer, raw: &str) {
             CursorPosition::None => unreachable!(),
         };
 
-        cursor.horizontial_index = CursorPosition::Absolute(index + raw.chars().count());
+        match modification {
+            TextModification::DeleteCharOnCursor => {
+                if index == 0 {
+                    return;
+                }
 
-        line.content = format!(
-            "{}{}{}",
-            &line.content[..index],
-            raw,
-            &line.content[index..]
-        );
+                cursor.horizontial_index = CursorPosition::Absolute(index - 1);
+
+                line.content = format!("{}{}", &line.content[..index - 1], &line.content[index..]);
+            }
+            TextModification::Insert(raw) => {
+                cursor.horizontial_index = CursorPosition::Absolute(index + raw.chars().count());
+
+                line.content = format!(
+                    "{}{}{}",
+                    &line.content[..index],
+                    raw,
+                    &line.content[index..]
+                );
+            }
+        }
     }
 }

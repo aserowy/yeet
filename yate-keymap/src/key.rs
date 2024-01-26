@@ -48,23 +48,28 @@ impl ToString for Key {
 
         match self.code {
             KeyCode::Char(_) => {
-                if modifiers.is_empty() {
-                    self.code.to_string()
-                } else if modifiers.len() == 1 && modifiers[0] == KeyModifier::Shift {
-                    self.code.to_string().to_uppercase()
-                } else if modifiers.contains(&KeyModifier::Shift) {
+                if modifiers.contains(&KeyModifier::Shift) {
                     modifiers.retain(|modifier| *modifier != KeyModifier::Shift);
-                    get_key_string(self.code.to_string().to_uppercase(), modifiers)
+                    get_key_string(self.code.to_string().to_uppercase(), modifiers, false)
                 } else {
-                    get_key_string(self.code.to_string(), modifiers)
+                    get_key_string(self.code.to_string(), modifiers, false)
                 }
             }
-            _ => get_key_string(self.code.to_string(), modifiers),
+            KeyCode::Bar => get_key_string(String::from("|"), modifiers, false),
+            KeyCode::Backslash => get_key_string(String::from("\\"), modifiers, false),
+            KeyCode::LessThan => get_key_string(String::from("<"), modifiers, false),
+            KeyCode::Space => get_key_string(String::from(" "), modifiers, false),
+            KeyCode::Tab => get_key_string(String::from("\\t"), modifiers, false),
+            _ => get_key_string(self.code.to_string(), modifiers, true),
         }
     }
 }
 
-fn get_key_string(code: String, modifiers: Vec<KeyModifier>) -> String {
+fn get_key_string(code: String, modifiers: Vec<KeyModifier>, force_ltgt: bool) -> String {
+    if modifiers.is_empty() && !force_ltgt {
+        return code;
+    }
+
     let mut result = String::from("<");
     for modifier in modifiers {
         match modifier {

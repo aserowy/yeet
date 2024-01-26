@@ -12,13 +12,19 @@ pub enum Message {
     ChangeKeySequence(String),
     ChangeMode(Mode, Mode),
     ExecuteCommand,
+    Modification(TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
-    PassthroughKeys(String),
     SelectCurrent,
     SelectParent,
     Refresh,
     Quit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TextModification {
+    DeleteCharOnCursor,
+    Insert(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -4,6 +4,8 @@ use map::KeyMap;
 use message::{Binding, Message, Mode};
 use tree::KeyTree;
 
+use crate::message::TextModification;
+
 mod buffer;
 pub mod conversion;
 pub mod key;
@@ -45,8 +47,8 @@ impl MessageResolver {
             (bindings, None) => {
                 if bindings.is_empty() {
                     let messages = if get_passthrough_by_mode(&self.mode) {
-                        // TODO: key to string missing
-                        vec![Message::PassthroughKeys("a".to_string())]
+                        let message = TextModification::Insert(self.buffer.to_string());
+                        vec![Message::Modification(message)]
                     } else {
                         Vec::new()
                     };
@@ -85,10 +87,8 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 None => messages.push(msg),
             },
             Binding::Mode(md) => {
-                if md != *mode {
-                    messages.push(Message::ChangeMode(mode.clone(), md.clone()));
-                    *mode = md;
-                }
+                messages.push(Message::ChangeMode(mode.clone(), md.clone()));
+                *mode = md;
             }
             Binding::Motion(mtn) => match repeat {
                 Some(rpt) => {
