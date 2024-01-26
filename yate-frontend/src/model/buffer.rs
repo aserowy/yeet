@@ -91,7 +91,7 @@ impl ViewPort {
         self.get_line_number_width() + self.get_border_width() + custom_prefix_width
     }
 
-    pub fn get_prefix_width(&self) -> usize {
+    fn get_prefix_width(&self) -> usize {
         self.get_line_number_width()
     }
 }

@@ -1,12 +1,16 @@
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{BufferLine, Cursor, CursorPosition, StylePartialSpan, ViewPort};
+use crate::model::buffer::{
+    BufferLine, Cursor, CursorPosition, StylePartial, StylePartialSpan, ViewPort,
+};
 
-use super::style::{CURSORLINE_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL};
+use super::style::{
+    CURSORLINE_STYLE_PARTIAL, CURSOR_INSERT_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL,
+};
 
 pub fn get_cursor_style_partials(
     vp: &ViewPort,
-    _mode: &Mode,
+    mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
     line: &BufferLine,
@@ -55,11 +59,18 @@ pub fn get_cursor_style_partials(
         spans.push((
             offset + cursor_index,
             offset + cursor_index + 1,
-            CURSOR_NORMAL_STYLE_PARTIAL.clone(),
+            get_partial_style(mode),
         ));
 
         spans
     } else {
         Vec::new()
+    }
+}
+
+fn get_partial_style(mode: &Mode) -> StylePartial {
+    match mode {
+        Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
+        Mode::Command => CURSOR_INSERT_STYLE_PARTIAL.clone(),
     }
 }

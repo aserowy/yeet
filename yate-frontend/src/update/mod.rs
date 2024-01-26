@@ -18,10 +18,28 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
         }
-        Message::ChangeMode(_, to) => {
+        Message::ChangeMode(from, to) => {
             model.mode = to.clone();
 
-            update_commandline(model, layout, message);
+            match from {
+                Mode::Command => {
+                    unfocus_buffer(&mut model.commandline);
+                    update_commandline(model, layout, message);
+                }
+                Mode::Normal => {
+                    unfocus_buffer(&mut model.current_directory);
+                }
+            }
+
+            match to {
+                Mode::Command => {
+                    focus_buffer(&mut model.commandline);
+                    update_commandline(model, layout, message);
+                }
+                Mode::Normal => {
+                    focus_buffer(&mut model.current_directory);
+                }
+            }
         }
         Message::ExecuteCommand => todo!(),
         Message::MoveCursor(_, _) => {
@@ -74,23 +92,33 @@ fn update_commandline(model: &mut Model, layout: &AppLayout, message: &Message) 
     buffer.view_port.width = usize::from(layout.width);
 
     if let Message::ChangeMode(from, to) = message {
-        match (from, to) {
-            (Mode::Command, _) => {
-                buffer.lines = vec![BufferLine::default()];
-            }
-            (_, Mode::Command) => {
-                let bufferline = BufferLine {
-                    prefix: Some(":".to_string()),
-                    ..Default::default()
-                };
+        if from == &Mode::Command && to != &Mode::Command {
+            buffer.lines = vec![BufferLine::default()];
+        }
 
-                buffer.lines = vec![bufferline];
-            }
-            (_, _) => {}
+        if from != &Mode::Command && to == &Mode::Command {
+            let bufferline = BufferLine {
+                prefix: Some(":".to_string()),
+                ..Default::default()
+            };
+
+            buffer.lines = vec![bufferline];
         }
     }
 
     buffer::update(buffer, message);
+}
+
+fn focus_buffer(buffer: &mut Buffer) {
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor = false;
+    }
+}
+
+fn unfocus_buffer(buffer: &mut Buffer) {
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor = true;
+    }
 }
 
 fn update_current_directory(model: &mut Model, layout: &AppLayout, message: &Message) {
