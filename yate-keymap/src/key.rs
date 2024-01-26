@@ -42,6 +42,7 @@ impl PartialEq for Key {
 }
 
 impl ToString for Key {
+    // TODO: add support for mode dependent string representations
     fn to_string(&self) -> String {
         let mut modifiers = self.modifiers.clone();
         modifiers.sort();
