@@ -1,7 +1,8 @@
-use yate_keymap::message::{Message, TextModification};
+use yate_keymap::message::Message;
 
-use crate::model::buffer::{Buffer, BufferLine, Cursor, CursorPosition, ViewPort};
+use crate::model::buffer::{Buffer, Cursor, CursorPosition, ViewPort};
 
+mod bufferline;
 mod cursor;
 mod viewport;
 
@@ -10,7 +11,7 @@ pub fn update(model: &mut Buffer, message: &Message) {
         Message::ChangeKeySequence(_) => {}
         Message::ChangeMode(_, _) => {}
         Message::ExecuteCommand => todo!(),
-        Message::Modification(modification) => update_line(model, modification),
+        Message::Modification(modification) => bufferline::update(model, modification),
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(model, count, direction);
             viewport::update_by_cursor(model);
@@ -38,50 +39,14 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
     }
 }
 
-fn update_line(model: &mut Buffer, modification: &TextModification) {
-    if let Some(cursor) = &mut model.cursor {
-        if cursor.horizontial_index == CursorPosition::None {
-            return;
-        }
+pub fn focus_buffer(buffer: &mut Buffer) {
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor = false;
+    }
+}
 
-        let line = if model.lines.is_empty() {
-            cursor.vertical_index = 0;
-
-            let line = BufferLine::default();
-            model.lines.push(line);
-
-            &mut model.lines[0]
-        } else {
-            &mut model.lines[cursor.vertical_index]
-        };
-
-        let index = match cursor.horizontial_index {
-            CursorPosition::Absolute(n) => n,
-            // FIX: count > 0 checks
-            CursorPosition::End => line.content.chars().count() - 1,
-            CursorPosition::None => unreachable!(),
-        };
-
-        match modification {
-            TextModification::DeleteCharOnCursor => {
-                if index == 0 {
-                    return;
-                }
-
-                cursor.horizontial_index = CursorPosition::Absolute(index - 1);
-
-                line.content = format!("{}{}", &line.content[..index - 1], &line.content[index..]);
-            }
-            TextModification::Insert(raw) => {
-                cursor.horizontial_index = CursorPosition::Absolute(index + raw.chars().count());
-
-                line.content = format!(
-                    "{}{}{}",
-                    &line.content[..index],
-                    raw,
-                    &line.content[index..]
-                );
-            }
-        }
+pub fn unfocus_buffer(buffer: &mut Buffer) {
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor = true;
     }
 }
