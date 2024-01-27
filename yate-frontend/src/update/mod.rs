@@ -1,6 +1,6 @@
 use yate_keymap::message::{Message, Mode};
 
-use crate::{layout::AppLayout, model::Model};
+use crate::{event::AppResult, layout::AppLayout, model::Model};
 
 mod buffer;
 mod commandline;
@@ -9,12 +9,16 @@ mod parent;
 mod path;
 mod preview;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Option<AppResult> {
     match message {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
         }
         Message::ChangeMode(from, to) => {
+            if from == to {
+                return None;
+            }
+
             model.mode = to.clone();
 
             match from {
@@ -33,11 +37,14 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                     commandline::update(model, layout, message);
                 }
                 Mode::Normal => {
+                    // NOTE: add file modification handling
                     buffer::focus_buffer(&mut model.current_directory);
                 }
             }
         }
-        Message::ExecuteCommand => todo!(),
+        Message::ExecuteCommand => {
+            // TODO: add command execution handling in regard of mode
+        }
         Message::Modification(_) => match model.mode {
             Mode::Normal => {
                 // NOTE: add file modification handling
@@ -74,7 +81,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Message::SelectCurrent => {
             if let Some(target) = path::get_target_path(model) {
                 if !target.is_dir() {
-                    return;
+                    return None;
                 }
 
                 model.current_path = target;
@@ -93,6 +100,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                 preview::update(model, layout, message);
             }
         }
-        Message::Quit => {}
+        Message::Quit => return Some(AppResult::Quit),
     }
+
+    None
 }

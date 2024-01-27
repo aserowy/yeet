@@ -11,7 +11,12 @@ pub enum AppEvent {
     Startup,
 }
 
-pub fn listen_crossterm() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
+#[derive(Clone, Debug, PartialEq)]
+pub enum AppResult {
+    Quit,
+}
+
+pub fn listen() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
     let (sender, receiver) = mpsc::unbounded_channel();
     let internal_sender = sender.clone();
 
@@ -46,7 +51,7 @@ pub fn listen_crossterm() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEv
     (sender, receiver)
 }
 
-pub fn process_appevent(event: AppEvent, message_resolver: &mut MessageResolver) -> Vec<Message> {
+pub fn convert(event: AppEvent, message_resolver: &mut MessageResolver) -> Vec<Message> {
     match event {
         AppEvent::Error => todo!(),
         AppEvent::Key(key) => message_resolver.add_and_resolve(key),
