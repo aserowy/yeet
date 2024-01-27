@@ -1,6 +1,11 @@
+use ratatui::prelude::Rect;
 use yate_keymap::message::{Message, Mode};
 
-use crate::{event::AppResult, layout::AppLayout, model::Model};
+use crate::{
+    event::AppResult,
+    layout::AppLayout,
+    model::{buffer::ViewPort, Model},
+};
 
 mod buffer;
 mod commandline;
@@ -93,16 +98,32 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
             preview::update(model, layout, message);
         }
         Message::SelectCurrent => {
-            if let Some(target) = path::get_target_path(model) {
+            if let Some(target) = path::get_selected_path(model) {
                 if !target.is_dir() {
                     return None;
                 }
 
-                model.current_path = target;
+                model.current_path = target.clone();
+                model.history.add(target);
 
                 current::update(model, layout, message);
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
+
+                if let Some(history) = model.history.get_selection(&model.current_path) {
+                    let line = model
+                        .current_directory
+                        .lines
+                        .iter()
+                        .enumerate()
+                        .find(|(_, line)| line.content == history);
+
+                    if let Some(cursor) = &mut model.current_directory.cursor {
+                        if let Some((index, _)) = line {
+                            cursor.vertical_index = index;
+                        }
+                    }
+                }
             }
         }
         Message::SelectParent => {
@@ -118,4 +139,9 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
     }
 
     None
+}
+
+fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
+    vp.height = usize::from(rect.height);
+    vp.width = usize::from(rect.width);
 }

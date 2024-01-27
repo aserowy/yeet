@@ -14,38 +14,44 @@ use super::{buffer, path};
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let path = Path::new(&model.current_path);
+    let buffer = &mut model.parent_directory;
+    let layout = &layout.parent_directory;
+
+    super::set_viewport_dimensions(&mut buffer.view_port, layout);
+
     match path.parent() {
         Some(parent) => {
-            path::update_buffer_with_path(
-                &mut model.parent_directory,
-                &layout.parent_directory,
-                message,
-                parent,
-            );
+            buffer.lines = path::get_directory_content(parent);
+
+            buffer::update(buffer, message);
 
             let current_filename = path.file_name().unwrap().to_str().unwrap();
-            if let Some(index) = model
-                .parent_directory
+            let current_line = buffer
                 .lines
                 .iter()
-                .position(|line| line.content == current_filename)
-            {
-                if let Some(cursor) = &mut model.parent_directory.cursor {
+                .position(|line| line.content == current_filename);
+
+            if let Some(index) = current_line {
+                if let Some(cursor) = &mut buffer.cursor {
                     cursor.vertical_index = index;
                 } else {
-                    model.parent_directory.cursor = Some(Cursor {
+                    buffer.cursor = Some(Cursor {
                         horizontial_index: CursorPosition::None,
                         vertical_index: index,
                         ..Default::default()
                     });
                 }
-            }
 
-            buffer::update(
-                &mut model.parent_directory,
-                &Message::MoveViewPort(ViewPortDirection::CenterOnCursor),
-            );
+                buffer::update(
+                    buffer,
+                    &Message::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                );
+            }
         }
-        None => model.parent_directory.lines = vec![],
+        None => {
+            buffer.cursor = None;
+            buffer.lines = vec![];
+            buffer::update(buffer, message);
+        }
     }
 }

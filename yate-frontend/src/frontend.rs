@@ -45,7 +45,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
                 AppResult::ModeChanged(mode) => {
                     resolver.mode = mode;
                 }
-                _ => {}
+                AppResult::Quit => unreachable!(),
             }
         }
     }

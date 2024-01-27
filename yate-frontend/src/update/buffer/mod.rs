@@ -24,6 +24,12 @@ pub fn update(model: &mut Buffer, message: &Message) {
     }
 }
 
+pub fn focus_buffer(buffer: &mut Buffer) {
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor = false;
+    }
+}
+
 pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
     view_port.horizontal_index = 0;
     view_port.vertical_index = 0;
@@ -36,12 +42,6 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
             CursorPosition::End => CursorPosition::End,
             CursorPosition::None => CursorPosition::None,
         }
-    }
-}
-
-pub fn focus_buffer(buffer: &mut Buffer) {
-    if let Some(cursor) = &mut buffer.cursor {
-        cursor.hide_cursor = false;
     }
 }
 

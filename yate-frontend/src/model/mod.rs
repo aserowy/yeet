@@ -2,15 +2,20 @@ use std::{env, path::PathBuf};
 
 use yate_keymap::message::Mode;
 
-use self::buffer::{Buffer, Cursor, CursorPosition, LineNumber};
+use self::{
+    buffer::{Buffer, Cursor, CursorPosition, LineNumber},
+    history::History,
+};
 
 pub mod buffer;
+pub mod history;
 
 #[derive(Debug)]
 pub struct Model {
     pub commandline: Buffer,
     pub current_directory: Buffer,
     pub current_path: PathBuf,
+    pub history: History,
     pub key_sequence: String,
     pub mode: Mode,
     pub parent_directory: Buffer,
@@ -41,6 +46,7 @@ impl Default for Model {
                 },
                 ..Default::default()
             },
+            history: History::default(),
             key_sequence: String::new(),
             mode: Mode::default(),
             parent_directory: Buffer {
