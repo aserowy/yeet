@@ -10,6 +10,7 @@ use crate::{
 mod buffer;
 mod commandline;
 mod current;
+mod history;
 mod parent;
 mod path;
 mod preview;
@@ -110,20 +111,11 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
 
-                if let Some(history) = model.history.get_selection(&model.current_path) {
-                    let line = model
-                        .current_directory
-                        .lines
-                        .iter()
-                        .enumerate()
-                        .find(|(_, line)| line.content == history);
-
-                    if let Some(cursor) = &mut model.current_directory.cursor {
-                        if let Some((index, _)) = line {
-                            cursor.vertical_index = index;
-                        }
-                    }
-                }
+                history::set_cursor_index(
+                    &model.current_path,
+                    &model.history,
+                    &mut model.current_directory,
+                );
             }
         }
         Message::SelectParent => {
@@ -133,6 +125,12 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 current::update(model, layout, message);
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
+
+                history::set_cursor_index(
+                    &model.current_path,
+                    &model.history,
+                    &mut model.current_directory,
+                );
             }
         }
         Message::Quit => return Some(AppResult::Quit),

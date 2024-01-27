@@ -2,7 +2,7 @@ use yate_keymap::message::Message;
 
 use crate::{layout::AppLayout, model::Model};
 
-use super::{buffer, path};
+use super::{buffer, history, path};
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     if let Some(target) = path::get_selected_path(model) {
@@ -18,5 +18,9 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         };
 
         buffer::update(buffer, message);
+
+        if !history::set_cursor_index(&target, &model.history, buffer) {
+            buffer.cursor = None;
+        };
     }
 }

@@ -4,7 +4,7 @@ use crate::model::buffer::{Buffer, Cursor, CursorPosition, ViewPort};
 
 mod bufferline;
 mod cursor;
-mod viewport;
+pub mod viewport;
 
 pub fn update(model: &mut Buffer, message: &Message) {
     match message {
