@@ -88,7 +88,6 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
             },
             Binding::Mode(md) => {
                 messages.push(Message::ChangeMode(mode.clone(), md.clone()));
-                *mode = md;
             }
             Binding::Motion(mtn) => match repeat {
                 Some(rpt) => {

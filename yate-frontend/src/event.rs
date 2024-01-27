@@ -1,7 +1,12 @@
 use crossterm::event::Event;
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use yate_keymap::{conversion, key::Key, message::Message, MessageResolver};
+use yate_keymap::{
+    conversion,
+    key::Key,
+    message::{Message, Mode},
+    MessageResolver,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AppEvent {
@@ -13,6 +18,7 @@ pub enum AppEvent {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AppResult {
+    ModeChanged(Mode),
     Quit,
 }
 

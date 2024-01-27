@@ -27,17 +27,26 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    let mut message_resolver = MessageResolver::default();
+    let mut resolver = MessageResolver::default();
 
     let (_, mut receiver) = event::listen();
     while let Some(event) = receiver.recv().await {
-        let messages = event::convert(event, &mut message_resolver);
+        let messages = event::convert(event, &mut resolver);
 
         let mut result = Vec::new();
         terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
 
         if result.contains(&AppResult::Quit) {
             break;
+        }
+
+        for app_result in result {
+            match app_result {
+                AppResult::ModeChanged(mode) => {
+                    resolver.mode = mode;
+                }
+                _ => {}
+            }
         }
     }
 

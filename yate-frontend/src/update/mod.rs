@@ -41,9 +41,23 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                     buffer::focus_buffer(&mut model.current_directory);
                 }
             }
+
+            return Some(AppResult::ModeChanged(to.clone()));
         }
         Message::ExecuteCommand => {
-            // TODO: add command execution handling in regard of mode
+            if let Some(cmd) = model.commandline.lines.first() {
+                match cmd.content.as_str() {
+                    "q" => return update(model, layout, &Message::Quit),
+                    _ => {
+                        // TODO: add notification in cmd line?
+                        return update(
+                            model,
+                            layout,
+                            &Message::ChangeMode(model.mode.clone(), Mode::Normal),
+                        );
+                    }
+                }
+            }
         }
         Message::Modification(_) => match model.mode {
             Mode::Normal => {
