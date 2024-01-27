@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
 pub struct History {
@@ -21,18 +21,14 @@ impl History {
             .iter()
             .filter(|hstry| hstry.path.starts_with(path))
             .find_map(|hstry| {
-                if let Some(child) = get_next(path, &hstry.path) {
-                    Some(
-                        child
-                            .file_name()
-                            .unwrap()
-                            .to_str()
-                            .unwrap_or("")
-                            .to_string(),
-                    )
-                } else {
-                    None
-                }
+                get_next(path, &hstry.path).map(|child| {
+                    child
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap_or("")
+                        .to_string()
+                })
             })
     }
 }
@@ -49,22 +45,20 @@ enum HistoryState {
     _Loaded,
 }
 
-fn get_next(target: &PathBuf, history: &PathBuf) -> Option<PathBuf> {
-    let mut current = history.as_path();
-    let mut child = history.as_path();
+fn get_next(target: &PathBuf, history: &Path) -> Option<PathBuf> {
+    let mut current = history;
 
     loop {
         match current.parent() {
             Some(parent) => {
                 if parent == target {
-                    if child.exists() {
-                        return Some(child.to_path_buf());
+                    if current.exists() {
+                        return Some(current.to_path_buf());
                     } else {
                         return None;
                     }
                 }
 
-                child = current;
                 current = parent;
             }
             None => return None,

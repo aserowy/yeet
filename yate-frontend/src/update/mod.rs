@@ -105,7 +105,6 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 }
 
                 model.current_path = target.clone();
-                model.history.add(target);
 
                 current::update(model, layout, message);
                 parent::update(model, layout, message);
@@ -116,6 +115,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                     &model.history,
                     &mut model.current_directory,
                 );
+
+                model.history.add(target);
             }
         }
         Message::SelectParent => {
@@ -123,14 +124,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 model.current_path = parent.to_path_buf();
 
                 current::update(model, layout, message);
-                parent::update(model, layout, message);
-                preview::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current_path,
                     &model.history,
                     &mut model.current_directory,
                 );
+
+                parent::update(model, layout, message);
+                preview::update(model, layout, message);
             }
         }
         Message::Quit => return Some(AppResult::Quit),
