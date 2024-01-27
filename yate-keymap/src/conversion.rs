@@ -6,9 +6,7 @@ pub fn to_key(event: &KeyEvent) -> Option<Key> {
     let modifier = event
         .modifiers
         .iter_names()
-        .map(|(s, _)| to_modifier(s))
-        .filter(|m| m.is_some())
-        .flatten()
+        .flat_map(|(s, _)| to_modifier(s))
         .collect();
 
     match event.code {

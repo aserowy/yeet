@@ -47,15 +47,13 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(model: &mut Model, frame: &mut Frame, messages: &Vec<Message>) -> Vec<AppResult> {
+fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<AppResult> {
     let layout = AppLayout::default(frame.size());
 
-    let mut app_results = Vec::new();
-    for message in messages {
-        if let Some(result) = update::update(model, &layout, message) {
-            app_results.push(result);
-        }
-    }
+    let app_results = messages
+        .iter()
+        .flat_map(|message| update::update(model, &layout, message))
+        .collect();
 
     view::view(model, frame, &layout);
 
