@@ -2,7 +2,7 @@ use ratatui::prelude::Rect;
 use yate_keymap::message::{Message, Mode};
 
 use crate::{
-    event::AppResult,
+    event::PostRenderAction,
     layout::AppLayout,
     model::{buffer::ViewPort, Model},
 };
@@ -15,7 +15,11 @@ mod parent;
 mod path;
 mod preview;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Option<AppResult> {
+pub fn update(
+    model: &mut Model,
+    layout: &AppLayout,
+    message: &Message,
+) -> Option<Vec<PostRenderAction>> {
     match message {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
@@ -48,10 +52,12 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 }
             }
 
-            return Some(AppResult::ModeChanged(to.clone()));
+            return Some(vec![PostRenderAction::ModeChanged(to.clone())]);
         }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
+                // FIX: this implementation bricks and sucks a**
+                // maybe enable multiple AppResult as return to enable command and changemode
                 match cmd.content.as_str() {
                     "q" => return update(model, layout, &Message::Quit),
                     _ => {
@@ -107,14 +113,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 model.current_path = target.clone();
 
                 current::update(model, layout, message);
-                parent::update(model, layout, message);
-                preview::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current_path,
                     &model.history,
                     &mut model.current_directory,
                 );
+
+                parent::update(model, layout, message);
+                preview::update(model, layout, message);
 
                 model.history.add(target);
             }
@@ -135,7 +142,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) -> Optio
                 preview::update(model, layout, message);
             }
         }
-        Message::Quit => return Some(AppResult::Quit),
+        Message::Quit => return Some(vec![PostRenderAction::Quit]),
     }
 
     None

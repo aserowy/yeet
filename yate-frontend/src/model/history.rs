@@ -1,4 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io::Write;
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Default)]
 pub struct History {
@@ -30,6 +35,35 @@ impl History {
                         .to_string()
                 })
             })
+    }
+
+    // TODO: Error handling (all over the unwraps in yate!) and return Result here!
+    pub fn save(&self) {
+        let paths: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|entry| entry._state == HistoryState::Added)
+            .flat_map(|entry| entry.path.to_str())
+            .collect();
+
+        let serialized = serde_json::to_string(&paths).unwrap();
+        let history_path = format!(
+            "{}{}",
+            dirs::cache_dir().unwrap().to_str().unwrap(),
+            "/yate/.history"
+        );
+
+        if let Err(error) = fs::create_dir_all(Path::new(&history_path).parent().unwrap()) {
+            print!("{}", error);
+            return;
+        }
+
+        match File::create(history_path) {
+            Ok(mut output) => write!(output, "{}", serialized).unwrap(),
+            Err(error) => {
+                print!("{}", error);
+            }
+        }
     }
 }
 

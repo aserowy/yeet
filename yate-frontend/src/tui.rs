@@ -10,7 +10,7 @@ use std::io::{stderr, BufWriter};
 use yate_keymap::{message::Message, MessageResolver};
 
 use crate::{
-    event::{self, AppResult},
+    event::{self, PostRenderAction},
     layout::AppLayout,
     model::Model,
     update::{self},
@@ -36,16 +36,18 @@ pub async fn run(_address: String) -> Result<(), Error> {
         let mut result = Vec::new();
         terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
 
-        if result.contains(&AppResult::Quit) {
+        if result.contains(&PostRenderAction::Quit) {
+            model.history.save();
+
             break;
         }
 
         for app_result in result {
             match app_result {
-                AppResult::ModeChanged(mode) => {
+                PostRenderAction::ModeChanged(mode) => {
                     resolver.mode = mode;
                 }
-                AppResult::Quit => unreachable!(),
+                PostRenderAction::Quit => unreachable!(),
             }
         }
     }
@@ -56,15 +58,16 @@ pub async fn run(_address: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<AppResult> {
+fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<PostRenderAction> {
     let layout = AppLayout::default(frame.size());
 
-    let app_results = messages
+    let post_actions = messages
         .iter()
         .flat_map(|message| update::update(model, &layout, message))
+        .flatten()
         .collect();
 
     view::view(model, frame, &layout);
 
-    app_results
+    post_actions
 }

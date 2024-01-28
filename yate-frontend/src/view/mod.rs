@@ -8,6 +8,7 @@ mod preview;
 mod statusline;
 
 pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
+    // NOTE: If perf matters, call view only on relevant changed model parts
     commandline::view(model, frame, layout.commandline);
 
     buffer::view(

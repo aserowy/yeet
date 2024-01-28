@@ -9,7 +9,7 @@ use yate_keymap::{
 };
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum AppEvent {
+pub enum RenderAction {
     Error,
     Key(Key),
     Resize(u16, u16),
@@ -17,19 +17,19 @@ pub enum AppEvent {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum AppResult {
+pub enum PostRenderAction {
     ModeChanged(Mode),
     Quit,
 }
 
-pub fn listen() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
+pub fn listen() -> (UnboundedSender<RenderAction>, UnboundedReceiver<RenderAction>) {
     let (sender, receiver) = mpsc::unbounded_channel();
     let internal_sender = sender.clone();
 
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        internal_sender.send(AppEvent::Startup).unwrap();
+        internal_sender.send(RenderAction::Startup).unwrap();
 
         loop {
             let crossterm_event = reader.next().fuse();
@@ -45,7 +45,7 @@ pub fn listen() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
                             }
                         },
                         Some(Err(_)) => {
-                            internal_sender.send(AppEvent::Error).unwrap();
+                            internal_sender.send(RenderAction::Error).unwrap();
                         },
                         None => {},
                     }
@@ -57,50 +57,28 @@ pub fn listen() -> (UnboundedSender<AppEvent>, UnboundedReceiver<AppEvent>) {
     (sender, receiver)
 }
 
-pub fn convert(event: AppEvent, message_resolver: &mut MessageResolver) -> Vec<Message> {
+pub fn convert(event: RenderAction, message_resolver: &mut MessageResolver) -> Vec<Message> {
     match event {
-        AppEvent::Error => todo!(),
-        AppEvent::Key(key) => message_resolver.add_and_resolve(key),
-        AppEvent::Resize(_, _) => vec![Message::Refresh],
-        AppEvent::Startup => vec![Message::Refresh],
+        RenderAction::Error => todo!(),
+        RenderAction::Key(key) => message_resolver.add_and_resolve(key),
+        RenderAction::Resize(_, _) => vec![Message::Refresh],
+        RenderAction::Startup => vec![Message::Refresh],
     }
 }
 
-fn handle_event(event: Event) -> Option<AppEvent> {
+fn handle_event(event: Event) -> Option<RenderAction> {
     match event {
         Event::Key(key) => {
             if let Some(key) = conversion::to_key(&key) {
-                return Some(AppEvent::Key(key));
+                return Some(RenderAction::Key(key));
             }
 
             None
         }
-        Event::Resize(x, y) => Some(AppEvent::Resize(x, y)),
+        Event::Resize(x, y) => Some(RenderAction::Resize(x, y)),
         Event::FocusLost => None,
         Event::FocusGained => None,
         Event::Paste(_s) => None,
         Event::Mouse(_) => None,
     }
 }
-
-// let mut client = Client::connect(address).await?;
-// client.set("foo", bytes_from_str("bar").unwrap()).await?;
-
-// if let Some(value) = client.get("foo").await? {
-//     if let Ok(string) = str::from_utf8(&value) {
-//         stdout()
-//             .lock()
-//             .write_all(format!("\"{}\"", string).as_bytes())?;
-//     } else {
-//         stdout()
-//             .lock()
-//             .write_all(format!("{:?}", value).as_bytes())?;
-//     }
-// } else {
-//     stdout().lock().write_all(b"nil")?;
-
-// let _ = stdout().flush();
-
-// fn bytes_from_str(src: &str) -> Result<Bytes, Infallible> {
-//     Ok(Bytes::from(src.to_string()))
-// }

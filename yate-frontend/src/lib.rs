@@ -1,5 +1,5 @@
 pub mod event;
-pub mod frontend;
+pub mod tui;
 mod layout;
 mod model;
 mod update;
