@@ -27,6 +27,8 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
+    model.history.load();
+
     let mut resolver = MessageResolver::default();
 
     let (_, mut receiver) = event::listen();

@@ -1,9 +1,11 @@
-use std::fs;
-use std::io::Write;
 use std::{
-    fs::File,
+    cmp::Reverse,
+    fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
+    time::{self, SystemTime},
 };
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default)]
 pub struct History {
@@ -12,11 +14,17 @@ pub struct History {
 
 impl History {
     pub fn add(&mut self, path: PathBuf) {
+        let timestamp = SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
         self.entries.insert(
             0,
             HistoryEntry {
+                added_at: timestamp,
                 path,
-                _state: HistoryState::Added,
+                state: HistoryState::Added,
             },
         );
     }
@@ -38,15 +46,40 @@ impl History {
     }
 
     // TODO: Error handling (all over the unwraps in yate!) and return Result here!
+    pub fn load(&mut self) {
+        let history_path = format!(
+            "{}{}",
+            dirs::cache_dir().unwrap().to_str().unwrap(),
+            "/yate/.history"
+        );
+
+        if !Path::new(&history_path).exists() {
+            return;
+        }
+
+        let history_file = File::open(history_path).unwrap();
+        let mut history_csv_reader = csv::Reader::from_reader(history_file);
+
+        for result in history_csv_reader.deserialize() {
+            match result {
+                Ok(entry) => self.entries.push(entry),
+                Err(_) => {}
+            };
+        }
+
+        self.entries
+            .sort_unstable_by_key(|entry| Reverse(entry.added_at));
+    }
+
+    // TODO: Error handling (all over the unwraps in yate!) and return Result here!
+    // TODO: Optimize history objects
     pub fn save(&self) {
-        let paths: Vec<_> = self
+        let entries: Vec<_> = self
             .entries
             .iter()
-            .filter(|entry| entry._state == HistoryState::Added)
-            .flat_map(|entry| entry.path.to_str())
+            .filter(|entry| entry.state == HistoryState::Added)
             .collect();
 
-        let serialized = serde_json::to_string(&paths).unwrap();
         let history_path = format!(
             "{}{}",
             dirs::cache_dir().unwrap().to_str().unwrap(),
@@ -58,25 +91,37 @@ impl History {
             return;
         }
 
-        match File::create(history_path) {
-            Ok(mut output) => write!(output, "{}", serialized).unwrap(),
-            Err(error) => {
-                print!("{}", error);
-            }
+        let history_writer = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open(history_path)
+            .unwrap();
+
+        let mut history_csv_writer = csv::Writer::from_writer(history_writer);
+        for entry in entries {
+            history_csv_writer.serialize(entry).unwrap();
         }
+
+        history_csv_writer.flush().unwrap();
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 struct HistoryEntry {
     path: PathBuf,
-    _state: HistoryState,
+
+    #[serde(skip)]
+    state: HistoryState,
+    added_at: u64,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 enum HistoryState {
     Added,
-    _Loaded,
+
+    #[default]
+    Loaded,
 }
 
 fn get_next(target: &PathBuf, history: &Path) -> Option<PathBuf> {
