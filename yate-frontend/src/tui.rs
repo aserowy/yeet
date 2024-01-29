@@ -12,7 +12,7 @@ use yate_keymap::{message::Message, MessageResolver};
 use crate::{
     event::{self, PostRenderAction},
     layout::AppLayout,
-    model::Model,
+    model::{history, Model},
     update::{self},
     view::{self},
 };
@@ -27,7 +27,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    model.history.load();
+    history::load(&mut model.history);
 
     let mut resolver = MessageResolver::default();
 
@@ -39,7 +39,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
         terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
 
         if result.contains(&PostRenderAction::Quit) {
-            model.history.save();
+            history::save(&model.history);
 
             break;
         }

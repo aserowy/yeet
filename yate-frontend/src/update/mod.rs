@@ -4,7 +4,7 @@ use yate_keymap::message::{Message, Mode};
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{buffer::ViewPort, Model},
+    model::{self, buffer::ViewPort, Model},
 };
 
 mod buffer;
@@ -123,7 +123,7 @@ pub fn update(
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
 
-                model.history.add(target);
+                model::history::add(&mut model.history, &target);
             }
         }
         Message::SelectParent => {
