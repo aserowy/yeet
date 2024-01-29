@@ -12,7 +12,10 @@ use yate_keymap::{message::Message, MessageResolver};
 use crate::{
     event::{self, PostRenderAction},
     layout::AppLayout,
-    model::{history, Model},
+    model::{
+        history::{self},
+        Model,
+    },
     update::{self},
     view::{self},
 };

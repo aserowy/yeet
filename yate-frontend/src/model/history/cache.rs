@@ -1,6 +1,10 @@
-use std::{path::{PathBuf, Path}, fs::{OpenOptions, self, File}, collections::HashMap};
+use std::{
+    collections::HashMap,
+    fs::{self, File, OpenOptions},
+    path::{Path, PathBuf},
+};
 
-use super::{HistoryState, History, HistoryNode};
+use super::{History, HistoryNode, HistoryState};
 
 // TODO: Error handling (all over the unwraps in yate!) and return Result here!
 pub fn load(history: &mut History) {
@@ -34,7 +38,18 @@ pub fn load(history: &mut History) {
 }
 
 // TODO: Error handling (all over the unwraps in yate!) and return Result here!
+pub fn optimize() {
+    let mut history = History::default();
+    load(&mut history);
+    save_filtered(&history, HistoryState::Loaded, true);
+}
+
 pub fn save(history: &History) {
+    save_filtered(history, HistoryState::Added, false);
+}
+
+// TODO: Error handling (all over the unwraps in yate!) and return Result here!
+fn save_filtered(history: &History, state_filter: HistoryState, overwrite: bool) {
     let entries = get_paths(PathBuf::new(), &history.entries);
 
     let history_path = format!(
@@ -51,13 +66,14 @@ pub fn save(history: &History) {
     let history_writer = OpenOptions::new()
         .write(true)
         .create(true)
-        .append(true)
+        .truncate(overwrite)
+        .append(!overwrite)
         .open(history_path)
         .unwrap();
 
     let mut history_csv_writer = csv::Writer::from_writer(history_writer);
     for (changed_at, state, path) in entries {
-        if state == HistoryState::Loaded {
+        if state != state_filter {
             continue;
         }
 

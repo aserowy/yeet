@@ -20,7 +20,7 @@ pub struct HistoryNode {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-enum HistoryState {
+pub enum HistoryState {
     Added,
 
     #[default]
