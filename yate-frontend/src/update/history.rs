@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::model::{
     self,
@@ -8,7 +8,7 @@ use crate::model::{
 
 use super::buffer::viewport;
 
-pub fn set_cursor_index(path: &PathBuf, history: &History, buffer: &mut Buffer) -> bool {
+pub fn set_cursor_index(path: &Path, history: &History, buffer: &mut Buffer) -> bool {
     if let Some(history) = model::history::get_selection(history, path) {
         let line = buffer
             .lines

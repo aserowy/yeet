@@ -854,7 +854,6 @@ dependencies = [
  "dirs",
  "futures",
  "ratatui",
- "serde",
  "tokio",
  "yate-keymap",
 ]
