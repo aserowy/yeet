@@ -27,7 +27,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    history::load(&mut model.history);
+    history::cache::load(&mut model.history);
 
     let mut resolver = MessageResolver::default();
 
@@ -39,7 +39,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
         terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
 
         if result.contains(&PostRenderAction::Quit) {
-            history::save(&model.history);
+            history::cache::save(&model.history);
 
             break;
         }
