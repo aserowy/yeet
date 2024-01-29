@@ -2,33 +2,17 @@ use std::{
     cmp::Reverse,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
-    time::{self, SystemTime},
+    time::{self, SystemTime}, collections::HashMap,
 };
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default)]
 pub struct History {
-    entries: Vec<HistoryEntry>,
+    pub entries: HashMap<String, Vec<HistoryEntry>>,
 }
 
 impl History {
-    pub fn add(&mut self, path: PathBuf) {
-        let timestamp = SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        self.entries.insert(
-            0,
-            HistoryEntry {
-                added_at: timestamp,
-                path,
-                state: HistoryState::Added,
-            },
-        );
-    }
-
     pub fn get_selection(&self, path: &PathBuf) -> Option<String> {
         self.entries
             .iter()
@@ -72,7 +56,6 @@ impl History {
     }
 
     // TODO: Error handling (all over the unwraps in yate!) and return Result here!
-    // TODO: Optimize history objects
     pub fn save(&self) {
         let entries: Vec<_> = self
             .entries
