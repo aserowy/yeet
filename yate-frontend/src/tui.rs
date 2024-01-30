@@ -36,7 +36,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
 
     let (_, mut receiver) = event::listen();
     while let Some(event) = receiver.recv().await {
-        let messages = event::convert(event, &mut resolver);
+        let messages = event::convert_to_messages(event, &mut resolver);
 
         let mut result = Vec::new();
         terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
@@ -53,8 +53,9 @@ pub async fn run(_address: String) -> Result<(), Error> {
                     resolver.mode = mode;
                 }
                 PostRenderAction::OptimizeHistory => {
-                    todo!()
-                },
+                    // TODO: work as background task!
+                    history::cache::optimize();
+                }
                 PostRenderAction::Quit => unreachable!(),
             }
         }
