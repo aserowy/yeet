@@ -56,19 +56,26 @@ pub fn update(
         }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
-                // FIX: this implementation bricks and sucks a**
-                // maybe enable multiple AppResult as return to enable command and changemode
-                match cmd.content.as_str() {
-                    "q" => return update(model, layout, &Message::Quit),
-                    _ => {
-                        // TODO: add notification in cmd line?
-                        return update(
-                            model,
-                            layout,
-                            &Message::ChangeMode(model.mode.clone(), Mode::Normal),
-                        );
-                    }
-                }
+                let post_render_actions = match cmd.content.as_str() {
+                    "histopt" => Some(vec![PostRenderAction::OptimizeHistory]),
+                    "q" => update(model, layout, &Message::Quit),
+                    // TODO: add notification in cmd line?
+                    _ => None,
+                };
+
+                let mode_changed_actions = update(
+                    model,
+                    layout,
+                    &Message::ChangeMode(model.mode.clone(), Mode::Normal),
+                );
+
+                return Some(
+                    post_render_actions
+                        .into_iter()
+                        .flatten()
+                        .chain(mode_changed_actions.into_iter().flatten())
+                        .collect(),
+                );
             }
         }
         Message::Modification(_) => match model.mode {

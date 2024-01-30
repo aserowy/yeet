@@ -77,6 +77,10 @@ fn save_filtered(history: &History, state_filter: HistoryState, overwrite: bool)
             continue;
         }
 
+        if !path.exists() {
+            continue;
+        }
+
         if let Some(path) = path.to_str() {
             history_csv_writer
                 .write_record([changed_at.to_string().as_str(), path])

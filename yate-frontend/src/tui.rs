@@ -52,6 +52,9 @@ pub async fn run(_address: String) -> Result<(), Error> {
                 PostRenderAction::ModeChanged(mode) => {
                     resolver.mode = mode;
                 }
+                PostRenderAction::OptimizeHistory => {
+                    todo!()
+                },
                 PostRenderAction::Quit => unreachable!(),
             }
         }
