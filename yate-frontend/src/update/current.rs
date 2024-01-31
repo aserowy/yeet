@@ -11,5 +11,6 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
     buffer.lines = path::get_directory_content(&model.current_path);
 
+    // TODO: convert buffer changes to file modification tasks
     buffer::update(buffer, message);
 }

@@ -24,6 +24,7 @@ pub enum Message {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TextModification {
     DeleteCharOnCursor,
+    DeleteLineOnCursor,
     Insert(String),
 }
 

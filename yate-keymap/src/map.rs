@@ -104,6 +104,13 @@ impl Default for KeyMap {
                     Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageDown)),
                 ),
                 (
+                    vec![
+                        Key::new(KeyCode::from_char('d'), vec![]),
+                        Key::new(KeyCode::from_char('d'), vec![]),
+                    ],
+                    Binding::Message(Message::Modification(TextModification::DeleteLineOnCursor)),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
                     Binding::Motion(CursorDirection::Bottom),
                 ),

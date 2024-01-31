@@ -11,7 +11,9 @@ pub fn update(model: &mut Buffer, message: &Message) {
         Message::ChangeKeySequence(_) => {}
         Message::ChangeMode(_, _) => {}
         Message::ExecuteCommand => {}
-        Message::Modification(modification) => bufferline::update(model, modification),
+        Message::Modification(modification) => {
+            bufferline::update(model, modification);
+        }
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(model, count, direction);
             viewport::update_by_cursor(model);

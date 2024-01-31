@@ -105,3 +105,8 @@ pub enum LineNumber {
 
     Relative,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BufferChanged {
+    LineDeleted(usize, String),
+}
