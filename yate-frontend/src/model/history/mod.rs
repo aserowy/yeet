@@ -27,37 +27,39 @@ pub enum HistoryState {
     Loaded,
 }
 
-// TODO: Error handling (all over the unwraps in yate!) and return Result here!
-pub fn add(history: &mut History, path: &Path) {
-    let added_at = time::SystemTime::now()
-        .duration_since(time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+impl History {
+    // TODO: Error handling (all over the unwraps in yate!) and return Result here!
+    pub fn add(self: &mut History, path: &Path) {
+        let added_at = time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
-    let mut iter = path.components();
-    if let Some(component) = iter.next() {
-        if let Some(component_name) = component.as_os_str().to_str() {
-            add_entry(&mut history.entries, added_at, component_name, iter);
-        }
-    }
-}
-
-pub fn get_selection<'a>(history: &'a History, path: &Path) -> Option<&'a str> {
-    let mut current_nodes = &history.entries;
-    for component in path.components() {
-        if let Some(current_name) = component.as_os_str().to_str() {
-            if let Some(current_node) = current_nodes.get(current_name) {
-                current_nodes = &current_node.nodes;
-            } else {
-                return None;
+        let mut iter = path.components();
+        if let Some(component) = iter.next() {
+            if let Some(component_name) = component.as_os_str().to_str() {
+                add_entry(&mut self.entries, added_at, component_name, iter);
             }
         }
     }
 
-    current_nodes
-        .values()
-        .max_by_key(|node| node.changed_at)
-        .map(|node| node.component.as_str())
+    pub fn get_selection<'a>(self: &'a History, path: &Path) -> Option<&'a str> {
+        let mut current_nodes = &self.entries;
+        for component in path.components() {
+            if let Some(current_name) = component.as_os_str().to_str() {
+                if let Some(current_node) = current_nodes.get(current_name) {
+                    current_nodes = &current_node.nodes;
+                } else {
+                    return None;
+                }
+            }
+        }
+
+        current_nodes
+            .values()
+            .max_by_key(|node| node.changed_at)
+            .map(|node| node.component.as_str())
+    }
 }
 
 fn add_entry(
