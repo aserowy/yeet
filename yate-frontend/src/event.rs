@@ -7,6 +7,8 @@ use yate_keymap::{
     MessageResolver,
 };
 
+use crate::task::Task;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum RenderAction {
     Error,
@@ -18,7 +20,7 @@ pub enum RenderAction {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PostRenderAction {
     ModeChanged(Mode),
-    OptimizeHistory,
+    Task(Task),
     Quit,
 }
 

@@ -16,6 +16,7 @@ use crate::{
         history::{self},
         Model,
     },
+    task::TaskManager,
     update::{self},
     view::{self},
 };
@@ -33,33 +34,31 @@ pub async fn run(_address: String) -> Result<(), Error> {
     history::cache::load(&mut model.history);
 
     let mut resolver = MessageResolver::default();
+    let mut tasks = TaskManager::default();
 
     let (_, mut receiver) = event::listen();
     while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
-        let mut result = Vec::new();
-        terminal.draw(|frame| result = render(&mut model, frame, &messages))?;
+        let mut post_render_actions = Vec::new();
+        terminal.draw(|frame| post_render_actions = render(&mut model, frame, &messages))?;
 
-        if result.contains(&PostRenderAction::Quit) {
+        if post_render_actions.contains(&PostRenderAction::Quit) {
             history::cache::save(&model.history);
 
             break;
         }
 
-        for app_result in result {
-            match app_result {
-                PostRenderAction::ModeChanged(mode) => {
-                    resolver.mode = mode;
-                }
-                PostRenderAction::OptimizeHistory => {
-                    // TODO: work as background task!
-                    history::cache::optimize();
-                }
+        for post_render_action in post_render_actions {
+            match post_render_action {
+                PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
+                PostRenderAction::Task(task) => tasks.run(task),
                 PostRenderAction::Quit => unreachable!(),
             }
         }
     }
+
+    tasks.finishing().await;
 
     stderr().execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
@@ -70,7 +69,7 @@ pub async fn run(_address: String) -> Result<(), Error> {
 fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<PostRenderAction> {
     let layout = AppLayout::default(frame.size());
 
-    let post_actions = messages
+    let post_render_actions = messages
         .iter()
         .flat_map(|message| update::update(model, &layout, message))
         .flatten()
@@ -78,5 +77,5 @@ fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<Pos
 
     view::view(model, frame, &layout);
 
-    post_actions
+    post_render_actions
 }

@@ -5,6 +5,7 @@ use crate::{
     event::PostRenderAction,
     layout::AppLayout,
     model::{buffer::ViewPort, Model},
+    task::Task,
 };
 
 mod buffer;
@@ -57,7 +58,7 @@ pub fn update(
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 let post_render_actions = match cmd.content.as_str() {
-                    "histopt" => Some(vec![PostRenderAction::OptimizeHistory]),
+                    "histopt" => Some(vec![PostRenderAction::Task(Task::OptimizeHistory)]),
                     "q" => update(model, layout, &Message::Quit),
                     // TODO: add notification in cmd line?
                     _ => None,

@@ -29,7 +29,7 @@ pub enum HistoryState {
 
 impl History {
     // TODO: Error handling (all over the unwraps in yate!) and return Result here!
-    pub fn add(self: &mut History, path: &Path) {
+    pub fn add(&mut self, path: &Path) {
         let added_at = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
@@ -38,12 +38,18 @@ impl History {
         let mut iter = path.components();
         if let Some(component) = iter.next() {
             if let Some(component_name) = component.as_os_str().to_str() {
-                add_entry(&mut self.entries, added_at, component_name, iter);
+                add_entry(
+                    &mut self.entries,
+                    added_at,
+                    HistoryState::Added,
+                    component_name,
+                    iter,
+                );
             }
         }
     }
 
-    pub fn get_selection<'a>(self: &'a History, path: &Path) -> Option<&'a str> {
+    pub fn get_selection<'a>(&'a self, path: &Path) -> Option<&'a str> {
         let mut current_nodes = &self.entries;
         for component in path.components() {
             if let Some(current_name) = component.as_os_str().to_str() {
@@ -65,6 +71,7 @@ impl History {
 fn add_entry(
     nodes: &mut HashMap<String, HistoryNode>,
     changed_at: u64,
+    state: HistoryState,
     component_name: &str,
     mut component_iter: Components<'_>,
 ) {
@@ -75,7 +82,7 @@ fn add_entry(
                 changed_at,
                 component: component_name.to_string(),
                 nodes: HashMap::new(),
-                state: HistoryState::Added,
+                state: state.clone(),
             },
         );
     }
@@ -83,7 +90,7 @@ fn add_entry(
     if let Some(current_node) = nodes.get_mut(component_name) {
         if current_node.changed_at < changed_at {
             current_node.changed_at = changed_at;
-            current_node.state = HistoryState::Added;
+            current_node.state = state.clone();
         }
 
         if let Some(next_component) = component_iter.next() {
@@ -91,6 +98,7 @@ fn add_entry(
                 add_entry(
                     &mut current_node.nodes,
                     changed_at,
+                    state,
                     next_component_name,
                     component_iter,
                 );
