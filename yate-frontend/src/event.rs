@@ -79,7 +79,10 @@ fn handle_event(event: crossterm::event::Event) -> Option<RenderAction> {
     }
 }
 
-pub fn convert_to_messages(event: RenderAction, message_resolver: &mut MessageResolver) -> Vec<Message> {
+pub fn convert_to_messages(
+    event: RenderAction,
+    message_resolver: &mut MessageResolver,
+) -> Vec<Message> {
     match event {
         RenderAction::Error => todo!(),
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),

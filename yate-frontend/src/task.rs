@@ -58,11 +58,11 @@ impl TaskManager {
     }
 
     pub async fn finishing(&mut self) {
-        while let Some(task) = self.tasks.join_next().await {
-            match task {
-                Ok(_) => {}
-                Err(_) => {}
-            }
+        while let Some(_task) = self.tasks.join_next().await {
+            // match task {
+            //     Ok(_) => {}
+            //     Err(_) => {}
+            // }
         }
     }
 }

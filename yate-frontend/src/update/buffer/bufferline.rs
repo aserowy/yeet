@@ -57,7 +57,7 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
     }
 }
 
-fn get_line<'a>(model: &'a mut Buffer) -> Option<(&'a mut Cursor, &'a mut BufferLine)> {
+fn get_line(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
     if let Some(cursor) = &mut model.cursor {
         if cursor.horizontial_index == CursorPosition::None {
             return None;
