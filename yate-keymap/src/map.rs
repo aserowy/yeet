@@ -170,11 +170,6 @@ impl Default for KeyMap {
                     ],
                     Binding::Message(Message::MoveViewPort(ViewPortDirection::CenterOnCursor)),
                 ),
-                (
-                    // TODO: remove q and implement :q
-                    vec![Key::new(KeyCode::from_char('q'), vec![])],
-                    Binding::Message(Message::Quit),
-                ),
             ],
         );
 

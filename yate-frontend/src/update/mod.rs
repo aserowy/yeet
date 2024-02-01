@@ -24,6 +24,8 @@ pub fn update(
     match message {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
+
+            None
         }
         Message::ChangeMode(from, to) => {
             if from == to {
@@ -53,7 +55,7 @@ pub fn update(
                 }
             }
 
-            return Some(vec![PostRenderAction::ModeChanged(to.clone())]);
+            Some(vec![PostRenderAction::ModeChanged(to.clone())])
         }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
@@ -70,47 +72,58 @@ pub fn update(
                     &Message::ChangeMode(model.mode.clone(), Mode::Normal),
                 );
 
-                return Some(
+                Some(
                     post_render_actions
                         .into_iter()
                         .flatten()
                         .chain(mode_changed_actions.into_iter().flatten())
                         .collect(),
-                );
+                )
+            } else {
+                None
             }
         }
         Message::Modification(_) => match model.mode {
-            Mode::Normal => {
-                // NOTE: add file modification handling
-                current::update(model, layout, message);
-            }
+            Mode::Normal => current::update(model, layout, message),
             Mode::Command => {
                 commandline::update(model, layout, message);
+
+                None
             }
         },
         Message::MoveCursor(_, _) => match model.mode {
             Mode::Normal => {
-                current::update(model, layout, message);
+                let actions = current::update(model, layout, message);
                 preview::update(model, layout, message);
+
+                actions
             }
             Mode::Command => {
                 commandline::update(model, layout, message);
+
+                None
             }
         },
         Message::MoveViewPort(_) => match model.mode {
             Mode::Normal => {
-                current::update(model, layout, message);
+                let actions = current::update(model, layout, message);
                 preview::update(model, layout, message);
+
+                actions
             }
             Mode::Command => {
                 commandline::update(model, layout, message);
+
+                None
             }
         },
         Message::Refresh => {
+            let actions = current::update(model, layout, message);
             commandline::update(model, layout, message);
-            current::update(model, layout, message);
             parent::update(model, layout, message);
             preview::update(model, layout, message);
+
+            actions
         }
         Message::SelectCurrent => {
             if let Some(target) = path::get_selected_path(model) {
@@ -120,7 +133,7 @@ pub fn update(
 
                 model.current_path = target.clone();
 
-                current::update(model, layout, message);
+                let actions = current::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current_path,
@@ -132,13 +145,17 @@ pub fn update(
                 preview::update(model, layout, message);
 
                 model.history.add(&target);
+
+                actions
+            } else {
+                None
             }
         }
         Message::SelectParent => {
             if let Some(parent) = &model.current_path.parent() {
                 model.current_path = parent.to_path_buf();
 
-                current::update(model, layout, message);
+                let actions = current::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current_path,
@@ -148,12 +165,14 @@ pub fn update(
 
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
+
+                actions
+            } else {
+                None
             }
         }
-        Message::Quit => return Some(vec![PostRenderAction::Quit]),
+        Message::Quit => Some(vec![PostRenderAction::Quit]),
     }
-
-    None
 }
 
 fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {

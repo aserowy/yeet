@@ -5,7 +5,8 @@ use crate::model::buffer::{Buffer, BufferChanged, BufferLine, Cursor, CursorPosi
 pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec<BufferChanged>> {
     // TODO: most None must return Some(Vec<BufferChanged>) instead
     match modification {
-        // NOTE: Naming is misleading?
+        // TODO: add delete char before cursor for <bs> and use this for x
+        // TODO: remove visual cursor offset
         TextModification::DeleteCharOnCursor => {
             let line = get_line(model);
             if let Some((cursor, line)) = line {

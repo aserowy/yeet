@@ -1,28 +1,40 @@
 use yate_keymap::message::Message;
 
-use crate::model::buffer::{Buffer, Cursor, CursorPosition, ViewPort};
+use crate::model::buffer::{Buffer, BufferChanged, Cursor, CursorPosition, ViewPort};
 
 mod bufferline;
 mod cursor;
 pub mod viewport;
 
-pub fn update(model: &mut Buffer, message: &Message) {
+pub fn update(model: &mut Buffer, message: &Message) -> Option<Vec<BufferChanged>> {
     match message {
-        Message::ChangeKeySequence(_) => {}
-        Message::ChangeMode(_, _) => {}
-        Message::ExecuteCommand => {}
-        Message::Modification(modification) => {
-            bufferline::update(model, modification);
-        }
+        Message::ChangeKeySequence(_) => None,
+        Message::ChangeMode(_, _) => None,
+        Message::ExecuteCommand => None,
+        Message::Modification(modification) => bufferline::update(model, modification),
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(model, count, direction);
             viewport::update_by_cursor(model);
+
+            None
         }
-        Message::MoveViewPort(direction) => viewport::update_by_direction(model, direction),
-        Message::Refresh => {}
-        Message::SelectCurrent => reset_view(&mut model.view_port, &mut model.cursor),
-        Message::SelectParent => reset_view(&mut model.view_port, &mut model.cursor),
-        Message::Quit => {}
+        Message::MoveViewPort(direction) => {
+            viewport::update_by_direction(model, direction);
+
+            None
+        }
+        Message::Refresh => None,
+        Message::SelectCurrent => {
+            reset_view(&mut model.view_port, &mut model.cursor);
+
+            None
+        }
+        Message::SelectParent => {
+            reset_view(&mut model.view_port, &mut model.cursor);
+
+            None
+        }
+        Message::Quit => None,
     }
 }
 
