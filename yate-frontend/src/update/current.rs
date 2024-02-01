@@ -20,7 +20,7 @@ pub fn update(
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
     buffer.lines = path::get_directory_content(&model.current_path);
 
-    if let Some(modifications) = buffer::update(buffer, message) {
+    if let Some(modifications) = buffer::update(&model.mode, buffer, message) {
         let path = &model.current_path;
 
         let mut tasks = Vec::new();

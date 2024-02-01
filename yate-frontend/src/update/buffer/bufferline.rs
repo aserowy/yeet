@@ -5,22 +5,43 @@ use crate::model::buffer::{Buffer, BufferChanged, BufferLine, Cursor, CursorPosi
 pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec<BufferChanged>> {
     // TODO: most None must return Some(Vec<BufferChanged>) instead
     match modification {
-        // TODO: add delete char before cursor for <bs> and use this for x
-        // TODO: remove visual cursor offset
-        TextModification::DeleteCharOnCursor => {
+        TextModification::DeleteCharBeforeCursor => {
             let line = get_line(model);
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index > 0 {
-                    cursor.horizontial_index = CursorPosition::Absolute(index - 1);
+                    let next_index = index - 1;
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: next_index,
+                        expanded: next_index,
+                    };
 
                     let pre = &line.content[..index - 1];
                     let post = &line.content[index..];
+
                     line.content = format!("{}{}", pre, post);
 
                     None
                 } else {
-                    // TODO: if insert mode, delete line
+                    // TODO: char before cursor removes empty line and inserts rest to above
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        TextModification::DeleteCharOnCursor => {
+            let line = get_line(model);
+            if let Some((cursor, line)) = line {
+                let index = get_cursor_index(cursor, line);
+                if index < line.len() {
+                    let pre = &line.content[..index];
+                    let post = &line.content[index + 1..];
+
+                    line.content = format!("{}{}", pre, post);
+
+                    None
+                } else {
                     None
                 }
             } else {
@@ -50,7 +71,11 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
 
-                cursor.horizontial_index = CursorPosition::Absolute(index + raw.chars().count());
+                let next_index = index + raw.chars().count();
+                cursor.horizontial_index = CursorPosition::Absolute {
+                    current: next_index,
+                    expanded: next_index,
+                };
 
                 line.content = format!(
                     "{}{}{}",
@@ -90,9 +115,12 @@ fn get_line(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
 
 fn get_cursor_index(cursor: &Cursor, line: &BufferLine) -> usize {
     match cursor.horizontial_index {
-        CursorPosition::Absolute(n) => n,
+        CursorPosition::Absolute {
+            current,
+            expanded: _,
+        } => current,
         // FIX: count > 0 checks
-        CursorPosition::End => line.content.chars().count() - 1,
+        CursorPosition::End => line.len() - 1,
         CursorPosition::None => unreachable!(),
     }
 }

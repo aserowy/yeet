@@ -22,16 +22,16 @@ pub fn get_cursor_style_partials(
 
         let offset = vp.get_offset_width(line);
         let content_width = vp.width - offset;
+
         let line = &line.content[vp.horizontal_index..];
-        let line_length = if line.chars().count() > content_width {
+        let chars_count = line.chars().count();
+
+        let line_length = if chars_count > content_width {
             content_width
+        } else if chars_count == 0 {
+            1
         } else {
-            let length = line.chars().count();
-            if length == 0 {
-                1
-            } else {
-                length
-            }
+            chars_count
         };
 
         let mut spans = Vec::new();
@@ -44,16 +44,12 @@ pub fn get_cursor_style_partials(
         }
 
         let cursor_index = match &cursor.horizontial_index {
-            CursorPosition::Absolute(i) => {
-                let corrected_index = *i - vp.horizontal_index;
-                if corrected_index < line_length {
-                    corrected_index
-                } else {
-                    line_length - get_cursor_offset(mode)
-                }
-            }
             CursorPosition::End => line_length - vp.horizontal_index - 1,
             CursorPosition::None => return spans,
+            CursorPosition::Absolute {
+                current,
+                expanded: _,
+            } => *current - vp.horizontal_index,
         };
 
         spans.push((
@@ -65,13 +61,6 @@ pub fn get_cursor_style_partials(
         spans
     } else {
         Vec::new()
-    }
-}
-
-fn get_cursor_offset(mode: &Mode) -> usize {
-    match mode {
-        Mode::Normal => 1,
-        Mode::Command => 0,
     }
 }
 

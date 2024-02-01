@@ -1,4 +1,4 @@
-use yate_keymap::message::Message;
+use yate_keymap::message::{Message, Mode};
 
 use crate::model::buffer::{Buffer, BufferChanged, Cursor, CursorPosition, ViewPort};
 
@@ -6,14 +6,14 @@ mod bufferline;
 mod cursor;
 pub mod viewport;
 
-pub fn update(model: &mut Buffer, message: &Message) -> Option<Vec<BufferChanged>> {
+pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<BufferChanged>> {
     match message {
         Message::ChangeKeySequence(_) => None,
         Message::ChangeMode(_, _) => None,
         Message::ExecuteCommand => None,
         Message::Modification(modification) => bufferline::update(model, modification),
         Message::MoveCursor(count, direction) => {
-            cursor::update_by_direction(model, count, direction);
+            cursor::update_by_direction(mode, model, count, direction);
             viewport::update_by_cursor(model);
 
             None
@@ -52,7 +52,13 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
         cursor.vertical_index = 0;
 
         cursor.horizontial_index = match &cursor.horizontial_index {
-            CursorPosition::Absolute(_) => CursorPosition::Absolute(0),
+            CursorPosition::Absolute {
+                current: _,
+                expanded: _,
+            } => CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
             CursorPosition::End => CursorPosition::End,
             CursorPosition::None => CursorPosition::None,
         }

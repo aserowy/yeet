@@ -31,5 +31,5 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         }
     }
 
-    buffer::update(buffer, message);
+    buffer::update(&model.mode, buffer, message);
 }

@@ -17,7 +17,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             vec![]
         };
 
-        buffer::update(buffer, message);
+        buffer::update(&model.mode, buffer, message);
 
         if !history::set_cursor_index(&target, &model.history, buffer) {
             buffer.cursor = None;

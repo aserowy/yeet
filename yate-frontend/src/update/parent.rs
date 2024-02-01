@@ -23,7 +23,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Some(parent) => {
             buffer.lines = path::get_directory_content(parent);
 
-            buffer::update(buffer, message);
+            buffer::update(&model.mode, buffer, message);
 
             let current_filename = path.file_name().unwrap().to_str().unwrap();
             let current_line = buffer
@@ -43,6 +43,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                 }
 
                 buffer::update(
+                    &model.mode,
                     buffer,
                     &Message::MoveViewPort(ViewPortDirection::CenterOnCursor),
                 );
@@ -51,7 +52,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         None => {
             buffer.cursor = None;
             buffer.lines = vec![];
-            buffer::update(buffer, message);
+            buffer::update(&model.mode, buffer, message);
         }
     }
 }

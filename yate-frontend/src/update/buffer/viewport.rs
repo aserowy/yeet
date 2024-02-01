@@ -17,12 +17,15 @@ pub fn update_by_cursor(model: &mut Buffer) {
         }
 
         let cursor_index = match cursor.horizontial_index {
-            CursorPosition::Absolute(n) => n,
-            CursorPosition::End => model.lines[cursor.vertical_index].content.chars().count() - 1,
+            CursorPosition::Absolute {
+                current,
+                expanded: _,
+            } => current,
+            CursorPosition::End => model.lines[cursor.vertical_index].len() - 1,
             CursorPosition::None => return,
         };
 
-        let line = &model.lines[cursor_index];
+        let line = &model.lines[cursor.vertical_index];
         if viewport.horizontal_index > cursor_index {
             viewport.horizontal_index = cursor_index;
         } else if viewport.horizontal_index + viewport.get_content_width(line) < cursor_index {

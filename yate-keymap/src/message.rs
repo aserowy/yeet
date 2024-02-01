@@ -23,6 +23,7 @@ pub enum Message {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TextModification {
+    DeleteCharBeforeCursor,
     DeleteCharOnCursor,
     DeleteLineOnCursor,
     Insert(String),

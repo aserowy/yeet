@@ -17,14 +17,17 @@ pub struct Cursor {
 
 #[derive(Debug, PartialEq)]
 pub enum CursorPosition {
-    Absolute(usize),
+    Absolute { current: usize, expanded: usize },
     End,
     None,
 }
 
 impl Default for CursorPosition {
     fn default() -> Self {
-        CursorPosition::Absolute(0)
+        CursorPosition::Absolute {
+            current: 0,
+            expanded: 0,
+        }
     }
 }
 
@@ -33,6 +36,12 @@ pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: String,
     pub style: Vec<StylePartialSpan>,
+}
+
+impl BufferLine {
+    pub fn len(&self) -> usize {
+        self.content.chars().count()
+    }
 }
 
 pub type StylePartialSpan = (usize, usize, StylePartial);
