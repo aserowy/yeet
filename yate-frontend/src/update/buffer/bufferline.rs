@@ -14,8 +14,10 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 if index > 0 {
                     cursor.horizontial_index = CursorPosition::Absolute(index - 1);
 
-                    line.content =
-                        format!("{}{}", &line.content[..index - 1], &line.content[index..]);
+                    let pre = &line.content[..index - 1];
+                    let post = &line.content[index..];
+                    line.content = format!("{}{}", pre, post);
+
                     None
                 } else {
                     // TODO: if insert mode, delete line
@@ -30,7 +32,13 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 None
             } else if let Some(cursor) = &mut model.cursor {
                 let line_index = cursor.vertical_index;
-                let content = model.lines.remove(line_index).content.to_string();
+                let line = model.lines.remove(line_index);
+                let content = line.content.to_string();
+
+                let line_count = model.lines.len();
+                if line_count >= line_index {
+                    cursor.vertical_index = line_count - 1;
+                }
 
                 Some(vec![BufferChanged::LineDeleted(line_index, content)])
             } else {
