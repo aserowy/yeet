@@ -5,7 +5,7 @@ use yate_keymap::message::{Message, ViewPortDirection};
 use crate::{
     layout::AppLayout,
     model::{
-        buffer::{Cursor, CursorPosition},
+        buffer::{BufferLine, Cursor, CursorPosition},
         Model,
     },
 };
@@ -21,7 +21,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
 
     match path.parent() {
         Some(parent) => {
-            buffer.lines = path::get_directory_content(parent);
+            buffer.lines = match path::get_directory_content(parent) {
+                Ok(content) => content,
+                Err(_) => {
+                    vec![BufferLine {
+                        content: "Error reading directory".to_string(),
+                        ..Default::default()
+                    }]
+                }
+            };
 
             buffer::update(&model.mode, buffer, message);
 

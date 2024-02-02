@@ -3,7 +3,10 @@ use yate_keymap::message::Message;
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{buffer::BufferChanged, Model},
+    model::{
+        buffer::{BufferChanged, BufferLine, Cursor},
+        Model,
+    },
     task::Task,
 };
 
@@ -18,7 +21,23 @@ pub fn update(
     let layout = &layout.current_directory;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
-    buffer.lines = path::get_directory_content(&model.current_path);
+    buffer.lines = match path::get_directory_content(&model.current_path) {
+        Ok(content) => {
+            if buffer.cursor.is_none() {
+                buffer.cursor = Some(Cursor::default());
+            }
+
+            content
+        }
+        Err(_) => {
+            buffer.cursor = None;
+
+            vec![BufferLine {
+                content: "Error reading directory".to_string(),
+                ..Default::default()
+            }]
+        }
+    };
 
     if let Some(modifications) = buffer::update(&model.mode, buffer, message) {
         let path = &model.current_path;

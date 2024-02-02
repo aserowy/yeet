@@ -1,6 +1,9 @@
 use yate_keymap::message::Message;
 
-use crate::{layout::AppLayout, model::Model};
+use crate::{
+    layout::AppLayout,
+    model::{buffer::BufferLine, Model},
+};
 
 use super::{buffer, history, path};
 
@@ -12,7 +15,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
         buffer.lines = if target.is_dir() {
-            path::get_directory_content(&target)
+            match path::get_directory_content(&target) {
+                Ok(content) => content,
+                Err(_) => {
+                    vec![BufferLine {
+                        content: "Error reading directory".to_string(),
+                        ..Default::default()
+                    }]
+                }
+            }
         } else {
             vec![]
         };

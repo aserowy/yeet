@@ -2,16 +2,22 @@ use std::path::{Path, PathBuf};
 
 use ratatui::style::Color;
 
-use crate::model::{
-    buffer::{BufferLine, StylePartial},
-    Model,
+use crate::{
+    error::AppError,
+    model::{
+        buffer::{BufferLine, StylePartial},
+        Model,
+    },
 };
 
-pub fn get_directory_content(path: &Path) -> Vec<BufferLine> {
-    let mut content: Vec<_> = std::fs::read_dir(path)
-        .unwrap()
-        .map(|entry| get_bufferline_by_path(&entry.unwrap().path()))
-        .collect();
+pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
+    let mut content: Vec<_> = match std::fs::read_dir(path) {
+        Ok(content) => content
+            .flatten()
+            .map(|entry| get_bufferline_by_path(&entry.path()))
+            .collect(),
+        Err(error) => return Err(AppError::FileOperationFailed(error)),
+    };
 
     content.sort_unstable_by(|a, b| {
         a.content
@@ -19,7 +25,7 @@ pub fn get_directory_content(path: &Path) -> Vec<BufferLine> {
             .cmp(&b.content.to_ascii_uppercase())
     });
 
-    content
+    Ok(content)
 }
 
 pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
