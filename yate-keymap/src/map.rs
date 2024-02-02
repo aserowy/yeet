@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Binding, CursorDirection, TextModification, ViewPortDirection},
+    message::{Binding, CursorDirection, NewLineDirection, TextModification, ViewPortDirection},
     tree::KeyTree,
     Message, Mode,
 };
@@ -31,6 +31,37 @@ impl Default for KeyMap {
         let mut mappings = HashMap::new();
         mappings.insert(
             Mode::Command,
+            vec![
+                (
+                    vec![Key::new(KeyCode::Backspace, vec![])],
+                    Binding::Message(Message::Modification(
+                        TextModification::DeleteCharBeforeCursor,
+                    )),
+                ),
+                (
+                    vec![Key::new(KeyCode::Enter, vec![])],
+                    Binding::Message(Message::ExecuteCommand),
+                ),
+                (
+                    vec![Key::new(KeyCode::Esc, vec![])],
+                    Binding::Mode(Mode::Normal),
+                ),
+                (
+                    vec![Key::new(KeyCode::Delete, vec![])],
+                    Binding::Message(Message::Modification(TextModification::DeleteCharOnCursor)),
+                ),
+                (
+                    vec![Key::new(KeyCode::Left, vec![])],
+                    Binding::Motion(CursorDirection::Left),
+                ),
+                (
+                    vec![Key::new(KeyCode::Right, vec![])],
+                    Binding::Motion(CursorDirection::Right),
+                ),
+            ],
+        );
+        mappings.insert(
+            Mode::Insert,
             vec![
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
@@ -160,6 +191,20 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding::Motion(CursorDirection::Right),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('o'), vec![])],
+                    Binding::ModeAndTextModification(
+                        Mode::Insert,
+                        TextModification::InsertNewLine(NewLineDirection::Under),
+                    ),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('o'), vec![KeyModifier::Shift])],
+                    Binding::ModeAndTextModification(
+                        Mode::Insert,
+                        TextModification::InsertNewLine(NewLineDirection::Above),
+                    ),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],

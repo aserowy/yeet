@@ -73,8 +73,9 @@ pub fn update_by_direction(
                     };
 
                     let max_index = match mode {
-                        Mode::Normal => model.lines[cursor.vertical_index].len() - 1,
                         Mode::Command => model.lines[cursor.vertical_index].len(),
+                        Mode::Insert => model.lines[cursor.vertical_index].len(),
+                        Mode::Normal => model.lines[cursor.vertical_index].len() - 1,
                     };
 
                     if max_index > cursor_index {

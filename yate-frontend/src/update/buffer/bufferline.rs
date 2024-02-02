@@ -1,4 +1,4 @@
-use yate_keymap::message::TextModification;
+use yate_keymap::message::{NewLineDirection, TextModification};
 
 use crate::model::buffer::{Buffer, BufferChanged, BufferLine, Cursor, CursorPosition};
 
@@ -85,6 +85,26 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 );
             }
 
+            None
+        }
+        TextModification::InsertNewLine(direction) => {
+            match direction {
+                NewLineDirection::Above => {
+                    if let Some(cursor) = &mut model.cursor {
+                        let index = cursor.vertical_index;
+                        model.lines.insert(index, BufferLine::default());
+                    }
+                }
+                NewLineDirection::Under => {
+                    if let Some(cursor) = &mut model.cursor {
+                        let index = cursor.vertical_index + 1;
+                        cursor.vertical_index = index;
+                        model.lines.insert(index, BufferLine::default());
+                    }
+                }
+            }
+
+            // TODO: cache events in insert and release all changes when leaving insert at once
             None
         }
     }

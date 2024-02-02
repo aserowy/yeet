@@ -2,6 +2,7 @@
 pub enum Binding {
     Message(Message),
     Mode(Mode),
+    ModeAndTextModification(Mode, TextModification),
     Motion(CursorDirection),
     Repeat(usize),
     RepeatOrMotion(usize, CursorDirection),
@@ -21,12 +22,19 @@ pub enum Message {
     Quit,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
     DeleteLineOnCursor,
     Insert(String),
+    InsertNewLine(NewLineDirection),
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum NewLineDirection {
+    Above,
+    Under,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,16 +51,19 @@ pub enum CursorDirection {
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub enum Mode {
+    Command,
+    Insert,
+
     #[default]
     Normal,
-    Command,
 }
 
 impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
-            Mode::Normal => "normal".to_string(),
             Mode::Command => "command".to_string(),
+            Mode::Insert => "insert".to_string(),
+            Mode::Normal => "normal".to_string(),
         }
     }
 }

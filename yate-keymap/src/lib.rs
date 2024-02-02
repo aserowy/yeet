@@ -95,6 +95,10 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
             Binding::Mode(md) => {
                 messages.push(Message::ChangeMode(mode.clone(), md.clone()));
             }
+            Binding::ModeAndTextModification(md, mdfctn) => {
+                messages.push(Message::ChangeMode(mode.clone(), md.clone()));
+                messages.push(Message::Modification(mdfctn));
+            }
             Binding::Motion(mtn) => match repeat {
                 Some(rpt) => {
                     messages.push(Message::MoveCursor(rpt, mtn));
@@ -118,7 +122,8 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
 
 fn get_passthrough_by_mode(mode: &Mode) -> bool {
     match mode {
-        Mode::Normal => false,
         Mode::Command => true,
+        Mode::Insert => true,
+        Mode::Normal => false,
     }
 }
