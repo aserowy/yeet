@@ -37,7 +37,7 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<
         Message::Quit => None,
     };
 
-    cursor::update_by_direction(mode, model, &1, &CursorDirection::Refresh);
+    cursor::update_by_direction(mode, model, &1, &CursorDirection::Validate);
     viewport::update_by_cursor(model);
 
     buffer_changes

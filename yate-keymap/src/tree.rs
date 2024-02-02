@@ -24,13 +24,13 @@ impl KeyTree {
         keys: Vec<Key>,
         binding: Binding,
     ) -> Result<(), KeyMapError> {
-        if !self.modes.contains_key(&mode) {
+        if !self.modes.contains_key(mode) {
             self.modes.insert(mode.clone(), HashMap::new());
         }
 
         let mut key_iter = keys.iter();
         if let Some(key) = key_iter.next() {
-            match self.modes.get_mut(&mode) {
+            match self.modes.get_mut(mode) {
                 Some(mode) => {
                     add_mapping_node(mode, key, &mut key_iter, binding);
 
@@ -44,7 +44,7 @@ impl KeyTree {
     }
 
     pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> (Vec<Binding>, Option<Node>) {
-        if let Some(node) = self.modes.get(&mode) {
+        if let Some(node) = self.modes.get(mode) {
             let mut bindings = Vec::new();
 
             let mut key_iter = keys.iter();

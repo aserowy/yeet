@@ -20,7 +20,7 @@ pub fn update_by_direction(
                     cursor.vertical_index = model.lines.len() - 1;
 
                     let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(line_length, &cursor.horizontial_index);
+                    let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
                 }
@@ -33,7 +33,7 @@ pub fn update_by_direction(
                     }
 
                     let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(line_length, &cursor.horizontial_index);
+                    let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
                 }
@@ -65,14 +65,14 @@ pub fn update_by_direction(
                         expanded: 0,
                     };
                 }
-                CursorDirection::Refresh => {
+                CursorDirection::Validate => {
                     let max_index = model.lines.len() - 1;
                     if cursor.vertical_index >= max_index {
                         cursor.vertical_index = max_index;
                     }
 
                     let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(line_length, &cursor.horizontial_index);
+                    let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
                 }
@@ -86,12 +86,8 @@ pub fn update_by_direction(
                         CursorPosition::None => return,
                     };
 
-                    let max_index = match mode {
-                        Mode::Command => model.lines[cursor.vertical_index].len(),
-                        Mode::Insert => model.lines[cursor.vertical_index].len(),
-                        Mode::Normal => model.lines[cursor.vertical_index].len() - 1,
-                    };
-
+                    let max_index_offset = get_max_index_offset(mode);
+                    let max_index = model.lines[cursor.vertical_index].len() - max_index_offset;
                     if max_index > cursor_index {
                         let next_index = cursor_index + 1;
 
@@ -105,7 +101,7 @@ pub fn update_by_direction(
                     cursor.vertical_index = 0;
 
                     let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(line_length, &cursor.horizontial_index);
+                    let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
                 }
@@ -114,7 +110,7 @@ pub fn update_by_direction(
                         cursor.vertical_index -= 1;
 
                         let line_length = &model.lines[cursor.vertical_index].len();
-                        let position = get_position(line_length, &cursor.horizontial_index);
+                        let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                         cursor.horizontial_index = position;
                     }
@@ -124,13 +120,19 @@ pub fn update_by_direction(
     }
 }
 
-fn get_position(line_length: &usize, position: &CursorPosition) -> CursorPosition {
+fn get_position(mode: &Mode, line_length: &usize, position: &CursorPosition) -> CursorPosition {
     match position {
         CursorPosition::Absolute {
             current: _,
             expanded,
         } => {
-            let max_length = line_length - 1;
+            let max_index_offset = get_max_index_offset(mode);
+            let max_length = if line_length == &0 {
+                max_index_offset
+            } else {
+                line_length - max_index_offset
+            };
+
             if expanded > &max_length {
                 CursorPosition::Absolute {
                     current: max_length,
@@ -145,5 +147,13 @@ fn get_position(line_length: &usize, position: &CursorPosition) -> CursorPositio
         }
         CursorPosition::End => CursorPosition::End,
         CursorPosition::None => CursorPosition::None,
+    }
+}
+
+fn get_max_index_offset(mode: &Mode) -> usize {
+    match mode {
+        Mode::Command => 0,
+        Mode::Insert => 0,
+        Mode::Normal => 1,
     }
 }
