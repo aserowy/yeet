@@ -10,6 +10,7 @@ use std::io::{stderr, BufWriter};
 use yate_keymap::{message::Message, MessageResolver};
 
 use crate::{
+    error::AppError,
     event::{self, PostRenderAction},
     layout::AppLayout,
     model::{
@@ -21,9 +22,7 @@ use crate::{
     view::{self},
 };
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
-
-pub async fn run(_address: String) -> Result<(), Error> {
+pub async fn run(_address: String) -> Result<(), AppError> {
     stderr().execute(EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
@@ -31,10 +30,13 @@ pub async fn run(_address: String) -> Result<(), Error> {
     terminal.clear()?;
 
     let mut model = Model::default();
-    history::cache::load(&mut model.history);
+    if history::cache::load(&mut model.history).is_err() {
+        // TODO: add notifications in tui and show history load failed
+    }
 
     let mut resolver = MessageResolver::default();
     let mut tasks = TaskManager::default();
+    let mut result = Vec::new();
 
     let (_, mut receiver) = event::listen();
     while let Some(event) = receiver.recv().await {
@@ -43,27 +45,35 @@ pub async fn run(_address: String) -> Result<(), Error> {
         let mut post_render_actions = Vec::new();
         terminal.draw(|frame| post_render_actions = render(&mut model, frame, &messages))?;
 
-        if post_render_actions.contains(&PostRenderAction::Quit) {
-            history::cache::save(&model.history);
-
-            break;
-        }
-
-        for post_render_action in post_render_actions {
+        'actions: for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
+                PostRenderAction::OptimizeHistory => {
+                    if let Err(error) = history::cache::save(&model.history) {
+                        // TODO: log error
+                        result.push(error);
+                    }
+                }
+                PostRenderAction::Quit => {
+                    break 'actions;
+                }
                 PostRenderAction::Task(task) => tasks.run(task),
-                PostRenderAction::Quit => unreachable!(),
             }
         }
     }
 
-    tasks.finishing().await;
+    if let Err(error) = tasks.finishing().await {
+        result.push(error);
+    }
 
     stderr().execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
 
-    Ok(())
+    if result.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::Aggregate(result))
+    }
 }
 
 fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<PostRenderAction> {

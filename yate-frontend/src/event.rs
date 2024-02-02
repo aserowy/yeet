@@ -20,8 +20,9 @@ pub enum RenderAction {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PostRenderAction {
     ModeChanged(Mode),
-    Task(Task),
+    OptimizeHistory,
     Quit,
+    Task(Task),
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1

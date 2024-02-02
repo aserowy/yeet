@@ -171,7 +171,10 @@ pub fn update(
                 None
             }
         }
-        Message::Quit => Some(vec![PostRenderAction::Quit]),
+        Message::Quit => Some(vec![
+            PostRenderAction::OptimizeHistory,
+            PostRenderAction::Quit,
+        ]),
     }
 }
 
