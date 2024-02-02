@@ -49,7 +49,10 @@ pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
 }
 
 fn get_bufferline_by_path(path: &Path) -> BufferLine {
-    let content = path.file_name().unwrap().to_str().unwrap_or("").to_string();
+    let content = match path.file_name() {
+        Some(content) => content.to_str().unwrap_or("").to_string(),
+        None => "".to_string(),
+    };
 
     let style = if path.is_dir() {
         let length = content.chars().count();

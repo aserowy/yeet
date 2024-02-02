@@ -33,11 +33,15 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
 
             buffer::update(&model.mode, buffer, message);
 
-            let current_filename = path.file_name().unwrap().to_str().unwrap();
-            let current_line = buffer
-                .lines
-                .iter()
-                .position(|line| line.content == current_filename);
+            let current_filename = match path.file_name() {
+                Some(content) => content.to_str(),
+                None => None,
+            };
+
+            let current_line = match current_filename {
+                Some(content) => buffer.lines.iter().position(|line| line.content == content),
+                None => None,
+            };
 
             if let Some(index) = current_line {
                 if let Some(cursor) = &mut buffer.cursor {
