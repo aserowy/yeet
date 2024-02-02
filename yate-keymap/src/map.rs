@@ -17,7 +17,9 @@ impl KeyMap {
         let mut tree = KeyTree::default();
         for (mode, mappings) in self.mappings {
             for (keys, message) in mappings {
-                tree.add_mapping(&mode, keys, message);
+                if let Err(_error) = tree.add_mapping(&mode, keys, message) {
+                    // TODO: add logging
+                }
             }
         }
         tree
@@ -46,9 +48,7 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
-                    Binding::Message(Message::Modification(
-                        TextModification::DeleteCharOnCursor,
-                    )),
+                    Binding::Message(Message::Modification(TextModification::DeleteCharOnCursor)),
                 ),
                 (
                     vec![Key::new(KeyCode::Left, vec![])],

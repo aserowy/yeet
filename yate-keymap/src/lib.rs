@@ -13,6 +13,12 @@ mod map;
 pub mod message;
 mod tree;
 
+#[derive(Debug, thiserror::Error)]
+enum KeyMapError {
+    #[error("Failed to add mapping for mode {0}")]
+    ModeUnresolvable(String),
+}
+
 #[derive(Debug)]
 pub struct MessageResolver {
     buffer: KeyBuffer,

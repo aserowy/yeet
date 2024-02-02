@@ -3,6 +3,7 @@ use std::{collections::HashMap, slice::Iter};
 use crate::{
     key::Key,
     message::{Binding, Mode},
+    KeyMapError,
 };
 
 #[derive(Debug, Default)]
@@ -17,19 +18,28 @@ pub enum Node {
 }
 
 impl KeyTree {
-    pub fn add_mapping(&mut self, mode: &Mode, keys: Vec<Key>, binding: Binding) {
+    pub fn add_mapping(
+        &mut self,
+        mode: &Mode,
+        keys: Vec<Key>,
+        binding: Binding,
+    ) -> Result<(), KeyMapError> {
         if !self.modes.contains_key(mode) {
             self.modes.insert(mode.clone(), HashMap::new());
         }
 
         let mut key_iter = keys.iter();
         if let Some(key) = key_iter.next() {
-            add_mapping_node(
-                self.modes.get_mut(mode).unwrap(),
-                key,
-                &mut key_iter,
-                binding,
-            );
+            match self.modes.get_mut(mode) {
+                Some(mode) => {
+                    add_mapping_node(mode, key, &mut key_iter, binding);
+
+                    Ok(())
+                }
+                None => Err(KeyMapError::ModeUnresolvable(mode.to_string())),
+            }
+        } else {
+            Ok(())
         }
     }
 
