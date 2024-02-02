@@ -39,13 +39,13 @@ pub async fn run(_address: String) -> Result<(), AppError> {
     let mut result = Vec::new();
 
     let (_, mut receiver) = event::listen();
-    while let Some(event) = receiver.recv().await {
+    'app_loop: while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
         let mut post_render_actions = Vec::new();
         terminal.draw(|frame| post_render_actions = render(&mut model, frame, &messages))?;
 
-        'actions: for post_render_action in post_render_actions {
+        for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
                 PostRenderAction::OptimizeHistory => {
@@ -55,7 +55,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                     }
                 }
                 PostRenderAction::Quit => {
-                    break 'actions;
+                    break 'app_loop;
                 }
                 PostRenderAction::Task(task) => tasks.run(task),
             }

@@ -1,5 +1,5 @@
 use thiserror::Error;
-use tokio::task::{JoinError, JoinHandle};
+use tokio::task::JoinHandle;
 use yate_frontend::{
     error::AppError,
     tui::{self},
@@ -7,10 +7,10 @@ use yate_frontend::{
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Application error: {0}")]
-    AppError(#[from] AppError),
+    #[error("Application error")]
+    AppError,
     #[error("Join handle failed: Subprocess killed without shutting down")]
-    JoinHandleFailed(#[from] JoinError),
+    JoinHandleFailed,
 }
 
 #[tokio::main]
@@ -24,8 +24,8 @@ async fn main() -> Result<(), Error> {
     match tokio::join!(frontend_handle).0 {
         Ok(app_result) => match app_result {
             Ok(_) => Ok(()),
-            Err(error) => Err(Error::AppError(error)),
+            Err(_) => Err(Error::AppError),
         },
-        Err(error) => Err(Error::JoinHandleFailed(error)),
+        Err(_) => Err(Error::JoinHandleFailed),
     }
 }
