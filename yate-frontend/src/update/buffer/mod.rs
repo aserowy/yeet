@@ -1,4 +1,4 @@
-use yate_keymap::message::{Message, Mode};
+use yate_keymap::message::{CursorDirection, Message, Mode};
 
 use crate::model::buffer::{Buffer, BufferChanged, Cursor, CursorPosition, ViewPort};
 
@@ -7,7 +7,7 @@ mod cursor;
 pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<BufferChanged>> {
-    match message {
+    let buffer_changes = match message {
         Message::ChangeKeySequence(_) => None,
         Message::ChangeMode(_, _) => None,
         Message::ExecuteCommand => None,
@@ -35,7 +35,12 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<
             None
         }
         Message::Quit => None,
-    }
+    };
+
+    cursor::update_by_direction(mode, model, &1, &CursorDirection::Refresh);
+    viewport::update_by_cursor(model);
+
+    buffer_changes
 }
 
 pub fn focus_buffer(buffer: &mut Buffer) {

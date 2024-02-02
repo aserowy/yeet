@@ -25,14 +25,17 @@ pub fn update_by_direction(
                     cursor.horizontial_index = position;
                 }
                 CursorDirection::Down => {
-                    if model.lines.len() - 1 > cursor.vertical_index {
-                        cursor.vertical_index += 1;
-
-                        let line_length = &model.lines[cursor.vertical_index].len();
-                        let position = get_position(line_length, &cursor.horizontial_index);
-
-                        cursor.horizontial_index = position;
+                    let max_index = model.lines.len() - 1;
+                    if cursor.vertical_index >= max_index {
+                        cursor.vertical_index = max_index;
+                    } else {
+                        cursor.vertical_index += 1
                     }
+
+                    let line_length = &model.lines[cursor.vertical_index].len();
+                    let position = get_position(line_length, &cursor.horizontial_index);
+
+                    cursor.horizontial_index = position;
                 }
                 CursorDirection::Left => {
                     let cursor_index = match cursor.horizontial_index {
@@ -61,6 +64,17 @@ pub fn update_by_direction(
                         current: 0,
                         expanded: 0,
                     };
+                }
+                CursorDirection::Refresh => {
+                    let max_index = model.lines.len() - 1;
+                    if cursor.vertical_index >= max_index {
+                        cursor.vertical_index = max_index;
+                    }
+
+                    let line_length = &model.lines[cursor.vertical_index].len();
+                    let position = get_position(line_length, &cursor.horizontial_index);
+
+                    cursor.horizontial_index = position;
                 }
                 CursorDirection::Right => {
                     let cursor_index = match cursor.horizontial_index {
@@ -116,9 +130,10 @@ fn get_position(line_length: &usize, position: &CursorPosition) -> CursorPositio
             current: _,
             expanded,
         } => {
-            if expanded > line_length {
+            let max_length = line_length - 1;
+            if expanded > &max_length {
                 CursorPosition::Absolute {
-                    current: line_length - 1,
+                    current: max_length,
                     expanded: *expanded,
                 }
             } else {

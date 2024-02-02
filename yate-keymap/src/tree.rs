@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct KeyTree {
-    modes: HashMap<String, HashMap<Key, Node>>,
+    modes: HashMap<Mode, HashMap<Key, Node>>,
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +24,6 @@ impl KeyTree {
         keys: Vec<Key>,
         binding: Binding,
     ) -> Result<(), KeyMapError> {
-        let mode = mode.to_string();
         if !self.modes.contains_key(&mode) {
             self.modes.insert(mode.clone(), HashMap::new());
         }
@@ -45,7 +44,6 @@ impl KeyTree {
     }
 
     pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> (Vec<Binding>, Option<Node>) {
-        let mode = mode.to_string();
         if let Some(node) = self.modes.get(&mode) {
             let mut bindings = Vec::new();
 
