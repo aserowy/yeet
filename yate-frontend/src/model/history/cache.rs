@@ -4,29 +4,42 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::error::AppError;
+
 use super::{History, HistoryNode, HistoryState};
 
-// TODO: Error handling (all over the unwraps in yate!) and return Result here!
-pub fn load(history: &mut History) {
-    let history_path = format!(
-        "{}{}",
-        dirs::cache_dir().unwrap().to_str().unwrap(),
-        "/yate/.history"
-    );
-
+pub fn load(history: &mut History) -> Result<(), AppError> {
+    let history_path = get_history_path()?;
     if !Path::new(&history_path).exists() {
-        return;
+        return Err(AppError::LoadHistoryFailed);
     }
 
-    let history_file = File::open(history_path).unwrap();
+    let history_file = File::open(history_path)?;
     let mut history_csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .from_reader(history_file);
 
     for result in history_csv_reader.records() {
-        let record = result.unwrap();
-        let changed_at = record.get(0).unwrap().parse::<u64>().unwrap();
-        let path = record.get(1).unwrap();
+        let record = match result {
+            Ok(record) => record,
+            Err(_) => return Err(AppError::LoadHistoryFailed),
+        };
+
+        let changed_at = match record.get(0) {
+            Some(val) => {
+                if let Ok(changed_at) = val.parse::<u64>() {
+                    changed_at
+                } else {
+                    continue;
+                }
+            }
+            None => continue,
+        };
+
+        let path = match record.get(1) {
+            Some(path) => path,
+            None => continue,
+        };
 
         let mut iter = Path::new(path).components();
         if let Some(component) = iter.next() {
@@ -41,41 +54,55 @@ pub fn load(history: &mut History) {
             }
         }
     }
+
+    Ok(())
 }
 
-// TODO: Error handling (all over the unwraps in yate!) and return Result here!
-pub fn optimize() {
+pub fn optimize() -> Result<(), AppError> {
     let mut history = History::default();
-    load(&mut history);
-    save_filtered(&history, HistoryState::Loaded, true);
+    load(&mut history)?;
+    save_filtered(&history, HistoryState::Loaded, true)?;
+
+    Ok(())
 }
 
-pub fn save(history: &History) {
-    save_filtered(history, HistoryState::Added, false);
+pub fn save(history: &History) -> Result<(), AppError> {
+    save_filtered(history, HistoryState::Added, false)
 }
 
-// TODO: Error handling (all over the unwraps in yate!) and return Result here!
-fn save_filtered(history: &History, state_filter: HistoryState, overwrite: bool) {
+fn get_history_path() -> Result<String, AppError> {
+    let cache_dir = match dirs::cache_dir() {
+        Some(cache_dir) => match cache_dir.to_str() {
+            Some(cache_dir_string) => cache_dir_string.to_string(),
+            None => return Err(AppError::LoadHistoryFailed),
+        },
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    Ok(format!("{}{}", cache_dir, "/yate/.history"))
+}
+
+fn save_filtered(
+    history: &History,
+    state_filter: HistoryState,
+    overwrite: bool,
+) -> Result<(), AppError> {
     let entries = get_paths(PathBuf::new(), &history.entries);
 
-    let history_path = format!(
-        "{}{}",
-        dirs::cache_dir().unwrap().to_str().unwrap(),
-        "/yate/.history"
-    );
+    let history_path = get_history_path()?;
+    let history_dictionary = match Path::new(&history_path).parent() {
+        Some(path) => path,
+        None => return Err(AppError::LoadHistoryFailed),
+    };
 
-    if let Err(error) = fs::create_dir_all(Path::new(&history_path).parent().unwrap()) {
-        print!("{}", error);
-        return;
-    }
+    fs::create_dir_all(history_dictionary)?;
 
     let history_writer = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(overwrite)
         .append(!overwrite)
-        .open(history_path)
-        .unwrap();
+        .open(history_path)?;
 
     let mut history_csv_writer = csv::Writer::from_writer(history_writer);
     for (changed_at, state, path) in entries {
@@ -88,13 +115,19 @@ fn save_filtered(history: &History, state_filter: HistoryState, overwrite: bool)
         }
 
         if let Some(path) = path.to_str() {
-            history_csv_writer
+            // if let Err(_) = history_csv_writer.write_record([changed_at.to_string().as_str(), path])
+            if history_csv_writer
                 .write_record([changed_at.to_string().as_str(), path])
-                .unwrap();
+                .is_err()
+            {
+                // TODO: log error
+            }
         }
     }
 
-    history_csv_writer.flush().unwrap();
+    history_csv_writer.flush()?;
+
+    Ok(())
 }
 
 fn get_paths(

@@ -28,12 +28,11 @@ pub enum HistoryState {
 }
 
 impl History {
-    // TODO: Error handling (all over the unwraps in yate!) and return Result here!
     pub fn add(&mut self, path: &Path) {
-        let added_at = time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
+            Ok(time) => time.as_secs(),
+            Err(_) => 0,
+        };
 
         let mut iter = path.components();
         if let Some(component) = iter.next() {

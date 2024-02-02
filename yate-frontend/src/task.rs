@@ -1,9 +1,8 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use thiserror::Error;
 use tokio::task::JoinSet;
 
-use crate::model::history;
+use crate::{error::AppError, model::history};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Task {
@@ -13,17 +12,7 @@ pub enum Task {
 
 #[derive(Default)]
 pub struct TaskManager {
-    tasks: JoinSet<Result<(), TaskError>>,
-}
-
-#[derive(Debug, Error)]
-pub enum TaskError {
-    #[error("Failed to delete file")]
-    FileOperationFailed(#[from] io::Error),
-    #[error("Target is invalid")]
-    InvalidTarget,
-    #[error("Failed to optimize history")]
-    _OptimizeHistory,
+    tasks: JoinSet<Result<(), AppError>>,
 }
 
 impl TaskManager {
@@ -32,37 +21,39 @@ impl TaskManager {
         match task {
             Task::DeleteFile(path) => self.tasks.spawn(async move {
                 if !path.exists() {
-                    return Err(TaskError::InvalidTarget);
+                    return Err(AppError::InvalidTargetPath);
                 }
 
-                let result = if path.is_file() {
-                    fs::remove_file(&path)
+                if path.is_file() {
+                    fs::remove_file(&path)?;
                 } else if path.is_dir() {
-                    fs::remove_dir_all(&path)
-                } else {
-                    Err(io::Error::new(io::ErrorKind::NotFound, "Target is invalid"))
+                    fs::remove_dir_all(&path)?;
                 };
 
-                match result {
-                    Ok(_) => Ok(()),
-                    Err(error) => Err(TaskError::FileOperationFailed(error)),
-                }
+                Ok(())
             }),
             Task::OptimizeHistory => self.tasks.spawn(async move {
-                // TODO: add error handling
-                history::cache::optimize();
+                history::cache::optimize()?;
 
                 Ok(())
             }),
         };
     }
 
-    pub async fn finishing(&mut self) {
-        while let Some(_task) = self.tasks.join_next().await {
-            // match task {
-            //     Ok(_) => {}
-            //     Err(_) => {}
-            // }
+    pub async fn finishing(&mut self) -> Result<(), AppError> {
+        let mut errors = Vec::new();
+        while let Some(task) = self.tasks.join_next().await {
+            match task {
+                Ok(Ok(())) => (),
+                Ok(Err(error)) => errors.push(error),
+                Err(_) => (), // TODO: log error
+            };
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(AppError::Aggregate(errors))
         }
     }
 }

@@ -1,4 +1,5 @@
 mod event;
+mod error;
 mod layout;
 mod model;
 mod task;

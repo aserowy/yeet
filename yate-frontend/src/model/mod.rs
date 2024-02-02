@@ -64,8 +64,11 @@ impl Default for Model {
 
 fn get_current_path() -> PathBuf {
     if let Ok(path) = env::current_dir() {
-        return path;
+        path
+    } else if let Some(val) = dirs::home_dir() {
+        val
+    } else {
+        // TODO: log error
+        PathBuf::new()
     }
-
-    dirs::home_dir().unwrap()
 }

@@ -24,6 +24,7 @@ pub enum PostRenderAction {
     Quit,
 }
 
+// TODO: replace unwraps with shutdown struct (server) and graceful exit 1
 pub fn listen() -> (
     UnboundedSender<RenderAction>,
     UnboundedReceiver<RenderAction>,
@@ -74,7 +75,7 @@ fn handle_event(event: crossterm::event::Event) -> Option<RenderAction> {
         crossterm::event::Event::Resize(x, y) => Some(RenderAction::Resize(x, y)),
         crossterm::event::Event::FocusLost => None,
         crossterm::event::Event::FocusGained => None,
-        crossterm::event::Event::Paste(_s) => None,
+        crossterm::event::Event::Paste(_) => None,
         crossterm::event::Event::Mouse(_) => None,
     }
 }
