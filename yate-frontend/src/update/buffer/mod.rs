@@ -14,7 +14,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<
         Message::Modification(modification) => bufferline::update(model, modification),
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(mode, model, count, direction);
-            viewport::update_by_cursor(model);
 
             None
         }

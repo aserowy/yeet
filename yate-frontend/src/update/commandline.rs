@@ -11,8 +11,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let buffer = &mut model.commandline;
     let layout = &layout.commandline;
 
-    buffer.view_port.height = usize::from(layout.height);
-    buffer.view_port.width = usize::from(layout.width);
+    super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Message::ChangeMode(from, to) = message {
         if from == &Mode::Command && to != &Mode::Command {
