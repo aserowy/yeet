@@ -124,6 +124,7 @@ fn get_passthrough_by_mode(mode: &Mode) -> bool {
     match mode {
         Mode::Command => true,
         Mode::Insert => true,
+        Mode::Navigation => false,
         Mode::Normal => false,
     }
 }

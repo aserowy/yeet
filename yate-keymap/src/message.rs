@@ -56,6 +56,8 @@ pub enum Mode {
     Insert,
 
     #[default]
+    Navigation,
+
     Normal,
 }
 
@@ -64,6 +66,7 @@ impl ToString for Mode {
         match self {
             Mode::Command => "command".to_string(),
             Mode::Insert => "insert".to_string(),
+            Mode::Navigation => "navigation".to_string(),
             Mode::Normal => "normal".to_string(),
         }
     }

@@ -42,6 +42,9 @@ pub fn update(
                 Mode::Insert => {
                     buffer::unfocus_buffer(&mut model.current_directory);
                 }
+                Mode::Navigation => {
+                    buffer::unfocus_buffer(&mut model.current_directory);
+                }
                 Mode::Normal => {
                     buffer::unfocus_buffer(&mut model.current_directory);
                 }
@@ -55,8 +58,10 @@ pub fn update(
                 Mode::Insert => {
                     buffer::focus_buffer(&mut model.current_directory);
                 }
+                Mode::Navigation => {
+                    buffer::focus_buffer(&mut model.current_directory);
+                }
                 Mode::Normal => {
-                    // NOTE: add file modification handling
                     buffer::focus_buffer(&mut model.current_directory);
                 }
             }
@@ -75,7 +80,7 @@ pub fn update(
                 let mode_changed_actions = update(
                     model,
                     layout,
-                    &Message::ChangeMode(model.mode.clone(), Mode::Normal),
+                    &Message::ChangeMode(model.mode.clone(), Mode::default()),
                 );
 
                 Some(
@@ -96,6 +101,7 @@ pub fn update(
                 None
             }
             Mode::Insert => current::update(model, layout, message),
+            Mode::Navigation => current::update(model, layout, message),
             Mode::Normal => current::update(model, layout, message),
         },
         Message::MoveCursor(_, _) => match model.mode {
@@ -105,6 +111,12 @@ pub fn update(
                 None
             }
             Mode::Insert => {
+                let actions = current::update(model, layout, message);
+                preview::update(model, layout, message);
+
+                actions
+            }
+            Mode::Navigation => {
                 let actions = current::update(model, layout, message);
                 preview::update(model, layout, message);
 
@@ -124,6 +136,12 @@ pub fn update(
                 None
             }
             Mode::Insert => {
+                let actions = current::update(model, layout, message);
+                preview::update(model, layout, message);
+
+                actions
+            }
+            Mode::Navigation => {
                 let actions = current::update(model, layout, message);
                 preview::update(model, layout, message);
 

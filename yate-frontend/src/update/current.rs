@@ -22,7 +22,7 @@ pub fn update(
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    if model.mode == Mode::Normal {
+    if model.mode != Mode::Insert {
         // TODO: remove when notify is implemented
         buffer.lines = match path::get_directory_content(&model.current_path) {
             Ok(content) => {

@@ -69,6 +69,7 @@ fn get_partial_style(mode: &Mode) -> StylePartial {
     match mode {
         Mode::Command => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
+        Mode::Navigation => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
         Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
     }
 }
