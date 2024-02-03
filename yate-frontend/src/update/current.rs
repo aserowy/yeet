@@ -4,7 +4,7 @@ use crate::{
     event::PostRenderAction,
     layout::AppLayout,
     model::{
-        buffer::{BufferChanged, BufferLine, Cursor},
+        buffer::{BufferChanged, BufferLine, BufferResult, Cursor},
         Model,
     },
     task::Task,
@@ -22,7 +22,39 @@ pub fn update(
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
+    buffer::update(&model.mode, buffer, message);
+
+    None
+}
+
+pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+    if let Some(result) = buffer::update(
+        &model.mode,
+        &mut model.current_directory,
+        &Message::SaveBuffer(None),
+    ) {
+        let path = &model.current_path;
+
+        let mut tasks = Vec::new();
+        if let BufferResult::Changes(modifications) = result {
+            for modification in modifications {
+                match modification {
+                    BufferChanged::LineDeleted(_, name) => {
+                        tasks.push(PostRenderAction::Task(Task::DeleteFile(path.join(name))))
+                    }
+                }
+            }
+        }
+
+        Some(tasks)
+    } else {
+        None
+    }
+}
+
+pub fn set_content(model: &mut Model) {
     if model.mode != Mode::Insert {
+        let buffer = &mut model.current_directory;
         // TODO: remove when notify is implemented
         buffer.lines = match path::get_directory_content(&model.current_path) {
             Ok(content) => {
@@ -41,22 +73,5 @@ pub fn update(
                 }]
             }
         };
-    }
-
-    if let Some(modifications) = buffer::update(&model.mode, buffer, message) {
-        let path = &model.current_path;
-
-        let mut tasks = Vec::new();
-        for modification in modifications {
-            match modification {
-                BufferChanged::LineDeleted(_, name) => {
-                    tasks.push(PostRenderAction::Task(Task::DeleteFile(path.join(name))))
-                }
-            }
-        }
-
-        Some(tasks)
-    } else {
-        None
     }
 }

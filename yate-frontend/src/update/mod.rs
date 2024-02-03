@@ -44,24 +44,53 @@ pub fn update(
                 }
             }
 
-            match to {
+            let post_render_actions = match to {
                 Mode::Command => {
                     buffer::focus_buffer(&mut model.commandline);
                     commandline::update(model, layout, message);
-                }
-                Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    buffer::focus_buffer(&mut model.current_directory);
-                }
-            }
 
-            Some(vec![PostRenderAction::ModeChanged(to.clone())])
+                    None
+                }
+                Mode::Insert | Mode::Normal => {
+                    buffer::focus_buffer(&mut model.current_directory);
+
+                    None
+                }
+                Mode::Navigation => {
+                    buffer::focus_buffer(&mut model.current_directory);
+
+                    current::save_changes(model)
+                }
+            };
+
+            if let Some(mut post_render_action_vec) = post_render_actions {
+                post_render_action_vec.push(PostRenderAction::ModeChanged(to.clone()));
+
+                Some(post_render_action_vec)
+            } else {
+                Some(vec![PostRenderAction::ModeChanged(to.clone())])
+            }
         }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 let post_render_actions = match cmd.content.as_str() {
+                    "e!" => update(model, layout, &Message::Refresh),
                     "histopt" => Some(vec![PostRenderAction::Task(Task::OptimizeHistory)]),
                     "q" => update(model, layout, &Message::Quit),
-                    // TODO: add notification in cmd line?
+                    "w" => update(model, layout, &Message::SaveBuffer(None)),
+                    "wq" => {
+                        let actions: Vec<_> = update(model, layout, &Message::SaveBuffer(None))
+                            .into_iter()
+                            .flatten()
+                            .chain(update(model, layout, &Message::Quit).into_iter().flatten())
+                            .collect();
+
+                        if actions.is_empty() {
+                            None
+                        } else {
+                            Some(actions)
+                        }
+                    }
                     _ => None,
                 };
 
@@ -84,9 +113,8 @@ pub fn update(
         }
         Message::Modification(_) => match model.mode {
             Mode::Command => commandline::update(model, layout, message),
-            Mode::Insert | Mode::Navigation | Mode::Normal => {
-                current::update(model, layout, message)
-            }
+            Mode::Insert | Mode::Normal => current::update(model, layout, message),
+            Mode::Navigation => None,
         },
         Message::MoveCursor(_, _) => match model.mode {
             Mode::Command => commandline::update(model, layout, message),
@@ -108,13 +136,19 @@ pub fn update(
         },
         Message::Refresh => {
             let actions = current::update(model, layout, message);
+            current::set_content(model);
+
             commandline::update(model, layout, message);
             parent::update(model, layout, message);
             preview::update(model, layout, message);
 
             actions
         }
+        Message::SaveBuffer(_) => current::save_changes(model),
         Message::SelectCurrent => {
+            if model.mode != Mode::Navigation {
+                return None;
+            }
             if let Some(target) = path::get_selected_path(model) {
                 if !target.is_dir() {
                     return None;
@@ -123,6 +157,7 @@ pub fn update(
                 model.current_path = target.clone();
 
                 let actions = current::update(model, layout, message);
+                current::set_content(model);
 
                 history::set_cursor_index(
                     &model.current_path,
@@ -141,10 +176,14 @@ pub fn update(
             }
         }
         Message::SelectParent => {
+            if model.mode != Mode::Navigation {
+                return None;
+            }
             if let Some(parent) = &model.current_path.parent() {
                 model.current_path = parent.to_path_buf();
 
                 let actions = current::update(model, layout, message);
+                current::set_content(model);
 
                 history::set_cursor_index(
                     &model.current_path,

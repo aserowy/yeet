@@ -1,34 +1,41 @@
 use yate_keymap::message::{CursorDirection, Message, Mode};
 
-use crate::model::buffer::{Buffer, BufferChanged, Cursor, CursorPosition, ViewPort};
+use crate::model::buffer::{Buffer, BufferResult, Cursor, CursorPosition, ViewPort};
 
 mod bufferline;
 mod cursor;
 pub mod viewport;
 
-pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<BufferChanged>> {
-    let buffer_changes = match message {
+pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
+    let result = match message {
         Message::ChangeKeySequence(_) => None,
         Message::ChangeMode(_, _) => None,
         Message::ExecuteCommand => None,
-        Message::Modification(modification) => bufferline::update(model, modification),
+        Message::Modification(modification) => {
+            let buffer_changes = bufferline::update(model, modification);
+
+            if let Some(changes) = buffer_changes {
+                model.changes.extend(changes);
+            }
+
+            None
+        }
         Message::MoveCursor(count, direction) => {
             cursor::update_by_direction(mode, model, count, direction);
-
             None
         }
         Message::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);
-
             None
         }
         Message::Refresh => None,
-        Message::SelectCurrent => {
-            reset_view(&mut model.view_port, &mut model.cursor);
+        Message::SaveBuffer(_) => {
+            let changes = model.changes.clone();
+            model.changes = Vec::new();
 
-            None
+            Some(BufferResult::Changes(changes))
         }
-        Message::SelectParent => {
+        Message::SelectCurrent | Message::SelectParent => {
             reset_view(&mut model.view_port, &mut model.cursor);
 
             None
@@ -39,7 +46,7 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Vec<
     cursor::update_by_direction(mode, model, &1, &CursorDirection::Validate);
     viewport::update_by_cursor(model);
 
-    buffer_changes
+    result
 }
 
 pub fn focus_buffer(buffer: &mut Buffer) {

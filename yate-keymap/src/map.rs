@@ -147,6 +147,16 @@ impl Default for KeyMap {
                     Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageDown)),
                 ),
                 (
+                    vec![
+                        Key::new(KeyCode::from_char('d'), vec![]),
+                        Key::new(KeyCode::from_char('d'), vec![]),
+                    ],
+                    Binding::ModeAndTextModification(
+                        Mode::Normal,
+                        TextModification::DeleteLineOnCursor,
+                    ),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
                     Binding::Motion(CursorDirection::Bottom),
                 ),
@@ -176,6 +186,20 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Ctrl])],
                     Binding::Mode(Mode::Normal),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('o'), vec![])],
+                    Binding::ModeAndTextModification(
+                        Mode::Insert,
+                        TextModification::InsertNewLine(NewLineDirection::Under),
+                    ),
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('o'), vec![KeyModifier::Shift])],
+                    Binding::ModeAndTextModification(
+                        Mode::Insert,
+                        TextModification::InsertNewLine(NewLineDirection::Above),
+                    ),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],

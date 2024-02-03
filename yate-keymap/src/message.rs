@@ -16,6 +16,7 @@ pub enum Message {
     Modification(TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
+    SaveBuffer(Option<usize>),
     SelectCurrent,
     SelectParent,
     Refresh,

@@ -2,6 +2,7 @@ use ratatui::style::{Color, Modifier};
 
 #[derive(Debug, Default)]
 pub struct Buffer {
+    pub changes: Vec<BufferChanged>,
     pub cursor: Option<Cursor>,
     pub lines: Vec<BufferLine>,
     pub view_port: ViewPort,
@@ -113,6 +114,12 @@ pub enum LineNumber {
     None,
 
     Relative,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BufferResult {
+    Changes(Vec<BufferChanged>),
+    _Unused,
 }
 
 #[derive(Clone, Debug, PartialEq)]
