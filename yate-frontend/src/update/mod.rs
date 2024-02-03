@@ -39,13 +39,7 @@ pub fn update(
                     buffer::unfocus_buffer(&mut model.commandline);
                     commandline::update(model, layout, message);
                 }
-                Mode::Insert => {
-                    buffer::unfocus_buffer(&mut model.current_directory);
-                }
-                Mode::Navigation => {
-                    buffer::unfocus_buffer(&mut model.current_directory);
-                }
-                Mode::Normal => {
+                Mode::Insert | Mode::Navigation | Mode::Normal => {
                     buffer::unfocus_buffer(&mut model.current_directory);
                 }
             }
@@ -55,13 +49,7 @@ pub fn update(
                     buffer::focus_buffer(&mut model.commandline);
                     commandline::update(model, layout, message);
                 }
-                Mode::Insert => {
-                    buffer::focus_buffer(&mut model.current_directory);
-                }
-                Mode::Navigation => {
-                    buffer::focus_buffer(&mut model.current_directory);
-                }
-                Mode::Normal => {
+                Mode::Insert | Mode::Navigation | Mode::Normal => {
                     buffer::focus_buffer(&mut model.current_directory);
                 }
             }
@@ -95,61 +83,25 @@ pub fn update(
             }
         }
         Message::Modification(_) => match model.mode {
-            Mode::Command => {
-                commandline::update(model, layout, message);
-
-                None
+            Mode::Command => commandline::update(model, layout, message),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
+                current::update(model, layout, message)
             }
-            Mode::Insert => current::update(model, layout, message),
-            Mode::Navigation => current::update(model, layout, message),
-            Mode::Normal => current::update(model, layout, message),
         },
         Message::MoveCursor(_, _) => match model.mode {
-            Mode::Command => {
-                commandline::update(model, layout, message);
-
-                None
-            }
-            Mode::Insert => {
+            Mode::Command => commandline::update(model, layout, message),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
                 let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
-
-                actions
-            }
-            Mode::Navigation => {
-                let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
-
-                actions
-            }
-            Mode::Normal => {
-                let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
+                preview::update(model, layout, &Message::Refresh);
 
                 actions
             }
         },
         Message::MoveViewPort(_) => match model.mode {
-            Mode::Command => {
-                commandline::update(model, layout, message);
-
-                None
-            }
-            Mode::Insert => {
+            Mode::Command => commandline::update(model, layout, message),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
                 let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
-
-                actions
-            }
-            Mode::Navigation => {
-                let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
-
-                actions
-            }
-            Mode::Normal => {
-                let actions = current::update(model, layout, message);
-                preview::update(model, layout, message);
+                preview::update(model, layout, &Message::Refresh);
 
                 actions
             }
