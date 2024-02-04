@@ -3,7 +3,7 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use crate::model::buffer::{StylePartial, StylePartialSpan, ViewPort};
+use crate::model::buffer::{viewport::ViewPort, StylePartial, StylePartialSpan};
 
 type StyleSpan = (usize, usize, Style);
 

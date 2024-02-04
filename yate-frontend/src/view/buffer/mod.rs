@@ -1,7 +1,7 @@
 use ratatui::{prelude::Rect, text::Line, widgets::Paragraph, Frame};
 use yate_keymap::message::Mode;
 
-use crate::model::buffer::{Buffer, BufferLine, Cursor, StylePartialSpan, ViewPort};
+use crate::model::buffer::{viewport::ViewPort, Buffer, BufferLine, Cursor, StylePartialSpan};
 
 mod line;
 mod prefix;

@@ -1,7 +1,7 @@
 use yate_keymap::message::Mode;
 
 use crate::model::buffer::{
-    BufferLine, Cursor, CursorPosition, StylePartial, StylePartialSpan, ViewPort,
+    viewport::ViewPort, BufferLine, Cursor, CursorPosition, StylePartial, StylePartialSpan,
 };
 
 use super::style::{

@@ -1,9 +1,10 @@
 use yate_keymap::message::{CursorDirection, Message, Mode};
 
-use crate::model::buffer::{Buffer, BufferResult, Cursor, CursorPosition, ViewPort};
+use crate::model::buffer::{viewport::ViewPort, Buffer, BufferResult, Cursor, CursorPosition};
 
 mod bufferline;
 mod cursor;
+mod undo;
 pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
@@ -13,7 +14,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         Message::ExecuteCommand => None,
         Message::Modification(modification) => {
             let buffer_changes = bufferline::update(model, modification);
-
             if let Some(changes) = buffer_changes {
                 model.changes.extend(changes);
             }

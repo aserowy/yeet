@@ -1,5 +1,8 @@
 use crate::{
-    model::buffer::{BufferLine, Cursor, LineNumber, StylePartialSpan, ViewPort},
+    model::buffer::{
+        viewport::{LineNumber, ViewPort},
+        BufferLine, Cursor, StylePartialSpan,
+    },
     view::buffer::style::{LINE_NUMBER_ABS_STYLE_PARTIAL, LINE_NUMBER_REL_STYLE_PARTIAL},
 };
 

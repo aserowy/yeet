@@ -3,7 +3,10 @@ use std::{env, path::PathBuf};
 use yate_keymap::message::Mode;
 
 use self::{
-    buffer::{Buffer, Cursor, CursorPosition, LineNumber},
+    buffer::{
+        viewport::{LineNumber, ViewPort},
+        Buffer, Cursor, CursorPosition,
+    },
     history::History,
 };
 
@@ -39,7 +42,7 @@ impl Default for Model {
             current_path,
             current_directory: Buffer {
                 cursor: Some(Cursor::default()),
-                view_port: buffer::ViewPort {
+                view_port: ViewPort {
                     line_number: LineNumber::Relative,
                     line_number_width: 3,
                     ..Default::default()

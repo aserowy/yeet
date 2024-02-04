@@ -4,7 +4,7 @@ use yate_keymap::message::{Message, Mode};
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{buffer::ViewPort, Model},
+    model::{buffer::viewport::ViewPort, Model},
     task::Task,
 };
 
