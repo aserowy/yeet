@@ -71,7 +71,7 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 let content = line.content.to_string();
 
                 let line_count = model.lines.len();
-                if line_count >= line_index {
+                if line_index >= line_count {
                     cursor.vertical_index = line_count - 1;
                 }
 
