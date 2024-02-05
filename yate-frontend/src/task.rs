@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs::{self},
+    path::{Path, PathBuf},
+};
 
 use tokio::task::JoinSet;
 
@@ -6,7 +9,8 @@ use crate::{error::AppError, model::history};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Task {
-    DeleteFile(PathBuf),
+    AddPath(PathBuf),
+    DeletePath(PathBuf),
     OptimizeHistory,
 }
 
@@ -19,7 +23,22 @@ impl TaskManager {
     // TODO: if error occurs, enable handling in model with RenderAction + sender
     pub fn run(&mut self, task: Task) {
         match task {
-            Task::DeleteFile(path) => self.tasks.spawn(async move {
+            Task::AddPath(path) => self.tasks.spawn(async move {
+                if path.exists() {
+                    return Err(AppError::InvalidTargetPath);
+                }
+
+                let history_dictionary = match Path::new(&path).parent() {
+                    Some(path) => path,
+                    None => return Err(AppError::InvalidTargetPath),
+                };
+
+                fs::create_dir_all(history_dictionary)?;
+                fs::write(path, "")?;
+
+                Ok(())
+            }),
+            Task::DeletePath(path) => self.tasks.spawn(async move {
                 if !path.exists() {
                     return Err(AppError::InvalidTargetPath);
                 }

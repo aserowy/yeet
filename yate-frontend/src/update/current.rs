@@ -39,9 +39,11 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
         if let BufferResult::Changes(modifications) = result {
             for modification in modifications {
                 match modification {
-                    BufferChanged::LineAdded(_, _) => todo!(),
+                    BufferChanged::LineAdded(_, name) => {
+                        tasks.push(PostRenderAction::Task(Task::AddPath(path.join(name))))
+                    },
                     BufferChanged::LineRemoved(_, name) => {
-                        tasks.push(PostRenderAction::Task(Task::DeleteFile(path.join(name))))
+                        tasks.push(PostRenderAction::Task(Task::DeletePath(path.join(name))))
                     }
                     BufferChanged::Content(_, _, _) => todo!(),
                 }

@@ -19,9 +19,16 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                     let pre = &line.content[..index - 1];
                     let post = &line.content[index..];
 
-                    line.content = format!("{}{}", pre, post);
+                    let new = format!("{}{}", pre, post);
+                    let changed = BufferChanged::Content(
+                        cursor.vertical_index,
+                        line.content.to_string(),
+                        new.to_string(),
+                    );
 
-                    None
+                    line.content = new;
+
+                    Some(vec![changed])
                 } else {
                     // TODO: char before cursor removes empty line and inserts rest to above
                     None
@@ -38,9 +45,16 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                     let pre = &line.content[..index];
                     let post = &line.content[index + 1..];
 
-                    line.content = format!("{}{}", pre, post);
+                    let new = format!("{}{}", pre, post);
+                    let changed = BufferChanged::Content(
+                        cursor.vertical_index,
+                        line.content.to_string(),
+                        new.to_string(),
+                    );
 
-                    None
+                    line.content = new;
+
+                    Some(vec![changed])
                 } else {
                     None
                 }
@@ -77,35 +91,44 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                     expanded: next_index,
                 };
 
-                line.content = format!(
+                let new = format!(
                     "{}{}{}",
                     &line.content[..index],
                     raw,
                     &line.content[index..]
                 );
-            }
 
-            None
+                let changed = BufferChanged::Content(
+                    cursor.vertical_index,
+                    line.content.to_string(),
+                    new.to_string(),
+                );
+
+                line.content = new;
+
+                Some(vec![changed])
+            } else {
+                None
+            }
         }
         TextModification::InsertNewLine(direction) => {
-            match direction {
-                NewLineDirection::Above => {
-                    if let Some(cursor) = &mut model.cursor {
-                        let index = cursor.vertical_index;
-                        model.lines.insert(index, BufferLine::default());
-                    }
-                }
-                NewLineDirection::Under => {
-                    if let Some(cursor) = &mut model.cursor {
+            if let Some(cursor) = &mut model.cursor {
+                let index = match direction {
+                    NewLineDirection::Above => cursor.vertical_index,
+                    NewLineDirection::Under => {
                         let index = cursor.vertical_index + 1;
                         cursor.vertical_index = index;
-                        model.lines.insert(index, BufferLine::default());
-                    }
-                }
-            }
 
-            // TODO: cache events in insert and release all changes when leaving insert at once
-            None
+                        index
+                    }
+                };
+
+                model.lines.insert(index, BufferLine::default());
+
+                Some(vec![BufferChanged::LineAdded(index, "".to_string())])
+            } else {
+                None
+            }
         }
     }
 }

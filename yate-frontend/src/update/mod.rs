@@ -135,6 +135,7 @@ pub fn update(
             }
         },
         Message::Refresh => {
+            // TODO: handle undo state
             let actions = current::update(model, layout, message);
             current::set_content(model);
 
