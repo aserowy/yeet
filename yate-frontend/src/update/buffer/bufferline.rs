@@ -3,7 +3,6 @@ use yate_keymap::message::{NewLineDirection, TextModification};
 use crate::model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition};
 
 pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec<BufferChanged>> {
-    // TODO: most None must return Some(Vec<BufferChanged>) instead
     match modification {
         TextModification::DeleteCharBeforeCursor => {
             let line = get_line(model);
@@ -71,7 +70,9 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 let content = line.content.to_string();
 
                 let line_count = model.lines.len();
-                if line_index >= line_count {
+                if line_count == 0 {
+                    cursor.vertical_index = 0;
+                } else if line_index >= line_count {
                     cursor.vertical_index = line_count - 1;
                 }
 
@@ -116,10 +117,16 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 let index = match direction {
                     NewLineDirection::Above => cursor.vertical_index,
                     NewLineDirection::Under => {
-                        let index = cursor.vertical_index + 1;
-                        cursor.vertical_index = index;
+                        if model.lines.is_empty() {
+                            cursor.vertical_index = 0;
 
-                        index
+                            0
+                        } else {
+                            let index = cursor.vertical_index + 1;
+                            cursor.vertical_index = index;
+
+                            index
+                        }
                     }
                 };
 

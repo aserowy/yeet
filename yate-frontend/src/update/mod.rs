@@ -54,11 +54,13 @@ pub fn update(
                 }
                 Mode::Insert | Mode::Normal => {
                     buffer::focus_buffer(&mut model.current_directory);
+                    current::update(model, layout, message);
 
                     None
                 }
                 Mode::Navigation => {
                     buffer::focus_buffer(&mut model.current_directory);
+                    current::update(model, layout, message);
 
                     current::save_changes(model)
                 }

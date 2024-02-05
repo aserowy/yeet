@@ -65,17 +65,6 @@ pub fn update_by_direction(
                         expanded: 0,
                     };
                 }
-                CursorDirection::Validate => {
-                    let max_index = model.lines.len() - 1;
-                    if cursor.vertical_index >= max_index {
-                        cursor.vertical_index = max_index;
-                    }
-
-                    let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(mode, line_length, &cursor.horizontial_index);
-
-                    cursor.horizontial_index = position;
-                }
                 CursorDirection::Right => {
                     let cursor_index = match cursor.horizontial_index {
                         CursorPosition::Absolute {
@@ -114,6 +103,17 @@ pub fn update_by_direction(
 
                         cursor.horizontial_index = position;
                     }
+                }
+                CursorDirection::Validate => {
+                    let max_index = model.lines.len() - 1;
+                    if cursor.vertical_index >= max_index {
+                        cursor.vertical_index = max_index;
+                    }
+
+                    let line_length = &model.lines[cursor.vertical_index].len();
+                    let position = get_position(mode, line_length, &cursor.horizontial_index);
+
+                    cursor.horizontial_index = position;
                 }
             }
         }
