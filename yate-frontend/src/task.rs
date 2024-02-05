@@ -28,13 +28,19 @@ impl TaskManager {
                     return Err(AppError::InvalidTargetPath);
                 }
 
-                let history_dictionary = match Path::new(&path).parent() {
-                    Some(path) => path,
-                    None => return Err(AppError::InvalidTargetPath),
-                };
+                if let Some(path_str) = path.to_str() {
+                    if path_str.ends_with("/") {
+                        fs::create_dir_all(path)?;
+                    } else {
+                        let parent = match Path::new(&path).parent() {
+                            Some(path) => path,
+                            None => return Err(AppError::InvalidTargetPath),
+                        };
 
-                fs::create_dir_all(history_dictionary)?;
-                fs::write(path, "")?;
+                        fs::create_dir_all(parent)?;
+                        fs::write(path, "")?;
+                    }
+                }
 
                 Ok(())
             }),

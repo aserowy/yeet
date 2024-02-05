@@ -21,6 +21,7 @@ pub struct Model {
     pub history: History,
     pub key_sequence: String,
     pub mode: Mode,
+    pub mode_before: Option<Mode>,
     pub parent_directory: Buffer,
     pub preview: Buffer,
 }
@@ -52,6 +53,7 @@ impl Default for Model {
             history: History::default(),
             key_sequence: String::new(),
             mode: Mode::default(),
+            mode_before: None,
             parent_directory: Buffer {
                 cursor: Some(Cursor {
                     horizontial_index: CursorPosition::None,

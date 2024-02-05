@@ -33,6 +33,7 @@ pub fn update(
             }
 
             model.mode = to.clone();
+            model.mode_before = Some(from.clone());
 
             match from {
                 Mode::Command => {
@@ -97,7 +98,10 @@ pub fn update(
                 let mode_changed_actions = update(
                     model,
                     layout,
-                    &Message::ChangeMode(model.mode.clone(), Mode::default()),
+                    &Message::ChangeMode(
+                        model.mode.clone(),
+                        get_mode_after_command(&model.mode_before),
+                    ),
                 );
 
                 Some(
@@ -204,6 +208,18 @@ pub fn update(
             PostRenderAction::OptimizeHistory,
             PostRenderAction::Quit,
         ]),
+    }
+}
+
+fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
+    if let Some(mode) = mode_before {
+        match mode {
+            Mode::Command => unreachable!(),
+            Mode::Insert | Mode::Normal => Mode::Normal,
+            Mode::Navigation => Mode::Navigation,
+        }
+    } else {
+        Mode::default()
     }
 }
 
