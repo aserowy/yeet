@@ -1,6 +1,6 @@
 use yate_keymap::message::{NewLineDirection, TextModification};
 
-use crate::model::buffer::{Buffer, BufferChanged, BufferLine, Cursor, CursorPosition};
+use crate::model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition};
 
 pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec<BufferChanged>> {
     // TODO: most None must return Some(Vec<BufferChanged>) instead
@@ -61,7 +61,7 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                     cursor.vertical_index = line_count - 1;
                 }
 
-                Some(vec![BufferChanged::LineDeleted(line_index, content)])
+                Some(vec![BufferChanged::LineRemoved(line_index, content)])
             } else {
                 None
             }

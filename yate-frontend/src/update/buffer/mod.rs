@@ -10,14 +10,18 @@ pub mod viewport;
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
     let result = match message {
         Message::ChangeKeySequence(_) => None,
-        Message::ChangeMode(_, _) => None,
+        Message::ChangeMode(from, to) => {
+            if from == &Mode::Insert && to != &Mode::Insert {
+                model.undo.close_transaction();
+            }
+            None
+        }
         Message::ExecuteCommand => None,
         Message::Modification(modification) => {
             let buffer_changes = bufferline::update(model, modification);
             if let Some(changes) = buffer_changes {
-                model.changes.extend(changes);
+                model.undo.add(mode, changes);
             }
-
             None
         }
         Message::MoveCursor(count, direction) => {
@@ -30,14 +34,11 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         }
         Message::Refresh => None,
         Message::SaveBuffer(_) => {
-            let changes = model.changes.clone();
-            model.changes = Vec::new();
-
+            let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
         }
         Message::SelectCurrent | Message::SelectParent => {
             reset_view(&mut model.view_port, &mut model.cursor);
-
             None
         }
         Message::Quit => None,

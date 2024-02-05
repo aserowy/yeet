@@ -1,14 +1,18 @@
 use ratatui::style::{Color, Modifier};
 
-use self::viewport::ViewPort;
+use self::{
+    undo::{BufferChanged, Undo},
+    viewport::ViewPort,
+};
 
+pub mod undo;
 pub mod viewport;
 
 #[derive(Debug, Default)]
 pub struct Buffer {
-    pub changes: Vec<BufferChanged>,
     pub cursor: Option<Cursor>,
     pub lines: Vec<BufferLine>,
+    pub undo: Undo,
     pub view_port: ViewPort,
 }
 
@@ -68,9 +72,4 @@ impl Default for StylePartial {
 pub enum BufferResult {
     Changes(Vec<BufferChanged>),
     _Unused,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum BufferChanged {
-    LineDeleted(usize, String),
 }

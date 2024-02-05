@@ -4,7 +4,7 @@ use crate::{
     event::PostRenderAction,
     layout::AppLayout,
     model::{
-        buffer::{BufferChanged, BufferLine, BufferResult, Cursor},
+        buffer::{undo::BufferChanged, BufferLine, BufferResult, Cursor},
         Model,
     },
     task::Task,
@@ -39,9 +39,11 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
         if let BufferResult::Changes(modifications) = result {
             for modification in modifications {
                 match modification {
-                    BufferChanged::LineDeleted(_, name) => {
+                    BufferChanged::LineAdded(_, _) => todo!(),
+                    BufferChanged::LineRemoved(_, name) => {
                         tasks.push(PostRenderAction::Task(Task::DeleteFile(path.join(name))))
                     }
+                    BufferChanged::Content(_, _, _) => todo!(),
                 }
             }
         }
