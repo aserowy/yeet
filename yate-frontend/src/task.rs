@@ -12,6 +12,7 @@ pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
     OptimizeHistory,
+    RenamePath(PathBuf, PathBuf),
 }
 
 #[derive(Default)]
@@ -59,6 +60,15 @@ impl TaskManager {
             }),
             Task::OptimizeHistory => self.tasks.spawn(async move {
                 history::cache::optimize()?;
+
+                Ok(())
+            }),
+            Task::RenamePath(old, new) => self.tasks.spawn(async move {
+                if !old.exists() {
+                    return Err(AppError::InvalidTargetPath);
+                }
+
+                fs::rename(old, new)?;
 
                 Ok(())
             }),

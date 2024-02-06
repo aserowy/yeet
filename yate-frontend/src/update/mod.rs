@@ -56,9 +56,16 @@ pub fn update(
                     buffer::focus_buffer(&mut model.current_directory);
                     current::update(model, layout, message);
 
+                    // TODO: split normal and show pending file operations (refresh on enter normal/nav)
+
                     None
                 }
                 Mode::Navigation => {
+                    // TODO: handle file operations: show pending with gray, refresh on operation success
+                    // - build consolidate BufferChanges
+                    // - add changes to list in gray
+                    // - add notify support
+                    // - depending on info in notify message, replace exact line or refresh all
                     buffer::focus_buffer(&mut model.current_directory);
                     current::update(model, layout, message);
 

@@ -86,6 +86,7 @@ pub fn update_by_direction(
                         } => current,
                         CursorPosition::End => {
                             if mode == &Mode::Insert {
+                                // NOTE: -1 to trigger the replacement with absolute cursor
                                 max_index - 1
                             } else {
                                 return;
