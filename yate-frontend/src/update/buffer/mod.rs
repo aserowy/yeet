@@ -13,6 +13,7 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         Message::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
+                cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
             }
             None
         }
@@ -44,7 +45,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         Message::Quit => None,
     };
 
-    cursor::update_by_direction(mode, model, &1, &CursorDirection::Validate);
     viewport::update_by_cursor(model);
 
     result

@@ -57,7 +57,17 @@ pub fn update_by_direction(
                     }
                 }
                 CursorDirection::LineEnd => {
-                    cursor.horizontial_index = CursorPosition::End;
+                    if mode == &Mode::Insert {
+                        let index_correction = get_index_correction(mode);
+                        let max_index = model.lines[cursor.vertical_index].len() - index_correction;
+
+                        cursor.horizontial_index = CursorPosition::Absolute {
+                            current: max_index,
+                            expanded: max_index,
+                        };
+                    } else {
+                        cursor.horizontial_index = CursorPosition::End;
+                    }
                 }
                 CursorDirection::LineStart => {
                     cursor.horizontial_index = CursorPosition::Absolute {
@@ -66,17 +76,24 @@ pub fn update_by_direction(
                     };
                 }
                 CursorDirection::Right => {
+                    let index_correction = get_index_correction(mode);
+                    let max_index = model.lines[cursor.vertical_index].len() - index_correction;
+
                     let cursor_index = match cursor.horizontial_index {
                         CursorPosition::Absolute {
                             current,
                             expanded: _,
                         } => current,
-                        CursorPosition::End => return,
+                        CursorPosition::End => {
+                            if mode == &Mode::Insert {
+                                max_index - 1
+                            } else {
+                                return;
+                            }
+                        }
                         CursorPosition::None => return,
                     };
 
-                    let index_correction = get_index_correction(mode);
-                    let max_index = model.lines[cursor.vertical_index].len() - index_correction;
                     if max_index > cursor_index {
                         let next_index = cursor_index + 1;
 

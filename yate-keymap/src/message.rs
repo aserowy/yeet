@@ -2,6 +2,7 @@
 pub enum Binding {
     Message(Message),
     Mode(Mode),
+    ModeAndNotRepeatedMotion(Mode, CursorDirection),
     ModeAndTextModification(Mode, TextModification),
     Motion(CursorDirection),
     Repeat(usize),
