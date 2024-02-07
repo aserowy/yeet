@@ -4,7 +4,6 @@ use crate::model::buffer::{viewport::ViewPort, Buffer, BufferResult, Cursor, Cur
 
 mod bufferline;
 mod cursor;
-mod undo;
 pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
