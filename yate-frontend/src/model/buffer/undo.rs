@@ -2,6 +2,19 @@ use std::time;
 
 use yate_keymap::message::Mode;
 
+#[derive(Debug)]
+struct Transaction {
+    changes: Vec<BufferChanged>,
+    _timestamp: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BufferChanged {
+    Content(usize, String, String),
+    LineAdded(usize, String),
+    LineRemoved(usize, String),
+}
+
 #[derive(Debug, Default)]
 pub struct Undo {
     current_change: Option<BufferChanged>,
@@ -42,6 +55,31 @@ impl Undo {
         self.change_buffer = Vec::new();
     }
 
+    pub fn get_uncommited_changes(&self) -> Vec<BufferChanged> {
+        if self.transactions.is_empty() {
+            return Vec::new();
+        }
+
+        let start = if let Some(index) = self.current_save_index {
+            index + 1
+        } else {
+            0
+        };
+
+        let end = if let Some(index) = self.current_transaction_index {
+            index
+        } else {
+            self.transactions.len() - 1
+        };
+
+        self.transactions[start..end + 1]
+            .iter()
+            .fold(Vec::new(), |mut acc, t| {
+                acc.extend(t.changes.clone());
+                acc
+            })
+    }
+
     pub fn save(&mut self) -> Vec<BufferChanged> {
         self.close_transaction();
 
@@ -49,27 +87,13 @@ impl Undo {
             return Vec::new();
         }
 
-        let start = if let Some(index) = self.current_save_index {
-            index
+        let changes = self.get_uncommited_changes();
+
+        self.current_save_index = if let Some(index) = self.current_transaction_index {
+            Some(index)
         } else {
-            0
+            Some(self.transactions.len() - 1)
         };
-
-        let end = if let Some(index) = self.current_transaction_index {
-            index + 1
-        } else {
-            self.current_transaction_index = Some(self.transactions.len() - 1);
-            self.transactions.len()
-        };
-
-        let changes = self.transactions[start..end]
-            .iter()
-            .fold(Vec::new(), |mut acc, t| {
-                acc.extend(t._changes.clone());
-                acc
-            });
-
-        self.current_save_index = Some(self.transactions.len() - 1);
 
         changes
     }
@@ -84,25 +108,13 @@ impl Undo {
             Err(_) => 0,
         };
 
-        self.current_transaction_index = Some(self.transactions.len());
         self.transactions.push(Transaction {
-            _changes: changes,
+            changes,
             _timestamp: timestamp,
         });
+
+        self.current_transaction_index = Some(self.transactions.len() - 1);
     }
-}
-
-#[derive(Debug)]
-struct Transaction {
-    _changes: Vec<BufferChanged>,
-    _timestamp: u64,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum BufferChanged {
-    Content(usize, String, String),
-    LineAdded(usize, String),
-    LineRemoved(usize, String),
 }
 
 fn update(
@@ -155,5 +167,201 @@ fn update_current(
             }
         }
         BufferChanged::LineRemoved(_, _) => None,
+    }
+}
+
+pub fn consolidate(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
+    let mut consolidated_changes = Vec::new();
+    'changes: for change in changes {
+        match change {
+            BufferChanged::Content(line_index, _, new) => {
+                let mut index = *line_index;
+                for (rev_index, consolidated) in consolidated_changes.iter().rev().enumerate() {
+                    match consolidated {
+                        BufferChanged::Content(c_i, old, _) => {
+                            if c_i == &index {
+                                let max_index = consolidated_changes.len() - 1;
+                                let corrected_vec_index = max_index - rev_index;
+
+                                consolidated_changes[corrected_vec_index] =
+                                    BufferChanged::Content(*c_i, old.to_string(), new.to_string());
+
+                                continue 'changes;
+                            }
+                        }
+                        BufferChanged::LineAdded(c_i, _) => {
+                            if c_i == &index {
+                                let max_index = consolidated_changes.len() - 1;
+                                let corrected_vec_index = max_index - rev_index;
+
+                                consolidated_changes[corrected_vec_index] =
+                                    BufferChanged::LineAdded(*c_i, new.to_string());
+
+                                continue 'changes;
+                            } else if &index >= c_i {
+                                index -= 1;
+                            }
+                        }
+                        BufferChanged::LineRemoved(c_i, _) => {
+                            if &index > c_i {
+                                index += 1;
+                            }
+                        }
+                    }
+                }
+
+                consolidated_changes.push(change.clone());
+            }
+            BufferChanged::LineAdded(_, _) => {
+                consolidated_changes.push(change.clone());
+            }
+            BufferChanged::LineRemoved(line_index, _) => {
+                let mut index = *line_index;
+                for (rev_index, consolidated) in consolidated_changes.iter().rev().enumerate() {
+                    match consolidated {
+                        BufferChanged::Content(c_i, _, _) => {
+                            if c_i == &index {
+                                let max_index = consolidated_changes.len() - 1;
+                                let corrected_vec_index = max_index - rev_index;
+
+                                consolidated_changes.remove(corrected_vec_index);
+
+                                continue 'changes;
+                            }
+                        }
+                        BufferChanged::LineAdded(c_i, _) => {
+                            if c_i == &index {
+                                let max_index = consolidated_changes.len() - 1;
+                                let corrected_vec_index = max_index - rev_index;
+
+                                consolidated_changes.remove(corrected_vec_index);
+
+                                continue 'changes;
+                            } else if &index >= c_i {
+                                index -= 1;
+                            }
+                        }
+                        BufferChanged::LineRemoved(c_i, _) => {
+                            if &index > c_i {
+                                index += 1;
+                            }
+                        }
+                    }
+                }
+
+                consolidated_changes.push(change.clone());
+            }
+        };
+    }
+
+    consolidated_changes
+}
+
+mod test {
+    #[test]
+    fn test_get_uncommited_changes() {
+        use crate::model::buffer::undo::BufferChanged;
+
+        let mut undo = super::Undo::default();
+        let changes = undo.save();
+        assert_eq!(changes, vec![]);
+
+        let mut undo = super::Undo::default();
+        undo.add(
+            &yate_keymap::message::Mode::Insert,
+            vec![
+                BufferChanged::LineAdded(0, "a".to_string()),
+                BufferChanged::LineRemoved(4, "m".to_string()),
+            ],
+        );
+
+        let changes = undo.get_uncommited_changes();
+        assert_eq!(changes, Vec::new());
+
+        undo.close_transaction();
+        let changes = undo.get_uncommited_changes();
+        assert_eq!(
+            changes,
+            vec![
+                BufferChanged::LineAdded(0, "a".to_string()),
+                BufferChanged::LineRemoved(4, "m".to_string()),
+            ]
+        );
+
+        undo.add(
+            &yate_keymap::message::Mode::Normal,
+            vec![BufferChanged::LineAdded(2, "h".to_string())],
+        );
+        let changes = undo.get_uncommited_changes();
+        assert_eq!(
+            changes,
+            vec![
+                BufferChanged::LineAdded(0, "a".to_string()),
+                BufferChanged::LineRemoved(4, "m".to_string()),
+                BufferChanged::LineAdded(2, "h".to_string()),
+            ]
+        );
+
+        undo.add(
+            &yate_keymap::message::Mode::Insert,
+            vec![BufferChanged::LineRemoved(5, "m".to_string())],
+        );
+        let changes = undo.save();
+        assert_eq!(
+            changes,
+            vec![
+                BufferChanged::LineAdded(0, "a".to_string()),
+                BufferChanged::LineRemoved(4, "m".to_string()),
+                BufferChanged::LineAdded(2, "h".to_string()),
+                BufferChanged::LineRemoved(5, "m".to_string()),
+            ]
+        );
+
+        undo.add(
+            &yate_keymap::message::Mode::Normal,
+            vec![BufferChanged::LineAdded(2, "s".to_string())],
+        );
+        let changes = undo.get_uncommited_changes();
+        assert_eq!(changes, vec![BufferChanged::LineAdded(2, "s".to_string()),]);
+
+        let changes = undo.save();
+        assert_eq!(changes, vec![BufferChanged::LineAdded(2, "s".to_string()),]);
+
+        let changes = undo.save();
+        assert_eq!(changes, vec![]);
+    }
+
+    #[test]
+    fn test_consolidate() {
+        use crate::model::buffer::undo::BufferChanged;
+
+        let changes = vec![
+            BufferChanged::LineAdded(0, "a".to_string()),
+            BufferChanged::Content(0, "a".to_string(), "d".to_string()),
+            BufferChanged::LineRemoved(0, "d".to_string()),
+            BufferChanged::LineAdded(0, "e".to_string()),
+            BufferChanged::LineAdded(0, "f".to_string()),
+            BufferChanged::LineRemoved(0, "e".to_string()),
+            BufferChanged::LineAdded(1, "l".to_string()),
+            BufferChanged::LineAdded(2, "g".to_string()),
+            BufferChanged::Content(2, "".to_string(), "h".to_string()),
+            BufferChanged::Content(3, "i_old".to_string(), "i".to_string()),
+            BufferChanged::LineAdded(3, "j".to_string()),
+            BufferChanged::LineRemoved(3, "j".to_string()),
+            BufferChanged::Content(3, "".to_string(), "k".to_string()),
+            BufferChanged::LineRemoved(4, "m".to_string()),
+        ];
+        let consolidated_changes = super::consolidate(&changes);
+
+        assert_eq!(
+            consolidated_changes,
+            vec![
+                BufferChanged::LineAdded(0, "e".to_string()),
+                BufferChanged::LineAdded(1, "l".to_string()),
+                BufferChanged::LineAdded(2, "h".to_string()),
+                BufferChanged::Content(3, "i_old".to_string(), "k".to_string()),
+                BufferChanged::LineRemoved(4, "m".to_string()),
+            ]
+        );
     }
 }

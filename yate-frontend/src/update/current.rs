@@ -37,8 +37,7 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
 
         let mut tasks = Vec::new();
         if let BufferResult::Changes(modifications) = result {
-            // TODO: consolidate changes to enable 1:1 tasks (relevant when line navigation in insert is possible)
-            for modification in modifications {
+            for modification in crate::model::buffer::undo::consolidate(&modifications) {
                 match modification {
                     BufferChanged::LineAdded(_, name) => {
                         tasks.push(PostRenderAction::Task(Task::AddPath(path.join(name))))

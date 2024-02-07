@@ -130,6 +130,11 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                     }
                 };
 
+                cursor.horizontial_index = CursorPosition::Absolute {
+                    current: 0,
+                    expanded: 0,
+                };
+
                 model.lines.insert(index, BufferLine::default());
 
                 Some(vec![BufferChanged::LineAdded(index, "".to_string())])
