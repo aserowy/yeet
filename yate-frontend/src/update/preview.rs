@@ -14,7 +14,9 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
 
         super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-        buffer.lines = if target.is_dir() {
+        buffer.lines = if target == model.current_path {
+            Vec::new()
+        } else if target.is_dir() {
             match path::get_directory_content(&target) {
                 Ok(content) => content,
                 Err(_) => {
@@ -25,7 +27,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                 }
             }
         } else {
-            vec![]
+            // TODO: add file preview
+            Vec::new()
         };
 
         buffer::update(&model.mode, buffer, message);
