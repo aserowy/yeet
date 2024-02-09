@@ -41,7 +41,7 @@ pub fn update(
                     commandline::update(model, layout, message);
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    buffer::unfocus_buffer(&mut model.current_directory);
+                    buffer::unfocus_buffer(&mut model.current);
                 }
             }
 
@@ -53,24 +53,22 @@ pub fn update(
                     None
                 }
                 Mode::Insert => {
-                    buffer::focus_buffer(&mut model.current_directory);
+                    buffer::focus_buffer(&mut model.current);
                     current::update(model, layout, message);
 
                     None
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
-                    // - add consolidated changes to list in gray
-                    // - add notify support
                     // - depending on info in notify message, replace exact line or refresh all
-                    buffer::focus_buffer(&mut model.current_directory);
+                    buffer::focus_buffer(&mut model.current);
                     current::update(model, layout, message);
                     preview::update(model, layout, &Message::Refresh);
 
                     current::save_changes(model)
                 }
                 Mode::Normal => {
-                    buffer::focus_buffer(&mut model.current_directory);
+                    buffer::focus_buffer(&mut model.current);
                     current::update(model, layout, message);
                     preview::update(model, layout, &Message::Refresh);
 
@@ -176,12 +174,12 @@ pub fn update(
                 model.current_path = target.clone();
 
                 let actions = current::update(model, layout, message);
-                current::set_content(model);
+                model.current.lines = model.preview.lines.clone();
 
                 history::set_cursor_index(
                     &model.current_path,
                     &model.history,
-                    &mut model.current_directory,
+                    &mut model.current,
                 );
 
                 parent::update(model, layout, message);
@@ -202,12 +200,12 @@ pub fn update(
                 model.current_path = parent.to_path_buf();
 
                 let actions = current::update(model, layout, message);
-                current::set_content(model);
+                model.current.lines = model.parent.lines.clone();
 
                 history::set_cursor_index(
                     &model.current_path,
                     &model.history,
-                    &mut model.current_directory,
+                    &mut model.current,
                 );
 
                 parent::update(model, layout, message);

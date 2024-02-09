@@ -13,14 +13,14 @@ pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
 
     buffer::view(
         &model.mode,
-        &model.current_directory,
+        &model.current,
         frame,
         layout.current_directory,
     );
 
     buffer::view(
         &model.mode,
-        &model.parent_directory,
+        &model.parent,
         frame,
         layout.parent_directory,
     );

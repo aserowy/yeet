@@ -16,13 +16,13 @@ pub mod history;
 #[derive(Debug)]
 pub struct Model {
     pub commandline: Buffer,
-    pub current_directory: Buffer,
+    pub current: Buffer,
     pub current_path: PathBuf,
     pub history: History,
     pub key_sequence: String,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
-    pub parent_directory: Buffer,
+    pub parent: Buffer,
     pub preview: Buffer,
 }
 
@@ -41,7 +41,7 @@ impl Default for Model {
                 ..Default::default()
             },
             current_path,
-            current_directory: Buffer {
+            current: Buffer {
                 cursor: Some(Cursor::default()),
                 view_port: ViewPort {
                     line_number: LineNumber::Relative,
@@ -54,7 +54,7 @@ impl Default for Model {
             key_sequence: String::new(),
             mode: Mode::default(),
             mode_before: None,
-            parent_directory: Buffer {
+            parent: Buffer {
                 cursor: Some(Cursor {
                     horizontial_index: CursorPosition::None,
                     vertical_index: 0,

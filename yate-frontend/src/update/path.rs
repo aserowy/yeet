@@ -29,7 +29,7 @@ pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
 }
 
 pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
-    let buffer = &model.current_directory;
+    let buffer = &model.current;
     if buffer.lines.is_empty() {
         return None;
     }

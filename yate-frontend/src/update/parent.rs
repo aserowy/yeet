@@ -14,7 +14,7 @@ use super::{buffer, path};
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let path = Path::new(&model.current_path);
-    let buffer = &mut model.parent_directory;
+    let buffer = &mut model.parent;
     let layout = &layout.parent_directory;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);

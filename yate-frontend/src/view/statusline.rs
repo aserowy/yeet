@@ -25,7 +25,7 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
 }
 
 fn get_changes_content(model: &Model) -> Line {
-    let modifications = model.current_directory.undo.get_uncommited_changes();
+    let modifications = model.current.undo.get_uncommited_changes();
     let changes = crate::model::buffer::undo::consolidate(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);
