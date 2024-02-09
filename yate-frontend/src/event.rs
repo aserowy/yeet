@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use futures::{FutureExt, StreamExt};
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use notify::{PollWatcher, Watcher};
+use tokio::sync::mpsc::{self, UnboundedReceiver};
 use yate_keymap::{
     conversion,
     key::Key,
@@ -26,12 +29,25 @@ pub enum PostRenderAction {
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
-pub fn listen() -> (
-    UnboundedSender<RenderAction>,
-    UnboundedReceiver<RenderAction>,
-) {
+pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
     let (sender, receiver) = mpsc::unbounded_channel();
     let internal_sender = sender.clone();
+
+    let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
+    let mut watcher = PollWatcher::new(
+        move |res| {
+            watcher_sender.send(res).unwrap();
+        },
+        notify::Config::default().with_poll_interval(Duration::from_millis(500)),
+    )
+    .unwrap();
+
+    watcher
+        .watch(
+            std::env::current_dir().unwrap().as_path(),
+            notify::RecursiveMode::NonRecursive,
+        )
+        .unwrap();
 
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
@@ -40,8 +56,7 @@ pub fn listen() -> (
 
         loop {
             let crossterm_event = reader.next().fuse();
-            // TODO: let notify dict changed
-            // TODO: let backend state changed events (see comments bottom)
+            let notify_event = watcher_receiver.recv().fuse();
 
             tokio::select! {
                 event = crossterm_event => {
@@ -57,11 +72,24 @@ pub fn listen() -> (
                         None => {},
                     }
                 },
+                event = notify_event => {
+                    match event {
+                        Some(Ok(_event)) => {
+                            // TODO: handle notify event and replace single buffer lines
+                            internal_sender.send(RenderAction::Startup).unwrap();
+                        },
+                        Some(Err(_)) => {
+                            internal_sender.send(RenderAction::Error).unwrap();
+                        },
+                        None => {},
+                    }
+                },
+
             }
         }
     });
 
-    (sender, receiver)
+    (watcher, receiver)
 }
 
 fn handle_event(event: crossterm::event::Event) -> Option<RenderAction> {

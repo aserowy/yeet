@@ -38,7 +38,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
     let mut tasks = TaskManager::default();
     let mut result = Vec::new();
 
-    let (_, mut receiver) = event::listen();
+    let (_watcher, mut receiver) = event::listen();
     'app_loop: while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
