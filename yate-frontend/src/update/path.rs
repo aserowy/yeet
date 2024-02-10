@@ -50,14 +50,14 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
 }
 
 pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
-    let buffer = &model.current;
+    let buffer = &model.current.buffer;
     if buffer.lines.is_empty() {
         return None;
     }
 
     if let Some(cursor) = &buffer.cursor {
         let current = &buffer.lines[cursor.vertical_index];
-        let target = model.current_path.join(&current.content);
+        let target = model.current.path.join(&current.content);
 
         if target.exists() {
             Some(target)
@@ -71,8 +71,8 @@ pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
 
 pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>> {
     let mut actions = Vec::new();
-    if let Some(parent) = model.current_path.parent() {
-        if model.current_path == parent {
+    if let Some(parent) = model.current.path.parent() {
+        if model.current.path == parent {
             return None;
         }
 
@@ -82,7 +82,7 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
             actions.push(PostRenderAction::UnwatchPath(selected.clone()));
         }
 
-        model.current_path = parent.to_path_buf();
+        model.current.path = parent.to_path_buf();
     }
 
     Some(actions)
@@ -91,18 +91,37 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
 pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
     let mut actions = Vec::new();
     if let Some(selected) = get_selected_path(model) {
-        if model.current_path == selected {
+        if model.current.path == selected {
             return None;
         } else if !selected.is_dir() {
             return None;
         }
 
         actions.push(PostRenderAction::WatchPath(selected.clone()));
-        if let Some(parent) = model.current_path.parent() {
+        if let Some(parent) = model.current.path.parent() {
             actions.push(PostRenderAction::UnwatchPath(parent.to_path_buf()));
         }
 
-        model.current_path = selected.to_path_buf();
+        model.current.path = selected.to_path_buf();
+    };
+
+    Some(actions)
+}
+
+pub fn set_preview_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+    let mut actions = Vec::new();
+    if let Some(selected) = get_selected_path(model) {
+        let current = &model.current.path;
+        if current == &selected {
+            return None;
+        }
+
+        actions.push(PostRenderAction::WatchPath(selected.clone()));
+        actions.push(PostRenderAction::UnwatchPath(
+            model.preview.path.to_path_buf(),
+        ));
+
+        model.preview.path = selected.to_path_buf();
     };
 
     Some(actions)

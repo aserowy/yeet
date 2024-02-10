@@ -13,17 +13,12 @@ pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
 
     buffer::view(
         &model.mode,
-        &model.current,
+        &model.current.buffer,
         frame,
         layout.current_directory,
     );
 
-    buffer::view(
-        &model.mode,
-        &model.parent,
-        frame,
-        layout.parent_directory,
-    );
+    buffer::view(&model.mode, &model.parent, frame, layout.parent_directory);
 
     preview::view(model, frame, layout.preview);
     statusline::view(model, frame, layout.statusline);

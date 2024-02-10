@@ -16,14 +16,13 @@ pub mod history;
 #[derive(Debug)]
 pub struct Model {
     pub commandline: Buffer,
-    pub current: Buffer,
-    pub current_path: PathBuf,
+    pub current: DirectoryBuffer,
     pub history: History,
     pub key_sequence: String,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub parent: Buffer,
-    pub preview: Buffer,
+    pub preview: DirectoryBuffer,
 }
 
 impl Default for Model {
@@ -40,15 +39,17 @@ impl Default for Model {
                 }),
                 ..Default::default()
             },
-            current_path,
-            current: Buffer {
-                cursor: Some(Cursor::default()),
-                view_port: ViewPort {
-                    line_number: LineNumber::Relative,
-                    line_number_width: 3,
+            current: DirectoryBuffer {
+                buffer: Buffer {
+                    cursor: Some(Cursor::default()),
+                    view_port: ViewPort {
+                        line_number: LineNumber::Relative,
+                        line_number_width: 3,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
+                path: current_path,
             },
             history: History::default(),
             key_sequence: String::new(),
@@ -62,12 +63,19 @@ impl Default for Model {
                 }),
                 ..Default::default()
             },
-            preview: Buffer::default(),
+            preview: DirectoryBuffer::default(),
         }
     }
 }
 
+#[derive(Debug, Default)]
+pub struct DirectoryBuffer {
+    pub buffer: Buffer,
+    pub path: PathBuf,
+}
+
 fn get_current_path() -> PathBuf {
+    // TODO: configurable with clap
     if let Ok(path) = env::current_dir() {
         path
     } else if let Some(val) = dirs::home_dir() {

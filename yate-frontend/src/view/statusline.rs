@@ -16,7 +16,7 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
         .constraints([Constraint::Min(1), Constraint::Max(changes.width() as u16)])
         .split(rect);
 
-    let content = model.current_path.to_str().unwrap_or("");
+    let content = model.current.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Green);
     let span = Span::styled(content, style);
 
@@ -25,7 +25,7 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
 }
 
 fn get_changes_content(model: &Model) -> Line {
-    let modifications = model.current.undo.get_uncommited_changes();
+    let modifications = model.current.buffer.undo.get_uncommited_changes();
     let changes = crate::model::buffer::undo::consolidate(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

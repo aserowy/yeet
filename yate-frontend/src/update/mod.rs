@@ -40,7 +40,7 @@ pub fn update(
                     commandline::update(model, layout, message);
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    buffer::unfocus_buffer(&mut model.current);
+                    buffer::unfocus_buffer(&mut model.current.buffer);
                 }
             }
 
@@ -52,7 +52,7 @@ pub fn update(
                     None
                 }
                 Mode::Insert => {
-                    buffer::focus_buffer(&mut model.current);
+                    buffer::focus_buffer(&mut model.current.buffer);
                     current::update(model, layout, message);
 
                     None
@@ -60,14 +60,14 @@ pub fn update(
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // - depending on info in notify message, replace exact line or refresh all
-                    buffer::focus_buffer(&mut model.current);
+                    buffer::focus_buffer(&mut model.current.buffer);
                     current::update(model, layout, message);
                     preview::update(model, layout, &Message::Refresh);
 
                     current::save_changes(model)
                 }
                 Mode::Normal => {
-                    buffer::focus_buffer(&mut model.current);
+                    buffer::focus_buffer(&mut model.current.buffer);
                     current::update(model, layout, message);
                     preview::update(model, layout, &Message::Refresh);
 
@@ -131,34 +131,40 @@ pub fn update(
             Mode::Insert | Mode::Normal => current::update(model, layout, message),
             Mode::Navigation => None,
         },
-        Message::MoveCursor(_, _) => match model.mode {
+        Message::MoveCursor(_, _) | Message::MoveViewPort(_) => match model.mode {
             Mode::Command => commandline::update(model, layout, message),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                let actions = current::update(model, layout, message);
+                let mut actions = Vec::new();
+                if let Some(current_actions) = current::update(model, layout, message) {
+                    actions.extend(current_actions);
+                }
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                    actions.extend(preview_actions);
+                }
                 preview::update(model, layout, &Message::Refresh);
 
-                actions
-            }
-        },
-        Message::MoveViewPort(_) => match model.mode {
-            Mode::Command => commandline::update(model, layout, message),
-            Mode::Insert | Mode::Navigation | Mode::Normal => {
-                let actions = current::update(model, layout, message);
-                preview::update(model, layout, &Message::Refresh);
-
-                actions
+                Some(actions)
             }
         },
         Message::Refresh => {
             // TODO: handle undo state
-            let actions = current::update(model, layout, message);
+            // FIX: panics when shown directory gets removed from outside
+            let mut actions = Vec::new();
+            if let Some(current_actions) = current::update(model, layout, message) {
+                actions.extend(current_actions);
+            }
             current::set_content(model);
+
+            if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                actions.extend(preview_actions);
+            }
+            preview::update(model, layout, message);
 
             commandline::update(model, layout, message);
             parent::update(model, layout, message);
-            preview::update(model, layout, message);
 
-            actions
+            Some(actions)
         }
         Message::SaveBuffer(_) => current::save_changes(model),
         Message::SelectCurrent => {
@@ -168,14 +174,22 @@ pub fn update(
                 if let Some(current_actions) = current::update(model, layout, message) {
                     actions.extend(current_actions);
                 }
-                model.current.lines = model.preview.lines.clone();
+                model.current.buffer.lines = model.preview.buffer.lines.clone();
 
-                history::set_cursor_index(&model.current_path, &model.history, &mut model.current);
+                history::set_cursor_index(
+                    &model.current.path,
+                    &model.history,
+                    &mut model.current.buffer,
+                );
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                    actions.extend(preview_actions);
+                }
 
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
 
-                model.history.add(&model.current_path);
+                model.history.add(&model.current.path);
 
                 Some(actions)
             } else {
@@ -189,9 +203,17 @@ pub fn update(
                 if let Some(current_actions) = current::update(model, layout, message) {
                     actions.extend(current_actions);
                 }
-                model.current.lines = model.parent.lines.clone();
+                model.current.buffer.lines = model.parent.lines.clone();
 
-                history::set_cursor_index(&model.current_path, &model.history, &mut model.current);
+                history::set_cursor_index(
+                    &model.current.path,
+                    &model.history,
+                    &mut model.current.buffer,
+                );
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                    actions.extend(preview_actions);
+                }
 
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
@@ -202,15 +224,23 @@ pub fn update(
             }
         }
         Message::Startup => {
-            let mut actions = vec![PostRenderAction::WatchPath(model.current_path.clone())];
-            if let Some(refresh_actions) = update(model, layout, &Message::Refresh) {
-                actions.extend(refresh_actions);
+            let mut actions = vec![PostRenderAction::WatchPath(model.current.path.clone())];
+            if let Some(refresh) = update(model, layout, &Message::Refresh) {
+                actions.extend(refresh);
             }
-            if let Some(parent) = model.current_path.parent() {
+
+            if let Some(parent) = model.current.path.parent() {
                 actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
             };
-            if let Some(selected) = path::get_selected_path(model) {
-                actions.push(PostRenderAction::WatchPath(selected.clone()));
+
+            history::set_cursor_index(
+                &model.current.path,
+                &model.history,
+                &mut model.current.buffer,
+            );
+
+            if let Some(preview) = path::set_preview_to_selected(model) {
+                actions.extend(preview);
             }
 
             Some(actions)

@@ -17,7 +17,7 @@ pub fn update(
     layout: &AppLayout,
     message: &Message,
 ) -> Option<Vec<PostRenderAction>> {
-    let buffer = &mut model.current;
+    let buffer = &mut model.current.buffer;
     let layout = &layout.current_directory;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
@@ -30,10 +30,10 @@ pub fn update(
 pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
     if let Some(result) = buffer::update(
         &model.mode,
-        &mut model.current,
+        &mut model.current.buffer,
         &Message::SaveBuffer(None),
     ) {
-        let path = &model.current_path;
+        let path = &model.current.path;
 
         let mut tasks = Vec::new();
         if let BufferResult::Changes(modifications) = result {
@@ -63,10 +63,10 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
 
 pub fn set_content(model: &mut Model) {
     if model.mode != Mode::Insert {
-        let buffer = &mut model.current;
+        let buffer = &mut model.current.buffer;
         // TODO: remove with get current content task
         // FIX: shows no content in preview when uncommited changes are present
-        buffer.lines = match path::get_directory_content(&model.current_path) {
+        buffer.lines = match path::get_directory_content(&model.current.path) {
             Ok(content) => {
                 if buffer.cursor.is_none() {
                     buffer.cursor = Some(Cursor::default());

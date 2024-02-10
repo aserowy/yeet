@@ -13,7 +13,7 @@ use crate::{
 use super::{buffer, path};
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
-    let path = Path::new(&model.current_path);
+    let path = Path::new(&model.current.path);
     let buffer = &mut model.parent;
     let layout = &layout.parent_directory;
 
