@@ -8,7 +8,6 @@ pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
     let result = match message {
-        Message::ChangeKeySequence(_) => None,
         Message::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
@@ -16,7 +15,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
             }
             None
         }
-        Message::ExecuteCommand => None,
         Message::Modification(modification) => {
             let buffer_changes = bufferline::update(model, modification);
             if let Some(changes) = buffer_changes {
@@ -32,7 +30,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
             viewport::update_by_direction(model, direction);
             None
         }
-        Message::Refresh => None,
         Message::SaveBuffer(_) => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
@@ -41,7 +38,11 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
             reset_view(&mut model.view_port, &mut model.cursor);
             None
         }
-        Message::Quit => None,
+        Message::ChangeKeySequence(_)
+        | Message::ExecuteCommand
+        | Message::Refresh
+        | Message::Startup
+        | Message::Quit => None,
     };
 
     viewport::update_by_cursor(model);

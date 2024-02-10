@@ -4,6 +4,7 @@ use ratatui::style::Color;
 
 use crate::{
     error::AppError,
+    event::PostRenderAction,
     model::{
         buffer::{BufferLine, StylePartial},
         Model,
@@ -28,6 +29,26 @@ pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
     Ok(content)
 }
 
+fn get_bufferline_by_path(path: &Path) -> BufferLine {
+    let content = match path.file_name() {
+        Some(content) => content.to_str().unwrap_or("").to_string(),
+        None => "".to_string(),
+    };
+
+    let style = if path.is_dir() {
+        let length = content.chars().count();
+        vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
+    } else {
+        vec![]
+    };
+
+    BufferLine {
+        content,
+        style,
+        ..Default::default()
+    }
+}
+
 pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
     let buffer = &model.current;
     if buffer.lines.is_empty() {
@@ -48,22 +69,41 @@ pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
     }
 }
 
-fn get_bufferline_by_path(path: &Path) -> BufferLine {
-    let content = match path.file_name() {
-        Some(content) => content.to_str().unwrap_or("").to_string(),
-        None => "".to_string(),
-    };
+pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+    let mut actions = Vec::new();
+    if let Some(parent) = model.current_path.parent() {
+        if model.current_path == parent {
+            return None;
+        }
 
-    let style = if path.is_dir() {
-        let length = content.chars().count();
-        vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
-    } else {
-        vec![]
-    };
+        actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
 
-    BufferLine {
-        content,
-        style,
-        ..Default::default()
+        if let Some(selected) = get_selected_path(model) {
+            actions.push(PostRenderAction::UnwatchPath(selected.clone()));
+        }
+
+        model.current_path = parent.to_path_buf();
     }
+
+    Some(actions)
+}
+
+pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+    let mut actions = Vec::new();
+    if let Some(selected) = get_selected_path(model) {
+        if model.current_path == selected {
+            return None;
+        } else if !selected.is_dir() {
+            return None;
+        }
+
+        actions.push(PostRenderAction::WatchPath(selected.clone()));
+        if let Some(parent) = model.current_path.parent() {
+            actions.push(PostRenderAction::UnwatchPath(parent.to_path_buf()));
+        }
+
+        model.current_path = selected.to_path_buf();
+    };
+
+    Some(actions)
 }

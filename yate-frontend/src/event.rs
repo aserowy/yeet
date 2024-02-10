@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use futures::{FutureExt, StreamExt};
-use notify::{PollWatcher, Watcher};
+use notify::PollWatcher;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use yate_keymap::{
     conversion,
@@ -26,6 +26,8 @@ pub enum PostRenderAction {
     OptimizeHistory,
     Quit,
     Task(Task),
+    UnwatchPath(PathBuf),
+    WatchPath(PathBuf),
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
@@ -34,20 +36,13 @@ pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
     let internal_sender = sender.clone();
 
     let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
-    let mut watcher = PollWatcher::new(
+    let watcher = PollWatcher::new(
         move |res| {
             watcher_sender.send(res).unwrap();
         },
         notify::Config::default().with_poll_interval(Duration::from_millis(500)),
     )
     .unwrap();
-
-    watcher
-        .watch(
-            std::env::current_dir().unwrap().as_path(),
-            notify::RecursiveMode::NonRecursive,
-        )
-        .unwrap();
 
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
@@ -117,6 +112,6 @@ pub fn convert_to_messages(
         RenderAction::Error => todo!(),
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
         RenderAction::Resize(_, _) => vec![Message::Refresh],
-        RenderAction::Startup => vec![Message::Refresh],
+        RenderAction::Startup => vec![Message::Startup],
     }
 }

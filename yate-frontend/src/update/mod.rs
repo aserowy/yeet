@@ -24,7 +24,6 @@ pub fn update(
     match message {
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
-
             None
         }
         Message::ChangeMode(from, to) => {
@@ -164,57 +163,57 @@ pub fn update(
         Message::SaveBuffer(_) => current::save_changes(model),
         Message::SelectCurrent => {
             if model.mode != Mode::Navigation {
-                return None;
-            }
-            if let Some(target) = path::get_selected_path(model) {
-                if !target.is_dir() {
-                    return None;
+                None
+            } else if let Some(mut actions) = path::set_current_to_selected(model) {
+                if let Some(current_actions) = current::update(model, layout, message) {
+                    actions.extend(current_actions);
                 }
-
-                model.current_path = target.clone();
-
-                let actions = current::update(model, layout, message);
                 model.current.lines = model.preview.lines.clone();
 
-                history::set_cursor_index(
-                    &model.current_path,
-                    &model.history,
-                    &mut model.current,
-                );
+                history::set_cursor_index(&model.current_path, &model.history, &mut model.current);
 
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
 
-                model.history.add(&target);
+                model.history.add(&model.current_path);
 
-                actions
+                Some(actions)
             } else {
                 None
             }
         }
         Message::SelectParent => {
             if model.mode != Mode::Navigation {
-                return None;
-            }
-            if let Some(parent) = &model.current_path.parent() {
-                model.current_path = parent.to_path_buf();
-
-                let actions = current::update(model, layout, message);
+                None
+            } else if let Some(mut actions) = path::set_current_to_parent(model) {
+                if let Some(current_actions) = current::update(model, layout, message) {
+                    actions.extend(current_actions);
+                }
                 model.current.lines = model.parent.lines.clone();
 
-                history::set_cursor_index(
-                    &model.current_path,
-                    &model.history,
-                    &mut model.current,
-                );
+                history::set_cursor_index(&model.current_path, &model.history, &mut model.current);
 
                 parent::update(model, layout, message);
                 preview::update(model, layout, message);
 
-                actions
+                Some(actions)
             } else {
                 None
             }
+        }
+        Message::Startup => {
+            let mut actions = vec![PostRenderAction::WatchPath(model.current_path.clone())];
+            if let Some(refresh_actions) = update(model, layout, &Message::Refresh) {
+                actions.extend(refresh_actions);
+            }
+            if let Some(parent) = model.current_path.parent() {
+                actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
+            };
+            if let Some(selected) = path::get_selected_path(model) {
+                actions.push(PostRenderAction::WatchPath(selected.clone()));
+            }
+
+            Some(actions)
         }
         Message::Quit => Some(vec![
             PostRenderAction::OptimizeHistory,

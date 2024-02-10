@@ -2,6 +2,7 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use notify::{RecursiveMode, Watcher};
 use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     Frame,
@@ -38,7 +39,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
     let mut tasks = TaskManager::default();
     let mut result = Vec::new();
 
-    let (_watcher, mut receiver) = event::listen();
+    let (mut watcher, mut receiver) = event::listen();
     'app_loop: while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
@@ -58,6 +59,16 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                     break 'app_loop;
                 }
                 PostRenderAction::Task(task) => tasks.run(task),
+                PostRenderAction::UnwatchPath(p) => {
+                    if let Err(_error) = watcher.unwatch(p.as_path()) {
+                        // TODO: log error
+                    }
+                }
+                PostRenderAction::WatchPath(p) => {
+                    if let Err(_error) = watcher.watch(p.as_path(), RecursiveMode::NonRecursive) {
+                        // TODO: log error
+                    }
+                }
             }
         }
     }

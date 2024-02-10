@@ -17,10 +17,11 @@ pub enum Message {
     Modification(TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
+    Refresh,
     SaveBuffer(Option<usize>),
     SelectCurrent,
     SelectParent,
-    Refresh,
+    Startup,
     Quit,
 }
 
