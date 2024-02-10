@@ -80,8 +80,10 @@ impl TaskManager {
         while let Some(task) = self.tasks.join_next().await {
             match task {
                 Ok(Ok(())) => (),
+                // TODO: log error
                 Ok(Err(error)) => errors.push(error),
-                Err(_) => (), // TODO: log error
+                // TODO: log error
+                Err(_) => (),
             };
         }
 

@@ -17,6 +17,7 @@ pub enum RenderAction {
     Error,
     Key(Key),
     Resize(u16, u16),
+    Refresh,
     Startup,
 }
 
@@ -71,7 +72,7 @@ pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
                     match event {
                         Some(Ok(_event)) => {
                             // TODO: handle notify event and replace single buffer lines
-                            internal_sender.send(RenderAction::Startup).unwrap();
+                            internal_sender.send(RenderAction::Refresh).unwrap();
                         },
                         Some(Err(_)) => {
                             internal_sender.send(RenderAction::Error).unwrap();
@@ -109,8 +110,10 @@ pub fn convert_to_messages(
     message_resolver: &mut MessageResolver,
 ) -> Vec<Message> {
     match event {
-        RenderAction::Error => todo!(),
+        // TODO: log error?
+        RenderAction::Error => vec![Message::Refresh],
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
+        RenderAction::Refresh => vec![Message::Refresh],
         RenderAction::Resize(_, _) => vec![Message::Refresh],
         RenderAction::Startup => vec![Message::Startup],
     }
