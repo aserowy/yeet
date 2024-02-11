@@ -21,7 +21,7 @@ pub struct Model {
     pub key_sequence: String,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
-    pub parent: Buffer,
+    pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
 }
 
@@ -49,23 +49,32 @@ impl Default for Model {
                     },
                     ..Default::default()
                 },
-                path: current_path,
+                path: current_path.clone(),
             },
             history: History::default(),
             key_sequence: String::new(),
             mode: Mode::default(),
             mode_before: None,
-            parent: Buffer {
-                cursor: Some(Cursor {
-                    horizontial_index: CursorPosition::None,
-                    vertical_index: 0,
+            parent: OptionalDirectoryBuffer {
+                buffer: Buffer {
+                    cursor: Some(Cursor {
+                        horizontial_index: CursorPosition::None,
+                        vertical_index: 0,
+                        ..Default::default()
+                    }),
                     ..Default::default()
-                }),
-                ..Default::default()
+                },
+                path: current_path.parent().map(|path| path.to_path_buf()),
             },
             preview: DirectoryBuffer::default(),
         }
     }
+}
+
+#[derive(Debug, Default)]
+pub struct OptionalDirectoryBuffer {
+    pub buffer: Buffer,
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Debug, Default)]

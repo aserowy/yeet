@@ -76,12 +76,12 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
             return None;
         }
 
-        actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
-
-        if let Some(selected) = get_selected_path(model) {
-            actions.push(PostRenderAction::UnwatchPath(selected.clone()));
+        let parent_parent = parent.parent();
+        if let Some(parent) = parent_parent {
+            actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
         }
 
+        model.parent.path = parent_parent.map(|path| path.to_path_buf());
         model.current.path = parent.to_path_buf();
     }
 
@@ -97,29 +97,37 @@ pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction
             return None;
         }
 
-        actions.push(PostRenderAction::WatchPath(selected.clone()));
-        if let Some(parent) = model.current.path.parent() {
-            actions.push(PostRenderAction::UnwatchPath(parent.to_path_buf()));
+        if let Some(parent) = &model.parent.path {
+            actions.push(PostRenderAction::UnwatchPath(parent.clone()));
         }
-
+        model.parent.path = Some(model.current.path.clone());
         model.current.path = selected.to_path_buf();
     };
 
     Some(actions)
 }
 
-pub fn set_preview_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+pub fn set_preview_to_selected(
+    model: &mut Model,
+    unwatch_old_path: bool,
+    watch_new_path: bool,
+) -> Option<Vec<PostRenderAction>> {
     let mut actions = Vec::new();
     if let Some(selected) = get_selected_path(model) {
         let current = &model.current.path;
         if current == &selected {
             return None;
+        } else if model.preview.path == selected {
+            return None;
         }
 
-        actions.push(PostRenderAction::WatchPath(selected.clone()));
-        actions.push(PostRenderAction::UnwatchPath(
-            model.preview.path.to_path_buf(),
-        ));
+        if unwatch_old_path {
+            actions.push(PostRenderAction::UnwatchPath(model.preview.path.clone()));
+        }
+
+        if watch_new_path {
+            actions.push(PostRenderAction::WatchPath(selected.clone()));
+        }
 
         model.preview.path = selected.to_path_buf();
     };

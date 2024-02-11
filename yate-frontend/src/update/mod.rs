@@ -139,7 +139,7 @@ pub fn update(
                     actions.extend(current_actions);
                 }
 
-                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
                 }
                 preview::update(model, layout, &Message::Refresh);
@@ -155,7 +155,7 @@ pub fn update(
             }
             current::set_content(model);
 
-            if let Some(preview_actions) = path::set_preview_to_selected(model) {
+            if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview_actions);
             }
             preview::update(model, layout, message);
@@ -186,7 +186,7 @@ pub fn update(
                     &mut model.current.buffer,
                 );
 
-                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
                     actions.extend(preview_actions);
                 }
 
@@ -207,7 +207,7 @@ pub fn update(
                 buffer::set_content(
                     &model.mode,
                     &mut model.current.buffer,
-                    model.parent.lines.clone(),
+                    model.parent.buffer.lines.clone(),
                 );
 
                 if let Some(current_actions) = current::update(model, layout, message) {
@@ -220,7 +220,7 @@ pub fn update(
                     &mut model.current.buffer,
                 );
 
-                if let Some(preview_actions) = path::set_preview_to_selected(model) {
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, false) {
                     actions.extend(preview_actions);
                 }
 
@@ -248,7 +248,7 @@ pub fn update(
                 &mut model.current.buffer,
             );
 
-            if let Some(preview) = path::set_preview_to_selected(model) {
+            if let Some(preview) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview);
             }
 

@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use yate_keymap::message::{Message, ViewPortDirection};
 
 use crate::{
@@ -13,13 +11,12 @@ use crate::{
 use super::{buffer, path};
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
-    let path = Path::new(&model.current.path);
-    let buffer = &mut model.parent;
+    let buffer = &mut model.parent.buffer;
     let layout = &layout.parent;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    match path.parent() {
+    match &model.parent.path {
         Some(parent) => {
             let lines = match path::get_directory_content(parent) {
                 Ok(content) => content,
@@ -34,7 +31,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             buffer::set_content(&model.mode, buffer, lines);
             buffer::update(&model.mode, buffer, message);
 
-            let current_filename = match path.file_name() {
+            let current_filename = match model.current.path.file_name() {
                 Some(content) => content.to_str(),
                 None => None,
             };

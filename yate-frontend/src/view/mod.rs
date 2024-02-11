@@ -11,7 +11,7 @@ pub fn view(model: &mut Model, frame: &mut Frame, layout: &AppLayout) {
     commandline::view(model, frame, layout.commandline);
 
     buffer::view(&model.mode, &model.current.buffer, frame, layout.current);
-    buffer::view(&model.mode, &model.parent, frame, layout.parent);
+    buffer::view(&model.mode, &model.parent.buffer, frame, layout.parent);
     buffer::view(&model.mode, &model.preview.buffer, frame, layout.preview);
 
     statusline::view(model, frame, layout.statusline);

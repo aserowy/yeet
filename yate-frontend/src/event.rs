@@ -1,7 +1,7 @@
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
 use futures::{FutureExt, StreamExt};
-use notify::PollWatcher;
+use notify::INotifyWatcher;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use yate_keymap::{
     conversion,
@@ -32,16 +32,13 @@ pub enum PostRenderAction {
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
-pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
+pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
     let (sender, receiver) = mpsc::unbounded_channel();
 
     let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
-    let watcher = PollWatcher::new(
-        move |res| {
-            watcher_sender.send(res).unwrap();
-        },
-        notify::Config::default().with_poll_interval(Duration::from_millis(500)),
-    )
+    let watcher = notify::recommended_watcher(move |res| {
+        watcher_sender.send(res).unwrap();
+    })
     .unwrap();
 
     tokio::spawn(async move {
