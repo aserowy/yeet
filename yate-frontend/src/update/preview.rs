@@ -14,7 +14,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    buffer.lines = if target == &model.current.path {
+    let lines = if target == &model.current.path {
         Vec::new()
     } else if !target.exists() {
         Vec::new()
@@ -33,6 +33,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         Vec::new()
     };
 
+    buffer::set_content(&model.mode, buffer, lines);
     buffer::update(&model.mode, buffer, message);
 
     if !history::set_cursor_index(&target, &model.history, buffer) {

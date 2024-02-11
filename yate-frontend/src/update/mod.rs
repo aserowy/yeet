@@ -149,7 +149,6 @@ pub fn update(
         },
         Message::Refresh => {
             // TODO: handle undo state
-            // FIX: panics when shown directory gets removed from outside
             let mut actions = Vec::new();
             if let Some(current_actions) = current::update(model, layout, message) {
                 actions.extend(current_actions);
@@ -171,10 +170,15 @@ pub fn update(
             if model.mode != Mode::Navigation {
                 None
             } else if let Some(mut actions) = path::set_current_to_selected(model) {
+                buffer::set_content(
+                    &model.mode,
+                    &mut model.current.buffer,
+                    model.preview.buffer.lines.clone(),
+                );
+
                 if let Some(current_actions) = current::update(model, layout, message) {
                     actions.extend(current_actions);
                 }
-                model.current.buffer.lines = model.preview.buffer.lines.clone();
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -200,10 +204,15 @@ pub fn update(
             if model.mode != Mode::Navigation {
                 None
             } else if let Some(mut actions) = path::set_current_to_parent(model) {
+                buffer::set_content(
+                    &model.mode,
+                    &mut model.current.buffer,
+                    model.parent.lines.clone(),
+                );
+
                 if let Some(current_actions) = current::update(model, layout, message) {
                     actions.extend(current_actions);
                 }
-                model.current.buffer.lines = model.parent.lines.clone();
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -267,4 +276,27 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
     vp.height = usize::from(rect.height);
     vp.width = usize::from(rect.width);
+}
+
+mod test {
+    #[test]
+    fn test_get_mode_after_command() {
+        use yate_keymap::message::Mode;
+
+        let mode_before = Some(Mode::Normal);
+        let result = super::get_mode_after_command(&mode_before);
+        assert_eq!(result, Mode::Normal);
+
+        let mode_before = Some(Mode::Insert);
+        let result = super::get_mode_after_command(&mode_before);
+        assert_eq!(result, Mode::Normal);
+
+        let mode_before = Some(Mode::Navigation);
+        let result = super::get_mode_after_command(&mode_before);
+        assert_eq!(result, Mode::Navigation);
+
+        let mode_before = None;
+        let result = super::get_mode_after_command(&mode_before);
+        assert_eq!(result, Mode::Navigation);
+    }
 }

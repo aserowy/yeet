@@ -2,8 +2,8 @@ use ratatui::prelude::{Constraint, Direction, Layout, Rect};
 
 #[derive(Debug)]
 pub struct AppLayout {
-    pub parent_directory: Rect,
-    pub current_directory: Rect,
+    pub parent: Rect,
+    pub current: Rect,
     pub preview: Rect,
     pub statusline: Rect,
     pub commandline: Rect,
@@ -22,8 +22,8 @@ impl AppLayout {
             .split(main[0]);
 
         Self {
-            parent_directory: files[0],
-            current_directory: files[1],
+            parent: files[0],
+            current: files[1],
             preview: files[2],
             statusline: main[1],
             commandline: main[2],

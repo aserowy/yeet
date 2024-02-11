@@ -15,13 +15,13 @@ use super::{buffer, path};
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let path = Path::new(&model.current.path);
     let buffer = &mut model.parent;
-    let layout = &layout.parent_directory;
+    let layout = &layout.parent;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     match path.parent() {
         Some(parent) => {
-            buffer.lines = match path::get_directory_content(parent) {
+            let lines = match path::get_directory_content(parent) {
                 Ok(content) => content,
                 Err(_) => {
                     vec![BufferLine {
@@ -31,6 +31,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                 }
             };
 
+            buffer::set_content(&model.mode, buffer, lines);
             buffer::update(&model.mode, buffer, message);
 
             let current_filename = match path.file_name() {
@@ -63,7 +64,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
         }
         None => {
             buffer.cursor = None;
-            buffer.lines = vec![];
+
+            buffer::set_content(&model.mode, buffer, vec![]);
             buffer::update(&model.mode, buffer, message);
         }
     }

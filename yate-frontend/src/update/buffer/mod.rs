@@ -1,6 +1,8 @@
 use yate_keymap::message::{CursorDirection, Message, Mode};
 
-use crate::model::buffer::{viewport::ViewPort, Buffer, BufferResult, Cursor, CursorPosition};
+use crate::model::buffer::{
+    viewport::ViewPort, Buffer, BufferLine, BufferResult, Cursor, CursorPosition,
+};
 
 mod bufferline;
 mod cursor;
@@ -75,6 +77,12 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
             CursorPosition::None => CursorPosition::None,
         }
     }
+}
+
+pub fn set_content(mode: &Mode, model: &mut Buffer, content: Vec<BufferLine>) {
+    model.lines = content;
+
+    cursor::update_by_direction(mode, model, &1, &CursorDirection::Validate);
 }
 
 pub fn unfocus_buffer(buffer: &mut Buffer) {

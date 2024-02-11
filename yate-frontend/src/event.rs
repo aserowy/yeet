@@ -34,7 +34,6 @@ pub enum PostRenderAction {
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
 pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
     let (sender, receiver) = mpsc::unbounded_channel();
-    let internal_sender = sender.clone();
 
     let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
     let watcher = PollWatcher::new(
@@ -48,7 +47,7 @@ pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        internal_sender.send(RenderAction::Startup).unwrap();
+        sender.send(RenderAction::Startup).unwrap();
 
         loop {
             let crossterm_event = reader.next().fuse();
@@ -59,11 +58,11 @@ pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
                     match event {
                         Some(Ok(event)) => {
                             if let Some(message) = handle_event(event) {
-                                internal_sender.send(message).unwrap();
+                                sender.send(message).unwrap();
                             }
                         },
                         Some(Err(_)) => {
-                            internal_sender.send(RenderAction::Error).unwrap();
+                            sender.send(RenderAction::Error).unwrap();
                         },
                         None => {},
                     }
@@ -72,10 +71,10 @@ pub fn listen() -> (PollWatcher, UnboundedReceiver<RenderAction>) {
                     match event {
                         Some(Ok(_event)) => {
                             // TODO: handle notify event and replace single buffer lines
-                            internal_sender.send(RenderAction::Refresh).unwrap();
+                            sender.send(RenderAction::Refresh).unwrap();
                         },
                         Some(Err(_)) => {
-                            internal_sender.send(RenderAction::Error).unwrap();
+                            sender.send(RenderAction::Error).unwrap();
                         },
                         None => {},
                     }

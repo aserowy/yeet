@@ -18,7 +18,7 @@ pub fn update(
     message: &Message,
 ) -> Option<Vec<PostRenderAction>> {
     let buffer = &mut model.current.buffer;
-    let layout = &layout.current_directory;
+    let layout = &layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
@@ -66,7 +66,7 @@ pub fn set_content(model: &mut Model) {
         let buffer = &mut model.current.buffer;
         // TODO: remove with get current content task
         // FIX: shows no content in preview when uncommited changes are present
-        buffer.lines = match path::get_directory_content(&model.current.path) {
+        let lines = match path::get_directory_content(&model.current.path) {
             Ok(content) => {
                 if buffer.cursor.is_none() {
                     buffer.cursor = Some(Cursor::default());
@@ -83,5 +83,7 @@ pub fn set_content(model: &mut Model) {
                 }]
             }
         };
+
+        buffer::set_content(&model.mode, buffer, lines);
     }
 }

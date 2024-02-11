@@ -20,7 +20,7 @@ pub fn update(
 
     if let Message::ChangeMode(from, to) = message {
         if from == &Mode::Command && to != &Mode::Command {
-            buffer.lines = vec![BufferLine::default()];
+            buffer::set_content(to, buffer, vec![BufferLine::default()]);
         }
 
         if from != &Mode::Command && to == &Mode::Command {
@@ -31,7 +31,7 @@ pub fn update(
                 ..Default::default()
             };
 
-            buffer.lines = vec![bufferline];
+            buffer::set_content(to, buffer, vec![bufferline]);
         }
     }
 
