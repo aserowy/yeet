@@ -122,17 +122,6 @@ pub fn update_by_direction(
                         cursor.horizontial_index = position;
                     }
                 }
-                CursorDirection::Validate => {
-                    let max_index = model.lines.len() - 1;
-                    if cursor.vertical_index >= max_index {
-                        cursor.vertical_index = max_index;
-                    }
-
-                    let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(mode, line_length, &cursor.horizontial_index);
-
-                    cursor.horizontial_index = position;
-                }
             }
         }
     }
@@ -174,5 +163,19 @@ fn get_index_correction(mode: &Mode) -> usize {
         Mode::Insert => 0,
         Mode::Navigation => 1,
         Mode::Normal => 1,
+    }
+}
+
+pub fn validate(mode: &Mode, model: &mut Buffer) {
+    if let Some(cursor) = &mut model.cursor {
+        let max_index = model.lines.len() - 1;
+        if cursor.vertical_index >= max_index {
+            cursor.vertical_index = max_index;
+        }
+
+        let line_length = &model.lines[cursor.vertical_index].len();
+        let position = get_position(mode, line_length, &cursor.horizontial_index);
+
+        cursor.horizontial_index = position;
     }
 }

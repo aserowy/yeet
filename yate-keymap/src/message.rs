@@ -48,7 +48,6 @@ pub enum CursorDirection {
     LineEnd,
     LineStart,
     Right,
-    Validate,
     Top,
     Up,
 }

@@ -82,7 +82,7 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
 pub fn set_content(mode: &Mode, model: &mut Buffer, content: Vec<BufferLine>) {
     model.lines = content;
 
-    cursor::update_by_direction(mode, model, &1, &CursorDirection::Validate);
+    cursor::validate(mode, model);
 }
 
 pub fn unfocus_buffer(buffer: &mut Buffer) {
