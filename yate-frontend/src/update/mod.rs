@@ -187,12 +187,29 @@ pub fn update(
 
                         if !exists {
                             buffer.lines.push(path::get_bufferline_by_path(path));
+
+                            if path.is_dir() {
+                                let basepath = format!("{basename}/");
+
+                                // NOTE: this removes virtual adds like 'dirname/filename'
+                                let index = buffer
+                                    .lines
+                                    .iter()
+                                    .enumerate()
+                                    .find(|(_, bl)| bl.content.starts_with(&basepath))
+                                    .map(|(i, _)| i);
+
+                                if let Some(index) = index {
+                                    buffer.lines.remove(index);
+                                }
+                            }
                         }
 
                         if sort {
                             directory::sort_content(&model.mode, buffer);
                         }
 
+                        buffer::cursor::validate(&model.mode, buffer);
                         // TODO: correct cursor to stay on selection
                     }
                 }
