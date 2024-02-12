@@ -172,26 +172,59 @@ pub fn update(
             if let Some(parent) = path.parent() {
                 if let Some((_, buffer, sort)) = buffer.into_iter().find(|(p, _, _)| p == &parent) {
                     // TODO: better closer warmer: remove virtual entries... instead of this shiat
-                    if buffer
-                        .lines
-                        .iter()
-                        .find(|bl| bl.content == path.file_name().unwrap().to_str().unwrap())
-                        .is_none()
-                    {
-                        buffer.lines.push(path::get_bufferline_by_path(path));
-                    }
+                    if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
+                        let exists = buffer
+                            .lines
+                            .iter()
+                            .find(|bl| bl.content == basename)
+                            .is_some();
 
-                    if sort {
-                        directory::sort_content(&model.mode, buffer);
-                    }
+                        if !exists {
+                            buffer.lines.push(path::get_bufferline_by_path(path));
+                        }
 
-                    // TODO: correct cursor to stay on selection
+                        if sort {
+                            directory::sort_content(&model.mode, buffer);
+                        }
+
+                        // TODO: correct cursor to stay on selection
+                    }
                 }
             }
 
             None
         }
-        Message::PathRemoved(_) => todo!(),
+        Message::PathRemoved(path) => {
+            let mut buffer = vec![
+                (model.current.path.as_path(), &mut model.current.buffer),
+                (model.preview.path.as_path(), &mut model.preview.buffer),
+            ];
+
+            if let Some(parent) = path.parent() {
+                buffer.push((parent, &mut model.parent.buffer));
+            }
+
+            if let Some(parent) = path.parent() {
+                if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == &parent) {
+                    // TODO: better closer warmer: remove virtual entries... instead of this shiat
+                    if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
+                        let index = buffer
+                            .lines
+                            .iter()
+                            .enumerate()
+                            .find(|(_, bl)| bl.content == basename)
+                            .map(|(i, _)| i);
+
+                        if let Some(index) = index {
+                            buffer.lines.remove(index);
+                            buffer::cursor::validate(&model.mode, buffer);
+                        }
+                    }
+                }
+            }
+
+            None
+        }
         Message::Refresh => {
             // TODO: handle undo state
             let mut actions = Vec::new();
