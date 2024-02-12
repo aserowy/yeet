@@ -4,7 +4,10 @@ use yate_keymap::message::{Message, Mode};
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{buffer::viewport::ViewPort, Model},
+    model::{
+        buffer::{viewport::ViewPort, BufferLine},
+        Model,
+    },
     task::Task,
 };
 
@@ -232,15 +235,26 @@ pub fn update(
                 None
             }
         }
-        Message::Startup => {
-            let mut actions = vec![PostRenderAction::WatchPath(model.current.path.clone())];
-            if let Some(refresh) = update(model, layout, &Message::Refresh) {
-                actions.extend(refresh);
+        Message::SelectPath(path) => {
+            let mut actions = Vec::new();
+            if let Some(current_actions) = path::set_current_to_path(model, path) {
+                actions.extend(current_actions);
             }
 
-            if let Some(parent) = model.current.path.parent() {
-                actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
+            let lines = match path::get_directory_content(&model.current.path) {
+                Ok(content) => content,
+                Err(_) => {
+                    vec![BufferLine {
+                        content: "Error reading directory".to_string(),
+                        ..Default::default()
+                    }]
+                }
             };
+
+            buffer::set_content(&model.mode, &mut model.current.buffer, lines);
+            if let Some(current_actions) = current::update(model, layout, message) {
+                actions.extend(current_actions);
+            }
 
             history::set_cursor_index(
                 &model.current.path,
@@ -251,6 +265,9 @@ pub fn update(
             if let Some(preview) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview);
             }
+
+            parent::update(model, layout, message);
+            preview::update(model, layout, message);
 
             Some(actions)
         }

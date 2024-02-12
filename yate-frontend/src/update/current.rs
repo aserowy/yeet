@@ -12,6 +12,7 @@ use crate::{
 
 use super::{buffer, path};
 
+// TODO: remove return
 pub fn update(
     model: &mut Model,
     layout: &AppLayout,

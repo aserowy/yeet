@@ -43,7 +43,7 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         Message::ChangeKeySequence(_)
         | Message::ExecuteCommand
         | Message::Refresh
-        | Message::Startup
+        | Message::SelectPath(_)
         | Message::Quit => None,
     };
 

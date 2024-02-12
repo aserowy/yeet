@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Binding {
     Message(Message),
@@ -21,7 +23,7 @@ pub enum Message {
     SaveBuffer(Option<usize>),
     SelectCurrent,
     SelectParent,
-    Startup,
+    SelectPath(PathBuf),
     Quit,
 }
 

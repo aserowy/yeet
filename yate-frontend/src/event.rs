@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 use futures::{FutureExt, StreamExt};
 use notify::INotifyWatcher;
@@ -111,6 +111,18 @@ pub fn convert_to_messages(
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
         RenderAction::Refresh => vec![Message::Refresh],
         RenderAction::Resize(_, _) => vec![Message::Refresh],
-        RenderAction::Startup => vec![Message::Startup],
+        RenderAction::Startup => vec![Message::SelectPath(get_current_path())],
+    }
+}
+
+fn get_current_path() -> PathBuf {
+    // TODO: configurable with clap
+    if let Ok(path) = env::current_dir() {
+        path
+    } else if let Some(val) = dirs::home_dir() {
+        val
+    } else {
+        // TODO: log error
+        PathBuf::new()
     }
 }

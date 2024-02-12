@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 
 use yate_keymap::message::Mode;
 
@@ -27,8 +27,6 @@ pub struct Model {
 
 impl Default for Model {
     fn default() -> Self {
-        let current_path = get_current_path();
-
         Self {
             commandline: Buffer {
                 cursor: Some(Cursor {
@@ -49,7 +47,7 @@ impl Default for Model {
                     },
                     ..Default::default()
                 },
-                path: current_path.clone(),
+                ..Default::default()
             },
             history: History::default(),
             key_sequence: String::new(),
@@ -64,7 +62,7 @@ impl Default for Model {
                     }),
                     ..Default::default()
                 },
-                path: current_path.parent().map(|path| path.to_path_buf()),
+                ..Default::default()
             },
             preview: DirectoryBuffer::default(),
         }
@@ -81,16 +79,4 @@ pub struct OptionalDirectoryBuffer {
 pub struct DirectoryBuffer {
     pub buffer: Buffer,
     pub path: PathBuf,
-}
-
-fn get_current_path() -> PathBuf {
-    // TODO: configurable with clap
-    if let Ok(path) = env::current_dir() {
-        path
-    } else if let Some(val) = dirs::home_dir() {
-        val
-    } else {
-        // TODO: log error
-        PathBuf::new()
-    }
 }

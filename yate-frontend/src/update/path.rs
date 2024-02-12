@@ -88,6 +88,33 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
     Some(actions)
 }
 
+pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<PostRenderAction>> {
+    let mut actions = Vec::new();
+    if path.exists() {
+        let directory = if path.is_dir() {
+            path.to_path_buf()
+        } else {
+            return None;
+        };
+
+        if let Some(parent) = &model.parent.path {
+            actions.push(PostRenderAction::UnwatchPath(parent.clone()));
+        }
+
+        let parent_parent = directory.parent();
+        if let Some(parent) = parent_parent {
+            actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
+        }
+        model.parent.path = parent_parent.map(|path| path.to_path_buf());
+
+        actions.push(PostRenderAction::UnwatchPath(model.current.path.clone()));
+        actions.push(PostRenderAction::WatchPath(directory.clone()));
+        model.current.path = directory;
+    }
+
+    Some(actions)
+}
+
 pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
     let mut actions = Vec::new();
     if let Some(selected) = get_selected_path(model) {

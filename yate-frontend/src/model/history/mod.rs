@@ -28,6 +28,7 @@ pub enum HistoryState {
 }
 
 impl History {
+    // FIX: sets last navigation only with two navigations deep
     pub fn add(&mut self, path: &Path) {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
             Ok(time) => time.as_secs(),
