@@ -14,6 +14,7 @@ use crate::{
 mod buffer;
 mod commandline;
 mod current;
+mod directory;
 mod history;
 mod parent;
 mod path;
@@ -150,6 +151,47 @@ pub fn update(
                 Some(actions)
             }
         },
+        Message::PathAdded(path) => {
+            let mut buffer = vec![
+                (
+                    model.current.path.as_path(),
+                    &mut model.current.buffer,
+                    model.mode == Mode::Navigation,
+                ),
+                (
+                    model.preview.path.as_path(),
+                    &mut model.preview.buffer,
+                    true,
+                ),
+            ];
+
+            if let Some(parent) = path.parent() {
+                buffer.push((parent, &mut model.parent.buffer, true));
+            }
+
+            if let Some(parent) = path.parent() {
+                if let Some((_, buffer, sort)) = buffer.into_iter().find(|(p, _, _)| p == &parent) {
+                    // TODO: better closer warmer: remove virtual entries... instead of this shiat
+                    if buffer
+                        .lines
+                        .iter()
+                        .find(|bl| bl.content == path.file_name().unwrap().to_str().unwrap())
+                        .is_none()
+                    {
+                        buffer.lines.push(path::get_bufferline_by_path(path));
+                    }
+
+                    if sort {
+                        directory::sort_content(&model.mode, buffer);
+                    }
+
+                    // TODO: correct cursor to stay on selection
+                }
+            }
+
+            None
+        }
+        Message::PathRemoved(_) => todo!(),
         Message::Refresh => {
             // TODO: handle undo state
             let mut actions = Vec::new();
@@ -252,6 +294,8 @@ pub fn update(
             };
 
             buffer::set_content(&model.mode, &mut model.current.buffer, lines);
+            directory::sort_content(&model.mode, &mut model.current.buffer);
+
             if let Some(current_actions) = current::update(model, layout, message) {
                 actions.extend(current_actions);
             }

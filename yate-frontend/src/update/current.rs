@@ -86,5 +86,6 @@ pub fn set_content(model: &mut Model) {
         };
 
         buffer::set_content(&model.mode, buffer, lines);
+        super::directory::sort_content(&model.mode, buffer);
     }
 }

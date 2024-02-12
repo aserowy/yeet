@@ -5,10 +5,11 @@ use crate::model::buffer::{
 };
 
 mod bufferline;
-mod cursor;
+pub mod cursor;
 pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
+    // TODO: split message and buffer related messages
     let result = match message {
         Message::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
@@ -42,6 +43,8 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<Buff
         }
         Message::ChangeKeySequence(_)
         | Message::ExecuteCommand
+        | Message::PathAdded(_)
+        | Message::PathRemoved(_)
         | Message::Refresh
         | Message::SelectPath(_)
         | Message::Quit => None,
@@ -81,7 +84,6 @@ pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
 
 pub fn set_content(mode: &Mode, model: &mut Buffer, content: Vec<BufferLine>) {
     model.lines = content;
-
     cursor::validate(mode, model);
 }
 

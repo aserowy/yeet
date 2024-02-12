@@ -11,30 +11,13 @@ use crate::{
     },
 };
 
-pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
-    let mut content: Vec<_> = match std::fs::read_dir(path) {
-        Ok(content) => content
-            .flatten()
-            .map(|entry| get_bufferline_by_path(&entry.path()))
-            .collect(),
-        Err(error) => return Err(AppError::FileOperationFailed(error)),
-    };
-
-    content.sort_unstable_by(|a, b| {
-        a.content
-            .to_ascii_uppercase()
-            .cmp(&b.content.to_ascii_uppercase())
-    });
-
-    Ok(content)
-}
-
-fn get_bufferline_by_path(path: &Path) -> BufferLine {
+pub fn get_bufferline_by_path(path: &Path) -> BufferLine {
     let content = match path.file_name() {
         Some(content) => content.to_str().unwrap_or("").to_string(),
         None => "".to_string(),
     };
 
+    // TODO: Handle transition states like adding, removing, renaming
     let style = if path.is_dir() {
         let length = content.chars().count();
         vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
@@ -46,6 +29,16 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
         content,
         style,
         ..Default::default()
+    }
+}
+
+pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
+    match std::fs::read_dir(path) {
+        Ok(content) => Ok(content
+            .flatten()
+            .map(|entry| get_bufferline_by_path(&entry.path()))
+            .collect()),
+        Err(error) => Err(AppError::FileOperationFailed(error)),
     }
 }
 

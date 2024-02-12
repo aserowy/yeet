@@ -7,7 +7,10 @@ use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     Frame,
 };
-use std::io::{stderr, BufWriter};
+use std::{
+    io::{stderr, BufWriter},
+    path::PathBuf,
+};
 use yate_keymap::{message::Message, MessageResolver};
 
 use crate::{
@@ -60,11 +63,20 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                 }
                 PostRenderAction::Task(task) => tasks.run(task),
                 PostRenderAction::UnwatchPath(p) => {
+                    // TODO: stop current dir content enumeration
+                    if p == PathBuf::default() {
+                        continue;
+                    }
                     if let Err(_error) = watcher.unwatch(p.as_path()) {
                         // TODO: log error
                     }
                 }
                 PostRenderAction::WatchPath(p) => {
+                    // TODO: start content enumeration
+                    // TODO: handle rename events and unwatch old and watch new
+                    if p == PathBuf::default() {
+                        continue;
+                    }
                     if let Err(_error) = watcher.watch(p.as_path(), RecursiveMode::NonRecursive) {
                         // TODO: log error
                     }

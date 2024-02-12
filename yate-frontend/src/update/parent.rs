@@ -29,6 +29,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             };
 
             buffer::set_content(&model.mode, buffer, lines);
+            super::directory::sort_content(&model.mode, buffer);
             buffer::update(&model.mode, buffer, message);
 
             let current_filename = match model.current.path.file_name() {

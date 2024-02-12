@@ -1,7 +1,10 @@
 use std::{env, path::PathBuf};
 
 use futures::{FutureExt, StreamExt};
-use notify::INotifyWatcher;
+use notify::{
+    event::{ModifyKind, RenameMode},
+    INotifyWatcher,
+};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use yate_keymap::{
     conversion,
@@ -19,6 +22,8 @@ pub enum RenderAction {
     Resize(u16, u16),
     Refresh,
     Startup,
+    PathAdded(PathBuf),
+    PathRemoved(PathBuf),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -54,7 +59,7 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
                 event = crossterm_event => {
                     match event {
                         Some(Ok(event)) => {
-                            if let Some(message) = handle_event(event) {
+                            if let Some(message) = handle_crossterm_event(event) {
                                 sender.send(message).unwrap();
                             }
                         },
@@ -66,9 +71,12 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
                 },
                 event = notify_event => {
                     match event {
-                        Some(Ok(_event)) => {
-                            // TODO: handle notify event and replace single buffer lines
-                            sender.send(RenderAction::Refresh).unwrap();
+                        Some(Ok(event)) => {
+                            if let Some(messages) = handle_notify_event(event) {
+                                for message in messages {
+                                    sender.send(message).unwrap();
+                                }
+                            }
                         },
                         Some(Err(_)) => {
                             sender.send(RenderAction::Error).unwrap();
@@ -84,7 +92,7 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
     (watcher, receiver)
 }
 
-fn handle_event(event: crossterm::event::Event) -> Option<RenderAction> {
+fn handle_crossterm_event(event: crossterm::event::Event) -> Option<RenderAction> {
     match event {
         crossterm::event::Event::Key(key) => {
             if let Some(key) = conversion::to_key(&key) {
@@ -94,10 +102,49 @@ fn handle_event(event: crossterm::event::Event) -> Option<RenderAction> {
             None
         }
         crossterm::event::Event::Resize(x, y) => Some(RenderAction::Resize(x, y)),
-        crossterm::event::Event::FocusLost => None,
-        crossterm::event::Event::FocusGained => None,
-        crossterm::event::Event::Paste(_) => None,
-        crossterm::event::Event::Mouse(_) => None,
+        crossterm::event::Event::FocusLost
+        | crossterm::event::Event::FocusGained
+        | crossterm::event::Event::Paste(_)
+        | crossterm::event::Event::Mouse(_) => None,
+    }
+}
+
+fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
+    if event.need_rescan() {
+        return Some(vec![RenderAction::Refresh]);
+    }
+
+    match event.kind {
+        notify::EventKind::Create(_) => Some(
+            event
+                .paths
+                .iter()
+                .map(|p| RenderAction::PathAdded(p.clone()))
+                .collect(),
+        ),
+        // TODO: handle rename events with rename mode to/from (needs buffering)
+        notify::EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
+            if event.paths.len() == 2 {
+                Some(vec![
+                    RenderAction::PathRemoved(event.paths[0].clone()),
+                    RenderAction::PathAdded(event.paths[1].clone()),
+                ])
+            } else {
+                // TODO: log invalid event
+                None
+            }
+        }
+        notify::EventKind::Remove(_) => Some(
+            event
+                .paths
+                .iter()
+                .map(|p| RenderAction::PathRemoved(p.clone()))
+                .collect(),
+        ),
+        notify::EventKind::Any
+        | notify::EventKind::Access(_)
+        | notify::EventKind::Modify(_)
+        | notify::EventKind::Other => None,
     }
 }
 
@@ -109,6 +156,8 @@ pub fn convert_to_messages(
         // TODO: log error?
         RenderAction::Error => vec![Message::Refresh],
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
+        RenderAction::PathAdded(path) => vec![Message::PathAdded(path)],
+        RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
         RenderAction::Refresh => vec![Message::Refresh],
         RenderAction::Resize(_, _) => vec![Message::Refresh],
         RenderAction::Startup => vec![Message::SelectPath(get_current_path())],
