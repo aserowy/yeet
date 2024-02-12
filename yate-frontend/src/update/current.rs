@@ -12,20 +12,13 @@ use crate::{
 
 use super::{buffer, path};
 
-// TODO: remove return
-pub fn update(
-    model: &mut Model,
-    layout: &AppLayout,
-    message: &Message,
-) -> Option<Vec<PostRenderAction>> {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let buffer = &mut model.current.buffer;
     let layout = &layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     buffer::update(&model.mode, buffer, message);
-
-    None
 }
 
 pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {

@@ -130,18 +130,24 @@ pub fn update(
                 None
             }
         }
-        Message::Modification(_) => match model.mode {
-            Mode::Command => commandline::update(model, layout, message),
-            Mode::Insert | Mode::Normal => current::update(model, layout, message),
-            Mode::Navigation => None,
-        },
+        Message::Modification(_) => {
+            match model.mode {
+                Mode::Command => commandline::update(model, layout, message),
+                Mode::Insert | Mode::Normal => current::update(model, layout, message),
+                Mode::Navigation => {}
+            }
+
+            None
+        }
         Message::MoveCursor(_, _) | Message::MoveViewPort(_) => match model.mode {
-            Mode::Command => commandline::update(model, layout, message),
+            Mode::Command => {
+                commandline::update(model, layout, message);
+
+                None
+            }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 let mut actions = Vec::new();
-                if let Some(current_actions) = current::update(model, layout, message) {
-                    actions.extend(current_actions);
-                }
+                current::update(model, layout, message);
 
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
@@ -228,9 +234,7 @@ pub fn update(
         Message::Refresh => {
             // TODO: handle undo state
             let mut actions = Vec::new();
-            if let Some(current_actions) = current::update(model, layout, message) {
-                actions.extend(current_actions);
-            }
+            current::update(model, layout, message);
             current::set_content(model);
 
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
@@ -254,9 +258,7 @@ pub fn update(
                     model.preview.buffer.lines.clone(),
                 );
 
-                if let Some(current_actions) = current::update(model, layout, message) {
-                    actions.extend(current_actions);
-                }
+                current::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -288,9 +290,7 @@ pub fn update(
                     model.parent.buffer.lines.clone(),
                 );
 
-                if let Some(current_actions) = current::update(model, layout, message) {
-                    actions.extend(current_actions);
-                }
+                current::update(model, layout, message);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -329,9 +329,7 @@ pub fn update(
             buffer::set_content(&model.mode, &mut model.current.buffer, lines);
             directory::sort_content(&model.mode, &mut model.current.buffer);
 
-            if let Some(current_actions) = current::update(model, layout, message) {
-                actions.extend(current_actions);
-            }
+            current::update(model, layout, message);
 
             history::set_cursor_index(
                 &model.current.path,

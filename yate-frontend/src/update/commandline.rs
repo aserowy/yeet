@@ -1,18 +1,13 @@
 use yate_keymap::message::{Message, Mode};
 
 use crate::{
-    event::PostRenderAction,
     layout::AppLayout,
     model::{buffer::BufferLine, Model},
 };
 
 use super::buffer;
 
-pub fn update(
-    model: &mut Model,
-    layout: &AppLayout,
-    message: &Message,
-) -> Option<Vec<PostRenderAction>> {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let buffer = &mut model.commandline;
     let layout = &layout.commandline;
 
@@ -36,6 +31,4 @@ pub fn update(
     }
 
     buffer::update(&model.mode, buffer, message);
-
-    None
 }
