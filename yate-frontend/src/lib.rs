@@ -1,5 +1,5 @@
-mod event;
 pub mod error;
+mod event;
 mod layout;
 mod model;
 mod task;
