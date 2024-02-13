@@ -174,8 +174,13 @@ fn get_cursor_index(cursor: &Cursor, line: &BufferLine) -> usize {
             current,
             expanded: _,
         } => current,
-        // FIX: count > 0 checks
-        CursorPosition::End => line.len() - 1,
+        CursorPosition::End => {
+            if line.len() == 0 {
+                0
+            } else {
+                line.len() - 1
+            }
+        }
         CursorPosition::None => unreachable!(),
     }
 }

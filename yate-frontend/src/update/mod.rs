@@ -25,7 +25,7 @@ pub fn update(
     match message {
         Message::Buffer(msg) => {
             match msg {
-                yate_keymap::message::Buffer::ChangeMode(from, to) => {
+                Buffer::ChangeMode(from, to) => {
                     if from == to {
                         return None;
                     }
@@ -58,7 +58,6 @@ pub fn update(
                         }
                         Mode::Navigation => {
                             // TODO: handle file operations: show pending with gray, refresh on operation success
-                            // - depending on info in notify message, replace exact line or refresh all
                             buffer::focus_buffer(&mut model.current.buffer);
                             current::update(model, layout, Some(msg));
                             preview::update(model, layout, None);
@@ -82,7 +81,7 @@ pub fn update(
                         Some(vec![PostRenderAction::ModeChanged(to.clone())])
                     }
                 }
-                yate_keymap::message::Buffer::Modification(_) => {
+                Buffer::Modification(_) => {
                     match model.mode {
                         Mode::Command => commandline::update(model, layout, msg),
                         Mode::Insert | Mode::Normal => current::update(model, layout, Some(msg)),
@@ -91,8 +90,7 @@ pub fn update(
 
                     None
                 }
-                yate_keymap::message::Buffer::MoveCursor(_, _)
-                | yate_keymap::message::Buffer::MoveViewPort(_) => match model.mode {
+                Buffer::MoveCursor(_, _) | Buffer::MoveViewPort(_) => match model.mode {
                     Mode::Command => {
                         commandline::update(model, layout, msg);
 
@@ -113,7 +111,7 @@ pub fn update(
                         Some(actions)
                     }
                 },
-                yate_keymap::message::Buffer::SaveBuffer(_) => current::save_changes(model),
+                Buffer::SaveBuffer(_) => current::save_changes(model),
             }
         }
         Message::ChangeKeySequence(sequence) => {
@@ -294,7 +292,6 @@ pub fn update(
             model.current.buffer.lines.clear();
             current::update(model, layout, None);
 
-            // TODO: add finished enumeration and set history and preview
             history::set_cursor_index(
                 &model.current.path,
                 &model.history,

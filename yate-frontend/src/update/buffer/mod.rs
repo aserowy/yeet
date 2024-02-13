@@ -9,7 +9,6 @@ pub mod cursor;
 pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Option<BufferResult> {
-    // TODO: split message and buffer related messages
     let result = match message {
         message::Buffer::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
