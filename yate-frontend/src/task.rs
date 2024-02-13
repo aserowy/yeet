@@ -76,7 +76,7 @@ impl TaskManager {
                     match read_dir {
                         Ok(mut rd) => {
                             while let Some(entry) = rd.next_entry().await? {
-                                if cache.len() >= 1000 {
+                                if cache.len() >= 5000 {
                                     cache.push(entry.path());
 
                                     internal_sender

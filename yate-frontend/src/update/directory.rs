@@ -1,11 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use yate_keymap::message::Mode;
 
 use crate::model::{buffer::Buffer, Model};
 
 pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
-    // TODO: refactor into directory mod
     let mut buffer = vec![
         (
             model.current.path.as_path(),
@@ -25,38 +27,29 @@ pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
 
     for (path, buffer, sort) in buffer {
         let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
+        let mut content = buffer
+            .lines
+            .iter()
+            .map(|bl| {
+                let key = if bl.content.contains('/') {
+                    bl.content.split('/').collect::<Vec<_>>()[0].to_string()
+                } else {
+                    bl.content.clone()
+                };
+                return (key, bl.clone());
+            })
+            .collect::<HashMap<_, _>>();
 
         for path in paths_for_buffer {
-            // TODO: better closer warmer: remove virtual entries... instead of this shiat
             if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
-                let exists = buffer
-                    .lines
-                    .iter()
-                    .find(|bl| bl.content == basename)
-                    .is_some();
-
-                if !exists {
-                    buffer.lines.push(super::path::get_bufferline_by_path(path));
-
-                    if path.is_dir() {
-                        let basepath = format!("{basename}/");
-
-                        // NOTE: this removes virtual adds like 'dirname/filename'
-                        let index = buffer
-                            .lines
-                            .iter()
-                            .enumerate()
-                            .find(|(_, bl)| bl.content.starts_with(&basepath))
-                            .map(|(i, _)| i);
-
-                        if let Some(index) = index {
-                            buffer.lines.remove(index);
-                        }
-                    }
-                }
+                content.insert(
+                    basename.to_string(),
+                    super::path::get_bufferline_by_path(path),
+                );
             }
         }
 
+        buffer.lines = content.into_iter().map(|(_, bl)| bl).collect::<Vec<_>>();
         if sort {
             sort_content(&model.mode, buffer);
         }
@@ -87,7 +80,6 @@ pub fn remove_path(model: &mut Model, path: &Path) {
 
     if let Some(parent) = path.parent() {
         if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == &parent) {
-            // TODO: better closer warmer: remove virtual entries... instead of this shiat
             if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
                 let index = buffer
                     .lines
