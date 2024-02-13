@@ -198,7 +198,6 @@ pub fn update(
                 Some(actions)
             }
         }
-        // FIX: preserve sorting in normal/insert mode and add at bottom
         Message::PathsAdded(paths) => {
             directory::add_paths(model, paths);
 

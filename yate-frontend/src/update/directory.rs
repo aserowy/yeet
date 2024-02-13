@@ -27,29 +27,31 @@ pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
 
     for (path, buffer, sort) in buffer {
         let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
-        let mut content = buffer
+        let indexes = buffer
             .lines
             .iter()
-            .map(|bl| {
+            .enumerate()
+            .map(|(i, bl)| {
                 let key = if bl.content.contains('/') {
                     bl.content.split('/').collect::<Vec<_>>()[0].to_string()
                 } else {
                     bl.content.clone()
                 };
-                return (key, bl.clone());
+                return (key, i);
             })
             .collect::<HashMap<_, _>>();
 
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
-                content.insert(
-                    basename.to_string(),
-                    super::path::get_bufferline_by_path(path),
-                );
+                let line = super::path::get_bufferline_by_path(path);
+                if let Some(index) = indexes.get(basename) {
+                    buffer.lines[*index] = line;
+                } else {
+                    buffer.lines.push(line);
+                }
             }
         }
 
-        buffer.lines = content.into_iter().map(|(_, bl)| bl).collect::<Vec<_>>();
         if sort {
             sort_content(&model.mode, buffer);
         }
