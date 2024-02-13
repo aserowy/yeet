@@ -21,7 +21,7 @@ use crate::{
         history::{self},
         Model,
     },
-    task::TaskManager,
+    task::{Task, TaskManager},
     update::{self},
     view::{self},
 };
@@ -38,11 +38,12 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
+    let (mut watcher, sender, mut receiver) = event::listen();
+
     let mut resolver = MessageResolver::default();
-    let mut tasks = TaskManager::default();
+    let mut tasks = TaskManager::new(sender);
     let mut result = Vec::new();
 
-    let (mut watcher, mut receiver) = event::listen();
     'app_loop: while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
@@ -53,9 +54,8 @@ pub async fn run(_address: String) -> Result<(), AppError> {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
                 PostRenderAction::OptimizeHistory => {
-                    if let Err(error) = history::cache::save(&model.history) {
+                    if let Err(_error) = history::cache::save(&model.history) {
                         // TODO: log error
-                        result.push(error);
                     }
                 }
                 PostRenderAction::Quit => {
@@ -63,20 +63,26 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                 }
                 PostRenderAction::Task(task) => tasks.run(task),
                 PostRenderAction::UnwatchPath(p) => {
-                    // TODO: stop current dir content enumeration
                     if p == PathBuf::default() {
                         continue;
                     }
+
+                    // TODO: stop current dir content enumeration
+
                     if let Err(_error) = watcher.unwatch(p.as_path()) {
                         // TODO: log error
                     }
                 }
                 PostRenderAction::WatchPath(p) => {
-                    // TODO: start content enumeration
                     // TODO: handle rename events and unwatch old and watch new
                     if p == PathBuf::default() {
                         continue;
                     }
+
+                    if p.is_dir() {
+                        tasks.run(Task::EnumerateDirectory(p.clone()));
+                    }
+
                     if let Err(_error) = watcher.watch(p.as_path(), RecursiveMode::NonRecursive) {
                         // TODO: log error
                     }

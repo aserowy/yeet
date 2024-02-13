@@ -4,10 +4,7 @@ use yate_keymap::message::{Message, Mode};
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{
-        buffer::{viewport::ViewPort, BufferLine},
-        Model,
-    },
+    model::{buffer::viewport::ViewPort, Model},
     task::Task,
 };
 
@@ -152,107 +149,27 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
                 }
+                model.preview.buffer.lines.clear();
                 preview::update(model, layout, &Message::Refresh);
 
                 Some(actions)
             }
         },
         Message::PathAdded(path) => {
-            let mut buffer = vec![
-                (
-                    model.current.path.as_path(),
-                    &mut model.current.buffer,
-                    model.mode == Mode::Navigation,
-                ),
-                (
-                    model.preview.path.as_path(),
-                    &mut model.preview.buffer,
-                    true,
-                ),
-            ];
-
-            if let Some(parent) = path.parent() {
-                buffer.push((parent, &mut model.parent.buffer, true));
-            }
-
-            if let Some(parent) = path.parent() {
-                if let Some((_, buffer, sort)) = buffer.into_iter().find(|(p, _, _)| p == &parent) {
-                    // TODO: better closer warmer: remove virtual entries... instead of this shiat
-                    if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
-                        let exists = buffer
-                            .lines
-                            .iter()
-                            .find(|bl| bl.content == basename)
-                            .is_some();
-
-                        if !exists {
-                            buffer.lines.push(path::get_bufferline_by_path(path));
-
-                            if path.is_dir() {
-                                let basepath = format!("{basename}/");
-
-                                // NOTE: this removes virtual adds like 'dirname/filename'
-                                let index = buffer
-                                    .lines
-                                    .iter()
-                                    .enumerate()
-                                    .find(|(_, bl)| bl.content.starts_with(&basepath))
-                                    .map(|(i, _)| i);
-
-                                if let Some(index) = index {
-                                    buffer.lines.remove(index);
-                                }
-                            }
-                        }
-
-                        if sort {
-                            directory::sort_content(&model.mode, buffer);
-                        }
-
-                        buffer::cursor::validate(&model.mode, buffer);
-                        // TODO: correct cursor to stay on selection
-                    }
-                }
-            }
+            directory::add_path(model, path);
 
             None
         }
         Message::PathRemoved(path) => {
-            let mut buffer = vec![
-                (model.current.path.as_path(), &mut model.current.buffer),
-                (model.preview.path.as_path(), &mut model.preview.buffer),
-            ];
-
-            if let Some(parent) = path.parent() {
-                buffer.push((parent, &mut model.parent.buffer));
-            }
-
-            if let Some(parent) = path.parent() {
-                if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == &parent) {
-                    // TODO: better closer warmer: remove virtual entries... instead of this shiat
-                    if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
-                        let index = buffer
-                            .lines
-                            .iter()
-                            .enumerate()
-                            .find(|(_, bl)| bl.content == basename)
-                            .map(|(i, _)| i);
-
-                        if let Some(index) = index {
-                            buffer.lines.remove(index);
-                            buffer::cursor::validate(&model.mode, buffer);
-                        }
-                    }
-                }
-            }
+            directory::remove_path(model, path);
 
             None
         }
         Message::Refresh => {
             // TODO: handle undo state
+            // TODO: remove dir contents and restart enumeration
             let mut actions = Vec::new();
             current::update(model, layout, message);
-            current::set_content(model);
 
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview_actions);
@@ -269,12 +186,13 @@ pub fn update(
             if model.mode != Mode::Navigation {
                 None
             } else if let Some(mut actions) = path::set_current_to_selected(model) {
+                let current_content = model.current.buffer.lines.clone();
+
                 buffer::set_content(
                     &model.mode,
                     &mut model.current.buffer,
                     model.preview.buffer.lines.clone(),
                 );
-
                 current::update(model, layout, message);
 
                 history::set_cursor_index(
@@ -286,9 +204,11 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
                     actions.extend(preview_actions);
                 }
-
-                parent::update(model, layout, message);
+                model.preview.buffer.lines.clear();
                 preview::update(model, layout, message);
+
+                buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
+                parent::update(model, layout, message);
 
                 model.history.add(&model.current.path);
 
@@ -301,12 +221,13 @@ pub fn update(
             if model.mode != Mode::Navigation {
                 None
             } else if let Some(mut actions) = path::set_current_to_parent(model) {
+                let current_content = model.current.buffer.lines.clone();
+
                 buffer::set_content(
                     &model.mode,
                     &mut model.current.buffer,
                     model.parent.buffer.lines.clone(),
                 );
-
                 current::update(model, layout, message);
 
                 history::set_cursor_index(
@@ -318,9 +239,11 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, false) {
                     actions.extend(preview_actions);
                 }
-
-                parent::update(model, layout, message);
+                buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
                 preview::update(model, layout, message);
+
+                model.parent.buffer.lines.clear();
+                parent::update(model, layout, message);
 
                 Some(actions)
             } else {
@@ -333,21 +256,10 @@ pub fn update(
                 actions.extend(current_actions);
             }
 
-            let lines = match path::get_directory_content(&model.current.path) {
-                Ok(content) => content,
-                Err(_) => {
-                    vec![BufferLine {
-                        content: "Error reading directory".to_string(),
-                        ..Default::default()
-                    }]
-                }
-            };
-
-            buffer::set_content(&model.mode, &mut model.current.buffer, lines);
-            directory::sort_content(&model.mode, &mut model.current.buffer);
-
+            model.current.buffer.lines.clear();
             current::update(model, layout, message);
 
+            // TODO: add finished enumeration and set history and preview
             history::set_cursor_index(
                 &model.current.path,
                 &model.history,
@@ -358,7 +270,10 @@ pub fn update(
                 actions.extend(preview);
             }
 
+            model.parent.buffer.lines.clear();
             parent::update(model, layout, message);
+
+            model.preview.buffer.lines.clear();
             preview::update(model, layout, message);
 
             Some(actions)

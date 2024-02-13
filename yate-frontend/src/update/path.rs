@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use ratatui::style::Color;
 
 use crate::{
-    error::AppError,
     event::PostRenderAction,
     model::{
         buffer::{BufferLine, StylePartial},
@@ -29,16 +28,6 @@ pub fn get_bufferline_by_path(path: &Path) -> BufferLine {
         content,
         style,
         ..Default::default()
-    }
-}
-
-pub fn get_directory_content(path: &Path) -> Result<Vec<BufferLine>, AppError> {
-    match std::fs::read_dir(path) {
-        Ok(content) => Ok(content
-            .flatten()
-            .map(|entry| get_bufferline_by_path(&entry.path()))
-            .collect()),
-        Err(error) => Err(AppError::FileOperationFailed(error)),
     }
 }
 

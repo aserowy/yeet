@@ -1,16 +1,16 @@
-use yate_keymap::message::{Message, Mode};
+use yate_keymap::message::Message;
 
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
     model::{
-        buffer::{undo::BufferChanged, BufferLine, BufferResult, Cursor},
+        buffer::{undo::BufferChanged, BufferResult},
         Model,
     },
     task::Task,
 };
 
-use super::{buffer, path};
+use super::buffer;
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let buffer = &mut model.current.buffer;
@@ -52,33 +52,5 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
         Some(tasks)
     } else {
         None
-    }
-}
-
-pub fn set_content(model: &mut Model) {
-    if model.mode != Mode::Insert {
-        let buffer = &mut model.current.buffer;
-        // TODO: remove with get current content task
-        // FIX: shows no content in preview when uncommited changes are present
-        let lines = match path::get_directory_content(&model.current.path) {
-            Ok(content) => {
-                if buffer.cursor.is_none() {
-                    buffer.cursor = Some(Cursor::default());
-                }
-
-                content
-            }
-            Err(_) => {
-                buffer.cursor = None;
-
-                vec![BufferLine {
-                    content: "Error reading directory".to_string(),
-                    ..Default::default()
-                }]
-            }
-        };
-
-        buffer::set_content(&model.mode, buffer, lines);
-        super::directory::sort_content(&model.mode, buffer);
     }
 }

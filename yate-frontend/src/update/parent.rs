@@ -3,12 +3,12 @@ use yate_keymap::message::{Message, ViewPortDirection};
 use crate::{
     layout::AppLayout,
     model::{
-        buffer::{BufferLine, Cursor, CursorPosition},
+        buffer::{Cursor, CursorPosition},
         Model,
     },
 };
 
-use super::{buffer, path};
+use super::buffer;
 
 pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     let buffer = &mut model.parent.buffer;
@@ -17,19 +17,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     match &model.parent.path {
-        Some(parent) => {
-            let lines = match path::get_directory_content(parent) {
-                Ok(content) => content,
-                Err(_) => {
-                    vec![BufferLine {
-                        content: "Error reading directory".to_string(),
-                        ..Default::default()
-                    }]
-                }
-            };
-
-            buffer::set_content(&model.mode, buffer, lines);
-            super::directory::sort_content(&model.mode, buffer);
+        Some(_) => {
             buffer::update(&model.mode, buffer, message);
 
             let current_filename = match model.current.path.file_name() {

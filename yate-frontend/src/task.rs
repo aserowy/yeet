@@ -1,26 +1,31 @@
-use std::{
-    fs::{self},
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-use tokio::task::JoinSet;
+use tokio::{fs, sync::mpsc::UnboundedSender, task::JoinSet};
 
-use crate::{error::AppError, model::history};
+use crate::{error::AppError, event::RenderAction, model::history};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
+    EnumerateDirectory(PathBuf),
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
 }
 
-#[derive(Default)]
 pub struct TaskManager {
+    sender: UnboundedSender<RenderAction>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 impl TaskManager {
+    pub fn new(sender: UnboundedSender<RenderAction>) -> Self {
+        Self {
+            sender,
+            tasks: JoinSet::new(),
+        }
+    }
+
     // TODO: if error occurs, enable handling in model with RenderAction + sender
     pub fn run(&mut self, task: Task) {
         match task {
@@ -31,15 +36,15 @@ impl TaskManager {
 
                 if let Some(path_str) = path.to_str() {
                     if path_str.ends_with('/') {
-                        fs::create_dir_all(path)?;
+                        fs::create_dir_all(path).await?;
                     } else {
                         let parent = match Path::new(&path).parent() {
                             Some(path) => path,
                             None => return Err(AppError::InvalidTargetPath),
                         };
 
-                        fs::create_dir_all(parent)?;
-                        fs::write(path, "")?;
+                        fs::create_dir_all(parent).await?;
+                        fs::write(path, "").await?;
                     }
                 }
 
@@ -51,13 +56,36 @@ impl TaskManager {
                 }
 
                 if path.is_file() {
-                    fs::remove_file(&path)?;
+                    fs::remove_file(&path).await?;
                 } else if path.is_dir() {
-                    fs::remove_dir_all(&path)?;
+                    fs::remove_dir_all(&path).await?;
                 };
 
                 Ok(())
             }),
+            // TODO: batch dirs and send message batches with 500 entries
+            Task::EnumerateDirectory(path) => {
+                let internal_sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if !path.exists() {
+                        return Err(AppError::InvalidTargetPath);
+                    }
+
+                    let read_dir = tokio::fs::read_dir(path).await;
+                    match read_dir {
+                        Ok(mut rd) => {
+                            while let Some(entry) = rd.next_entry().await? {
+                                internal_sender
+                                    .send(RenderAction::PathAdded(entry.path()))
+                                    .unwrap();
+                            }
+
+                            Ok(())
+                        }
+                        Err(error) => Err(AppError::FileOperationFailed(error)),
+                    }
+                })
+            }
             Task::OptimizeHistory => self.tasks.spawn(async move {
                 history::cache::optimize()?;
 
@@ -68,7 +96,7 @@ impl TaskManager {
                     return Err(AppError::InvalidTargetPath);
                 }
 
-                fs::rename(old, new)?;
+                fs::rename(old, new).await?;
 
                 Ok(())
             }),

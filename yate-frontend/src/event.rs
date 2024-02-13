@@ -5,7 +5,7 @@ use notify::{
     event::{ModifyKind, RenameMode},
     INotifyWatcher,
 };
-use tokio::sync::mpsc::{self, UnboundedReceiver};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use yate_keymap::{
     conversion,
     key::Key,
@@ -37,8 +37,13 @@ pub enum PostRenderAction {
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
-pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
+pub fn listen() -> (
+    INotifyWatcher,
+    UnboundedSender<RenderAction>,
+    UnboundedReceiver<RenderAction>,
+) {
     let (sender, receiver) = mpsc::unbounded_channel();
+    let internal_sender = sender.clone();
 
     let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
     let watcher = notify::recommended_watcher(move |res| {
@@ -49,7 +54,7 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        sender.send(RenderAction::Startup).unwrap();
+        internal_sender.send(RenderAction::Startup).unwrap();
 
         loop {
             let crossterm_event = reader.next().fuse();
@@ -60,11 +65,11 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
                     match event {
                         Some(Ok(event)) => {
                             if let Some(message) = handle_crossterm_event(event) {
-                                sender.send(message).unwrap();
+                                internal_sender.send(message).unwrap();
                             }
                         },
                         Some(Err(_)) => {
-                            sender.send(RenderAction::Error).unwrap();
+                            internal_sender.send(RenderAction::Error).unwrap();
                         },
                         None => {},
                     }
@@ -74,12 +79,12 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
                         Some(Ok(event)) => {
                             if let Some(messages) = handle_notify_event(event) {
                                 for message in messages {
-                                    sender.send(message).unwrap();
+                                    internal_sender.send(message).unwrap();
                                 }
                             }
                         },
                         Some(Err(_)) => {
-                            sender.send(RenderAction::Error).unwrap();
+                            internal_sender.send(RenderAction::Error).unwrap();
                         },
                         None => {},
                     }
@@ -89,7 +94,7 @@ pub fn listen() -> (INotifyWatcher, UnboundedReceiver<RenderAction>) {
         }
     });
 
-    (watcher, receiver)
+    (watcher, sender, receiver)
 }
 
 fn handle_crossterm_event(event: crossterm::event::Event) -> Option<RenderAction> {
