@@ -1,4 +1,4 @@
-use yate_keymap::message::{Message, Mode};
+use yate_keymap::message::{Buffer, Mode};
 
 use crate::{
     layout::AppLayout,
@@ -7,13 +7,13 @@ use crate::{
 
 use super::buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: &Buffer) {
     let buffer = &mut model.commandline;
     let layout = &layout.commandline;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    if let Message::ChangeMode(from, to) = message {
+    if let Buffer::ChangeMode(from, to) = message {
         if from == &Mode::Command && to != &Mode::Command {
             buffer::set_content(to, buffer, vec![BufferLine::default()]);
         }

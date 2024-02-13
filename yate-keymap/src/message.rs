@@ -13,20 +13,24 @@ pub enum Binding {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
+    Buffer(Buffer),
     ChangeKeySequence(String),
-    ChangeMode(Mode, Mode),
     ExecuteCommand,
-    Modification(TextModification),
-    MoveCursor(usize, CursorDirection),
-    MoveViewPort(ViewPortDirection),
     PathsAdded(Vec<PathBuf>),
     PathRemoved(PathBuf),
-    Refresh,
-    SaveBuffer(Option<usize>),
     SelectCurrent,
     SelectParent,
     SelectPath(PathBuf),
     Quit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Buffer {
+    ChangeMode(Mode, Mode),
+    Modification(TextModification),
+    MoveCursor(usize, CursorDirection),
+    MoveViewPort(ViewPortDirection),
+    SaveBuffer(Option<usize>),
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

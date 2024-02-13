@@ -1,4 +1,4 @@
-use yate_keymap::message::Message;
+use yate_keymap::message::Buffer;
 
 use crate::{
     event::PostRenderAction,
@@ -12,20 +12,22 @@ use crate::{
 
 use super::buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
     let buffer = &mut model.current.buffer;
     let layout = &layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    buffer::update(&model.mode, buffer, message);
+    if let Some(message) = message {
+        buffer::update(&model.mode, buffer, message);
+    }
 }
 
 pub fn save_changes(model: &mut Model) -> Option<Vec<PostRenderAction>> {
     if let Some(result) = buffer::update(
         &model.mode,
         &mut model.current.buffer,
-        &Message::SaveBuffer(None),
+        &Buffer::SaveBuffer(None),
     ) {
         let path = &model.current.path;
 

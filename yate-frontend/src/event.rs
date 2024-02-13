@@ -159,12 +159,12 @@ pub fn convert_to_messages(
 ) -> Vec<Message> {
     match event {
         // TODO: log error?
-        RenderAction::Error => vec![Message::Refresh],
+        RenderAction::Error => vec![],
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
         RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
         RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
-        RenderAction::Refresh => vec![Message::Refresh],
-        RenderAction::Resize(_, _) => vec![Message::Refresh],
+        RenderAction::Refresh => vec![],
+        RenderAction::Resize(_, _) => vec![],
         RenderAction::Startup => vec![Message::SelectPath(get_current_path())],
     }
 }

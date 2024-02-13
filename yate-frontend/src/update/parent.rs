@@ -1,4 +1,4 @@
-use yate_keymap::message::{Message, ViewPortDirection};
+use yate_keymap::message::{Buffer, ViewPortDirection};
 
 use crate::{
     layout::AppLayout,
@@ -10,7 +10,7 @@ use crate::{
 
 use super::buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
+pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
     let buffer = &mut model.parent.buffer;
     let layout = &layout.parent;
 
@@ -18,7 +18,9 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
 
     match &model.parent.path {
         Some(_) => {
-            buffer::update(&model.mode, buffer, message);
+            if let Some(message) = message {
+                buffer::update(&model.mode, buffer, message);
+            }
 
             let current_filename = match model.current.path.file_name() {
                 Some(content) => content.to_str(),
@@ -44,7 +46,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
                 buffer::update(
                     &model.mode,
                     buffer,
-                    &Message::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                    &Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
                 );
             }
         }
@@ -52,7 +54,10 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Message) {
             buffer.cursor = None;
 
             buffer::set_content(&model.mode, buffer, vec![]);
-            buffer::update(&model.mode, buffer, message);
+
+            if let Some(message) = message {
+                buffer::update(&model.mode, buffer, message);
+            }
         }
     }
 }

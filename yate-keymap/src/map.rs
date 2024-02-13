@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Binding, CursorDirection, NewLineDirection, TextModification, ViewPortDirection},
+    message::{
+        Binding, Buffer, CursorDirection, NewLineDirection, TextModification, ViewPortDirection,
+    },
     tree::KeyTree,
     Message, Mode,
 };
@@ -34,9 +36,9 @@ impl Default for KeyMap {
             vec![
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
-                    Binding::Message(Message::Modification(
+                    Binding::Message(Message::Buffer(Buffer::Modification(
                         TextModification::DeleteCharBeforeCursor,
-                    )),
+                    ))),
                 ),
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
@@ -48,7 +50,9 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
-                    Binding::Message(Message::Modification(TextModification::DeleteCharOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::Modification(
+                        TextModification::DeleteCharOnCursor,
+                    ))),
                 ),
                 (
                     vec![Key::new(KeyCode::Left, vec![])],
@@ -65,9 +69,9 @@ impl Default for KeyMap {
             vec![
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
-                    Binding::Message(Message::Modification(
+                    Binding::Message(Message::Buffer(Buffer::Modification(
                         TextModification::DeleteCharBeforeCursor,
-                    )),
+                    ))),
                 ),
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
@@ -79,7 +83,9 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
-                    Binding::Message(Message::Modification(TextModification::DeleteCharOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::Modification(
+                        TextModification::DeleteCharOnCursor,
+                    ))),
                 ),
                 (
                     vec![Key::new(KeyCode::Left, vec![])],
@@ -144,7 +150,9 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('d'), vec![KeyModifier::Ctrl])],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageDown)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::HalfPageDown,
+                    ))),
                 ),
                 (
                     vec![
@@ -203,28 +211,36 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageUp)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::HalfPageUp,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('b'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::BottomOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::BottomOnCursor,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('t'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::TopOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::TopOnCursor,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('z'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::CenterOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::CenterOnCursor,
+                    ))),
                 ),
             ],
         );
@@ -293,14 +309,18 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('d'), vec![KeyModifier::Ctrl])],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageDown)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::HalfPageDown,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('d'), vec![]),
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
-                    Binding::Message(Message::Modification(TextModification::DeleteLineOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::Modification(
+                        TextModification::DeleteLineOnCursor,
+                    ))),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
@@ -353,28 +373,36 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::HalfPageUp)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::HalfPageUp,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('b'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::BottomOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::BottomOnCursor,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('t'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::TopOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::TopOnCursor,
+                    ))),
                 ),
                 (
                     vec![
                         Key::new(KeyCode::from_char('z'), vec![]),
                         Key::new(KeyCode::from_char('z'), vec![]),
                     ],
-                    Binding::Message(Message::MoveViewPort(ViewPortDirection::CenterOnCursor)),
+                    Binding::Message(Message::Buffer(Buffer::MoveViewPort(
+                        ViewPortDirection::CenterOnCursor,
+                    ))),
                 ),
             ],
         );

@@ -1,5 +1,5 @@
 use ratatui::prelude::Rect;
-use yate_keymap::message::{Message, Mode};
+use yate_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
     event::PostRenderAction,
@@ -23,80 +23,121 @@ pub fn update(
     message: &Message,
 ) -> Option<Vec<PostRenderAction>> {
     match message {
+        Message::Buffer(msg) => {
+            match msg {
+                yate_keymap::message::Buffer::ChangeMode(from, to) => {
+                    if from == to {
+                        return None;
+                    }
+
+                    model.mode = to.clone();
+                    model.mode_before = Some(from.clone());
+
+                    match from {
+                        Mode::Command => {
+                            buffer::unfocus_buffer(&mut model.commandline);
+                            commandline::update(model, layout, msg);
+                        }
+                        Mode::Insert | Mode::Navigation | Mode::Normal => {
+                            buffer::unfocus_buffer(&mut model.current.buffer);
+                        }
+                    }
+
+                    let post_render_actions = match to {
+                        Mode::Command => {
+                            buffer::focus_buffer(&mut model.commandline);
+                            commandline::update(model, layout, msg);
+
+                            None
+                        }
+                        Mode::Insert => {
+                            buffer::focus_buffer(&mut model.current.buffer);
+                            current::update(model, layout, Some(msg));
+
+                            None
+                        }
+                        Mode::Navigation => {
+                            // TODO: handle file operations: show pending with gray, refresh on operation success
+                            // - depending on info in notify message, replace exact line or refresh all
+                            buffer::focus_buffer(&mut model.current.buffer);
+                            current::update(model, layout, Some(msg));
+                            preview::update(model, layout, None);
+
+                            current::save_changes(model)
+                        }
+                        Mode::Normal => {
+                            buffer::focus_buffer(&mut model.current.buffer);
+                            current::update(model, layout, Some(msg));
+                            preview::update(model, layout, None);
+
+                            None
+                        }
+                    };
+
+                    if let Some(mut post_render_action_vec) = post_render_actions {
+                        post_render_action_vec.push(PostRenderAction::ModeChanged(to.clone()));
+
+                        Some(post_render_action_vec)
+                    } else {
+                        Some(vec![PostRenderAction::ModeChanged(to.clone())])
+                    }
+                }
+                yate_keymap::message::Buffer::Modification(_) => {
+                    match model.mode {
+                        Mode::Command => commandline::update(model, layout, msg),
+                        Mode::Insert | Mode::Normal => current::update(model, layout, Some(msg)),
+                        Mode::Navigation => {}
+                    }
+
+                    None
+                }
+                yate_keymap::message::Buffer::MoveCursor(_, _)
+                | yate_keymap::message::Buffer::MoveViewPort(_) => match model.mode {
+                    Mode::Command => {
+                        commandline::update(model, layout, msg);
+
+                        None
+                    }
+                    Mode::Insert | Mode::Navigation | Mode::Normal => {
+                        let mut actions = Vec::new();
+                        current::update(model, layout, Some(msg));
+
+                        if let Some(preview_actions) =
+                            path::set_preview_to_selected(model, true, true)
+                        {
+                            actions.extend(preview_actions);
+                            model.preview.buffer.lines.clear();
+                            preview::update(model, layout, None);
+                        }
+
+                        Some(actions)
+                    }
+                },
+                yate_keymap::message::Buffer::SaveBuffer(_) => current::save_changes(model),
+            }
+        }
         Message::ChangeKeySequence(sequence) => {
             model.key_sequence = sequence.clone();
             None
         }
-        Message::ChangeMode(from, to) => {
-            if from == to {
-                return None;
-            }
-
-            model.mode = to.clone();
-            model.mode_before = Some(from.clone());
-
-            match from {
-                Mode::Command => {
-                    buffer::unfocus_buffer(&mut model.commandline);
-                    commandline::update(model, layout, message);
-                }
-                Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    buffer::unfocus_buffer(&mut model.current.buffer);
-                }
-            }
-
-            let post_render_actions = match to {
-                Mode::Command => {
-                    buffer::focus_buffer(&mut model.commandline);
-                    commandline::update(model, layout, message);
-
-                    None
-                }
-                Mode::Insert => {
-                    buffer::focus_buffer(&mut model.current.buffer);
-                    current::update(model, layout, message);
-
-                    None
-                }
-                Mode::Navigation => {
-                    // TODO: handle file operations: show pending with gray, refresh on operation success
-                    // - depending on info in notify message, replace exact line or refresh all
-                    buffer::focus_buffer(&mut model.current.buffer);
-                    current::update(model, layout, message);
-                    preview::update(model, layout, &Message::Refresh);
-
-                    current::save_changes(model)
-                }
-                Mode::Normal => {
-                    buffer::focus_buffer(&mut model.current.buffer);
-                    current::update(model, layout, message);
-                    preview::update(model, layout, &Message::Refresh);
-
-                    None
-                }
-            };
-
-            if let Some(mut post_render_action_vec) = post_render_actions {
-                post_render_action_vec.push(PostRenderAction::ModeChanged(to.clone()));
-
-                Some(post_render_action_vec)
-            } else {
-                Some(vec![PostRenderAction::ModeChanged(to.clone())])
-            }
-        }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 let post_render_actions = match cmd.content.as_str() {
-                    "e!" => update(model, layout, &Message::Refresh),
+                    "e!" => update(
+                        model,
+                        layout,
+                        &Message::SelectPath(model.current.path.clone()),
+                    ),
                     "histopt" => Some(vec![PostRenderAction::Task(Task::OptimizeHistory)]),
                     "q" => update(model, layout, &Message::Quit),
-                    "w" => update(model, layout, &Message::SaveBuffer(None)),
+                    "w" => update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None))),
                     "wq" => {
-                        let actions: Vec<_> = update(model, layout, &Message::SaveBuffer(None))
-                            .into_iter()
-                            .flatten()
-                            .chain(update(model, layout, &Message::Quit).into_iter().flatten())
-                            .collect();
+                        let actions: Vec<_> =
+                            update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None)))
+                                .into_iter()
+                                .flatten()
+                                .chain(update(model, layout, &Message::Quit).into_iter().flatten())
+                                .collect();
 
                         if actions.is_empty() {
                             None
@@ -110,10 +151,10 @@ pub fn update(
                 let mode_changed_actions = update(
                     model,
                     layout,
-                    &Message::ChangeMode(
+                    &Message::Buffer(Buffer::ChangeMode(
                         model.mode.clone(),
                         get_mode_after_command(&model.mode_before),
-                    ),
+                    )),
                 );
 
                 Some(
@@ -127,34 +168,7 @@ pub fn update(
                 None
             }
         }
-        Message::Modification(_) => {
-            match model.mode {
-                Mode::Command => commandline::update(model, layout, message),
-                Mode::Insert | Mode::Normal => current::update(model, layout, message),
-                Mode::Navigation => {}
-            }
-
-            None
-        }
-        Message::MoveCursor(_, _) | Message::MoveViewPort(_) => match model.mode {
-            Mode::Command => {
-                commandline::update(model, layout, message);
-
-                None
-            }
-            Mode::Insert | Mode::Navigation | Mode::Normal => {
-                let mut actions = Vec::new();
-                current::update(model, layout, message);
-
-                if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
-                    actions.extend(preview_actions);
-                    model.preview.buffer.lines.clear();
-                    preview::update(model, layout, &Message::Refresh);
-                }
-
-                Some(actions)
-            }
-        },
+        // FIX: preserve sorting in normal/insert mode and add at bottom
         Message::PathsAdded(paths) => {
             directory::add_paths(model, paths);
 
@@ -162,7 +176,7 @@ pub fn update(
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview_actions);
                 model.preview.buffer.lines.clear();
-                preview::update(model, layout, &Message::Refresh);
+                preview::update(model, layout, None);
             }
 
             if actions.is_empty() {
@@ -178,7 +192,7 @@ pub fn update(
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview_actions);
                 model.preview.buffer.lines.clear();
-                preview::update(model, layout, &Message::Refresh);
+                preview::update(model, layout, None);
             }
 
             if actions.is_empty() {
@@ -187,23 +201,6 @@ pub fn update(
                 Some(actions)
             }
         }
-        Message::Refresh => {
-            // TODO: handle undo state
-            // TODO: remove dir contents and restart enumeration
-            let mut actions = Vec::new();
-            current::update(model, layout, message);
-
-            if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
-                actions.extend(preview_actions);
-            }
-            preview::update(model, layout, message);
-
-            commandline::update(model, layout, message);
-            parent::update(model, layout, message);
-
-            Some(actions)
-        }
-        Message::SaveBuffer(_) => current::save_changes(model),
         Message::SelectCurrent => {
             if model.mode != Mode::Navigation {
                 None
@@ -215,7 +212,7 @@ pub fn update(
                     &mut model.current.buffer,
                     model.preview.buffer.lines.clone(),
                 );
-                current::update(model, layout, message);
+                current::update(model, layout, None);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -227,10 +224,10 @@ pub fn update(
                     actions.extend(preview_actions);
                 }
                 model.preview.buffer.lines.clear();
-                preview::update(model, layout, message);
+                preview::update(model, layout, None);
 
                 buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
-                parent::update(model, layout, message);
+                parent::update(model, layout, None);
 
                 model.history.add(&model.current.path);
 
@@ -250,7 +247,7 @@ pub fn update(
                     &mut model.current.buffer,
                     model.parent.buffer.lines.clone(),
                 );
-                current::update(model, layout, message);
+                current::update(model, layout, None);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -262,10 +259,10 @@ pub fn update(
                     actions.extend(preview_actions);
                 }
                 buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
-                preview::update(model, layout, message);
+                preview::update(model, layout, None);
 
                 model.parent.buffer.lines.clear();
-                parent::update(model, layout, message);
+                parent::update(model, layout, None);
 
                 Some(actions)
             } else {
@@ -279,7 +276,7 @@ pub fn update(
             }
 
             model.current.buffer.lines.clear();
-            current::update(model, layout, message);
+            current::update(model, layout, None);
 
             // TODO: add finished enumeration and set history and preview
             history::set_cursor_index(
@@ -293,10 +290,10 @@ pub fn update(
             }
 
             model.parent.buffer.lines.clear();
-            parent::update(model, layout, message);
+            parent::update(model, layout, None);
 
             model.preview.buffer.lines.clear();
-            preview::update(model, layout, message);
+            preview::update(model, layout, None);
 
             Some(actions)
         }

@@ -1,4 +1,4 @@
-use yate_keymap::message::{CursorDirection, Message, Mode};
+use yate_keymap::message::{self, CursorDirection, Mode};
 
 use crate::model::buffer::{
     viewport::ViewPort, Buffer, BufferLine, BufferResult, Cursor, CursorPosition,
@@ -8,47 +8,42 @@ mod bufferline;
 pub mod cursor;
 pub mod viewport;
 
-pub fn update(mode: &Mode, model: &mut Buffer, message: &Message) -> Option<BufferResult> {
+pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Option<BufferResult> {
     // TODO: split message and buffer related messages
     let result = match message {
-        Message::ChangeMode(from, to) => {
+        message::Buffer::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
                 cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
             }
             None
         }
-        Message::Modification(modification) => {
+        message::Buffer::Modification(modification) => {
             let buffer_changes = bufferline::update(model, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
             None
         }
-        Message::MoveCursor(count, direction) => {
+        message::Buffer::MoveCursor(count, direction) => {
             cursor::update_by_direction(mode, model, count, direction);
             None
         }
-        Message::MoveViewPort(direction) => {
+        message::Buffer::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);
             None
         }
-        Message::SaveBuffer(_) => {
+        message::Buffer::SaveBuffer(_) => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
         }
-        Message::SelectCurrent | Message::SelectParent => {
-            reset_view(&mut model.view_port, &mut model.cursor);
-            None
-        }
-        Message::ChangeKeySequence(_)
-        | Message::ExecuteCommand
-        | Message::PathsAdded(_)
-        | Message::PathRemoved(_)
-        | Message::Refresh
-        | Message::SelectPath(_)
-        | Message::Quit => None,
     };
+
+    // TODO: place function in outer scope
+    // Message::SelectCurrent | Message::SelectParent => {
+    //     reset_view(&mut model.view_port, &mut model.cursor);
+    //     None
+    // }
 
     viewport::update_by_cursor(model);
 

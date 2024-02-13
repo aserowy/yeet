@@ -4,7 +4,7 @@ use map::KeyMap;
 use message::{Binding, Message, Mode};
 use tree::KeyTree;
 
-use crate::message::TextModification;
+use crate::message::{Buffer, TextModification};
 
 mod buffer;
 pub mod conversion;
@@ -54,7 +54,7 @@ impl MessageResolver {
                 if bindings.is_empty() {
                     let messages = if get_passthrough_by_mode(&self.mode) {
                         let message = TextModification::Insert(self.buffer.to_string());
-                        vec![Message::Modification(message)]
+                        vec![Message::Buffer(Buffer::Modification(message))]
                     } else {
                         Vec::new()
                     };
@@ -93,18 +93,27 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 None => messages.push(msg),
             },
             Binding::Mode(md) => {
-                messages.push(Message::ChangeMode(mode.clone(), md.clone()));
+                messages.push(Message::Buffer(Buffer::ChangeMode(
+                    mode.clone(),
+                    md.clone(),
+                )));
             }
             Binding::ModeAndNotRepeatedMotion(md, mtn) => {
-                messages.push(Message::ChangeMode(mode.clone(), md.clone()));
-                messages.push(Message::MoveCursor(1, mtn));
+                messages.push(Message::Buffer(Buffer::ChangeMode(
+                    mode.clone(),
+                    md.clone(),
+                )));
+                messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn)));
 
                 repeat = None;
             }
             Binding::ModeAndTextModification(md, mdfctn) => {
-                messages.push(Message::ChangeMode(mode.clone(), md.clone()));
+                messages.push(Message::Buffer(Buffer::ChangeMode(
+                    mode.clone(),
+                    md.clone(),
+                )));
 
-                let msg = Message::Modification(mdfctn);
+                let msg = Message::Buffer(Buffer::Modification(mdfctn));
                 match repeat {
                     Some(rpt) => {
                         for _ in 0..rpt {
@@ -117,10 +126,10 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
             }
             Binding::Motion(mtn) => match repeat {
                 Some(rpt) => {
-                    messages.push(Message::MoveCursor(rpt, mtn));
+                    messages.push(Message::Buffer(Buffer::MoveCursor(rpt, mtn)));
                     repeat = None;
                 }
-                None => messages.push(Message::MoveCursor(1, mtn)),
+                None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },
             Binding::Repeat(rpt) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
@@ -128,7 +137,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
             },
             Binding::RepeatOrMotion(rpt, mtn) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
-                None => messages.push(Message::MoveCursor(1, mtn)),
+                None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },
         }
     }
