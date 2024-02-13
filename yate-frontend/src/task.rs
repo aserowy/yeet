@@ -71,7 +71,7 @@ impl TaskManager {
                         return Err(AppError::InvalidTargetPath);
                     }
 
-                    let read_dir = tokio::fs::read_dir(path).await;
+                    let read_dir = tokio::fs::read_dir(path.clone()).await;
                     let mut cache = Vec::new();
                     match read_dir {
                         Ok(mut rd) => {
@@ -89,6 +89,10 @@ impl TaskManager {
 
                             internal_sender
                                 .send(RenderAction::PathsAdded(cache))
+                                .unwrap();
+
+                            internal_sender
+                                .send(RenderAction::PathEnumerationFinished(path))
                                 .unwrap();
 
                             Ok(())

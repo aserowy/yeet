@@ -22,8 +22,9 @@ pub enum RenderAction {
     Resize(u16, u16),
     Refresh,
     Startup,
-    PathsAdded(Vec<PathBuf>),
+    PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
+    PathsAdded(Vec<PathBuf>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -161,8 +162,9 @@ pub fn convert_to_messages(
         // TODO: log error?
         RenderAction::Error => vec![],
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
-        RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
+        RenderAction::PathEnumerationFinished(path) => vec![Message::PathEnumerationFinished(path)],
         RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
+        RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
         RenderAction::Refresh => vec![],
         RenderAction::Resize(_, _) => vec![],
         RenderAction::Startup => vec![Message::SelectPath(get_current_path())],

@@ -39,12 +39,6 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Opt
         }
     };
 
-    // TODO: place function in outer scope
-    // Message::SelectCurrent | Message::SelectParent => {
-    //     reset_view(&mut model.view_port, &mut model.cursor);
-    //     None
-    // }
-
     viewport::update_by_cursor(model);
 
     result

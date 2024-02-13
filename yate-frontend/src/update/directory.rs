@@ -74,7 +74,7 @@ pub fn remove_path(model: &mut Model, path: &Path) {
         (model.preview.path.as_path(), &mut model.preview.buffer),
     ];
 
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer));
     }
 

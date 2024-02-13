@@ -168,9 +168,24 @@ pub fn update(
                 None
             }
         }
-        // FIX: preserve sorting in normal/insert mode and add at bottom
-        Message::PathsAdded(paths) => {
-            directory::add_paths(model, paths);
+        Message::PathEnumerationFinished(path) => {
+            let mut buffer = vec![
+                (model.current.path.as_path(), &mut model.current.buffer),
+                (model.preview.path.as_path(), &mut model.preview.buffer),
+            ];
+
+            if let Some(parent) = &model.parent.path {
+                buffer.push((parent, &mut model.parent.buffer));
+            }
+
+            if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == &path) {
+                history::set_cursor_index(path, &model.history, buffer);
+            }
+
+            None
+        }
+        Message::PathRemoved(path) => {
+            directory::remove_path(model, path);
 
             let mut actions = Vec::new();
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
@@ -185,8 +200,9 @@ pub fn update(
                 Some(actions)
             }
         }
-        Message::PathRemoved(path) => {
-            directory::remove_path(model, path);
+        // FIX: preserve sorting in normal/insert mode and add at bottom
+        Message::PathsAdded(paths) => {
+            directory::add_paths(model, paths);
 
             let mut actions = Vec::new();
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
