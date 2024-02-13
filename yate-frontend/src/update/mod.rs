@@ -148,9 +148,9 @@ pub fn update(
 
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::update(model, layout, &Message::Refresh);
                 }
-                model.preview.buffer.lines.clear();
-                preview::update(model, layout, &Message::Refresh);
 
                 Some(actions)
             }
@@ -158,12 +158,34 @@ pub fn update(
         Message::PathsAdded(paths) => {
             directory::add_paths(model, paths);
 
-            None
+            let mut actions = Vec::new();
+            if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
+                actions.extend(preview_actions);
+                model.preview.buffer.lines.clear();
+                preview::update(model, layout, &Message::Refresh);
+            }
+
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
         }
         Message::PathRemoved(path) => {
             directory::remove_path(model, path);
 
-            None
+            let mut actions = Vec::new();
+            if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
+                actions.extend(preview_actions);
+                model.preview.buffer.lines.clear();
+                preview::update(model, layout, &Message::Refresh);
+            }
+
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
         }
         Message::Refresh => {
             // TODO: handle undo state

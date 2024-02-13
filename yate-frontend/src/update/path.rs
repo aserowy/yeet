@@ -128,7 +128,6 @@ pub fn set_preview_to_selected(
     unwatch_old_path: bool,
     watch_new_path: bool,
 ) -> Option<Vec<PostRenderAction>> {
-    let mut actions = Vec::new();
     if let Some(selected) = get_selected_path(model) {
         let current = &model.current.path;
         if current == &selected {
@@ -137,6 +136,7 @@ pub fn set_preview_to_selected(
             return None;
         }
 
+        let mut actions = Vec::new();
         if unwatch_old_path {
             actions.push(PostRenderAction::UnwatchPath(model.preview.path.clone()));
         }
@@ -146,7 +146,9 @@ pub fn set_preview_to_selected(
         }
 
         model.preview.path = selected.to_path_buf();
-    };
 
-    Some(actions)
+        Some(actions)
+    } else {
+        None
+    }
 }
