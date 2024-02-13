@@ -63,7 +63,7 @@ impl TaskManager {
 
                 Ok(())
             }),
-            // TODO: batch dirs and send message batches with 500 entries
+            // TODO: use own stream to not block user input on e.g. large directories
             Task::EnumerateDirectory(path) => {
                 let internal_sender = self.sender.clone();
                 self.tasks.spawn(async move {
