@@ -1,8 +1,6 @@
 use yate_keymap::message::{self, CursorDirection, Mode};
 
-use crate::model::buffer::{
-    viewport::ViewPort, Buffer, BufferLine, BufferResult, Cursor, CursorPosition,
-};
+use crate::model::buffer::{Buffer, BufferLine, BufferResult, CursorPosition};
 
 mod bufferline;
 pub mod cursor;
@@ -49,11 +47,12 @@ pub fn focus_buffer(buffer: &mut Buffer) {
     }
 }
 
-pub fn reset_view(view_port: &mut ViewPort, cursor: &mut Option<Cursor>) {
+pub fn reset_view(model: &mut Buffer) {
+    let view_port = &mut model.view_port;
     view_port.horizontal_index = 0;
     view_port.vertical_index = 0;
 
-    if let Some(cursor) = cursor {
+    if let Some(cursor) = &mut model.cursor {
         cursor.vertical_index = 0;
 
         cursor.horizontial_index = match &cursor.horizontial_index {

@@ -19,7 +19,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Buffer) {
         }
 
         if from != &Mode::Command && to == &Mode::Command {
-            buffer::reset_view(&mut buffer.view_port, &mut buffer.cursor);
+            buffer::reset_view(buffer);
 
             let bufferline = BufferLine {
                 prefix: Some(":".to_string()),

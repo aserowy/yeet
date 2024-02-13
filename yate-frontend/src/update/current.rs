@@ -20,6 +20,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
 
     if let Some(message) = message {
         buffer::update(&model.mode, buffer, message);
+    } else {
+        buffer::reset_view(buffer);
     }
 }
 
