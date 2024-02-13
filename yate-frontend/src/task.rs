@@ -72,13 +72,24 @@ impl TaskManager {
                     }
 
                     let read_dir = tokio::fs::read_dir(path).await;
+                    let mut cache = Vec::new();
                     match read_dir {
                         Ok(mut rd) => {
                             while let Some(entry) = rd.next_entry().await? {
-                                internal_sender
-                                    .send(RenderAction::PathAdded(entry.path()))
-                                    .unwrap();
+                                if cache.len() >= 1000 {
+                                    cache.push(entry.path());
+
+                                    internal_sender
+                                        .send(RenderAction::PathsAdded(cache.drain(..).collect()))
+                                        .unwrap();
+                                } else {
+                                    cache.push(entry.path());
+                                }
                             }
+
+                            internal_sender
+                                .send(RenderAction::PathsAdded(cache))
+                                .unwrap();
 
                             Ok(())
                         }

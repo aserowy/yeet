@@ -22,7 +22,7 @@ pub enum RenderAction {
     Resize(u16, u16),
     Refresh,
     Startup,
-    PathAdded(PathBuf),
+    PathsAdded(Vec<PathBuf>),
     PathRemoved(PathBuf),
 }
 
@@ -124,7 +124,7 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
             event
                 .paths
                 .iter()
-                .map(|p| RenderAction::PathAdded(p.clone()))
+                .map(|p| RenderAction::PathsAdded(vec![p.clone()]))
                 .collect(),
         ),
         // TODO: handle rename events with rename mode to/from (needs buffering)
@@ -132,7 +132,7 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
             if event.paths.len() == 2 {
                 Some(vec![
                     RenderAction::PathRemoved(event.paths[0].clone()),
-                    RenderAction::PathAdded(event.paths[1].clone()),
+                    RenderAction::PathsAdded(vec![event.paths[1].clone()]),
                 ])
             } else {
                 // TODO: log invalid event
@@ -161,7 +161,7 @@ pub fn convert_to_messages(
         // TODO: log error?
         RenderAction::Error => vec![Message::Refresh],
         RenderAction::Key(key) => message_resolver.add_and_resolve(key),
-        RenderAction::PathAdded(path) => vec![Message::PathAdded(path)],
+        RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
         RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
         RenderAction::Refresh => vec![Message::Refresh],
         RenderAction::Resize(_, _) => vec![Message::Refresh],

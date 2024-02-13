@@ -155,8 +155,8 @@ pub fn update(
                 Some(actions)
             }
         },
-        Message::PathAdded(path) => {
-            directory::add_path(model, path);
+        Message::PathsAdded(paths) => {
+            directory::add_paths(model, paths);
 
             None
         }

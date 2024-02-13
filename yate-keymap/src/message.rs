@@ -19,7 +19,7 @@ pub enum Message {
     Modification(TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
-    PathAdded(PathBuf),
+    PathsAdded(Vec<PathBuf>),
     PathRemoved(PathBuf),
     Refresh,
     SaveBuffer(Option<usize>),

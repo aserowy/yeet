@@ -1,10 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use yate_keymap::message::Mode;
 
 use crate::model::{buffer::Buffer, Model};
 
-pub fn add_path(model: &mut Model, path: &Path) {
+pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
     // TODO: refactor into directory mod
     let mut buffer = vec![
         (
@@ -19,12 +19,14 @@ pub fn add_path(model: &mut Model, path: &Path) {
         ),
     ];
 
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer, true));
     }
 
-    if let Some(parent) = path.parent() {
-        if let Some((_, buffer, sort)) = buffer.into_iter().find(|(p, _, _)| p == &parent) {
+    for (path, buffer, sort) in buffer {
+        let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
+
+        for path in paths_for_buffer {
             // TODO: better closer warmer: remove virtual entries... instead of this shiat
             if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
                 let exists = buffer
@@ -52,15 +54,15 @@ pub fn add_path(model: &mut Model, path: &Path) {
                         }
                     }
                 }
-
-                if sort {
-                    sort_content(&model.mode, buffer);
-                }
-
-                super::buffer::cursor::validate(&model.mode, buffer);
-                // TODO: correct cursor to stay on selection
             }
         }
+
+        if sort {
+            sort_content(&model.mode, buffer);
+        }
+
+        super::buffer::cursor::validate(&model.mode, buffer);
+        // TODO: correct cursor to stay on selection
     }
 }
 
