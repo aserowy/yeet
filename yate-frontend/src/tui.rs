@@ -21,7 +21,7 @@ use crate::{
         history::{self},
         Model,
     },
-    task::{Task, TaskManager},
+    task::Task,
     update::{self},
     view::{self},
 };
@@ -38,10 +38,9 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
-    let (mut watcher, sender, mut receiver) = event::listen();
+    let (mut watcher, mut tasks, mut receiver) = event::listen();
 
     let mut resolver = MessageResolver::default();
-    let mut tasks = TaskManager::new(sender);
     let mut result = Vec::new();
 
     'app_loop: while let Some(event) = receiver.recv().await {
@@ -81,6 +80,8 @@ pub async fn run(_address: String) -> Result<(), AppError> {
 
                     if p.is_dir() {
                         tasks.run(Task::EnumerateDirectory(p.clone()));
+                    } else {
+                        // TODO: task to load preview with own message
                     }
 
                     if let Err(_error) = watcher.watch(p.as_path(), RecursiveMode::NonRecursive) {

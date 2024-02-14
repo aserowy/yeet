@@ -5,7 +5,7 @@ use notify::{
     event::{ModifyKind, RenameMode},
     INotifyWatcher,
 };
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{self, Receiver};
 use yate_keymap::{
     conversion,
     key::Key,
@@ -13,7 +13,7 @@ use yate_keymap::{
     MessageResolver,
 };
 
-use crate::task::Task;
+use crate::task::{Task, TaskManager};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RenderAction {
@@ -38,39 +38,42 @@ pub enum PostRenderAction {
 }
 
 // TODO: replace unwraps with shutdown struct (server) and graceful exit 1
-pub fn listen() -> (
-    INotifyWatcher,
-    UnboundedSender<RenderAction>,
-    UnboundedReceiver<RenderAction>,
-) {
-    let (sender, receiver) = mpsc::unbounded_channel();
+pub fn listen() -> (INotifyWatcher, TaskManager, Receiver<RenderAction>) {
+    let (sender, receiver) = mpsc::channel(1);
     let internal_sender = sender.clone();
 
-    let (watcher_sender, mut watcher_receiver) = mpsc::unbounded_channel();
+    let (watcher_sender, mut notify_receiver) = mpsc::unbounded_channel();
     let watcher = notify::recommended_watcher(move |res| {
         watcher_sender.send(res).unwrap();
     })
     .unwrap();
 
+    let (task_sender, mut task_receiver) = mpsc::unbounded_channel();
+    let tasks = TaskManager::new(task_sender);
+
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        internal_sender.send(RenderAction::Startup).unwrap();
+        internal_sender
+            .send(RenderAction::Startup)
+            .await
+            .expect("Failed to send message");
 
         loop {
             let crossterm_event = reader.next().fuse();
-            let notify_event = watcher_receiver.recv().fuse();
+            let notify_event = notify_receiver.recv().fuse();
+            let task_event = task_receiver.recv().fuse();
 
             tokio::select! {
                 event = crossterm_event => {
                     match event {
                         Some(Ok(event)) => {
                             if let Some(message) = handle_crossterm_event(event) {
-                                internal_sender.send(message).unwrap();
+                                let _ = internal_sender.send(message).await;
                             }
                         },
                         Some(Err(_)) => {
-                            internal_sender.send(RenderAction::Error).unwrap();
+                            let _ = internal_sender.send(RenderAction::Error).await;
                         },
                         None => {},
                     }
@@ -80,22 +83,29 @@ pub fn listen() -> (
                         Some(Ok(event)) => {
                             if let Some(messages) = handle_notify_event(event) {
                                 for message in messages {
-                                    internal_sender.send(message).unwrap();
+                                    let _ = internal_sender.send(message).await;
                                 }
                             }
                         },
                         Some(Err(_)) => {
-                            internal_sender.send(RenderAction::Error).unwrap();
+                            let _ = internal_sender.send(RenderAction::Error).await;
+                        },
+                        None => {},
+                    }
+                }
+                event = task_event => {
+                    match event {
+                        Some(event) => {
+                            let _ = internal_sender.send(event).await;
                         },
                         None => {},
                     }
                 },
-
             }
         }
     });
 
-    (watcher, sender, receiver)
+    (watcher, tasks, receiver)
 }
 
 fn handle_crossterm_event(event: crossterm::event::Event) -> Option<RenderAction> {

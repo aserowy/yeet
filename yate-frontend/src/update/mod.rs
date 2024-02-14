@@ -17,7 +17,7 @@ mod parent;
 mod path;
 mod preview;
 
-// TODO: refactore into right abstraction level (what ever right means here :D)
+// TODO: refactor into right abstraction level (what ever right means here :D)
 pub fn update(
     model: &mut Model,
     layout: &AppLayout,
