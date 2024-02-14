@@ -66,7 +66,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                         continue;
                     }
 
-                    // TODO: stop current dir content enumeration
+                    tasks.abort(&Task::EnumerateDirectory(p.clone()));
 
                     if let Err(_error) = watcher.unwatch(p.as_path()) {
                         // TODO: log error

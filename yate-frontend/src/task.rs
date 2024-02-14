@@ -1,10 +1,17 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
-use tokio::{fs, sync::mpsc::UnboundedSender, task::JoinSet};
+use tokio::{
+    fs,
+    sync::mpsc::Sender,
+    task::{AbortHandle, JoinSet},
+};
 
 use crate::{error::AppError, event::RenderAction, model::history};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
@@ -14,21 +21,48 @@ pub enum Task {
 }
 
 pub struct TaskManager {
-    sender: UnboundedSender<RenderAction>,
+    abort_handles: HashMap<Task, AbortHandle>,
+    sender: Sender<RenderAction>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 impl TaskManager {
-    pub fn new(sender: UnboundedSender<RenderAction>) -> Self {
+    pub fn new(sender: Sender<RenderAction>) -> Self {
         Self {
+            abort_handles: HashMap::new(),
             sender,
             tasks: JoinSet::new(),
         }
     }
 
+    pub fn abort(&mut self, task: &Task) {
+        if let Some(abort_handle) = self.abort_handles.remove(task) {
+            abort_handle.abort();
+        }
+    }
+
+    pub async fn finishing(&mut self) -> Result<(), AppError> {
+        let mut errors = Vec::new();
+        while let Some(task) = self.tasks.join_next().await {
+            match task {
+                Ok(Ok(())) => (),
+                // TODO: log error
+                Ok(Err(error)) => errors.push(error),
+                // TODO: log error
+                Err(_) => (),
+            };
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(AppError::Aggregate(errors))
+        }
+    }
+
     // TODO: if error occurs, enable handling in model with RenderAction + sender
     pub fn run(&mut self, task: Task) {
-        match task {
+        let abort_handle = match task.clone() {
             Task::AddPath(path) => self.tasks.spawn(async move {
                 if path.exists() {
                     return Err(AppError::InvalidTargetPath);
@@ -80,9 +114,9 @@ impl TaskManager {
                                 if cache.len() >= cache_size.round() as usize {
                                     cache.push(entry.path());
 
-                                    internal_sender
+                                    let _ = internal_sender
                                         .send(RenderAction::PathsAdded(cache.drain(..).collect()))
-                                        .unwrap();
+                                        .await;
 
                                     if cache_size < max_cache_size {
                                         cache_size = cache_size * 1.5;
@@ -92,13 +126,10 @@ impl TaskManager {
                                 }
                             }
 
-                            internal_sender
-                                .send(RenderAction::PathsAdded(cache))
-                                .unwrap();
-
-                            internal_sender
+                            let _ = internal_sender.send(RenderAction::PathsAdded(cache)).await;
+                            let _ = internal_sender
                                 .send(RenderAction::PathEnumerationFinished(path))
-                                .unwrap();
+                                .await;
 
                             Ok(())
                         }
@@ -121,24 +152,9 @@ impl TaskManager {
                 Ok(())
             }),
         };
-    }
 
-    pub async fn finishing(&mut self) -> Result<(), AppError> {
-        let mut errors = Vec::new();
-        while let Some(task) = self.tasks.join_next().await {
-            match task {
-                Ok(Ok(())) => (),
-                // TODO: log error
-                Ok(Err(error)) => errors.push(error),
-                // TODO: log error
-                Err(_) => (),
-            };
-        }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(AppError::Aggregate(errors))
+        if let Some(handle) = self.abort_handles.insert(task, abort_handle) {
+            handle.abort();
         }
     }
 }

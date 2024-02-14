@@ -48,7 +48,7 @@ pub fn listen() -> (INotifyWatcher, TaskManager, Receiver<RenderAction>) {
     })
     .unwrap();
 
-    let (task_sender, mut task_receiver) = mpsc::unbounded_channel();
+    let (task_sender, mut task_receiver) = mpsc::channel(2);
     let tasks = TaskManager::new(task_sender);
 
     tokio::spawn(async move {
