@@ -63,7 +63,6 @@ impl TaskManager {
 
                 Ok(())
             }),
-            // TODO: use own stream to not block user input on e.g. large directories
             Task::EnumerateDirectory(path) => {
                 let internal_sender = self.sender.clone();
                 self.tasks.spawn(async move {
@@ -75,13 +74,19 @@ impl TaskManager {
                     let mut cache = Vec::new();
                     match read_dir {
                         Ok(mut rd) => {
+                            let mut cache_size: f64 = 500.0;
+                            let max_cache_size: f64 = 10_000.0;
                             while let Some(entry) = rd.next_entry().await? {
-                                if cache.len() >= 5000 {
+                                if cache.len() >= cache_size.round() as usize {
                                     cache.push(entry.path());
 
                                     internal_sender
                                         .send(RenderAction::PathsAdded(cache.drain(..).collect()))
                                         .unwrap();
+
+                                    if cache_size < max_cache_size {
+                                        cache_size = cache_size * 1.5;
+                                    }
                                 } else {
                                     cache.push(entry.path());
                                 }
