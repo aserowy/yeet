@@ -308,6 +308,8 @@ pub fn update(
             model.preview.buffer.lines.clear();
             preview::update(model, layout, None);
 
+            model.history.add(&model.current.path);
+
             Some(actions)
         }
         Message::Quit => Some(vec![
