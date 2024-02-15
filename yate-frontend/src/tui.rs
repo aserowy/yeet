@@ -80,7 +80,6 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                     }
                 }
                 PostRenderAction::WatchPath(p) => {
-                    // TODO: handle rename events and unwatch old and watch new
                     if p == PathBuf::default() {
                         continue;
                     }

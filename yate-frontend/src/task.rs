@@ -143,11 +143,18 @@ impl TaskManager {
             Task::LoadPreview(path) => {
                 let internal_sender = self.sender.clone();
                 self.tasks.spawn(async move {
+                    if let Some(kind) = infer::get_from_path(path.clone())? {
+                        // TODO: add preview for images here
+                        if !kind.mime_type().starts_with("text") {
+                            return Err(AppError::InvalidTargetPath);
+                        }
+                    }
 
+                    let content = fs::read_to_string(path.clone()).await?;
                     let _ = internal_sender
                         .send(RenderAction::PreviewLoaded(
                             path.clone(),
-                            vec!["preview".to_string(), "loaded...".to_string()],
+                            content.lines().map(|s| s.to_string()).collect(),
                         ))
                         .await;
 
