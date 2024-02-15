@@ -332,7 +332,7 @@ pub fn update(
             Some(actions)
         }
         Message::Quit => Some(vec![
-            PostRenderAction::OptimizeHistory,
+            PostRenderAction::Task(Task::SaveHistory(model.history.clone())),
             PostRenderAction::Quit,
         ]),
     }

@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use tokio::{
     fs,
@@ -9,9 +6,13 @@ use tokio::{
     task::{AbortHandle, JoinSet},
 };
 
-use crate::{error::AppError, event::RenderAction, model::history};
+use crate::{
+    error::AppError,
+    event::RenderAction,
+    model::history::{self, History},
+};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
@@ -19,10 +20,11 @@ pub enum Task {
     LoadPreview(PathBuf),
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
+    SaveHistory(History),
 }
 
 pub struct TaskManager {
-    abort_handles: HashMap<Task, AbortHandle>,
+    abort_handles: Vec<(Task, AbortHandle)>,
     sender: Sender<RenderAction>,
     tasks: JoinSet<Result<(), AppError>>,
 }
@@ -30,14 +32,15 @@ pub struct TaskManager {
 impl TaskManager {
     pub fn new(sender: Sender<RenderAction>) -> Self {
         Self {
-            abort_handles: HashMap::new(),
+            abort_handles: Vec::new(),
             sender,
             tasks: JoinSet::new(),
         }
     }
 
     pub fn abort(&mut self, task: &Task) {
-        if let Some(abort_handle) = self.abort_handles.remove(task) {
+        if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == task) {
+            let (_, abort_handle) = self.abort_handles.remove(index);
             abort_handle.abort();
         }
     }
@@ -146,7 +149,7 @@ impl TaskManager {
                     if let Some(kind) = infer::get_from_path(path.clone())? {
                         // TODO: add preview for images here
                         if !kind.mime_type().starts_with("text") {
-                            return Err(AppError::InvalidTargetPath);
+                            return Ok(());
                         }
                     }
 
@@ -175,10 +178,20 @@ impl TaskManager {
 
                 Ok(())
             }),
+            Task::SaveHistory(history) => self.tasks.spawn(async move {
+                if let Err(_error) = history::cache::save(&history) {
+                    // TODO: log error
+                }
+
+                Ok(())
+            }),
         };
 
-        if let Some(handle) = self.abort_handles.insert(task, abort_handle) {
-            handle.abort();
+        if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == &task) {
+            let (_, abort_handle) = self.abort_handles.remove(index);
+            abort_handle.abort();
         }
+
+        self.abort_handles.push((task, abort_handle));
     }
 }

@@ -6,12 +6,12 @@ use std::{
 
 pub mod cache;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct History {
     pub entries: HashMap<String, HistoryNode>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HistoryNode {
     changed_at: u64,
     component: String,
@@ -19,7 +19,7 @@ pub struct HistoryNode {
     state: HistoryState,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum HistoryState {
     Added,
 

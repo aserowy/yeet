@@ -115,7 +115,6 @@ fn save_filtered(
         }
 
         if let Some(path) = path.to_str() {
-            // if let Err(_) = history_csv_writer.write_record([changed_at.to_string().as_str(), path])
             if history_csv_writer
                 .write_record([changed_at.to_string().as_str(), path])
                 .is_err()

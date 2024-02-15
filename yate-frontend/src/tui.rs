@@ -58,12 +58,6 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
-                PostRenderAction::OptimizeHistory => {
-                    // TODO: add task to task manager
-                    if let Err(_error) = history::cache::save(&model.history) {
-                        // TODO: log error
-                    }
-                }
                 PostRenderAction::Quit => {
                     break 'app_loop;
                 }
