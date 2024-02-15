@@ -4,7 +4,10 @@ use yate_keymap::message::{Buffer, Message, Mode};
 use crate::{
     event::PostRenderAction,
     layout::AppLayout,
-    model::{buffer::viewport::ViewPort, Model},
+    model::{
+        buffer::{viewport::ViewPort, BufferLine},
+        Model,
+    },
     task::Task,
 };
 
@@ -214,6 +217,22 @@ pub fn update(
             } else {
                 Some(actions)
             }
+        }
+        Message::PreviewLoaded(path, content) => {
+            if path == &model.preview.path {
+                let content = content
+                    .iter()
+                    .map(|s| BufferLine {
+                        content: s.to_string(),
+                        ..Default::default()
+                    })
+                    .collect();
+
+                buffer::set_content(&model.mode, &mut model.preview.buffer, content);
+                preview::update(model, layout, None);
+            }
+
+            None
         }
         Message::SelectCurrent => {
             if model.mode != Mode::Navigation {

@@ -19,6 +19,7 @@ pub enum Message {
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
+    PreviewLoaded(PathBuf, Vec<String>),
     SelectCurrent,
     SelectParent,
     SelectPath(PathBuf),

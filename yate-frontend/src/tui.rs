@@ -3,15 +3,12 @@ use crossterm::{
     ExecutableCommand,
 };
 use notify::{RecursiveMode, Watcher};
-use ratatui::{
-    prelude::{CrosstermBackend, Terminal},
-    Frame,
-};
+use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::{
     io::{stderr, BufWriter},
     path::PathBuf,
 };
-use yate_keymap::{message::Message, MessageResolver};
+use yate_keymap::MessageResolver;
 
 use crate::{
     error::AppError,
@@ -46,13 +43,23 @@ pub async fn run(_address: String) -> Result<(), AppError> {
     'app_loop: while let Some(event) = receiver.recv().await {
         let messages = event::convert_to_messages(event, &mut resolver);
 
-        let mut post_render_actions = Vec::new();
-        terminal.draw(|frame| post_render_actions = render(&mut model, frame, &messages))?;
+        let size = terminal.size().expect("Failed to get terminal size");
+        let layout = AppLayout::default(size);
+
+        let post_render_actions: Vec<_> = messages
+            .iter()
+            .flat_map(|message| update::update(&mut model, &layout, message))
+            .flatten()
+            .collect();
+
+        // TODO: introduce skip rendering on certain message sents to prevent flickering (e.g. enumeration, preview)
+        terminal.draw(|frame| view::view(&mut model, frame, &layout))?;
 
         for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
                 PostRenderAction::OptimizeHistory => {
+                    // TODO: add task to task manager
                     if let Err(_error) = history::cache::save(&model.history) {
                         // TODO: log error
                     }
@@ -81,7 +88,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                     if p.is_dir() {
                         tasks.run(Task::EnumerateDirectory(p.clone()));
                     } else {
-                        // TODO: task to load preview with own message
+                        tasks.run(Task::LoadPreview(p.clone()));
                     }
 
                     if let Err(_error) = watcher.watch(p.as_path(), RecursiveMode::NonRecursive) {
@@ -104,18 +111,4 @@ pub async fn run(_address: String) -> Result<(), AppError> {
     } else {
         Err(AppError::Aggregate(result))
     }
-}
-
-fn render(model: &mut Model, frame: &mut Frame, messages: &[Message]) -> Vec<PostRenderAction> {
-    let layout = AppLayout::default(frame.size());
-
-    let post_render_actions = messages
-        .iter()
-        .flat_map(|message| update::update(model, &layout, message))
-        .flatten()
-        .collect();
-
-    view::view(model, frame, &layout);
-
-    post_render_actions
 }

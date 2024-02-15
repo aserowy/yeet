@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use futures::{FutureExt, StreamExt};
 use notify::{
     event::{ModifyKind, RenameMode},
-    INotifyWatcher,
+    RecommendedWatcher,
 };
 use tokio::sync::mpsc::{self, Receiver};
 use yate_keymap::{
@@ -25,6 +25,7 @@ pub enum RenderAction {
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
+    PreviewLoaded(PathBuf, Vec<String>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -37,18 +38,19 @@ pub enum PostRenderAction {
     WatchPath(PathBuf),
 }
 
-// TODO: replace unwraps with shutdown struct (server) and graceful exit 1
-pub fn listen() -> (INotifyWatcher, TaskManager, Receiver<RenderAction>) {
+pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
     let (sender, receiver) = mpsc::channel(1);
     let internal_sender = sender.clone();
 
     let (watcher_sender, mut notify_receiver) = mpsc::unbounded_channel();
     let watcher = notify::recommended_watcher(move |res| {
-        watcher_sender.send(res).unwrap();
+        if let Err(_err) = watcher_sender.send(res) {
+            // TODO: log error
+        }
     })
-    .unwrap();
+    .expect("Failed to create watcher");
 
-    let (task_sender, mut task_receiver) = mpsc::channel(2);
+    let (task_sender, mut task_receiver) = mpsc::channel(1);
     let tasks = TaskManager::new(task_sender);
 
     tokio::spawn(async move {
@@ -175,6 +177,7 @@ pub fn convert_to_messages(
         RenderAction::PathEnumerationFinished(path) => vec![Message::PathEnumerationFinished(path)],
         RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
         RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
+        RenderAction::PreviewLoaded(path, content) => vec![Message::PreviewLoaded(path, content)],
         RenderAction::Refresh => vec![],
         RenderAction::Resize(_, _) => vec![],
         RenderAction::Startup => vec![Message::SelectPath(get_current_path())],
