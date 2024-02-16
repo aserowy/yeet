@@ -69,41 +69,6 @@ impl Default for KeyMap {
 
         add_mapping(
             &mut mappings,
-            vec![Mode::Insert],
-            vec![
-                (
-                    vec![Key::new(KeyCode::Backspace, vec![])],
-                    Binding::Message(Message::Buffer(Buffer::Modification(
-                        TextModification::DeleteCharBeforeCursor,
-                    ))),
-                ),
-                (
-                    vec![Key::new(KeyCode::Enter, vec![])],
-                    Binding::Message(Message::ExecuteCommand),
-                ),
-                (
-                    vec![Key::new(KeyCode::Esc, vec![])],
-                    Binding::Mode(Mode::Normal),
-                ),
-                (
-                    vec![Key::new(KeyCode::Delete, vec![])],
-                    Binding::Message(Message::Buffer(Buffer::Modification(
-                        TextModification::DeleteCharOnCursor,
-                    ))),
-                ),
-                (
-                    vec![Key::new(KeyCode::Left, vec![])],
-                    Binding::Motion(CursorDirection::Left),
-                ),
-                (
-                    vec![Key::new(KeyCode::Right, vec![])],
-                    Binding::Motion(CursorDirection::Right),
-                ),
-            ],
-        );
-
-        add_mapping(
-            &mut mappings,
             vec![Mode::Navigation],
             vec![
                 (
@@ -300,6 +265,37 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
+                    Binding::Motion(CursorDirection::Right),
+                ),
+            ],
+        );
+
+        add_mapping(
+            &mut mappings,
+            vec![Mode::Insert],
+            vec![
+                (
+                    vec![Key::new(KeyCode::Backspace, vec![])],
+                    Binding::Message(Message::Buffer(Buffer::Modification(
+                        TextModification::DeleteCharBeforeCursor,
+                    ))),
+                ),
+                (
+                    vec![Key::new(KeyCode::Esc, vec![])],
+                    Binding::Mode(Mode::Normal),
+                ),
+                (
+                    vec![Key::new(KeyCode::Delete, vec![])],
+                    Binding::Message(Message::Buffer(Buffer::Modification(
+                        TextModification::DeleteCharOnCursor,
+                    ))),
+                ),
+                (
+                    vec![Key::new(KeyCode::Left, vec![])],
+                    Binding::Motion(CursorDirection::Left),
+                ),
+                (
+                    vec![Key::new(KeyCode::Right, vec![])],
                     Binding::Motion(CursorDirection::Right),
                 ),
             ],

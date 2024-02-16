@@ -16,6 +16,7 @@ pub enum Message {
     Buffer(Buffer),
     ChangeKeySequence(String),
     ExecuteCommand,
+    ExecuteCommandString(String),
     PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),

@@ -127,56 +127,62 @@ pub fn update(
             model.key_sequence = sequence.clone();
             None
         }
-        // TODO: add content to message to enable commands from outside without dependency to command line content
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
-                let post_render_actions = match cmd.content.as_str() {
-                    "e!" => update(
-                        model,
-                        layout,
-                        &Message::SelectPath(model.current.path.clone()),
-                    ),
-                    "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
-                        Task::OptimizeHistory,
-                    ))]),
-                    "q" => update(model, layout, &Message::Quit),
-                    "w" => update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None))),
-                    "wq" => {
-                        let actions: Vec<_> =
-                            update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None)))
-                                .into_iter()
-                                .flatten()
-                                .chain(update(model, layout, &Message::Quit).into_iter().flatten())
-                                .collect();
-
-                        if actions.is_empty() {
-                            None
-                        } else {
-                            Some(actions)
-                        }
-                    }
-                    _ => None,
-                };
-
-                let mode_changed_actions = update(
+                update(
                     model,
                     layout,
-                    &Message::Buffer(Buffer::ChangeMode(
-                        model.mode.clone(),
-                        get_mode_after_command(&model.mode_before),
-                    )),
-                );
-
-                Some(
-                    post_render_actions
-                        .into_iter()
-                        .flatten()
-                        .chain(mode_changed_actions.into_iter().flatten())
-                        .collect(),
+                    &Message::ExecuteCommandString(cmd.content.clone()),
                 )
             } else {
                 None
             }
+        }
+        Message::ExecuteCommandString(command) => {
+            let post_render_actions = match command.as_str() {
+                "e!" => update(
+                    model,
+                    layout,
+                    &Message::SelectPath(model.current.path.clone()),
+                ),
+                "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
+                    Task::OptimizeHistory,
+                ))]),
+                "q" => update(model, layout, &Message::Quit),
+                "w" => update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None))),
+                "wq" => {
+                    let actions: Vec<_> =
+                        update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None)))
+                            .into_iter()
+                            .flatten()
+                            .chain(update(model, layout, &Message::Quit).into_iter().flatten())
+                            .collect();
+
+                    if actions.is_empty() {
+                        None
+                    } else {
+                        Some(actions)
+                    }
+                }
+                _ => None,
+            };
+
+            let mode_changed_actions = update(
+                model,
+                layout,
+                &Message::Buffer(Buffer::ChangeMode(
+                    model.mode.clone(),
+                    get_mode_after_command(&model.mode_before),
+                )),
+            );
+
+            Some(
+                post_render_actions
+                    .into_iter()
+                    .flatten()
+                    .chain(mode_changed_actions.into_iter().flatten())
+                    .collect(),
+            )
         }
         Message::PathEnumerationContentChanged(path, contents) => {
             // TODO: handle unsaved changes
