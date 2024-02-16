@@ -17,7 +17,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
         buffer::reset_view(buffer);
     }
 
-    if !history::set_cursor_index(&target, &model.history, buffer) {
+    if !history::set_cursor_index(target, &model.history, buffer) {
         buffer.cursor = None;
     };
 }

@@ -117,9 +117,7 @@ pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<RenderA
 
 pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<RenderAction>> {
     if let Some(selected) = get_selected_path(model) {
-        if model.current.path == selected {
-            return None;
-        } else if !selected.is_dir() {
+        if model.current.path == selected || !selected.is_dir() {
             return None;
         }
 
@@ -145,9 +143,7 @@ pub fn set_preview_to_selected(
 ) -> Option<Vec<RenderAction>> {
     if let Some(selected) = get_selected_path(model) {
         let current = &model.current.path;
-        if current == &selected {
-            return None;
-        } else if model.preview.path == selected {
+        if current == &selected || model.preview.path == selected {
             return None;
         }
 

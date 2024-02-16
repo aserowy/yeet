@@ -186,7 +186,7 @@ pub fn update(
                 buffer.push((parent, &mut model.parent.buffer));
             }
 
-            if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == &path) {
+            if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
                 history::set_cursor_index(path, &model.history, buffer);
             }
 

@@ -7,7 +7,7 @@ use yate_keymap::message::Mode;
 
 use crate::model::{buffer::Buffer, Model};
 
-pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
+pub fn add_paths(model: &mut Model, paths: &[PathBuf]) {
     let mut buffer = vec![
         (
             model.current.path.as_path(),
@@ -37,12 +37,13 @@ pub fn add_paths(model: &mut Model, paths: &Vec<PathBuf>) {
                 } else {
                     bl.content.clone()
                 };
-                return (key, i);
+
+                (key, i)
             })
             .collect::<HashMap<_, _>>();
 
         for path in paths_for_buffer {
-            if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
+            if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let line = super::path::get_bufferline_by_path(path);
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;
@@ -82,7 +83,7 @@ pub fn remove_path(model: &mut Model, path: &Path) {
 
     if let Some(parent) = path.parent() {
         if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == &parent) {
-            if let Some(basename) = path.file_name().map(|oss| oss.to_str()).flatten() {
+            if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let index = buffer
                     .lines
                     .iter()

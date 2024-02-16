@@ -74,38 +74,19 @@ pub fn listen() -> (
             let task_event = task_receiver.recv().fuse();
 
             tokio::select! {
-                event = crossterm_event => {
-                    match event {
-                        Some(Ok(event)) => {
-                            if let Some(message) = handle_crossterm_event(&inner_resolver_mutex, event).await {
-                                let _ = internal_sender.send(message).await;
-                            }
-                        },
-                        Some(Err(_)) => {
-                            // TODO: log error
-                        },
-                        None => {},
+                Some(Ok(event)) = crossterm_event => {
+                    if let Some(message) = handle_crossterm_event(&inner_resolver_mutex, event).await {
+                        let _ = internal_sender.send(message).await;
                     }
                 },
-                event = notify_event => {
-                    match event {
-                        Some(Ok(event)) => {
-                            if let Some(messages) = handle_notify_event(event) {
-                                let _ = internal_sender.send(messages).await;
-                            }
-                        },
-                        Some(Err(_)) => {
-                            // TODO: log error
-                        },
-                        None => {},
+                Some(Ok(event)) = notify_event => {
+                    if let Some(messages) = handle_notify_event(event) {
+                        let _ = internal_sender.send(messages).await;
                     }
                 }
                 event = task_event => {
-                    match event {
-                        Some(event) => {
-                            let _ = internal_sender.send(event).await;
-                        },
-                        None => {},
+                    if let Some(event) = event{
+                        let _ = internal_sender.send(event).await;
                     }
                 },
             }

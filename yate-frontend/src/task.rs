@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    mem,
+    path::{Path, PathBuf},
+};
 
 use tokio::{
     fs,
@@ -121,11 +124,11 @@ impl TaskManager {
                                     // TODO: introduce custom message for this that contains all entries and frontload
                                     // bufferline creation, sorting and filtering to enable simple content replace
                                     let _ = internal_sender
-                                        .send(vec![Message::PathsAdded(cache.drain(..).collect())])
+                                        .send(vec![Message::PathsAdded(mem::take(&mut cache))])
                                         .await;
 
                                     if cache_size < max_cache_size {
-                                        cache_size = cache_size * 2;
+                                        cache_size *= 2;
                                     }
                                 } else {
                                     cache.push(entry.path());
