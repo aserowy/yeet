@@ -8,7 +8,6 @@ use std::{
     io::{stderr, BufWriter},
     path::PathBuf,
 };
-use yate_keymap::MessageResolver;
 
 use crate::{
     error::AppError,
@@ -35,14 +34,10 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
-    let (mut watcher, mut tasks, mut receiver) = event::listen();
-
-    let mut resolver = MessageResolver::default();
+    let (resolver_mutex, mut watcher, mut tasks, mut receiver) = event::listen();
     let mut result = Vec::new();
 
-    'app_loop: while let Some(event) = receiver.recv().await {
-        let messages = event::convert_to_messages(event, &mut resolver);
-
+    'app_loop: while let Some(messages) = receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
         let layout = AppLayout::default(size);
 
@@ -52,12 +47,16 @@ pub async fn run(_address: String) -> Result<(), AppError> {
             .flatten()
             .collect();
 
-        // TODO: introduce skip rendering on certain message sents to prevent flickering (e.g. enumeration, preview)
         terminal.draw(|frame| view::view(&mut model, frame, &layout))?;
 
+        // TODO: refactor post render actions
         for post_render_action in post_render_actions {
             match post_render_action {
-                PostRenderAction::ModeChanged(mode) => resolver.mode = mode,
+                PostRenderAction::ModeChanged(mode) => {
+                    let mut resolver = resolver_mutex.lock().await;
+                    resolver.mode = mode
+                }
+
                 PostRenderAction::Quit => {
                     break 'app_loop;
                 }

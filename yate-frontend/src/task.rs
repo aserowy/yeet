@@ -5,10 +5,10 @@ use tokio::{
     sync::mpsc::Sender,
     task::{AbortHandle, JoinSet},
 };
+use yate_keymap::message::Message;
 
 use crate::{
     error::AppError,
-    event::RenderAction,
     model::history::{self, History},
 };
 
@@ -25,12 +25,12 @@ pub enum Task {
 
 pub struct TaskManager {
     abort_handles: Vec<(Task, AbortHandle)>,
-    sender: Sender<RenderAction>,
+    sender: Sender<Vec<Message>>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 impl TaskManager {
-    pub fn new(sender: Sender<RenderAction>) -> Self {
+    pub fn new(sender: Sender<Vec<Message>>) -> Self {
         Self {
             abort_handles: Vec::new(),
             sender,
@@ -121,7 +121,7 @@ impl TaskManager {
                                     // TODO: introduce custom message for this that contains all entries and frontload
                                     // bufferline creation, sorting and filtering to enable simple content replace
                                     let _ = internal_sender
-                                        .send(RenderAction::PathsAdded(cache.drain(..).collect()))
+                                        .send(vec![Message::PathsAdded(cache.drain(..).collect())])
                                         .await;
 
                                     if cache_size < max_cache_size {
@@ -132,9 +132,9 @@ impl TaskManager {
                                 }
                             }
 
-                            let _ = internal_sender.send(RenderAction::PathsAdded(cache)).await;
+                            let _ = internal_sender.send(vec![Message::PathsAdded(cache)]).await;
                             let _ = internal_sender
-                                .send(RenderAction::PathEnumerationFinished(path))
+                                .send(vec![Message::PathEnumerationFinished(path)])
                                 .await;
 
                             Ok(())
@@ -155,10 +155,10 @@ impl TaskManager {
 
                     let content = fs::read_to_string(path.clone()).await?;
                     let _ = internal_sender
-                        .send(RenderAction::PreviewLoaded(
+                        .send(vec![Message::PreviewLoaded(
                             path.clone(),
                             content.lines().map(|s| s.to_string()).collect(),
-                        ))
+                        )])
                         .await;
 
                     Ok(())

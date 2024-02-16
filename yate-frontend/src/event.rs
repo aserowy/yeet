@@ -1,32 +1,21 @@
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, sync::Arc};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
     event::{ModifyKind, RenameMode},
     RecommendedWatcher,
 };
-use tokio::sync::mpsc::{self, Receiver};
+use tokio::sync::{
+    mpsc::{self, Receiver},
+    Mutex,
+};
 use yate_keymap::{
     conversion,
-    key::Key,
     message::{Message, Mode},
     MessageResolver,
 };
 
 use crate::task::{Task, TaskManager};
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum RenderAction {
-    Error,
-    Key(Key),
-    Resize(u16, u16),
-    Refresh,
-    Startup,
-    PathEnumerationFinished(PathBuf),
-    PathRemoved(PathBuf),
-    PathsAdded(Vec<PathBuf>),
-    PreviewLoaded(PathBuf, Vec<String>),
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PostRenderAction {
@@ -37,7 +26,15 @@ pub enum PostRenderAction {
     WatchPath(PathBuf),
 }
 
-pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
+pub fn listen() -> (
+    Arc<Mutex<MessageResolver>>,
+    RecommendedWatcher,
+    TaskManager,
+    Receiver<Vec<Message>>,
+) {
+    let resolver_mutex = Arc::new(Mutex::new(MessageResolver::default()));
+    let inner_resolver_mutex = resolver_mutex.clone();
+
     let (sender, receiver) = mpsc::channel(1);
     let internal_sender = sender.clone();
 
@@ -56,7 +53,7 @@ pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
         let mut reader = crossterm::event::EventStream::new();
 
         internal_sender
-            .send(RenderAction::Startup)
+            .send(vec![Message::SelectPath(get_current_path())])
             .await
             .expect("Failed to send message");
 
@@ -69,12 +66,12 @@ pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
                 event = crossterm_event => {
                     match event {
                         Some(Ok(event)) => {
-                            if let Some(message) = handle_crossterm_event(event) {
+                            if let Some(message) = handle_crossterm_event(&inner_resolver_mutex, event).await {
                                 let _ = internal_sender.send(message).await;
                             }
                         },
                         Some(Err(_)) => {
-                            let _ = internal_sender.send(RenderAction::Error).await;
+                            // TODO: log error
                         },
                         None => {},
                     }
@@ -83,13 +80,11 @@ pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
                     match event {
                         Some(Ok(event)) => {
                             if let Some(messages) = handle_notify_event(event) {
-                                for message in messages {
-                                    let _ = internal_sender.send(message).await;
-                                }
+                                let _ = internal_sender.send(messages).await;
                             }
                         },
                         Some(Err(_)) => {
-                            let _ = internal_sender.send(RenderAction::Error).await;
+                            // TODO: log error
                         },
                         None => {},
                     }
@@ -106,19 +101,25 @@ pub fn listen() -> (RecommendedWatcher, TaskManager, Receiver<RenderAction>) {
         }
     });
 
-    (watcher, tasks, receiver)
+    (resolver_mutex.clone(), watcher, tasks, receiver)
 }
 
-fn handle_crossterm_event(event: crossterm::event::Event) -> Option<RenderAction> {
+async fn handle_crossterm_event(
+    resolver_mutex: &Arc<Mutex<MessageResolver>>,
+    event: crossterm::event::Event,
+) -> Option<Vec<Message>> {
     match event {
         crossterm::event::Event::Key(key) => {
             if let Some(key) = conversion::to_key(&key) {
-                return Some(RenderAction::Key(key));
+                let mut resolver = resolver_mutex.lock().await;
+                let messages = resolver.add_and_resolve(key);
+                return Some(messages);
             }
 
             None
         }
-        crossterm::event::Event::Resize(x, y) => Some(RenderAction::Resize(x, y)),
+        // TODO: add Rerender on resize
+        crossterm::event::Event::Resize(_, _) => None,
         crossterm::event::Event::FocusLost
         | crossterm::event::Event::FocusGained
         | crossterm::event::Event::Paste(_)
@@ -126,9 +127,9 @@ fn handle_crossterm_event(event: crossterm::event::Event) -> Option<RenderAction
     }
 }
 
-fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
+fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
     if event.need_rescan() {
-        return Some(vec![RenderAction::Refresh]);
+        // TODO: Refresh directory states
     }
 
     match event.kind {
@@ -136,15 +137,15 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
             event
                 .paths
                 .iter()
-                .map(|p| RenderAction::PathsAdded(vec![p.clone()]))
+                .map(|p| Message::PathsAdded(vec![p.clone()]))
                 .collect(),
         ),
         // TODO: handle rename events with rename mode to/from (needs buffering)
         notify::EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
             if event.paths.len() == 2 {
                 Some(vec![
-                    RenderAction::PathRemoved(event.paths[0].clone()),
-                    RenderAction::PathsAdded(vec![event.paths[1].clone()]),
+                    Message::PathRemoved(event.paths[0].clone()),
+                    Message::PathsAdded(vec![event.paths[1].clone()]),
                 ])
             } else {
                 // TODO: log invalid event
@@ -155,31 +156,13 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<RenderAction>> {
             event
                 .paths
                 .iter()
-                .map(|p| RenderAction::PathRemoved(p.clone()))
+                .map(|p| Message::PathRemoved(p.clone()))
                 .collect(),
         ),
         notify::EventKind::Any
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
         | notify::EventKind::Other => None,
-    }
-}
-
-pub fn convert_to_messages(
-    event: RenderAction,
-    message_resolver: &mut MessageResolver,
-) -> Vec<Message> {
-    match event {
-        // TODO: log error?
-        RenderAction::Error => vec![],
-        RenderAction::Key(key) => message_resolver.add_and_resolve(key),
-        RenderAction::PathEnumerationFinished(path) => vec![Message::PathEnumerationFinished(path)],
-        RenderAction::PathRemoved(path) => vec![Message::PathRemoved(path)],
-        RenderAction::PathsAdded(paths) => vec![Message::PathsAdded(paths)],
-        RenderAction::PreviewLoaded(path, content) => vec![Message::PreviewLoaded(path, content)],
-        RenderAction::Refresh => vec![],
-        RenderAction::Resize(_, _) => vec![],
-        RenderAction::Startup => vec![Message::SelectPath(get_current_path())],
     }
 }
 

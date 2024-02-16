@@ -1,6 +1,5 @@
 use thiserror::Error;
-
-use crate::event::RenderAction;
+use yate_keymap::message::Message;
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -13,5 +12,5 @@ pub enum AppError {
     #[error("Loading navigation history failed")]
     LoadHistoryFailed,
     #[error("Sending render action failed")]
-    RenderActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<RenderAction>),
+    RenderActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Message>),
 }
