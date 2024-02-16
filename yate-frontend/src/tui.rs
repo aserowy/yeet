@@ -1,17 +1,20 @@
+use std::{
+    io::{stderr, BufWriter},
+    path::PathBuf,
+    time::Duration,
+};
+
 use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 use notify::{RecursiveMode, Watcher};
 use ratatui::prelude::{CrosstermBackend, Terminal};
-use std::{
-    io::{stderr, BufWriter},
-    path::PathBuf,
-};
+use tokio::time;
 
 use crate::{
     error::AppError,
-    event::{self, PostRenderAction},
+    event::{self, PostRenderAction, PreRenderAction, RenderAction},
     layout::AppLayout,
     model::{
         history::{self},
@@ -41,28 +44,47 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         let size = terminal.size().expect("Failed to get terminal size");
         let layout = AppLayout::default(size);
 
-        let post_render_actions: Vec<_> = messages
+        let render_actions: Vec<_> = messages
             .iter()
             .flat_map(|message| update::update(&mut model, &layout, message))
             .flatten()
             .collect();
 
+        // TODO: refactor pre render actions
+        let pre_render_actions = render_actions.iter().filter_map(|actn| match actn {
+            RenderAction::Pre(pre) => Some(pre),
+            _ => None,
+        });
+
+        for pre_render_action in pre_render_actions {
+            match pre_render_action {
+                PreRenderAction::SleepBeforeRender => {
+                    time::sleep(Duration::from_millis(25)).await;
+                }
+            }
+        }
+
         terminal.draw(|frame| view::view(&mut model, frame, &layout))?;
 
         // TODO: refactor post render actions
+        let post_render_actions = render_actions.iter().filter_map(|actn| match actn {
+            RenderAction::Post(post) => Some(post),
+            _ => None,
+        });
+
         for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => {
                     let mut resolver = resolver_mutex.lock().await;
-                    resolver.mode = mode
+                    resolver.mode = mode.clone();
                 }
 
                 PostRenderAction::Quit => {
                     break 'app_loop;
                 }
-                PostRenderAction::Task(task) => tasks.run(task),
+                PostRenderAction::Task(task) => tasks.run(task.clone()),
                 PostRenderAction::UnwatchPath(p) => {
-                    if p == PathBuf::default() {
+                    if p == &PathBuf::default() {
                         continue;
                     }
 
@@ -73,7 +95,7 @@ pub async fn run(_address: String) -> Result<(), AppError> {
                     }
                 }
                 PostRenderAction::WatchPath(p) => {
-                    if p == PathBuf::default() {
+                    if p == &PathBuf::default() {
                         continue;
                     }
 

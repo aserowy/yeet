@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use ratatui::style::Color;
 
 use crate::{
-    event::PostRenderAction,
+    event::{PostRenderAction, PreRenderAction, RenderAction},
     model::{
         buffer::{BufferLine, StylePartial},
         Model,
@@ -51,7 +51,7 @@ pub fn get_selected_path(model: &Model) -> Option<PathBuf> {
     }
 }
 
-pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<RenderAction>> {
     if let Some(parent) = model.current.path.parent() {
         if model.current.path == parent {
             return None;
@@ -61,7 +61,10 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
 
         let mut actions = Vec::new();
         if let Some(parent) = parent_parent {
-            actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
+            actions.extend(vec![
+                RenderAction::Pre(PreRenderAction::SleepBeforeRender),
+                RenderAction::Post(PostRenderAction::WatchPath(parent.to_path_buf())),
+            ]);
         }
 
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
@@ -73,7 +76,7 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<PostRenderAction>>
     }
 }
 
-pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<PostRenderAction>> {
+pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<RenderAction>> {
     if path.exists() {
         let directory = if path.is_dir() {
             path.to_path_buf()
@@ -83,17 +86,27 @@ pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<PostRen
 
         let mut actions = Vec::new();
         if let Some(parent) = &model.parent.path {
-            actions.push(PostRenderAction::UnwatchPath(parent.clone()));
+            actions.push(RenderAction::Post(PostRenderAction::UnwatchPath(
+                parent.clone(),
+            )));
         }
 
         let parent_parent = directory.parent();
         if let Some(parent) = parent_parent {
-            actions.push(PostRenderAction::WatchPath(parent.to_path_buf()));
+            actions.extend(vec![
+                RenderAction::Pre(PreRenderAction::SleepBeforeRender),
+                RenderAction::Post(PostRenderAction::WatchPath(parent.to_path_buf())),
+            ]);
         }
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
 
-        actions.push(PostRenderAction::UnwatchPath(model.current.path.clone()));
-        actions.push(PostRenderAction::WatchPath(directory.clone()));
+        actions.push(RenderAction::Post(PostRenderAction::UnwatchPath(
+            model.current.path.clone(),
+        )));
+        actions.extend(vec![
+            RenderAction::Pre(PreRenderAction::SleepBeforeRender),
+            RenderAction::Post(PostRenderAction::WatchPath(directory.clone())),
+        ]);
         model.current.path = directory;
 
         Some(actions)
@@ -102,7 +115,7 @@ pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<PostRen
     }
 }
 
-pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction>> {
+pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<RenderAction>> {
     if let Some(selected) = get_selected_path(model) {
         if model.current.path == selected {
             return None;
@@ -112,7 +125,9 @@ pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<PostRenderAction
 
         let mut actions = Vec::new();
         if let Some(parent) = &model.parent.path {
-            actions.push(PostRenderAction::UnwatchPath(parent.clone()));
+            actions.push(RenderAction::Post(PostRenderAction::UnwatchPath(
+                parent.clone(),
+            )));
         }
         model.parent.path = Some(model.current.path.clone());
         model.current.path = selected.to_path_buf();
@@ -127,7 +142,7 @@ pub fn set_preview_to_selected(
     model: &mut Model,
     unwatch_old_path: bool,
     watch_new_path: bool,
-) -> Option<Vec<PostRenderAction>> {
+) -> Option<Vec<RenderAction>> {
     if let Some(selected) = get_selected_path(model) {
         let current = &model.current.path;
         if current == &selected {
@@ -138,11 +153,16 @@ pub fn set_preview_to_selected(
 
         let mut actions = Vec::new();
         if unwatch_old_path {
-            actions.push(PostRenderAction::UnwatchPath(model.preview.path.clone()));
+            actions.push(RenderAction::Post(PostRenderAction::UnwatchPath(
+                model.preview.path.clone(),
+            )));
         }
 
         if watch_new_path {
-            actions.push(PostRenderAction::WatchPath(selected.clone()));
+            actions.extend(vec![
+                RenderAction::Pre(PreRenderAction::SleepBeforeRender),
+                RenderAction::Post(PostRenderAction::WatchPath(selected.clone())),
+            ]);
         }
 
         model.preview.path = selected.to_path_buf();

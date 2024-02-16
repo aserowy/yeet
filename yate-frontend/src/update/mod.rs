@@ -2,7 +2,7 @@ use ratatui::prelude::Rect;
 use yate_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    event::PostRenderAction,
+    event::{PostRenderAction, RenderAction},
     layout::AppLayout,
     model::{
         buffer::{viewport::ViewPort, BufferLine},
@@ -25,7 +25,7 @@ pub fn update(
     model: &mut Model,
     layout: &AppLayout,
     message: &Message,
-) -> Option<Vec<PostRenderAction>> {
+) -> Option<Vec<RenderAction>> {
     match message {
         Message::Buffer(msg) => {
             match msg {
@@ -78,11 +78,15 @@ pub fn update(
                     };
 
                     if let Some(mut post_render_action_vec) = post_render_actions {
-                        post_render_action_vec.push(PostRenderAction::ModeChanged(to.clone()));
+                        post_render_action_vec.push(RenderAction::Post(
+                            PostRenderAction::ModeChanged(to.clone()),
+                        ));
 
                         Some(post_render_action_vec)
                     } else {
-                        Some(vec![PostRenderAction::ModeChanged(to.clone())])
+                        Some(vec![RenderAction::Post(PostRenderAction::ModeChanged(
+                            to.clone(),
+                        ))])
                     }
                 }
                 Buffer::Modification(_) => {
@@ -130,7 +134,9 @@ pub fn update(
                         layout,
                         &Message::SelectPath(model.current.path.clone()),
                     ),
-                    "histopt" => Some(vec![PostRenderAction::Task(Task::OptimizeHistory)]),
+                    "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
+                        Task::OptimizeHistory,
+                    ))]),
                     "q" => update(model, layout, &Message::Quit),
                     "w" => update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None))),
                     "wq" => {
@@ -332,8 +338,10 @@ pub fn update(
             Some(actions)
         }
         Message::Quit => Some(vec![
-            PostRenderAction::Task(Task::SaveHistory(model.history.clone())),
-            PostRenderAction::Quit,
+            RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
+                model.history.clone(),
+            ))),
+            RenderAction::Post(PostRenderAction::Quit),
         ]),
     }
 }

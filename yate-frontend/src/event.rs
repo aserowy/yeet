@@ -18,6 +18,17 @@ use yate_keymap::{
 use crate::task::{Task, TaskManager};
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum RenderAction {
+    Pre(PreRenderAction),
+    Post(PostRenderAction),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreRenderAction {
+    SleepBeforeRender,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum PostRenderAction {
     ModeChanged(Mode),
     Quit,
