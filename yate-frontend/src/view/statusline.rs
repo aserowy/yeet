@@ -39,7 +39,7 @@ fn get_position_content(model: &Model) -> Line {
         .buffer
         .cursor
         .as_ref()
-        .and_then(|crsr| Some(crsr.vertical_index + 1));
+        .map(|crsr| crsr.vertical_index + 1);
 
     let mut content = Vec::new();
     if let Some(position) = current_position {

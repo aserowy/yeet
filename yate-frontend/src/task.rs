@@ -47,6 +47,12 @@ impl TaskManager {
 
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
+        for (task, abort_handle) in self.abort_handles.drain(..) {
+            if should_abort_on_finish(task) {
+                abort_handle.abort();
+            }
+        }
+
         while let Some(task) = self.tasks.join_next().await {
             match task {
                 Ok(Ok(())) => (),
@@ -206,5 +212,17 @@ impl TaskManager {
         }
 
         self.abort_handles.push((task, abort_handle));
+    }
+}
+
+fn should_abort_on_finish(task: Task) -> bool {
+    match task {
+        Task::AddPath(_) => false,
+        Task::DeletePath(_) => false,
+        Task::EnumerateDirectory(_) => true,
+        Task::LoadPreview(_) => true,
+        Task::OptimizeHistory => false,
+        Task::RenamePath(_, _) => false,
+        Task::SaveHistory(_) => false,
     }
 }
