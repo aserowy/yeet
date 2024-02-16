@@ -211,6 +211,10 @@ pub fn update(
             }
         }
         Message::PathEnumerationFinished(path) => {
+            if model.mode != Mode::Navigation {
+                return None;
+            }
+
             let mut buffer = vec![
                 (model.current.path.as_path(), &mut model.current.buffer),
                 (model.preview.path.as_path(), &mut model.preview.buffer),
