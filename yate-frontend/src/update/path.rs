@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::style::Color;
+use yate_keymap::message::ContentKind;
 
 use crate::{
     event::{PostRenderAction, PreRenderAction, RenderAction},
@@ -9,6 +10,22 @@ use crate::{
         Model,
     },
 };
+
+pub fn get_bufferline_by_enumeration_content(kind: &ContentKind, content: &String) -> BufferLine {
+    // TODO: refactor with by path
+    let style = if kind == &ContentKind::Directory {
+        let length = content.chars().count();
+        vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
+    } else {
+        vec![]
+    };
+
+    BufferLine {
+        content: content.to_string(),
+        style,
+        ..Default::default()
+    }
+}
 
 pub fn get_bufferline_by_path(path: &Path) -> BufferLine {
     let content = match path.file_name() {

@@ -176,6 +176,39 @@ pub fn update(
                 None
             }
         }
+        Message::PathEnumerationContentChanged(path, contents) => {
+            // TODO: handle unsaved changes
+            let mut buffer = vec![
+                (model.current.path.as_path(), &mut model.current.buffer),
+                (model.preview.path.as_path(), &mut model.preview.buffer),
+            ];
+
+            if let Some(parent) = &model.parent.path {
+                buffer.push((parent, &mut model.parent.buffer));
+            }
+
+            let mut actions = Vec::new();
+            if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
+                let content = contents
+                    .iter()
+                    .map(|(knd, cntnt)| path::get_bufferline_by_enumeration_content(knd, cntnt))
+                    .collect();
+
+                buffer::set_content(&model.mode, buffer, content);
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::update(model, layout, None);
+                }
+            }
+
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
+        }
         Message::PathEnumerationFinished(path) => {
             let mut buffer = vec![
                 (model.current.path.as_path(), &mut model.current.buffer),
@@ -186,11 +219,23 @@ pub fn update(
                 buffer.push((parent, &mut model.parent.buffer));
             }
 
+            let mut actions = Vec::new();
             if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
+                directory::sort_content(&model.mode, buffer);
                 history::set_cursor_index(path, &model.history, buffer);
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::update(model, layout, None);
+                }
             }
 
-            None
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
         }
         Message::PathRemoved(path) => {
             directory::remove_path(model, path);

@@ -16,6 +16,7 @@ pub enum Message {
     Buffer(Buffer),
     ChangeKeySequence(String),
     ExecuteCommand,
+    PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
@@ -24,6 +25,12 @@ pub enum Message {
     SelectParent,
     SelectPath(PathBuf),
     Quit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ContentKind {
+    Directory,
+    File,
 }
 
 #[derive(Clone, Debug, PartialEq)]

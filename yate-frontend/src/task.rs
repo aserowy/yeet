@@ -1,14 +1,11 @@
-use std::{
-    mem,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use tokio::{
     fs,
     sync::mpsc::Sender,
     task::{AbortHandle, JoinSet},
 };
-use yate_keymap::message::Message;
+use yate_keymap::message::{ContentKind, Message};
 
 use crate::{
     error::AppError,
@@ -116,28 +113,41 @@ impl TaskManager {
                     match read_dir {
                         Ok(mut rd) => {
                             let mut cache_size = 100;
-                            let max_cache_size = 6_400;
-                            while let Some(entry) = rd.next_entry().await? {
-                                if cache.len() >= cache_size {
-                                    cache.push(entry.path());
 
-                                    // TODO: introduce custom message for this that contains all entries and frontload
-                                    // bufferline creation, sorting and filtering to enable simple content replace
+                            while let Some(entry) = rd.next_entry().await? {
+                                let kind = if entry.path().is_dir() {
+                                    ContentKind::Directory
+                                } else {
+                                    ContentKind::File
+                                };
+
+                                let content = match entry.path().file_name() {
+                                    Some(content) => content.to_str().unwrap_or("").to_string(),
+                                    None => "".to_string(),
+                                };
+
+                                cache.push((kind, content));
+
+                                if cache.len() >= cache_size {
                                     let _ = internal_sender
-                                        .send(vec![Message::PathsAdded(mem::take(&mut cache))])
+                                        .send(vec![Message::PathEnumerationContentChanged(
+                                            path.clone(),
+                                            cache.clone(),
+                                        )])
                                         .await;
 
-                                    if cache_size < max_cache_size {
-                                        cache_size *= 2;
-                                    }
-                                } else {
-                                    cache.push(entry.path());
+                                    cache_size *= 2;
                                 }
                             }
 
-                            let _ = internal_sender.send(vec![Message::PathsAdded(cache)]).await;
                             let _ = internal_sender
-                                .send(vec![Message::PathEnumerationFinished(path)])
+                                .send(vec![
+                                    Message::PathEnumerationContentChanged(
+                                        path.clone(),
+                                        cache.clone(),
+                                    ),
+                                    Message::PathEnumerationFinished(path),
+                                ])
                                 .await;
 
                             Ok(())

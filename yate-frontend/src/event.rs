@@ -132,7 +132,6 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                 .map(|p| Message::PathsAdded(vec![p.clone()]))
                 .collect(),
         ),
-        // TODO: handle rename events with rename mode to/from (needs buffering)
         notify::EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
             if event.paths.len() == 2 {
                 Some(vec![
