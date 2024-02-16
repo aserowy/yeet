@@ -118,9 +118,7 @@ pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<RenderA
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
 
         actions.extend(vec![
-            RenderAction::Post(PostRenderAction::UnwatchPath(
-                model.current.path.clone(),
-            )),
+            RenderAction::Post(PostRenderAction::UnwatchPath(model.current.path.clone())),
             RenderAction::Pre(PreRenderAction::SleepBeforeRender),
             RenderAction::Post(PostRenderAction::WatchPath(directory.clone())),
         ]);

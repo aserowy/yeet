@@ -360,8 +360,14 @@ pub fn update(
             }
         }
         Message::SelectPath(path) => {
+            let directory = if path.is_file() {
+                path.parent().unwrap()
+            } else {
+                path.as_path()
+            };
+
             let mut actions = Vec::new();
-            if let Some(current_actions) = path::set_current_to_path(model, path) {
+            if let Some(current_actions) = path::set_current_to_path(model, directory) {
                 actions.extend(current_actions);
             }
 

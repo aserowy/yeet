@@ -1,4 +1,5 @@
 use std::{
+    env,
     io::{stderr, BufWriter},
     path::PathBuf,
     time::Duration,
@@ -25,7 +26,7 @@ use crate::{
     view::{self},
 };
 
-pub async fn run(_address: String) -> Result<(), AppError> {
+pub async fn run(initial_selection: Option<PathBuf>) -> Result<(), AppError> {
     stderr().execute(EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
@@ -37,7 +38,8 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
-    let (resolver_mutex, mut watcher, mut tasks, mut receiver) = event::listen();
+    let initial_path = get_initial_path(initial_selection);
+    let (resolver_mutex, mut watcher, mut tasks, mut receiver) = event::listen(initial_path);
     let mut result = Vec::new();
 
     'app_loop: while let Some(messages) = receiver.recv().await {
@@ -124,5 +126,20 @@ pub async fn run(_address: String) -> Result<(), AppError> {
         Ok(())
     } else {
         Err(AppError::Aggregate(result))
+    }
+}
+
+fn get_initial_path(initial_selection: Option<PathBuf>) -> PathBuf {
+    if let Some(path) = initial_selection {
+        if path.exists() {
+            return path;
+        }
+    }
+
+    if let Ok(path) = env::current_dir() {
+        path
+    } else {
+        // TODO: log error
+        PathBuf::new()
     }
 }

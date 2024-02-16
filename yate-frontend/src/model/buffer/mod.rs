@@ -16,7 +16,7 @@ pub struct Buffer {
     pub view_port: ViewPort,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Cursor {
     pub hide_cursor: bool,
     pub hide_cursor_line: bool,
@@ -24,7 +24,7 @@ pub struct Cursor {
     pub vertical_index: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CursorPosition {
     Absolute { current: usize, expanded: usize },
     End,

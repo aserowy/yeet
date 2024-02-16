@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use clap::Parser;
 use thiserror::Error;
 use yate_frontend::tui::{self};
 
@@ -5,16 +8,22 @@ use yate_frontend::tui::{self};
 pub enum Error {
     #[error("Application error")]
     AppError,
-    #[error("Join handle failed: Subprocess killed without shutting down")]
-    JoinHandleFailed,
+}
+
+#[derive(Debug, Parser)] // requires `derive` feature
+#[command(name = "yate")]
+#[command(about = "yate", long_about = "yet another tui explorer")]
+struct Cli {
+    #[arg(required = false)]
+    path: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let port = 12341;
-    let address = format!("127.0.0.1:{}", port);
+    let _args = Cli::parse();
 
-    let _result = tui::run(address).await;
-
-    Ok(())
+    match tui::run(_args.path).await {
+        Ok(()) => Ok(()),
+        Err(_) => Err(Error::AppError),
+    }
 }

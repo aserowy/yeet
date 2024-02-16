@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
@@ -37,7 +37,9 @@ pub enum PostRenderAction {
     WatchPath(PathBuf),
 }
 
-pub fn listen() -> (
+pub fn listen(
+    initial_path: PathBuf,
+) -> (
     Arc<Mutex<MessageResolver>>,
     RecommendedWatcher,
     TaskManager,
@@ -64,7 +66,7 @@ pub fn listen() -> (
         let mut reader = crossterm::event::EventStream::new();
 
         internal_sender
-            .send(vec![Message::SelectPath(get_current_path())])
+            .send(vec![Message::SelectPath(initial_path)])
             .await
             .expect("Failed to send message");
 
@@ -154,17 +156,5 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
         | notify::EventKind::Other => None,
-    }
-}
-
-fn get_current_path() -> PathBuf {
-    // TODO: configurable with clap
-    if let Ok(path) = env::current_dir() {
-        path
-    } else if let Some(val) = dirs::home_dir() {
-        val
-    } else {
-        // TODO: log error
-        PathBuf::new()
     }
 }
