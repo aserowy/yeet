@@ -62,6 +62,7 @@ pub fn update(
                         }
                         Mode::Navigation => {
                             // TODO: handle file operations: show pending with gray, refresh on operation success
+                            // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                             buffer::focus_buffer(&mut model.current.buffer);
                             current::update(model, layout, Some(msg));
                             preview::update(model, layout, None);
