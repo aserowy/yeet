@@ -12,21 +12,22 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(model);
     let position = get_position_content(model);
 
-    let layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Min(1),
-            Constraint::Min(5),
-            Constraint::Min(1),
-            Constraint::Max(position.width() as u16),
-        ])
-        .split(rect);
-
     let content = model.current.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Green);
     let span = Span::styled(content, style);
+    let path = Line::from(span);
 
-    frame.render_widget(Paragraph::new(Line::from(span)), layout[0]);
+    let layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(path.width() as u16),
+            Constraint::Length(3),
+            Constraint::Min(changes.width() as u16),
+            Constraint::Length(position.width() as u16),
+        ])
+        .split(rect);
+
+    frame.render_widget(Paragraph::new(path), layout[0]);
     frame.render_widget(Paragraph::new(changes), layout[2]);
     frame.render_widget(Paragraph::new(position), layout[3]);
 }

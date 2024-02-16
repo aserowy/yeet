@@ -126,6 +126,7 @@ pub fn update(
             model.key_sequence = sequence.clone();
             None
         }
+        // TODO: add content to message to enable commands from outside without dependency to command line content
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 let post_render_actions = match cmd.content.as_str() {
