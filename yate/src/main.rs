@@ -10,19 +10,24 @@ pub enum Error {
     AppError,
 }
 
-#[derive(Debug, Parser)] // requires `derive` feature
+#[derive(Debug, Parser)]
 #[command(name = "yate")]
-#[command(about = "yate", long_about = "yet another tui explorer")]
+#[command(about = "yate - yet another tui explorer")]
 struct Cli {
-    #[arg(required = false)]
+    #[arg(
+        long = "stdout-on-open",
+        help = "on open print selected paths to stdout instead and quit the application"
+    )]
+    stdout_on_open: bool,
+    #[arg(help = "path to open in yate on startup")]
     path: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let _args = Cli::parse();
+    let args = Cli::parse();
 
-    match tui::run(_args.path).await {
+    match tui::run(args.path).await {
         Ok(()) => Ok(()),
         Err(_) => Err(Error::AppError),
     }
