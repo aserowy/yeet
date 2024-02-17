@@ -366,6 +366,7 @@ pub fn update(
             }
         }
         Message::SelectPath(path) => {
+            // TODO: check in set current to path and extend enumeration request with filename
             let directory = if path.is_file() {
                 path.parent().unwrap()
             } else {
@@ -379,16 +380,6 @@ pub fn update(
 
             model.current.buffer.lines.clear();
             current::update(model, layout, None);
-
-            history::set_cursor_index(
-                &model.current.path,
-                &model.history,
-                &mut model.current.buffer,
-            );
-
-            if let Some(preview) = path::set_preview_to_selected(model, true, true) {
-                actions.extend(preview);
-            }
 
             model.parent.buffer.lines.clear();
             parent::update(model, layout, None);

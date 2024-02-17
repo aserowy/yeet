@@ -21,12 +21,13 @@ use crate::{
         history::{self},
         Model,
     },
+    settings::Settings,
     task::Task,
     update::{self},
     view::{self},
 };
 
-pub async fn run(initial_selection: Option<PathBuf>) -> Result<(), AppError> {
+pub async fn run(settings: Settings) -> Result<(), AppError> {
     stderr().execute(EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
@@ -38,7 +39,7 @@ pub async fn run(initial_selection: Option<PathBuf>) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
-    let initial_path = get_initial_path(initial_selection);
+    let initial_path = get_initial_path(settings.startup_path);
     let (resolver_mutex, mut watcher, mut tasks, mut receiver) = event::listen(initial_path);
     let mut result = Vec::new();
 
