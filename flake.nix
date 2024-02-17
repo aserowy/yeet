@@ -1,6 +1,6 @@
 # https://github.com/cpu/woodwidelog/blob/bb549af2b33c5c50ae6e7361da4af3b1993caa1d/content/articles/rust-flake/index.md?plain=1#L50
 {
-  description = "yate flake";
+  description = "y1337 the great flake";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -28,7 +28,7 @@
             inherit system overlays;
           };
 
-          toml = builtins.fromTOML (builtins.readFile ./yate/Cargo.toml);
+          toml = builtins.fromTOML (builtins.readFile ./y1337/Cargo.toml);
 
           package = (pkgs.makeRustPlatform {
             cargo = pkgs.rust-bin.stable.latest.minimal;
@@ -64,8 +64,8 @@
         in
         {
           packages = {
-            default = self'.packages.yate;
-            yate = package;
+            default = self'.packages.y1337;
+            y1337 = package;
           };
 
           devShells.default = shell;
