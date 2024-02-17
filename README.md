@@ -1,4 +1,6 @@
-# y1337 - tui file management
+# y1337 (pronounced jeet)
+
+## the name is the vision
 
 Yet Another Astoundingly Hackable, Keyboard-Controlled, Ultra-Intuitive,
 Efficient, Versatile, Interactive, Fast, Elmish, Minimalistic, and Superlative
@@ -17,6 +19,8 @@ Users to Extend Its Functionality, Shape Its Behavior, and Create Customized Wor
 Tailored to Their Unique Needs, Enabling a Thriving Ecosystem of Community-Driven
 Plugins, Where Imagination Meets Practicality, and Every Keystroke Holds the Promise
 of Infinite Possibilities.
+
+In short: y1337
 
 ## architecture overview
 
