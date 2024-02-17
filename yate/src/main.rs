@@ -29,21 +29,21 @@ fn cli() -> Command {
     Command::new("yate")
         .about("yate - yet another tui explorer")
         .args([
-            Arg::new("stdout-on-open")
-                .action(ArgAction::SetTrue)
-                .default_value("false")
-                .long("stdout-on-open")
-                .help("on open print selected paths to stdout instead and close the application"),
+            // NOTE: arguments
             Arg::new("path")
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf))
                 .help("path to open in yate on startup"),
+            // NOTE: options
+            Arg::new("stdout-on-open")
+                .long("stdout-on-open")
+                .action(ArgAction::SetTrue)
+                .default_value("false")
+                .help("on open print selected paths to stdout instead and close the application"),
         ])
 }
 
 fn map_args_to_settings(args: &ArgMatches, settings: &mut Settings) {
     settings.stdout_selection = args.get_flag("stdout-on-open");
-    settings.startup_path = args
-        .get_one("path")
-        .and_then(|path: &PathBuf| Some(path.clone()));
+    settings.startup_path = args.get_one("path").map(|path: &PathBuf| path.clone());
 }

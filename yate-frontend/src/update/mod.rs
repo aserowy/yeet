@@ -123,10 +123,6 @@ pub fn update(
                 Buffer::SaveBuffer(_) => current::save_changes(model),
             }
         }
-        Message::ChangeKeySequence(sequence) => {
-            model.key_sequence = sequence.clone();
-            None
-        }
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 update(
@@ -183,6 +179,10 @@ pub fn update(
                     .chain(mode_changed_actions.into_iter().flatten())
                     .collect(),
             )
+        }
+        Message::KeySequenceChanged(sequence) => {
+            model.key_sequence = sequence.clone();
+            None
         }
         Message::PathEnumerationContentChanged(path, contents) => {
             // TODO: handle unsaved changes

@@ -41,7 +41,7 @@ impl MessageResolver {
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
-            return vec![Message::ChangeKeySequence(self.buffer.to_string())];
+            return vec![Message::KeySequenceChanged(self.buffer.to_string())];
         }
 
         self.buffer.add_key(key);
@@ -73,7 +73,7 @@ impl MessageResolver {
             }
         };
 
-        messages.push(Message::ChangeKeySequence(self.buffer.to_string()));
+        messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
         messages
     }
 }

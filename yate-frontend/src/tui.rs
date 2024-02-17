@@ -137,10 +137,5 @@ fn get_initial_path(initial_selection: Option<PathBuf>) -> PathBuf {
         }
     }
 
-    if let Ok(path) = env::current_dir() {
-        path
-    } else {
-        // TODO: log error
-        PathBuf::new()
-    }
+    env::current_dir().expect("Failed to get current directory")
 }

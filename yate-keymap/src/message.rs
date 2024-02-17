@@ -14,9 +14,9 @@ pub enum Binding {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Message {
     Buffer(Buffer),
-    ChangeKeySequence(String),
     ExecuteCommand,
     ExecuteCommandString(String),
+    KeySequenceChanged(String),
     PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
