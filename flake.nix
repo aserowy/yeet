@@ -63,6 +63,10 @@
           };
         in
         {
+          overlayAttrs = {
+            inherit (config.packages) y1337;
+          };
+
           packages = {
             default = self'.packages.y1337;
             y1337 = package;
