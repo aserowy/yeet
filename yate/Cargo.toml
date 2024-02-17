@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 yate-frontend = { path = "../yate-frontend" }
 tokio = { version = "1.35.1", features = ["full"] }
-thiserror = "1.0.56"
+thiserror = "1.0.57"
 clap = { version = "4.5.0", features = ["derive"] }
