@@ -8,6 +8,7 @@ use crate::{
         buffer::{viewport::ViewPort, BufferLine},
         Model,
     },
+    settings::Settings,
     task::Task,
 };
 
@@ -22,6 +23,7 @@ mod preview;
 
 // TODO: refactor into right abstraction level (what ever right means here :D)
 pub fn update(
+    settings: &Settings,
     model: &mut Model,
     layout: &AppLayout,
     message: &Message,
@@ -126,6 +128,7 @@ pub fn update(
         Message::ExecuteCommand => {
             if let Some(cmd) = model.commandline.lines.first() {
                 update(
+                    settings,
                     model,
                     layout,
                     &Message::ExecuteCommandString(cmd.content.clone()),
@@ -137,6 +140,7 @@ pub fn update(
         Message::ExecuteCommandString(command) => {
             let post_render_actions = match command.as_str() {
                 "e!" => update(
+                    settings,
                     model,
                     layout,
                     &Message::SelectPath(model.current.path.clone()),
@@ -144,15 +148,28 @@ pub fn update(
                 "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
                     Task::OptimizeHistory,
                 ))]),
-                "q" => update(model, layout, &Message::Quit),
-                "w" => update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None))),
+                "q" => update(settings, model, layout, &Message::Quit),
+                "w" => update(
+                    settings,
+                    model,
+                    layout,
+                    &Message::Buffer(Buffer::SaveBuffer(None)),
+                ),
                 "wq" => {
-                    let actions: Vec<_> =
-                        update(model, layout, &Message::Buffer(Buffer::SaveBuffer(None)))
+                    let actions: Vec<_> = update(
+                        settings,
+                        model,
+                        layout,
+                        &Message::Buffer(Buffer::SaveBuffer(None)),
+                    )
+                    .into_iter()
+                    .flatten()
+                    .chain(
+                        update(settings, model, layout, &Message::Quit)
                             .into_iter()
-                            .flatten()
-                            .chain(update(model, layout, &Message::Quit).into_iter().flatten())
-                            .collect();
+                            .flatten(),
+                    )
+                    .collect();
 
                     if actions.is_empty() {
                         None
@@ -164,6 +181,7 @@ pub fn update(
             };
 
             let mode_changed_actions = update(
+                settings,
                 model,
                 layout,
                 &Message::Buffer(Buffer::ChangeMode(
@@ -183,6 +201,26 @@ pub fn update(
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
             None
+        }
+        Message::OpenCurrentSelection => {
+            if model.mode != Mode::Navigation {
+                None
+            } else if settings.stdout_on_open {
+                let result = if let Some(selected) = path::get_selected_path(model) {
+                    Some(selected.to_string_lossy().to_string())
+                } else {
+                    None
+                };
+
+                Some(vec![
+                    RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
+                        model.history.clone(),
+                    ))),
+                    RenderAction::Post(PostRenderAction::Quit(result)),
+                ])
+            } else {
+                None
+            }
         }
         Message::PathEnumerationContentChanged(path, contents) => {
             // TODO: handle unsaved changes
@@ -395,7 +433,7 @@ pub fn update(
             RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
                 model.history.clone(),
             ))),
-            RenderAction::Post(PostRenderAction::Quit),
+            RenderAction::Post(PostRenderAction::Quit(None)),
         ]),
     }
 }

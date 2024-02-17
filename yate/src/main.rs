@@ -44,6 +44,6 @@ fn cli() -> Command {
 }
 
 fn map_args_to_settings(args: &ArgMatches, settings: &mut Settings) {
-    settings.stdout_selection = args.get_flag("stdout-on-open");
+    settings.stdout_on_open = args.get_flag("stdout-on-open");
     settings.startup_path = args.get_one("path").map(|path: &PathBuf| path.clone());
 }

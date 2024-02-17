@@ -1,6 +1,6 @@
 use std::{
     env,
-    io::{stderr, BufWriter},
+    io::{stderr, stdout, BufWriter, Write},
     path::PathBuf,
     time::Duration,
 };
@@ -39,17 +39,17 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         // TODO: add notifications in tui and show history load failed
     }
 
-    let initial_path = get_initial_path(settings.startup_path);
+    let initial_path = get_initial_path(&settings.startup_path);
     let (resolver_mutex, mut watcher, mut tasks, mut receiver) = event::listen(initial_path);
-    let mut result = Vec::new();
 
+    let mut result = Vec::new();
     'app_loop: while let Some(messages) = receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
         let layout = AppLayout::default(size);
 
         let render_actions: Vec<_> = messages
             .iter()
-            .flat_map(|message| update::update(&mut model, &layout, message))
+            .flat_map(|message| update::update(&settings, &mut model, &layout, message))
             .flatten()
             .collect();
 
@@ -82,7 +82,10 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                     resolver.mode = mode.clone();
                 }
 
-                PostRenderAction::Quit => {
+                PostRenderAction::Quit(stdout_result) => {
+                    if let Some(stdout_result) = stdout_result {
+                        stdout().lock().write_all(stdout_result.as_bytes())?;
+                    }
                     break 'app_loop;
                 }
                 PostRenderAction::Task(task) => tasks.run(task.clone()),
@@ -130,10 +133,10 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 }
 
-fn get_initial_path(initial_selection: Option<PathBuf>) -> PathBuf {
+fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
     if let Some(path) = initial_selection {
         if path.exists() {
-            return path;
+            return path.to_path_buf();
         }
     }
 

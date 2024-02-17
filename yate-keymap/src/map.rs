@@ -72,6 +72,10 @@ impl Default for KeyMap {
             vec![Mode::Navigation],
             vec![
                 (
+                    vec![Key::new(KeyCode::Enter, vec![])],
+                    Binding::Message(Message::OpenCurrentSelection),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding::Repeat(0),
                 ),

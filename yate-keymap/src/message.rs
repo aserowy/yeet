@@ -17,6 +17,7 @@ pub enum Message {
     ExecuteCommand,
     ExecuteCommandString(String),
     KeySequenceChanged(String),
+    OpenCurrentSelection,
     PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
