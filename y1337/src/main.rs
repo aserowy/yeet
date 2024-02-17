@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
 
 fn cli() -> Command {
     Command::new("y1337")
-        .about("y1337 - yet another tui explorer")
+        .about("y1337 - yet another... read the name on gh...")
         .args([
             // NOTE: arguments
             Arg::new("path")
