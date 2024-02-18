@@ -204,20 +204,22 @@ pub fn update(
         }
         Message::OpenCurrentSelection => {
             if model.mode != Mode::Navigation {
-                None
-            } else if settings.stdout_on_open {
-                let result = if let Some(selected) = path::get_selected_path(model) {
-                    Some(selected.to_string_lossy().to_string())
-                } else {
-                    None
-                };
+                return None;
+            }
 
-                Some(vec![
-                    RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
-                        model.history.clone(),
-                    ))),
-                    RenderAction::Post(PostRenderAction::Quit(result)),
-                ])
+            if let Some(selected) = path::get_selected_path(model) {
+                if settings.stdout_on_open {
+                    Some(vec![
+                        RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
+                            model.history.clone(),
+                        ))),
+                        RenderAction::Post(PostRenderAction::Quit(Some(
+                            selected.to_string_lossy().to_string(),
+                        ))),
+                    ])
+                } else {
+                    Some(vec![RenderAction::Post(PostRenderAction::Open(selected))])
+                }
             } else {
                 None
             }

@@ -1,6 +1,6 @@
-# y1337 (pronounced jeet)
+# y1337 (pronounced yeet)
 
-## the name is the vision
+## the name, the vision
 
 Yet Another Astoundingly Hackable, Keyboard-Controlled, Ultra-Intuitive,
 Efficient, Versatile, Interactive, Fast, Elmish, Minimalistic, and Superlative

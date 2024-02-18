@@ -81,7 +81,16 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                     let mut resolver = resolver_mutex.lock().await;
                     resolver.mode = mode.clone();
                 }
-
+                PostRenderAction::Open(path) => {
+                    let path = path.clone();
+                    // FIX: open files using cli programs sets those in background and y gets stuck
+                    match open::that(path) {
+                        Ok(_) => (),
+                        Err(_err) => {
+                            // TODO: log error
+                        }
+                    }
+                }
                 PostRenderAction::Quit(stdout_result) => {
                     if let Some(stdout_result) = stdout_result {
                         stdout().lock().write_all(stdout_result.as_bytes())?;

@@ -31,6 +31,7 @@ pub enum PreRenderAction {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PostRenderAction {
     ModeChanged(Mode),
+    Open(PathBuf),
     Quit(Option<String>),
     Task(Task),
     UnwatchPath(PathBuf),
