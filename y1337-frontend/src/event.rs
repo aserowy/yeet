@@ -25,6 +25,7 @@ pub enum RenderAction {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PreRenderAction {
+    Resize(u16, u16),
     SleepBeforeRender,
 }
 
@@ -113,8 +114,7 @@ async fn handle_crossterm_event(
 
             None
         }
-        // TODO: add Rerender on resize
-        crossterm::event::Event::Resize(_, _) => None,
+        crossterm::event::Event::Resize(x, y) => Some(vec![Message::Resize(x, y)]),
         crossterm::event::Event::FocusLost
         | crossterm::event::Event::FocusGained
         | crossterm::event::Event::Paste(_)

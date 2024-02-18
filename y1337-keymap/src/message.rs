@@ -23,6 +23,7 @@ pub enum Message {
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
+    Resize(u16, u16),
     SelectCurrent,
     SelectParent,
     SelectPath(PathBuf),

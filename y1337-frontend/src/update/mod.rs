@@ -2,7 +2,7 @@ use ratatui::prelude::Rect;
 use y1337_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    event::{PostRenderAction, RenderAction},
+    event::{PostRenderAction, PreRenderAction, RenderAction},
     layout::AppLayout,
     model::{
         buffer::{viewport::ViewPort, BufferLine},
@@ -337,6 +337,7 @@ pub fn update(
 
             None
         }
+        Message::Resize(x, y) => Some(vec![RenderAction::Pre(PreRenderAction::Resize(*x, *y))]),
         Message::SelectCurrent => {
             if model.mode != Mode::Navigation {
                 None

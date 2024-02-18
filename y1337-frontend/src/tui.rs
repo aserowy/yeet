@@ -10,7 +10,10 @@ use crossterm::{
     ExecutableCommand,
 };
 use notify::{RecursiveMode, Watcher};
-use ratatui::prelude::{CrosstermBackend, Terminal};
+use ratatui::{
+    layout::Rect,
+    prelude::{CrosstermBackend, Terminal},
+};
 use tokio::time;
 
 use crate::{
@@ -61,6 +64,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         for pre_render_action in pre_render_actions {
             match pre_render_action {
+                PreRenderAction::Resize(x, y) => {
+                    terminal.resize(Rect::new(0, 0, *x, *y))?;
+                }
                 PreRenderAction::SleepBeforeRender => {
                     time::sleep(Duration::from_millis(25)).await;
                 }
