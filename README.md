@@ -55,3 +55,11 @@ key combinations are mapped indirectly to messages.
 
 conversion translates crossterm key events to the y1337-keymap
 representation.
+
+## faq
+
+### opening files in linux does nothing
+
+y1337 utilizes `xdg-open` to start files. Thus, not opening anything probably lies
+in a misconfigured mime setup. Check `~/.local/share/applications/` for invalid entries.
+Some programs causing problems reagularly. Im looking at you `wine`...
