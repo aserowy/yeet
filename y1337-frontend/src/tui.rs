@@ -84,11 +84,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                 PostRenderAction::Open(path) => {
                     let path = path.clone();
                     // FIX: open files using cli programs sets those in background and y gets stuck
-                    match open::that(path) {
-                        Ok(_) => (),
-                        Err(_err) => {
-                            // TODO: log error
-                        }
+                    if let Err(_err) = open::that(path) {
+                        // TODO: log error
                     }
                 }
                 PostRenderAction::Quit(stdout_result) => {
