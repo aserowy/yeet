@@ -9,7 +9,7 @@ use std::{
 
 use tokio::process::Command;
 
-#[cfg(all(unix, not(macos)))]
+#[cfg(all(unix, not(target_os = "macos")))]
 pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
     use std::{env, path::PathBuf};
 
@@ -67,21 +67,27 @@ pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
     cmd.wait().await
 }
 
-#[cfg(macos)]
+#[cfg(target_os = "macos")]
 pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
-    let mut cmd = Command::new("/usr/bin/open").arg(path).spawn()?;
-    cmd.wait().await
+    Command::new("/usr/bin/open")
+        .arg(path)
+        .spawn()?
+        .wait()
+        .await
 }
 
-#[cfg(redox)]
+#[cfg(target_os = "redox")]
 pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
-    let mut cmd = Command::new("/ui/bin/launcher").arg(path).spawn()?;
-    cmd.wait().await
+    Command::new("/ui/bin/launcher")
+        .arg(path)
+        .spawn()?
+        .wait()
+        .await
 }
 
 #[cfg(windows)]
 pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
-    // const CREATE_NO_WINDOW: u32 = 0x08000000;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     fn wrap_in_quotes<T: AsRef<OsStr>>(path: T) -> String {
         let mut result = OsString::from("\"");
@@ -91,13 +97,13 @@ pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
         result.to_string_lossy().to_string()
     }
 
-    let mut cmd = Command::new("cmd")
+    Command::new("cmd")
         .args(&["/c", "start", "\"\"", &wrap_in_quotes(path)])
-        // .creation_flags(CREATE_NO_WINDOW); missing
-        .spawn()?;
-
-    cmd.wait().await
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()?
+        .wait()
+        .await
 }
 
-#[cfg(not(any(unix, windows, target_os = "macos", target_os = "redox")))]
+#[cfg(not(any(unix, windows, target_os = "redox")))]
 compile_error!("open is not supported on this platform");
