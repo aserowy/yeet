@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use tokio::{process::Command, time};
+use tokio::time;
 
 use crate::{
     error::AppError,
@@ -24,6 +24,7 @@ pub mod error;
 mod event;
 mod layout;
 mod model;
+mod open;
 pub mod settings;
 mod task;
 mod terminal;
@@ -96,13 +97,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
                     terminal.suspend();
 
-                    // TODO: refactor into custom mod for linux/mac/windows (look at open-rs)
                     // FIX: remove flickering (alternate screen leave and cli started)
-                    let mut asdf = Command::new("xdg-open")
-                        .arg(path)
-                        .spawn()
-                        .expect("Failed to open file");
-                    asdf.wait().await.expect("Failed to open file");
+                    open::path(&path).await?;
 
                     emitter.resume();
                     terminal.resume()?;
