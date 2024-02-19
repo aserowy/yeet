@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use thiserror::Error;
-use y1337_frontend::{
-    settings::Settings,
-    tui::{self},
-};
+use y1337_frontend::settings::Settings;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -19,7 +16,7 @@ async fn main() -> Result<(), Error> {
     let args = cli().get_matches();
     map_args_to_settings(&args, &mut frontend_settings);
 
-    match tui::run(frontend_settings).await {
+    match y1337_frontend::run(frontend_settings).await {
         Ok(()) => Ok(()),
         Err(_) => Err(Error::AppError),
     }

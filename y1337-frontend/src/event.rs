@@ -5,9 +5,12 @@ use notify::{
     event::{ModifyKind, RenameMode},
     RecommendedWatcher,
 };
-use tokio::sync::{
-    mpsc::{self, Receiver},
-    Mutex,
+use tokio::{
+    select,
+    sync::{
+        mpsc::{self, Receiver},
+        oneshot, Mutex,
+    },
 };
 use y1337_keymap::{
     conversion,
@@ -39,65 +42,116 @@ pub enum PostRenderAction {
     WatchPath(PathBuf),
 }
 
-pub fn listen(
-    initial_path: PathBuf,
-) -> (
-    Arc<Mutex<MessageResolver>>,
-    RecommendedWatcher,
-    TaskManager,
-    Receiver<Vec<Message>>,
-) {
-    let resolver_mutex = Arc::new(Mutex::new(MessageResolver::default()));
-    let inner_resolver_mutex = resolver_mutex.clone();
+pub struct Emitter {
+    cancellation: mpsc::Sender<oneshot::Sender<bool>>,
+    pub tasks: TaskManager,
+    pub receiver: Receiver<Vec<Message>>,
+    pub resolver: Arc<Mutex<MessageResolver>>,
+    sender: mpsc::Sender<Vec<Message>>,
+    pub watcher: RecommendedWatcher,
+}
 
-    let (sender, receiver) = mpsc::channel(1);
-    let internal_sender = sender.clone();
+impl Emitter {
+    pub fn listen(initial_path: PathBuf) -> Self {
+        let (sender, receiver) = mpsc::channel(1);
+        let internal_sender = sender.clone();
 
-    let (watcher_sender, mut notify_receiver) = mpsc::unbounded_channel();
-    let watcher = notify::recommended_watcher(move |res| {
-        if let Err(_err) = watcher_sender.send(res) {
+        let (watcher_sender, mut notify_receiver) = mpsc::unbounded_channel();
+        let watcher = notify::recommended_watcher(move |res| {
+            if let Err(_err) = watcher_sender.send(res) {
+                // TODO: log error
+            }
+        })
+        .expect("Failed to create watcher");
+
+        let (task_sender, mut task_receiver) = mpsc::channel(1);
+        let tasks = TaskManager::new(task_sender);
+        tokio::spawn(async move {
+            internal_sender
+                .send(vec![Message::SelectPath(initial_path)])
+                .await
+                .expect("Failed to send message");
+
+            loop {
+                let notify_event = notify_receiver.recv().fuse();
+                let task_event = task_receiver.recv().fuse();
+
+                tokio::select! {
+                    Some(Ok(event)) = notify_event => {
+                        if let Some(messages) = handle_notify_event(event) {
+                            let _ = internal_sender.send(messages).await;
+                        }
+                    }
+                    event = task_event => {
+                        if let Some(event) = event{
+                            let _ = internal_sender.send(event).await;
+                        }
+                    },
+                }
+            }
+        });
+
+        let (cancellation, cancellation_receiver) = mpsc::channel(1);
+        let resolver = Arc::new(Mutex::new(MessageResolver::default()));
+
+        start_crossterm_listener(cancellation_receiver, resolver.clone(), sender.clone());
+
+        Self {
+            cancellation,
+            sender,
+            tasks,
+            receiver,
+            resolver,
+            watcher,
+        }
+    }
+
+    pub async fn suspend(&self) -> Result<bool, oneshot::error::RecvError> {
+        let (sender, receiver) = oneshot::channel();
+        if let Err(_err) = self.cancellation.send(sender).await {
             // TODO: log error
         }
-    })
-    .expect("Failed to create watcher");
 
-    let (task_sender, mut task_receiver) = mpsc::channel(1);
-    let tasks = TaskManager::new(task_sender);
+        receiver.await
+    }
 
+    pub fn resume(&mut self) {
+        let (cancellation, cancellation_receiver) = mpsc::channel(1);
+        self.cancellation = cancellation;
+
+        start_crossterm_listener(
+            cancellation_receiver,
+            self.resolver.clone(),
+            self.sender.clone(),
+        );
+    }
+}
+
+fn start_crossterm_listener(
+    mut cancellation_receiver: mpsc::Receiver<oneshot::Sender<bool>>,
+    resolver_mutex: Arc<Mutex<MessageResolver>>,
+    sender: mpsc::Sender<Vec<Message>>,
+) {
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
 
-        internal_sender
-            .send(vec![Message::SelectPath(initial_path)])
-            .await
-            .expect("Failed to send message");
-
         loop {
             let crossterm_event = reader.next().fuse();
-            let notify_event = notify_receiver.recv().fuse();
-            let task_event = task_receiver.recv().fuse();
+            let cancellation_event = cancellation_receiver.recv().fuse();
 
-            tokio::select! {
+            select! {
+                Some(sender) = cancellation_event => {
+                    sender.send(true).expect("Failed to send cancellation signal");
+                    break
+                }
                 Some(Ok(event)) = crossterm_event => {
-                    if let Some(message) = handle_crossterm_event(&inner_resolver_mutex, event).await {
-                        let _ = internal_sender.send(message).await;
-                    }
-                },
-                Some(Ok(event)) = notify_event => {
-                    if let Some(messages) = handle_notify_event(event) {
-                        let _ = internal_sender.send(messages).await;
+                    if let Some(message) = handle_crossterm_event(&resolver_mutex, event).await {
+                        let _ = sender.send(message).await;
                     }
                 }
-                event = task_event => {
-                    if let Some(event) = event{
-                        let _ = internal_sender.send(event).await;
-                    }
-                },
             }
         }
     });
-
-    (resolver_mutex.clone(), watcher, tasks, receiver)
 }
 
 async fn handle_crossterm_event(

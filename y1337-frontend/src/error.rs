@@ -13,4 +13,6 @@ pub enum AppError {
     LoadHistoryFailed,
     #[error("Sending render action failed")]
     RenderActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Message>),
+    #[error("Terminal not initialized")]
+    TerminalNotInitialized,
 }
