@@ -15,4 +15,6 @@ pub enum AppError {
     RenderActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Message>),
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
+    #[error("Watch operation on path failed")]
+    WatchOperationFailed(#[from] notify::Error),
 }

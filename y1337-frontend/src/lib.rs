@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use notify::{RecursiveMode, Watcher};
 use tokio::{process::Command, time};
 
 use crate::{
@@ -80,8 +79,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         for post_render_action in post_render_actions {
             match post_render_action {
                 PostRenderAction::ModeChanged(mode) => {
-                    let mut resolver = emitter.resolver.lock().await;
-                    resolver.mode = mode.clone();
+                    emitter.set_current_mode(mode.clone()).await;
                 }
                 PostRenderAction::Open(path) => {
                     let path = path.clone();
@@ -116,15 +114,15 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                     }
                     break 'app_loop;
                 }
-                PostRenderAction::Task(task) => emitter.tasks.run(task.clone()),
+                PostRenderAction::Task(task) => emitter.run(task.clone()),
                 PostRenderAction::UnwatchPath(p) => {
                     if p == &PathBuf::default() {
                         continue;
                     }
 
-                    emitter.tasks.abort(&Task::EnumerateDirectory(p.clone()));
+                    emitter.abort(&Task::EnumerateDirectory(p.clone()));
 
-                    if let Err(_error) = emitter.watcher.unwatch(p.as_path()) {
+                    if let Err(_error) = emitter.unwatch(p.as_path()) {
                         // TODO: log error
                     }
                 }
@@ -134,15 +132,12 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                     }
 
                     if p.is_dir() {
-                        emitter.tasks.run(Task::EnumerateDirectory(p.clone()));
+                        emitter.run(Task::EnumerateDirectory(p.clone()));
                     } else {
-                        emitter.tasks.run(Task::LoadPreview(p.clone()));
+                        emitter.run(Task::LoadPreview(p.clone()));
                     }
 
-                    if let Err(_error) = emitter
-                        .watcher
-                        .watch(p.as_path(), RecursiveMode::NonRecursive)
-                    {
+                    if let Err(_error) = emitter.watch(p.as_path()) {
                         // TODO: log error
                     }
                 }
@@ -150,7 +145,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         }
     }
 
-    if let Err(error) = emitter.tasks.finishing().await {
+    if let Err(error) = emitter.shutdown().await {
         result.push(error);
     }
 

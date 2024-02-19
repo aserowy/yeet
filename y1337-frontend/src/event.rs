@@ -1,9 +1,12 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
     event::{ModifyKind, RenameMode},
-    RecommendedWatcher,
+    RecommendedWatcher, RecursiveMode, Watcher,
 };
 use tokio::{
     select,
@@ -18,7 +21,10 @@ use y1337_keymap::{
     MessageResolver,
 };
 
-use crate::task::{Task, TaskManager};
+use crate::{
+    error::AppError,
+    task::{Task, TaskManager},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RenderAction {
@@ -44,11 +50,11 @@ pub enum PostRenderAction {
 
 pub struct Emitter {
     cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
-    pub tasks: TaskManager,
+    tasks: TaskManager,
     pub receiver: Receiver<Vec<Message>>,
-    pub resolver: Arc<Mutex<MessageResolver>>,
+    resolver: Arc<Mutex<MessageResolver>>,
     sender: mpsc::Sender<Vec<Message>>,
-    pub watcher: RecommendedWatcher,
+    watcher: RecommendedWatcher,
 }
 
 impl Emitter {
@@ -128,6 +134,31 @@ impl Emitter {
             self.resolver.clone(),
             self.sender.clone(),
         );
+    }
+
+    pub async fn shutdown(&mut self) -> Result<(), AppError> {
+        self.tasks.finishing().await
+    }
+
+    pub async fn set_current_mode(&mut self, mode: Mode) {
+        let mut resolver = self.resolver.lock().await;
+        resolver.mode = mode;
+    }
+
+    pub fn unwatch(&mut self, path: &Path) -> Result<(), AppError> {
+        Ok(self.watcher.unwatch(path)?)
+    }
+
+    pub fn watch(&mut self, path: &Path) -> Result<(), AppError> {
+        Ok(self.watcher.watch(path, RecursiveMode::NonRecursive)?)
+    }
+
+    pub fn run(&mut self, task: Task) {
+        self.tasks.run(task);
+    }
+
+    pub fn abort(&mut self, task: &Task) {
+        self.tasks.abort(task);
     }
 }
 
