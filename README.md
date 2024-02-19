@@ -44,6 +44,7 @@ to navigation.
 | ---------- | --------------------------------------------------------- |
 | h, l       | navigating the file tree                                  |
 | j, k       | navigating the current directory                          |
+| gh         | goto home directory                                       |
 | m          | go into normal mode                                       |
 | dd         | go into normal and delete the current line                |
 | o, O       | add a new line and change to insert mode                  |
