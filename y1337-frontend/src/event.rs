@@ -58,7 +58,7 @@ pub struct Emitter {
 }
 
 impl Emitter {
-    pub fn listen(initial_path: PathBuf) -> Self {
+    pub fn start(initial_path: PathBuf) -> Self {
         let (sender, receiver) = mpsc::channel(1);
         let internal_sender = sender.clone();
 

@@ -38,7 +38,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 
     let initial_path = get_initial_path(&settings.startup_path);
-    let mut emitter = Emitter::listen(initial_path.clone());
+    let mut emitter = Emitter::start(initial_path.clone());
 
     let mut result = Vec::new();
     'app_loop: while let Some(messages) = emitter.receiver.recv().await {
@@ -68,7 +68,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             }
         }
 
-        terminal.draw(|frame| view::view(&mut model, frame, &layout))?;
+        view::view(&mut terminal, &mut model, &layout)?;
 
         // TODO: refactor post render actions
         let post_render_actions = render_actions.iter().filter_map(|actn| match actn {
@@ -106,7 +106,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
                     emitter.resume();
                     terminal.resume()?;
-                    terminal.draw(|frame| view::view(&mut model, frame, &layout))?;
+
+                    view::view(&mut terminal, &mut model, &layout)?;
                 }
                 PostRenderAction::Quit(stdout_result) => {
                     if let Some(stdout_result) = stdout_result {
