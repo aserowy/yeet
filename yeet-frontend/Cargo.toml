@@ -14,3 +14,6 @@ thiserror = "1.0.56"
 notify = { version = "6.1.1", default-features = false, features = ["macos_fsevent"] }
 infer = "0.15.0"
 dirs = "5.0.1"
+
+[target.'cfg(all(unix, not(macos)))'.dependencies]
+pathdiff = "0.2.0"

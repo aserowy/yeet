@@ -1,4 +1,4 @@
-# yeet (y337)
+# yeet or y337
 
 ## the name, the vision
 
