@@ -6,7 +6,7 @@ use std::{
 };
 
 use notify::{RecursiveMode, Watcher};
-use tokio::{time, process::Command};
+use tokio::{process::Command, time};
 
 use crate::{
     error::AppError,
