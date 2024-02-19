@@ -43,7 +43,7 @@ pub enum PostRenderAction {
 }
 
 pub struct Emitter {
-    cancellation: mpsc::Sender<oneshot::Sender<bool>>,
+    cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
     pub tasks: TaskManager,
     pub receiver: Receiver<Vec<Message>>,
     pub resolver: Arc<Mutex<MessageResolver>>,
@@ -91,13 +91,13 @@ impl Emitter {
             }
         });
 
-        let (cancellation, cancellation_receiver) = mpsc::channel(1);
+        let (cancellation, cancellation_receiver) = oneshot::channel();
         let resolver = Arc::new(Mutex::new(MessageResolver::default()));
 
         start_crossterm_listener(cancellation_receiver, resolver.clone(), sender.clone());
 
         Self {
-            cancellation,
+            cancellation: Some(cancellation),
             sender,
             tasks,
             receiver,
@@ -106,18 +106,22 @@ impl Emitter {
         }
     }
 
-    pub async fn suspend(&self) -> Result<bool, oneshot::error::RecvError> {
-        let (sender, receiver) = oneshot::channel();
-        if let Err(_err) = self.cancellation.send(sender).await {
-            // TODO: log error
-        }
+    pub async fn suspend(&mut self) -> Result<bool, oneshot::error::RecvError> {
+        if let Some(cancellation) = self.cancellation.take() {
+            let (sender, receiver) = oneshot::channel();
+            if let Err(_err) = cancellation.send(sender) {
+                // TODO: log error
+            }
 
-        receiver.await
+            receiver.await
+        } else {
+            Ok(false)
+        }
     }
 
     pub fn resume(&mut self) {
-        let (cancellation, cancellation_receiver) = mpsc::channel(1);
-        self.cancellation = cancellation;
+        let (cancellation, cancellation_receiver) = oneshot::channel();
+        self.cancellation = Some(cancellation);
 
         start_crossterm_listener(
             cancellation_receiver,
@@ -128,7 +132,7 @@ impl Emitter {
 }
 
 fn start_crossterm_listener(
-    mut cancellation_receiver: mpsc::Receiver<oneshot::Sender<bool>>,
+    mut cancellation_receiver: oneshot::Receiver<oneshot::Sender<bool>>,
     resolver_mutex: Arc<Mutex<MessageResolver>>,
     sender: mpsc::Sender<Vec<Message>>,
 ) {
@@ -137,10 +141,9 @@ fn start_crossterm_listener(
 
         loop {
             let crossterm_event = reader.next().fuse();
-            let cancellation_event = cancellation_receiver.recv().fuse();
 
             select! {
-                Some(sender) = cancellation_event => {
+                Ok(sender) = &mut cancellation_receiver => {
                     sender.send(true).expect("Failed to send cancellation signal");
                     break
                 }
