@@ -8,11 +8,11 @@ use ratatui::{backend::CrosstermBackend, layout::Rect, Frame, Terminal};
 
 use crate::error::AppError;
 
-pub struct Term {
+pub struct TerminalWrapper {
     inner: Option<Terminal<CrosstermBackend<BufWriter<Stderr>>>>,
 }
 
-impl Term {
+impl TerminalWrapper {
     pub fn start() -> Result<Self, AppError> {
         stderr().execute(EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;

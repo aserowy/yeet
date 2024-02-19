@@ -17,7 +17,7 @@ use crate::{
     },
     settings::Settings,
     task::Task,
-    terminal::Term,
+    terminal::TerminalWrapper,
 };
 
 pub mod error;
@@ -32,7 +32,7 @@ mod update;
 mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
-    let mut terminal = Term::start()?;
+    let mut terminal = TerminalWrapper::start()?;
     let mut model = Model::default();
     if history::cache::load(&mut model.history).is_err() {
         // TODO: add notifications in tui and show history load failed

@@ -27,6 +27,7 @@ use tokio::process::Command;
 //     let mut commands: Vec<(&str, Vec<&OsStr>)> = vec![];
 //
 //     let wsl_path = wsl_path(path);
+// CUSTOM DEPENDENCY: is_wsl
 //     if is_wsl::is_wsl() {
 //         commands.push(("wslview", vec![&wsl_path]));
 //     }
