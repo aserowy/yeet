@@ -6,7 +6,7 @@ use std::{
 };
 
 use notify::{RecursiveMode, Watcher};
-use tokio::time;
+use tokio::{time, process::Command};
 
 use crate::{
     error::AppError,
@@ -98,9 +98,13 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
                     terminal.suspend();
 
-                    if let Err(_err) = open::that_in_background(path).join() {
-                        // TODO: log error
-                    }
+                    // TODO: refactor into custom mod for linux/mac/windows (look at open-rs)
+                    // FIX: remove flickering (alternate screen leave and cli started)
+                    let mut asdf = Command::new("xdg-open")
+                        .arg(path)
+                        .spawn()
+                        .expect("Failed to open file");
+                    asdf.wait().await.expect("Failed to open file");
 
                     emitter.resume();
                     terminal.resume()?;
