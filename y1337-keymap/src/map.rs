@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
@@ -88,6 +88,13 @@ impl Default for KeyMap {
                         Mode::Normal,
                         TextModification::DeleteLineOnCursor,
                     ),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('h'), vec![]),
+                    ],
+                    Binding::Message(Message::SelectPath(get_home_path())),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
@@ -321,4 +328,10 @@ fn add_mapping(
             mappings.insert(mode, bindings.clone());
         }
     }
+}
+
+fn get_home_path() -> PathBuf {
+    dirs::home_dir()
+        .expect("Failed to get home directory")
+        .to_path_buf()
 }

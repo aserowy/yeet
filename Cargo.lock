@@ -1201,6 +1201,7 @@ name = "y1337-keymap"
 version = "0.0.1"
 dependencies = [
  "crossterm",
+ "dirs",
  "thiserror",
 ]
 

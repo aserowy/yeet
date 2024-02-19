@@ -58,7 +58,7 @@ to navigation.
 | keys       | action                                                    |
 | ---------- | --------------------------------------------------------- |
 | h, l       | move cursor left/right                                    |
-| 0, $       | movve cursor to line start/end                            |
+| 0, $       | move cursor to line start/end                             |
 | j, k       | navigating the current directory                          |
 | m          | go into normal mode                                       |
 | dd         | delete the current line                                   |
