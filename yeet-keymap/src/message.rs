@@ -17,6 +17,9 @@ pub enum Message {
     ExecuteCommand,
     ExecuteCommandString(String),
     KeySequenceChanged(String),
+    NavigateToCurrent,
+    NavigateToParent,
+    NavigateToPath(PathBuf),
     OpenCurrentSelection,
     PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
@@ -24,9 +27,6 @@ pub enum Message {
     PathsAdded(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
     Resize(u16, u16),
-    SelectCurrent,
-    SelectParent,
-    SelectPath(PathBuf),
     Quit,
 }
 

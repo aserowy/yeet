@@ -18,7 +18,7 @@ In every mode `esc` switches to the next 'level' mode. The order is:
 
 navigation < normal < insert
 
-Exceptions to this order is the command mode. Leaving this mode will restore the
+Exception to this order is the command mode. Leaving this mode will restore the
 previous one.
 
 When transition from normal to navigation all changes to the filesystem will get
@@ -70,14 +70,12 @@ pass them to the relevant components.
 The frontend follows an elm architecture with one exception: The model is
 mutable and will not get created every update.
 
-frontend.rs holds the lifecycle of the tui. It starts an event stream to
+It holds the lifecycle of the tui. It starts an event stream to
 enable non lockable operations. This stream is implemented in event.rs and
 translates multiple event emitter like terminal interaction with crossterm into
-AppEvents.
+messages.
 
-layout.rs defines the overall app layout, which is used by all view functions.
-
-The modules model, update and view represent the elm philosophy. Messages
+The modules model, update and view represent parts of the elm philosophy. Messages
 are defined in yeet-keymap to prevent cycling dependencies.
 
 ### yeet-keymap

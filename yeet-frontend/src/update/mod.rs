@@ -143,7 +143,7 @@ pub fn update(
                     settings,
                     model,
                     layout,
-                    &Message::SelectPath(model.current.path.clone()),
+                    &Message::NavigateToPath(model.current.path.clone()),
                 ),
                 "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
                     Task::OptimizeHistory,
@@ -201,6 +201,100 @@ pub fn update(
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
             None
+        }
+        Message::NavigateToCurrent => {
+            if model.mode != Mode::Navigation {
+                None
+            } else if let Some(mut actions) = path::set_current_to_selected(model) {
+                let current_content = model.current.buffer.lines.clone();
+
+                buffer::set_content(
+                    &model.mode,
+                    &mut model.current.buffer,
+                    model.preview.buffer.lines.clone(),
+                );
+                current::update(model, layout, None);
+
+                history::set_cursor_index(
+                    &model.current.path,
+                    &model.history,
+                    &mut model.current.buffer,
+                );
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
+                    actions.extend(preview_actions);
+                }
+                model.preview.buffer.lines.clear();
+                preview::update(model, layout, None);
+
+                buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
+                parent::update(model, layout, None);
+
+                model.history.add(&model.current.path);
+
+                Some(actions)
+            } else {
+                None
+            }
+        }
+        Message::NavigateToParent => {
+            if model.mode != Mode::Navigation {
+                None
+            } else if let Some(mut actions) = path::set_current_to_parent(model) {
+                let current_content = model.current.buffer.lines.clone();
+
+                buffer::set_content(
+                    &model.mode,
+                    &mut model.current.buffer,
+                    model.parent.buffer.lines.clone(),
+                );
+                current::update(model, layout, None);
+
+                history::set_cursor_index(
+                    &model.current.path,
+                    &model.history,
+                    &mut model.current.buffer,
+                );
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, false) {
+                    actions.extend(preview_actions);
+                }
+                buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
+                preview::update(model, layout, None);
+
+                model.parent.buffer.lines.clear();
+                parent::update(model, layout, None);
+
+                Some(actions)
+            } else {
+                None
+            }
+        }
+        Message::NavigateToPath(path) => {
+            // TODO: check in set current to path and extend enumeration request with filename
+            let directory = if path.is_file() {
+                path.parent().unwrap()
+            } else {
+                path.as_path()
+            };
+
+            let mut actions = Vec::new();
+            if let Some(current_actions) = path::set_current_to_path(model, directory) {
+                actions.extend(current_actions);
+            }
+
+            model.current.buffer.lines.clear();
+            current::update(model, layout, None);
+
+            model.parent.buffer.lines.clear();
+            parent::update(model, layout, None);
+
+            model.preview.buffer.lines.clear();
+            preview::update(model, layout, None);
+
+            model.history.add(&model.current.path);
+
+            Some(actions)
         }
         Message::OpenCurrentSelection => {
             if model.mode != Mode::Navigation {
@@ -338,100 +432,6 @@ pub fn update(
             None
         }
         Message::Resize(x, y) => Some(vec![RenderAction::Pre(PreRenderAction::Resize(*x, *y))]),
-        Message::SelectCurrent => {
-            if model.mode != Mode::Navigation {
-                None
-            } else if let Some(mut actions) = path::set_current_to_selected(model) {
-                let current_content = model.current.buffer.lines.clone();
-
-                buffer::set_content(
-                    &model.mode,
-                    &mut model.current.buffer,
-                    model.preview.buffer.lines.clone(),
-                );
-                current::update(model, layout, None);
-
-                history::set_cursor_index(
-                    &model.current.path,
-                    &model.history,
-                    &mut model.current.buffer,
-                );
-
-                if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
-                    actions.extend(preview_actions);
-                }
-                model.preview.buffer.lines.clear();
-                preview::update(model, layout, None);
-
-                buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
-                parent::update(model, layout, None);
-
-                model.history.add(&model.current.path);
-
-                Some(actions)
-            } else {
-                None
-            }
-        }
-        Message::SelectParent => {
-            if model.mode != Mode::Navigation {
-                None
-            } else if let Some(mut actions) = path::set_current_to_parent(model) {
-                let current_content = model.current.buffer.lines.clone();
-
-                buffer::set_content(
-                    &model.mode,
-                    &mut model.current.buffer,
-                    model.parent.buffer.lines.clone(),
-                );
-                current::update(model, layout, None);
-
-                history::set_cursor_index(
-                    &model.current.path,
-                    &model.history,
-                    &mut model.current.buffer,
-                );
-
-                if let Some(preview_actions) = path::set_preview_to_selected(model, true, false) {
-                    actions.extend(preview_actions);
-                }
-                buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
-                preview::update(model, layout, None);
-
-                model.parent.buffer.lines.clear();
-                parent::update(model, layout, None);
-
-                Some(actions)
-            } else {
-                None
-            }
-        }
-        Message::SelectPath(path) => {
-            // TODO: check in set current to path and extend enumeration request with filename
-            let directory = if path.is_file() {
-                path.parent().unwrap()
-            } else {
-                path.as_path()
-            };
-
-            let mut actions = Vec::new();
-            if let Some(current_actions) = path::set_current_to_path(model, directory) {
-                actions.extend(current_actions);
-            }
-
-            model.current.buffer.lines.clear();
-            current::update(model, layout, None);
-
-            model.parent.buffer.lines.clear();
-            parent::update(model, layout, None);
-
-            model.preview.buffer.lines.clear();
-            preview::update(model, layout, None);
-
-            model.history.add(&model.current.path);
-
-            Some(actions)
-        }
         Message::Quit => Some(vec![
             RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
                 model.history.clone(),

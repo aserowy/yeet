@@ -94,15 +94,15 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('h'), vec![]),
                     ],
-                    Binding::Message(Message::SelectPath(get_home_path())),
+                    Binding::Message(Message::NavigateToPath(get_home_path())),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
-                    Binding::Message(Message::SelectParent),
+                    Binding::Message(Message::NavigateToParent),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
-                    Binding::Message(Message::SelectCurrent),
+                    Binding::Message(Message::NavigateToCurrent),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('m'), vec![])],

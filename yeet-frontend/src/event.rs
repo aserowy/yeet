@@ -74,7 +74,7 @@ impl Emitter {
         let tasks = TaskManager::new(task_sender);
         tokio::spawn(async move {
             internal_sender
-                .send(vec![Message::SelectPath(initial_path)])
+                .send(vec![Message::NavigateToPath(initial_path)])
                 .await
                 .expect("Failed to send message");
 
