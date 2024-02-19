@@ -22,6 +22,53 @@ of Infinite Possibilities.
 
 In short: y1337
 
+## shortcuts
+
+### changing modes
+
+In every mode `esc` switches to the next 'level' mode. The order is:
+
+navigation < normal < insert
+
+Exceptions to this order is the command mode. Leaving this mode will restore the
+previous one.
+
+When transition from normal to navigation all changes to the filesystem will get
+persisted. Thus, changes in insert and normal are handled like unsaved buffer changes
+and are not present on the file system till `:w` gets called or the mode changes
+to navigation.
+
+### navigation mode
+
+| keys       | action                                                    |
+| ---------- | --------------------------------------------------------- |
+| h, l       | navigating the file tree                                  |
+| j, k       | navigating the current directory                          |
+| m          | go into normal mode                                       |
+| dd         | go into normal and delete the current line                |
+| o, O       | add a new line and change to insert mode                  |
+| i, a       | change to insert mode                                     |
+| I, A       | jump to line start/end and change to insert mode          |
+| :          | change to command mode                                    |
+| zt, zz, zb | move viewport to start, center, bottom of cursor position |
+| C-u, C-d   | move viewport half screen up/down                         |
+
+### normal mode
+
+| keys       | action                                                    |
+| ---------- | --------------------------------------------------------- |
+| h, l       | move cursor left/right                                    |
+| 0, $       | movve cursor to line start/end                            |
+| j, k       | navigating the current directory                          |
+| m          | go into normal mode                                       |
+| dd         | delete the current line                                   |
+| o, O       | add a new line and change to insert mode                  |
+| i, a       | change to insert mode                                     |
+| I, A       | jump to line start/end and change to insert mode          |
+| :          | change to command mode                                    |
+| zt, zz, zb | move viewport to start, center, bottom of cursor position |
+| C-u, C-d   | move viewport half screen up/down                         |
+
 ## architecture overview
 
 ### y1337
