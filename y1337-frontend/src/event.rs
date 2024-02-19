@@ -18,7 +18,10 @@ use y1337_keymap::{
     MessageResolver,
 };
 
-use crate::task::{Task, TaskManager};
+use crate::{
+    error::AppError,
+    task::{Task, TaskManager},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RenderAction {

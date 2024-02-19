@@ -98,7 +98,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
                     terminal.suspend();
 
-                    if let Err(_err) = open::that(path) {
+                    if let Err(_err) = open::that_in_background(path).join() {
                         // TODO: log error
                     }
 

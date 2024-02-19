@@ -29,11 +29,7 @@ impl Term {
 
     pub fn shutdown(&mut self) -> Result<(), AppError> {
         self.inner = None;
-
-        terminal::disable_raw_mode()?;
-        stderr().execute(terminal::LeaveAlternateScreen)?;
-
-        Ok(())
+        self.stop()
     }
 
     pub fn size(&self) -> Result<Rect, AppError> {
@@ -55,11 +51,15 @@ impl Term {
     }
 
     pub fn suspend(&mut self) {
+        self.stop().expect("Failed to stop terminal");
         self.inner = None;
     }
 
     pub fn resume(&mut self) -> Result<(), AppError> {
         if self.inner.is_none() {
+            stderr().execute(EnterAlternateScreen)?;
+            terminal::enable_raw_mode()?;
+
             let mut terminal = Terminal::new(CrosstermBackend::new(BufWriter::new(stderr())))?;
             terminal.clear()?;
 
@@ -75,6 +75,13 @@ impl Term {
                 return Err(AppError::from(err));
             }
         }
+
+        Ok(())
+    }
+
+    fn stop(&self) -> Result<(), AppError> {
+        terminal::disable_raw_mode()?;
+        stderr().execute(terminal::LeaveAlternateScreen)?;
 
         Ok(())
     }
