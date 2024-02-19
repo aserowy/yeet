@@ -1,26 +1,14 @@
-# y1337 (pronounced yeet)
+# yeet (y337)
 
 ## the name, the vision
 
-Yet Another Astoundingly Hackable, Keyboard-Controlled, Ultra-Intuitive,
-Efficient, Versatile, Interactive, Fast, Elmish, Minimalistic, and Superlative
-File Explorer with Vim-Inspired Keybindings, Designed to Revolutionize Terminal
-Productivity, and Unleash Unprecedented Efficiency, All While Honoring the Spirit
-of Open Source Collaboration and Embracing the Beauty, and Greatness of Rust Programming
-Language, Crafted with Passion, Precision, Pain, and Perseverance, Aiming to Reshape
-the Way We Navigate and Manipulate Files in the Digital Realm, Pioneering a New
-Era of Command-Line Exploration and Empowering Users to Harness the Full Potential
-of Their Command Shells, Forever Changing the Landscape of File Interaction, and
-Leaving a Legacy Worthy of Legends, Echoing Through the Halls of Cyberspace and
-Inspiring Generations of Developers Yet to Come, A Testament to Human Ingenuity
-and the Endless Quest for Excellence, a Journey Beyond the Cursor, and a Beacon
-of Innovation in the Vast Digital Wilderness, Infused with the Magic of Lua, Allowing
-Users to Extend Its Functionality, Shape Its Behavior, and Create Customized Workflows
-Tailored to Their Unique Needs, Enabling a Thriving Ecosystem of Community-Driven
-Plugins, Where Imagination Meets Practicality, and Every Keystroke Holds the Promise
-of Infinite Possibilities.
+Yet Another Astoundingly Hackable, Keyboard-Controlled, Efficient, Versatile,
+Interactive, Fast, Elmish, Minimalistic, and Superlative File Explorer with
+Vim-Inspired Keybindings, Infused with the Magic of Lua, Allowing Users to Extend
+Its Functionality, Shape Its Behavior, and Create Customized Workflows Tailored
+to Their Unique Needs!
 
-In short: y1337
+In short: y337
 
 ## shortcuts
 
@@ -72,12 +60,12 @@ to navigation.
 
 ## architecture overview
 
-### y1337
+### yeet
 
 The main crate is handling frontend and backend and resolves cli arguments to
 pass them to the relevant components.
 
-### y1337-frontend
+### yeet-frontend
 
 The frontend follows an elm architecture with one exception: The model is
 mutable and will not get created every update.
@@ -90,9 +78,9 @@ AppEvents.
 layout.rs defines the overall app layout, which is used by all view functions.
 
 The modules model, update and view represent the elm philosophy. Messages
-are defined in y1337-keymap to prevent cycling dependencies.
+are defined in yeet-keymap to prevent cycling dependencies.
 
-### y1337-keymap
+### yeet-keymap
 
 This crate holds all key relevant features. The MessageResolver uses buffer
 and tree to resolve possible messages, which follow the elm architecture to
@@ -101,13 +89,13 @@ modify the model.
 tree uses the keymap to build a key tree structure. Thus, in keymap all
 key combinations are mapped indirectly to messages.
 
-conversion translates crossterm key events to the y1337-keymap
+conversion translates crossterm key events to the yeet-keymap
 representation.
 
 ## faq
 
 ### opening files in linux does nothing
 
-y1337 utilizes `xdg-open` to start files. Thus, not opening anything probably lies
+yeet utilizes `xdg-open` to start files. Thus, not opening anything probably lies
 in a misconfigured mime setup. Check `~/.local/share/applications/` for invalid entries.
 Some programs causing problems regularly. Im looking at you `wine`...
