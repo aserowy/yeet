@@ -49,10 +49,6 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: /usr/bin/aarch64-linux-gnu-gcc
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: build snap
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: snapcore/action-build@v1
-
       - name: pack unix artifacts
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         env:
