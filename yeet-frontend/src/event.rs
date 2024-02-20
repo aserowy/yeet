@@ -26,28 +26,6 @@ use crate::{
     task::{Task, TaskManager},
 };
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum RenderAction {
-    Pre(PreRenderAction),
-    Post(PostRenderAction),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum PreRenderAction {
-    Resize(u16, u16),
-    SleepBeforeRender,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum PostRenderAction {
-    ModeChanged(Mode),
-    Open(PathBuf),
-    Quit(Option<String>),
-    Task(Task),
-    UnwatchPath(PathBuf),
-    WatchPath(PathBuf),
-}
-
 pub struct Emitter {
     cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
     tasks: TaskManager,

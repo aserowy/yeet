@@ -8,8 +8,9 @@ use std::{
 use tokio::time;
 
 use crate::{
+    action::{PostAction, PreViewAction, RenderAction},
     error::AppError,
-    event::{Emitter, PostRenderAction, PreRenderAction, RenderAction},
+    event::Emitter,
     layout::AppLayout,
     model::{
         history::{self},
@@ -20,6 +21,7 @@ use crate::{
     terminal::TerminalWrapper,
 };
 
+mod action;
 pub mod error;
 mod event;
 mod layout;
@@ -54,16 +56,16 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         // TODO: refactor pre render actions
         let pre_render_actions = render_actions.iter().filter_map(|actn| match actn {
-            RenderAction::Pre(pre) => Some(pre),
+            RenderAction::PreView(pre) => Some(pre),
             _ => None,
         });
 
         for pre_render_action in pre_render_actions {
             match pre_render_action {
-                PreRenderAction::Resize(x, y) => {
+                PreViewAction::Resize(x, y) => {
                     terminal.resize(*x, *y)?;
                 }
-                PreRenderAction::SleepBeforeRender => {
+                PreViewAction::SleepBeforeRender => {
                     time::sleep(Duration::from_millis(25)).await;
                 }
             }
@@ -79,10 +81,10 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         for post_render_action in post_render_actions {
             match post_render_action {
-                PostRenderAction::ModeChanged(mode) => {
+                PostAction::ModeChanged(mode) => {
                     emitter.set_current_mode(mode.clone()).await;
                 }
-                PostRenderAction::Open(path) => {
+                PostAction::Open(path) => {
                     let path = path.clone();
 
                     // TODO: check with mime if suspend/resume is necessary?
@@ -105,14 +107,14 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
                     view::view(&mut terminal, &mut model, &layout)?;
                 }
-                PostRenderAction::Quit(stdout_result) => {
+                PostAction::Quit(stdout_result) => {
                     if let Some(stdout_result) = stdout_result {
                         stdout().lock().write_all(stdout_result.as_bytes())?;
                     }
                     break 'app_loop;
                 }
-                PostRenderAction::Task(task) => emitter.run(task.clone()),
-                PostRenderAction::UnwatchPath(p) => {
+                PostAction::Task(task) => emitter.run(task.clone()),
+                PostAction::UnwatchPath(p) => {
                     if p == &PathBuf::default() {
                         continue;
                     }
@@ -123,7 +125,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                         // TODO: log error
                     }
                 }
-                PostRenderAction::WatchPath(p) => {
+                PostAction::WatchPath(p) => {
                     if p == &PathBuf::default() {
                         continue;
                     }

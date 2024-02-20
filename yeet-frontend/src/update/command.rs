@@ -1,7 +1,7 @@
 use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    event::{PostRenderAction, RenderAction},
+    action::{PostAction, RenderAction},
     layout::AppLayout,
     model::Model,
     settings::Settings,
@@ -21,7 +21,7 @@ pub fn execute(
             layout,
             &Message::NavigateToPath(model.current.path.clone()),
         ),
-        "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
+        "histopt" => Some(vec![RenderAction::Post(PostAction::Task(
             Task::OptimizeHistory,
         ))]),
         "q" => super::update(settings, model, layout, &Message::Quit),

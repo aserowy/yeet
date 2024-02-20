@@ -2,7 +2,7 @@ use ratatui::prelude::Rect;
 use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    event::{PostRenderAction, PreRenderAction, RenderAction},
+    action::{PostAction, PreViewAction, RenderAction},
     layout::AppLayout,
     model::{
         buffer::{viewport::ViewPort, BufferLine},
@@ -13,8 +13,8 @@ use crate::{
 };
 
 mod buffer;
-mod commandline;
 mod command;
+mod commandline;
 mod current;
 mod directory;
 mod history;
@@ -82,13 +82,12 @@ pub fn update(
                     };
 
                     if let Some(mut post_render_action_vec) = post_render_actions {
-                        post_render_action_vec.push(RenderAction::Post(
-                            PostRenderAction::ModeChanged(to.clone()),
-                        ));
+                        post_render_action_vec
+                            .push(RenderAction::Post(PostAction::ModeChanged(to.clone())));
 
                         Some(post_render_action_vec)
                     } else {
-                        Some(vec![RenderAction::Post(PostRenderAction::ModeChanged(
+                        Some(vec![RenderAction::Post(PostAction::ModeChanged(
                             to.clone(),
                         ))])
                     }
@@ -247,15 +246,15 @@ pub fn update(
             if let Some(selected) = path::get_selected_path(model) {
                 if settings.stdout_on_open {
                     Some(vec![
-                        RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
+                        RenderAction::Post(PostAction::Task(Task::SaveHistory(
                             model.history.clone(),
                         ))),
-                        RenderAction::Post(PostRenderAction::Quit(Some(
+                        RenderAction::Post(PostAction::Quit(Some(
                             selected.to_string_lossy().to_string(),
                         ))),
                     ])
                 } else {
-                    Some(vec![RenderAction::Post(PostRenderAction::Open(selected))])
+                    Some(vec![RenderAction::Post(PostAction::Open(selected))])
                 }
             } else {
                 None
@@ -374,12 +373,10 @@ pub fn update(
 
             None
         }
-        Message::Resize(x, y) => Some(vec![RenderAction::Pre(PreRenderAction::Resize(*x, *y))]),
+        Message::Resize(x, y) => Some(vec![RenderAction::PreView(PreViewAction::Resize(*x, *y))]),
         Message::Quit => Some(vec![
-            RenderAction::Post(PostRenderAction::Task(Task::SaveHistory(
-                model.history.clone(),
-            ))),
-            RenderAction::Post(PostRenderAction::Quit(None)),
+            RenderAction::Post(PostAction::Task(Task::SaveHistory(model.history.clone()))),
+            RenderAction::Post(PostAction::Quit(None)),
         ]),
     }
 }

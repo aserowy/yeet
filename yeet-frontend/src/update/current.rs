@@ -1,7 +1,7 @@
 use yeet_keymap::message::Buffer;
 
 use crate::{
-    event::{PostRenderAction, RenderAction},
+    action::{PostAction, RenderAction},
     layout::AppLayout,
     model::{
         buffer::{undo::BufferChanged, BufferResult},
@@ -38,15 +38,16 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<RenderAction>> {
             for modification in crate::model::buffer::undo::consolidate(&modifications) {
                 match modification {
                     BufferChanged::LineAdded(_, name) => tasks.push(RenderAction::Post(
-                        PostRenderAction::Task(Task::AddPath(path.join(name))),
+                        PostAction::Task(Task::AddPath(path.join(name))),
                     )),
                     BufferChanged::LineRemoved(_, name) => tasks.push(RenderAction::Post(
-                        PostRenderAction::Task(Task::DeletePath(path.join(name))),
+                        PostAction::Task(Task::DeletePath(path.join(name))),
                     )),
                     BufferChanged::Content(_, old_name, new_name) => {
-                        tasks.push(RenderAction::Post(PostRenderAction::Task(
-                            Task::RenamePath(path.join(old_name), path.join(new_name)),
-                        )))
+                        tasks.push(RenderAction::Post(PostAction::Task(Task::RenamePath(
+                            path.join(old_name),
+                            path.join(new_name),
+                        ))))
                     }
                 }
             }
