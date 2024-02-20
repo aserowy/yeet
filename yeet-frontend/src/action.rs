@@ -19,6 +19,8 @@ pub enum PreView {
     Open(PathBuf),
     Resize(u16, u16),
     SleepBeforeRender,
+    UnwatchPath(PathBuf),
+    WatchPath(PathBuf),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -26,8 +28,6 @@ pub enum PostView {
     ModeChanged(Mode),
     Quit(Option<String>),
     Task(Task),
-    UnwatchPath(PathBuf),
-    WatchPath(PathBuf),
 }
 
 pub async fn execute_pre_view(
@@ -65,28 +65,7 @@ pub async fn execute_pre_view(
                 PreView::SleepBeforeRender => {
                     tokio::time::sleep(Duration::from_millis(50)).await;
                 }
-            },
-            _ => {}
-        }
-    }
-    Ok(())
-}
-
-pub async fn execute_post(actions: &Vec<Action>, emitter: &mut Emitter) -> Result<bool, AppError> {
-    for action in actions {
-        match action {
-            Action::PostView(post) => match post {
-                PostView::ModeChanged(mode) => {
-                    emitter.set_current_mode(mode.clone()).await;
-                }
-                PostView::Quit(stdout_result) => {
-                    if let Some(stdout_result) = stdout_result {
-                        stdout().lock().write_all(stdout_result.as_bytes())?;
-                    }
-                    return Ok(false);
-                }
-                PostView::Task(task) => emitter.run(task.clone()),
-                PostView::UnwatchPath(p) => {
+                PreView::UnwatchPath(p) => {
                     if p == &PathBuf::default() {
                         continue;
                     }
@@ -97,7 +76,7 @@ pub async fn execute_post(actions: &Vec<Action>, emitter: &mut Emitter) -> Resul
                         // TODO: log error
                     }
                 }
-                PostView::WatchPath(p) => {
+                PreView::WatchPath(p) => {
                     if p == &PathBuf::default() {
                         continue;
                     }
@@ -112,6 +91,30 @@ pub async fn execute_post(actions: &Vec<Action>, emitter: &mut Emitter) -> Resul
                         // TODO: log error
                     }
                 }
+            },
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+pub async fn execute_post_view(
+    actions: &Vec<Action>,
+    emitter: &mut Emitter,
+) -> Result<bool, AppError> {
+    for action in actions {
+        match action {
+            Action::PostView(post) => match post {
+                PostView::ModeChanged(mode) => {
+                    emitter.set_current_mode(mode.clone()).await;
+                }
+                PostView::Quit(stdout_result) => {
+                    if let Some(stdout_result) = stdout_result {
+                        stdout().lock().write_all(stdout_result.as_bytes())?;
+                    }
+                    return Ok(false);
+                }
+                PostView::Task(task) => emitter.run(task.clone()),
             },
             _ => {}
         }

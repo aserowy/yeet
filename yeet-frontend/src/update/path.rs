@@ -4,7 +4,7 @@ use ratatui::style::Color;
 use yeet_keymap::message::ContentKind;
 
 use crate::{
-    action::{Action, PostView, PreView},
+    action::{Action, PreView},
     model::{
         buffer::{BufferLine, StylePartial},
         Model,
@@ -80,7 +80,7 @@ pub fn set_current_to_parent(model: &mut Model) -> Option<Vec<Action>> {
         if let Some(parent) = parent_parent {
             actions.extend(vec![
                 Action::PreView(PreView::SleepBeforeRender),
-                Action::PostView(PostView::WatchPath(parent.to_path_buf())),
+                Action::PreView(PreView::WatchPath(parent.to_path_buf())),
             ]);
         }
 
@@ -103,22 +103,22 @@ pub fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<Action>
 
         let mut actions = Vec::new();
         if let Some(parent) = &model.parent.path {
-            actions.push(Action::PostView(PostView::UnwatchPath(parent.clone())));
+            actions.push(Action::PreView(PreView::UnwatchPath(parent.clone())));
         }
 
         let parent_parent = directory.parent();
         if let Some(parent) = parent_parent {
             actions.extend(vec![
                 Action::PreView(PreView::SleepBeforeRender),
-                Action::PostView(PostView::WatchPath(parent.to_path_buf())),
+                Action::PreView(PreView::WatchPath(parent.to_path_buf())),
             ]);
         }
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
 
         actions.extend(vec![
-            Action::PostView(PostView::UnwatchPath(model.current.path.clone())),
+            Action::PreView(PreView::UnwatchPath(model.current.path.clone())),
             Action::PreView(PreView::SleepBeforeRender),
-            Action::PostView(PostView::WatchPath(directory.clone())),
+            Action::PreView(PreView::WatchPath(directory.clone())),
         ]);
         model.current.path = directory;
 
@@ -136,7 +136,7 @@ pub fn set_current_to_selected(model: &mut Model) -> Option<Vec<Action>> {
 
         let mut actions = Vec::new();
         if let Some(parent) = &model.parent.path {
-            actions.push(Action::PostView(PostView::UnwatchPath(parent.clone())));
+            actions.push(Action::PreView(PreView::UnwatchPath(parent.clone())));
         }
         model.parent.path = Some(model.current.path.clone());
         model.current.path = selected.to_path_buf();
@@ -160,7 +160,7 @@ pub fn set_preview_to_selected(
 
         let mut actions = Vec::new();
         if unwatch_old_path {
-            actions.push(Action::PostView(PostView::UnwatchPath(
+            actions.push(Action::PreView(PreView::UnwatchPath(
                 model.preview.path.clone(),
             )));
         }
@@ -168,7 +168,7 @@ pub fn set_preview_to_selected(
         if watch_new_path {
             actions.extend(vec![
                 Action::PreView(PreView::SleepBeforeRender),
-                Action::PostView(PostView::WatchPath(selected.clone())),
+                Action::PreView(PreView::WatchPath(selected.clone())),
             ]);
         }
 
