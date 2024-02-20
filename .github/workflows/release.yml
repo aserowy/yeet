@@ -76,5 +76,4 @@ jobs:
           draft: true
           files: |
             yeet-${{ matrix.target }}.zip
-            yeet*.snap
           generate_release_notes: true
