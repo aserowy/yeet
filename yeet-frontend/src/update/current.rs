@@ -1,7 +1,7 @@
 use yeet_keymap::message::Buffer;
 
 use crate::{
-    action::{PostAction, RenderAction},
+    action::{Action, PostView},
     layout::AppLayout,
     model::{
         buffer::{undo::BufferChanged, BufferResult},
@@ -25,7 +25,7 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
     }
 }
 
-pub fn save_changes(model: &mut Model) -> Option<Vec<RenderAction>> {
+pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
     if let Some(result) = buffer::update(
         &model.mode,
         &mut model.current.buffer,
@@ -37,18 +37,15 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<RenderAction>> {
         if let BufferResult::Changes(modifications) = result {
             for modification in crate::model::buffer::undo::consolidate(&modifications) {
                 match modification {
-                    BufferChanged::LineAdded(_, name) => tasks.push(RenderAction::Post(
-                        PostAction::Task(Task::AddPath(path.join(name))),
+                    BufferChanged::LineAdded(_, name) => tasks.push(Action::PostView(
+                        PostView::Task(Task::AddPath(path.join(name))),
                     )),
-                    BufferChanged::LineRemoved(_, name) => tasks.push(RenderAction::Post(
-                        PostAction::Task(Task::DeletePath(path.join(name))),
+                    BufferChanged::LineRemoved(_, name) => tasks.push(Action::PostView(
+                        PostView::Task(Task::DeletePath(path.join(name))),
                     )),
-                    BufferChanged::Content(_, old_name, new_name) => {
-                        tasks.push(RenderAction::Post(PostAction::Task(Task::RenamePath(
-                            path.join(old_name),
-                            path.join(new_name),
-                        ))))
-                    }
+                    BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::PostView(
+                        PostView::Task(Task::RenamePath(path.join(old_name), path.join(new_name))),
+                    )),
                 }
             }
         }

@@ -1,7 +1,7 @@
 use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    action::{PostAction, RenderAction},
+    action::{Action, PostView},
     layout::AppLayout,
     model::Model,
     settings::Settings,
@@ -13,7 +13,7 @@ pub fn execute(
     settings: &Settings,
     model: &mut Model,
     layout: &AppLayout,
-) -> Option<Vec<RenderAction>> {
+) -> Option<Vec<Action>> {
     let post_render_actions = match cmd {
         "e!" => super::update(
             settings,
@@ -21,7 +21,7 @@ pub fn execute(
             layout,
             &Message::NavigateToPath(model.current.path.clone()),
         ),
-        "histopt" => Some(vec![RenderAction::Post(PostAction::Task(
+        "histopt" => Some(vec![Action::PostView(PostView::Task(
             Task::OptimizeHistory,
         ))]),
         "q" => super::update(settings, model, layout, &Message::Quit),

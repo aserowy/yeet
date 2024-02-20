@@ -1,14 +1,6 @@
-use std::{
-    env,
-    io::{stdout, Write},
-    path::PathBuf,
-    time::Duration,
-};
-
-use tokio::time;
+use std::{env, path::PathBuf};
 
 use crate::{
-    action::{PostAction, PreViewAction, RenderAction},
     error::AppError,
     event::Emitter,
     layout::AppLayout,
@@ -17,7 +9,6 @@ use crate::{
         Model,
     },
     settings::Settings,
-    task::Task,
     terminal::TerminalWrapper,
 };
 
@@ -44,103 +35,21 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut emitter = Emitter::start(initial_path.clone());
 
     let mut result = Vec::new();
-    'app_loop: while let Some(messages) = emitter.receiver.recv().await {
+    while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
         let layout = AppLayout::default(size);
 
-        let render_actions: Vec<_> = messages
+        let actions: Vec<_> = messages
             .iter()
             .flat_map(|message| update::update(&settings, &mut model, &layout, message))
             .flatten()
             .collect();
 
-        // TODO: refactor pre render actions
-        let pre_render_actions = render_actions.iter().filter_map(|actn| match actn {
-            RenderAction::PreView(pre) => Some(pre),
-            _ => None,
-        });
-
-        for pre_render_action in pre_render_actions {
-            match pre_render_action {
-                PreViewAction::Resize(x, y) => {
-                    terminal.resize(*x, *y)?;
-                }
-                PreViewAction::SleepBeforeRender => {
-                    time::sleep(Duration::from_millis(25)).await;
-                }
-            }
-        }
-
+        action::execute_pre_view(&actions, &mut emitter, &mut terminal).await?;
         view::view(&mut terminal, &mut model, &layout)?;
 
-        // TODO: refactor post render actions
-        let post_render_actions = render_actions.iter().filter_map(|actn| match actn {
-            RenderAction::Post(post) => Some(post),
-            _ => None,
-        });
-
-        for post_render_action in post_render_actions {
-            match post_render_action {
-                PostAction::ModeChanged(mode) => {
-                    emitter.set_current_mode(mode.clone()).await;
-                }
-                PostAction::Open(path) => {
-                    let path = path.clone();
-
-                    // TODO: check with mime if suspend/resume is necessary?
-                    match emitter.suspend().await {
-                        Ok(result) => {
-                            if !result {
-                                continue;
-                            }
-                        }
-                        Err(_err) => {} // TODO: log error
-                    }
-
-                    terminal.suspend();
-
-                    // FIX: remove flickering (alternate screen leave and cli started)
-                    open::path(&path).await?;
-
-                    emitter.resume();
-                    terminal.resume()?;
-
-                    view::view(&mut terminal, &mut model, &layout)?;
-                }
-                PostAction::Quit(stdout_result) => {
-                    if let Some(stdout_result) = stdout_result {
-                        stdout().lock().write_all(stdout_result.as_bytes())?;
-                    }
-                    break 'app_loop;
-                }
-                PostAction::Task(task) => emitter.run(task.clone()),
-                PostAction::UnwatchPath(p) => {
-                    if p == &PathBuf::default() {
-                        continue;
-                    }
-
-                    emitter.abort(&Task::EnumerateDirectory(p.clone()));
-
-                    if let Err(_error) = emitter.unwatch(p.as_path()) {
-                        // TODO: log error
-                    }
-                }
-                PostAction::WatchPath(p) => {
-                    if p == &PathBuf::default() {
-                        continue;
-                    }
-
-                    if p.is_dir() {
-                        emitter.run(Task::EnumerateDirectory(p.clone()));
-                    } else {
-                        emitter.run(Task::LoadPreview(p.clone()));
-                    }
-
-                    if let Err(_error) = emitter.watch(p.as_path()) {
-                        // TODO: log error
-                    }
-                }
-            }
+        if !action::execute_post(&actions, &mut emitter).await? {
+            break;
         }
     }
 
