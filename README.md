@@ -1,4 +1,4 @@
-# yeet or y337
+# yeet
 
 ## the name, the vision
 
@@ -28,12 +28,17 @@ to navigation.
 
 ### navigation mode
 
+| keys | action                   |
+| ---- | ------------------------ |
+| h, l | navigating the file tree |
+| gh   | goto home directory      |
+| m    | go into normal mode      |
+
+### navigation and normal mode
+
 | keys       | action                                                    |
 | ---------- | --------------------------------------------------------- |
-| h, l       | navigating the file tree                                  |
-| j, k       | navigating the current directory                          |
-| gh         | goto home directory                                       |
-| m          | go into normal mode                                       |
+| j, k       | navigating the current directory down/up                  |
 | dd         | go into normal and delete the current line                |
 | o, O       | add a new line and change to insert mode                  |
 | i, a       | change to insert mode                                     |
@@ -44,28 +49,27 @@ to navigation.
 
 ### normal mode
 
-| keys       | action                                                    |
-| ---------- | --------------------------------------------------------- |
-| h, l       | move cursor left/right                                    |
-| 0, $       | move cursor to line start/end                             |
-| j, k       | navigating the current directory                          |
-| m          | go into normal mode                                       |
-| dd         | delete the current line                                   |
-| o, O       | add a new line and change to insert mode                  |
-| i, a       | change to insert mode                                     |
-| I, A       | jump to line start/end and change to insert mode          |
-| :          | change to command mode                                    |
-| zt, zz, zb | move viewport to start, center, bottom of cursor position |
-| C-u, C-d   | move viewport half screen up/down                         |
+| keys | action                        |
+| ---- | ----------------------------- |
+| h, l | move cursor left/right        |
+| 0, $ | move cursor to line start/end |
+
+## faq
+
+### opening files in linux does nothing
+
+yeet utilizes `xdg-open` to start files. Thus, not opening anything probably lies
+in a misconfigured mime setup. Check `~/.local/share/applications/` for invalid entries.
+Some programs causing problems regularly. Im looking at you `wine`...
 
 ## architecture overview
 
-### yeet
+### yeet crate
 
 The main crate is handling frontend and backend and resolves cli arguments to
 pass them to the relevant components.
 
-### yeet-frontend
+### yeet-frontend crate
 
 The frontend follows an elm architecture with one exception: The model is
 mutable and will not get created every update.
@@ -78,7 +82,7 @@ messages.
 The modules model, update and view represent parts of the elm philosophy. Messages
 are defined in yeet-keymap to prevent cycling dependencies.
 
-### yeet-keymap
+### yeet-keymap crate
 
 This crate holds all key relevant features. The MessageResolver uses buffer
 and tree to resolve possible messages, which follow the elm architecture to
@@ -89,11 +93,3 @@ key combinations are mapped indirectly to messages.
 
 conversion translates crossterm key events to the yeet-keymap
 representation.
-
-## faq
-
-### opening files in linux does nothing
-
-yeet utilizes `xdg-open` to start files. Thus, not opening anything probably lies
-in a misconfigured mime setup. Check `~/.local/share/applications/` for invalid entries.
-Some programs causing problems regularly. Im looking at you `wine`...
