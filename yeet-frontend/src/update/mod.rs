@@ -14,6 +14,7 @@ use crate::{
 
 mod buffer;
 mod commandline;
+mod command;
 mod current;
 mod directory;
 mod history;
@@ -138,65 +139,7 @@ pub fn update(
             }
         }
         Message::ExecuteCommandString(command) => {
-            let post_render_actions = match command.as_str() {
-                "e!" => update(
-                    settings,
-                    model,
-                    layout,
-                    &Message::NavigateToPath(model.current.path.clone()),
-                ),
-                "histopt" => Some(vec![RenderAction::Post(PostRenderAction::Task(
-                    Task::OptimizeHistory,
-                ))]),
-                "q" => update(settings, model, layout, &Message::Quit),
-                "w" => update(
-                    settings,
-                    model,
-                    layout,
-                    &Message::Buffer(Buffer::SaveBuffer(None)),
-                ),
-                "wq" => {
-                    let actions: Vec<_> = update(
-                        settings,
-                        model,
-                        layout,
-                        &Message::Buffer(Buffer::SaveBuffer(None)),
-                    )
-                    .into_iter()
-                    .flatten()
-                    .chain(
-                        update(settings, model, layout, &Message::Quit)
-                            .into_iter()
-                            .flatten(),
-                    )
-                    .collect();
-
-                    if actions.is_empty() {
-                        None
-                    } else {
-                        Some(actions)
-                    }
-                }
-                _ => None,
-            };
-
-            let mode_changed_actions = update(
-                settings,
-                model,
-                layout,
-                &Message::Buffer(Buffer::ChangeMode(
-                    model.mode.clone(),
-                    get_mode_after_command(&model.mode_before),
-                )),
-            );
-
-            Some(
-                post_render_actions
-                    .into_iter()
-                    .flatten()
-                    .chain(mode_changed_actions.into_iter().flatten())
-                    .collect(),
-            )
+            command::execute(command, settings, model, layout)
         }
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
@@ -441,42 +384,7 @@ pub fn update(
     }
 }
 
-fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
-    if let Some(mode) = mode_before {
-        match mode {
-            Mode::Command => unreachable!(),
-            Mode::Insert | Mode::Normal => Mode::Normal,
-            Mode::Navigation => Mode::Navigation,
-        }
-    } else {
-        Mode::default()
-    }
-}
-
 fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
     vp.height = usize::from(rect.height);
     vp.width = usize::from(rect.width);
-}
-
-mod test {
-    #[test]
-    fn test_get_mode_after_command() {
-        use yeet_keymap::message::Mode;
-
-        let mode_before = Some(Mode::Normal);
-        let result = super::get_mode_after_command(&mode_before);
-        assert_eq!(result, Mode::Normal);
-
-        let mode_before = Some(Mode::Insert);
-        let result = super::get_mode_after_command(&mode_before);
-        assert_eq!(result, Mode::Normal);
-
-        let mode_before = Some(Mode::Navigation);
-        let result = super::get_mode_after_command(&mode_before);
-        assert_eq!(result, Mode::Navigation);
-
-        let mode_before = None;
-        let result = super::get_mode_after_command(&mode_before);
-        assert_eq!(result, Mode::Navigation);
-    }
 }
