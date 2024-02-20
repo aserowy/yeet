@@ -1,6 +1,8 @@
-# yeet
+<div align="center">
+  <img src="assets/logo.png" alt="yeet logo" width="20%">
+</div>
 
-## the name, the vision
+## yeet - the vision
 
 Yet Another Astoundingly Hackable, Keyboard-Controlled, Efficient, Versatile,
 Interactive, Fast, Elmish, Minimalistic, and Superlative File Explorer with
