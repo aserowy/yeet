@@ -58,6 +58,13 @@ to navigation.
 
 ## faq
 
+### how fast is yeet
+
+It utilizes the same mechanics like yazi (tokio i/o) without that many roundtrips
+because of the underlying architecture. Thus, it should be equally fast. E.g. reading
+a directory with 500k entries takes only a couple of seconds without blocking the
+ui.
+
 ### opening files in linux does nothing
 
 yeet utilizes `xdg-open` to start files. Thus, not opening anything probably lies
