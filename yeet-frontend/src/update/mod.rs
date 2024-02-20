@@ -9,7 +9,6 @@ use crate::{
         Model,
     },
     settings::Settings,
-    task::Task,
 };
 
 mod buffer;
@@ -243,12 +242,9 @@ pub fn update(
 
             if let Some(selected) = path::get_selected_path(model) {
                 if settings.stdout_on_open {
-                    Some(vec![
-                        Action::PostView(PostView::Task(Task::SaveHistory(model.history.clone()))),
-                        Action::PostView(PostView::Quit(Some(
-                            selected.to_string_lossy().to_string(),
-                        ))),
-                    ])
+                    Some(vec![Action::PostView(PostView::Quit(Some(
+                        selected.to_string_lossy().to_string(),
+                    )))])
                 } else {
                     Some(vec![Action::PreView(PreView::Open(selected))])
                 }
@@ -370,10 +366,7 @@ pub fn update(
             None
         }
         Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
-        Message::Quit => Some(vec![
-            Action::PostView(PostView::Task(Task::SaveHistory(model.history.clone()))),
-            Action::PostView(PostView::Quit(None)),
-        ]),
+        Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
     }
 }
 

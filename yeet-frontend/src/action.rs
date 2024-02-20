@@ -6,7 +6,9 @@ use std::{
 
 use yeet_keymap::message::Mode;
 
-use crate::{error::AppError, event::Emitter, open, task::Task, terminal::TerminalWrapper};
+use crate::{
+    error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Action {
@@ -36,8 +38,8 @@ pub async fn execute_pre_view(
     terminal: &mut TerminalWrapper,
 ) -> Result<(), AppError> {
     for action in actions {
-        match action {
-            Action::PreView(pre) => match pre {
+        if let Action::PreView(pre) = action {
+            match pre {
                 PreView::Open(path) => {
                     let path = path.clone();
 
@@ -91,8 +93,7 @@ pub async fn execute_pre_view(
                         // TODO: log error
                     }
                 }
-            },
-            _ => {}
+            }
         }
     }
     Ok(())
@@ -101,10 +102,11 @@ pub async fn execute_pre_view(
 pub async fn execute_post_view(
     actions: &Vec<Action>,
     emitter: &mut Emitter,
+    model: &Model,
 ) -> Result<bool, AppError> {
     for action in actions {
-        match action {
-            Action::PostView(post) => match post {
+        if let Action::PostView(post) = action {
+            match post {
                 PostView::ModeChanged(mode) => {
                     emitter.set_current_mode(mode.clone()).await;
                 }
@@ -112,11 +114,12 @@ pub async fn execute_post_view(
                     if let Some(stdout_result) = stdout_result {
                         stdout().lock().write_all(stdout_result.as_bytes())?;
                     }
+                    emitter.run(Task::SaveHistory(model.history.clone()));
+
                     return Ok(false);
                 }
                 PostView::Task(task) => emitter.run(task.clone()),
-            },
-            _ => {}
+            }
         }
     }
     Ok(true)

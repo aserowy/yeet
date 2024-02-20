@@ -201,6 +201,7 @@ impl TaskManager {
                 if let Err(_error) = history::cache::save(&history) {
                     // TODO: log error
                 }
+                history::cache::optimize()?;
 
                 Ok(())
             }),

@@ -8,6 +8,8 @@ use crate::{
     task::Task,
 };
 
+use super::path;
+
 pub fn execute(
     cmd: &str,
     settings: &Settings,
@@ -15,6 +17,11 @@ pub fn execute(
     layout: &AppLayout,
 ) -> Option<Vec<Action>> {
     let post_render_actions = match cmd {
+        "d!" => path::get_selected_path(model).map(|path| {
+            vec![Action::PostView(PostView::Task(Task::DeletePath(
+                path.clone(),
+            )))]
+        }),
         "e!" => super::update(
             settings,
             model,

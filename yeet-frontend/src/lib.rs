@@ -48,7 +48,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         action::execute_pre_view(&actions, &mut emitter, &mut terminal).await?;
         view::view(&mut terminal, &mut model, &layout)?;
 
-        if !action::execute_post_view(&actions, &mut emitter).await? {
+        if !action::execute_post_view(&actions, &mut emitter, &model).await? {
             break;
         }
     }
