@@ -85,7 +85,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                 PostRenderAction::Open(path) => {
                     let path = path.clone();
 
-                    // TODO: check with mime if suspend/resume is necessary
+                    // TODO: check with mime if suspend/resume is necessary?
                     match emitter.suspend().await {
                         Ok(result) => {
                             if !result {

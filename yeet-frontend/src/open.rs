@@ -38,7 +38,7 @@ pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
             Ok(file_contents) => {
                 file_contents.contains("docker") || fs::metadata("/.dockerenv").await.is_ok()
             }
-            Err(_error) => false,
+            Err(_error) => false || fs::metadata("/.dockerenv").await.is_ok(),
         }
     }
 
