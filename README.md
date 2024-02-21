@@ -41,7 +41,7 @@ to navigation.
 | keys       | action                                                    |
 | ---------- | --------------------------------------------------------- |
 | j, k       | navigating the current directory down/up                  |
-| dd         | go into normal and delete the current line                |
+| dd         | go into normal and trash* the current line                |
 | o, O       | add a new line and change to insert mode                  |
 | i, a       | change to insert mode                                     |
 | I, A       | jump to line start/end and change to insert mode          |
@@ -49,6 +49,9 @@ to navigation.
 | :          | change to command mode                                    |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position |
 | C-u, C-d   | move viewport half screen up/down                         |
+
+*trash: files are not deleted but moved to yeets cache folder to enable register
+interactions. To delete the selected path completly, call command `:d!`.
 
 ### normal mode
 

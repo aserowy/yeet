@@ -24,6 +24,7 @@ pub enum Task {
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
     SaveHistory(History),
+    TrashPath(PathBuf),
     YankPath(PathBuf),
 }
 
@@ -204,8 +205,17 @@ impl TaskManager {
             Task::SaveHistory(history) => self.tasks.spawn(async move {
                 if let Err(_error) = history::cache::save(&history) {
                     // TODO: log error
+                    println!("Error: {:?}", _error);
                 }
                 history::cache::optimize()?;
+
+                Ok(())
+            }),
+            Task::TrashPath(path) => self.tasks.spawn(async move {
+                if let Err(_error) = register::cache_and_compress(&path).await {
+                    // TODO: log error
+                    println!("Error: {:?}", _error);
+                }
 
                 Ok(())
             }),
@@ -237,6 +247,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::OptimizeHistory => false,
         Task::RenamePath(_, _) => false,
         Task::SaveHistory(_) => false,
+        Task::TrashPath(_) => false,
         Task::YankPath(_) => false,
     }
 }
