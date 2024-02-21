@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     model::{
         history::{self, History},
-        register,
+        register::{self, RegisterEntry},
     },
 };
 
@@ -24,8 +24,8 @@ pub enum Task {
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
     SaveHistory(History),
-    TrashPath(PathBuf),
-    YankPath(PathBuf),
+    TrashPath(RegisterEntry),
+    YankPath(RegisterEntry),
 }
 
 pub struct TaskManager {
@@ -211,16 +211,16 @@ impl TaskManager {
 
                 Ok(())
             }),
-            Task::TrashPath(path) => self.tasks.spawn(async move {
-                if let Err(_error) = register::cache_and_compress(&path).await {
+            Task::TrashPath(entry) => self.tasks.spawn(async move {
+                if let Err(_error) = register::cache_and_compress(entry).await {
                     // TODO: log error
                     println!("Error: {:?}", _error);
                 }
 
                 Ok(())
             }),
-            Task::YankPath(path) => self.tasks.spawn(async move {
-                if let Err(_error) = register::compress(&path).await {
+            Task::YankPath(entry) => self.tasks.spawn(async move {
+                if let Err(_error) = register::compress(entry).await {
                     // TODO: log error
                     println!("Error: {:?}", _error);
                 }

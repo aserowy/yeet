@@ -369,7 +369,8 @@ pub fn update(
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
         Message::YankSelected => {
             if let Some(selected) = path::get_selected_path(model) {
-                Some(vec![Action::PreView(PreView::YankPath(selected))])
+                let entry = model.register.add(&selected);
+                Some(vec![Action::PreView(PreView::YankPath(entry))])
             } else {
                 None
             }

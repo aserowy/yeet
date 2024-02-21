@@ -22,9 +22,48 @@ use tokio::fs;
 use crate::error::AppError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Register {}
+pub struct Register {
+    entries: Vec<RegisterEntry>,
+}
 
-pub async fn cache_and_compress(path: &PathBuf) -> Result<(), AppError> {
+impl Register {
+    pub fn add(&mut self, path: &Path) -> RegisterEntry {
+        let entry = RegisterEntry::from(path);
+        self.entries.insert(0, entry.clone());
+        if self.entries.len() > 10 {
+            self.entries.pop();
+        }
+
+        entry
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct RegisterEntry {
+    pub id: String,
+    pub path: PathBuf,
+    pub status: RegisterStatus,
+}
+
+impl RegisterEntry {
+    fn from(path: &Path) -> Self {
+        Self {
+            id: get_compression_name(&path),
+            path: path.to_path_buf(),
+            status: RegisterStatus::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum RegisterStatus {
+    #[default]
+    Processing,
+
+    _Ready,
+}
+
+pub async fn cache_and_compress(entry: RegisterEntry) -> Result<(), AppError> {
     let cache_path = get_register_cache_path().await?;
 
     let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
@@ -37,10 +76,10 @@ pub async fn cache_and_compress(path: &PathBuf) -> Result<(), AppError> {
         fs::create_dir_all(&target_path).await?;
     }
 
-    if let Some(file_name) = path.file_name() {
+    if let Some(file_name) = entry.path.file_name() {
         let target_file = target_path.join(file_name);
-        fs::rename(path, target_file.clone()).await?;
-        compress_with_archive_name(&target_file, &get_compression_name(path)).await?;
+        fs::rename(entry.path, target_file.clone()).await?;
+        compress_with_archive_name(&target_file, &entry.id).await?;
     }
 
     fs::remove_dir_all(target_path).await?;
@@ -48,8 +87,8 @@ pub async fn cache_and_compress(path: &PathBuf) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn compress(path: &Path) -> Result<(), AppError> {
-    compress_with_archive_name(path, &get_compression_name(path)).await
+pub async fn compress(entry: RegisterEntry) -> Result<(), AppError> {
+    compress_with_archive_name(&entry.path, &entry.id).await
 }
 
 async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(), AppError> {

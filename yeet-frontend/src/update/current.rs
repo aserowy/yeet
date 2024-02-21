@@ -40,11 +40,15 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
                     BufferChanged::LineAdded(_, name) => tasks.push(Action::PostView(
                         PostView::Task(Task::AddPath(path.join(name))),
                     )),
-                    BufferChanged::LineRemoved(_, name) => tasks.push(Action::PostView(
-                        // TODO: handle soft delete with register task
-                        PostView::Task(Task::TrashPath(path.join(name))),
-                    )),
+                    BufferChanged::LineRemoved(_, name) => {
+                        let entry = model.register.add(&path.join(name));
+                        tasks.push(Action::PostView(
+                            // TODO: multiple deletes should get consolidated into a single task/archive
+                            PostView::Task(Task::TrashPath(entry)),
+                        ))
+                    }
                     BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::PostView(
+                        // TODO: new_name is empty, add to consolidated Trash operation
                         PostView::Task(Task::RenamePath(path.join(old_name), path.join(new_name))),
                     )),
                 }
