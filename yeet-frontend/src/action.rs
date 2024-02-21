@@ -7,12 +7,7 @@ use std::{
 use yeet_keymap::message::Mode;
 
 use crate::{
-    error::AppError,
-    event::Emitter,
-    model::{register::RegisterEntry, Model},
-    open,
-    task::Task,
-    terminal::TerminalWrapper,
+    error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,7 +23,6 @@ pub enum PreView {
     SleepBeforeRender,
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
-    YankPath(RegisterEntry),
 }
 
 pub async fn execute_pre_view(
@@ -89,9 +83,6 @@ pub async fn execute_pre_view(
                     if let Err(_error) = emitter.watch(path.as_path()) {
                         // TODO: log error
                     }
-                }
-                PreView::YankPath(entry) => {
-                    emitter.run(Task::YankPath(entry.clone()));
                 }
             }
         }

@@ -251,6 +251,7 @@ fn should_abort_on_finish(task: Task) -> bool {
     match task {
         Task::AddPath(_) => false,
         Task::DeletePath(_) => false,
+        Task::DeleteRegisterEntry(_) => false,
         Task::EnumerateDirectory(_) => true,
         Task::LoadPreview(_) => true,
         Task::OptimizeHistory => false,

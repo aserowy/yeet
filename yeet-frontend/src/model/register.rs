@@ -3,8 +3,6 @@
 
 // softdelete/yank: add entry with state processing and invoke task
 
-// cleanup older files, thus all 10 registers are filled
-
 // refresh registers on notify
 // change state to echo path
 
@@ -95,7 +93,8 @@ pub async fn compress(entry: RegisterEntry) -> Result<(), AppError> {
 }
 
 pub async fn delete(entry: RegisterEntry) -> Result<(), AppError> {
-    fs::remove_file(get_register_cache_path().await?.join(&entry.id)).await?;
+    let path = get_register_path().await?.join(&entry.id);
+    fs::remove_file(path).await?;
     Ok(())
 }
 

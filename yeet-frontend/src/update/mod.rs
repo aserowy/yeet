@@ -9,6 +9,7 @@ use crate::{
         Model,
     },
     settings::Settings,
+    task::Task,
 };
 
 mod buffer;
@@ -369,8 +370,17 @@ pub fn update(
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
         Message::YankSelected => {
             if let Some(selected) = path::get_selected_path(model) {
-                let entry = model.register.add(&selected);
-                Some(vec![Action::PreView(PreView::YankPath(entry))])
+                let mut tasks = Vec::new();
+
+                let (entry, old_entry) = model.register.add(&selected);
+                tasks.push(Action::PostView(PostView::Task(Task::YankPath(entry))));
+                if let Some(old_entry) = old_entry {
+                    tasks.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(
+                        old_entry,
+                    ))));
+                }
+
+                Some(tasks)
             } else {
                 None
             }
