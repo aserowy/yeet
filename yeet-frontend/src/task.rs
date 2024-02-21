@@ -19,6 +19,7 @@ use crate::{
 pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
+    DeleteRegisterEntry(RegisterEntry),
     EnumerateDirectory(PathBuf),
     LoadPreview(PathBuf),
     OptimizeHistory,
@@ -109,6 +110,14 @@ impl TaskManager {
                 } else if path.is_dir() {
                     fs::remove_dir_all(&path).await?;
                 };
+
+                Ok(())
+            }),
+            Task::DeleteRegisterEntry(entry) => self.tasks.spawn(async move {
+                if let Err(_error) = register::delete(entry).await {
+                    // TODO: log error
+                    println!("Error: {:?}", _error);
+                }
 
                 Ok(())
             }),

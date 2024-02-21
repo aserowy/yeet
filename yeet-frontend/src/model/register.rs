@@ -27,14 +27,17 @@ pub struct Register {
 }
 
 impl Register {
-    pub fn add(&mut self, path: &Path) -> RegisterEntry {
+    pub fn add(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
         let entry = RegisterEntry::from(path);
         self.entries.insert(0, entry.clone());
-        if self.entries.len() > 10 {
-            self.entries.pop();
-        }
 
-        entry
+        let old_entry = if self.entries.len() > 10 {
+            self.entries.pop()
+        } else {
+            None
+        };
+
+        (entry, old_entry)
     }
 }
 
@@ -91,6 +94,11 @@ pub async fn compress(entry: RegisterEntry) -> Result<(), AppError> {
     compress_with_archive_name(&entry.path, &entry.id).await
 }
 
+pub async fn delete(entry: RegisterEntry) -> Result<(), AppError> {
+    fs::remove_file(get_register_cache_path().await?.join(&entry.id)).await?;
+    Ok(())
+}
+
 async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(), AppError> {
     let target_path = get_register_path().await?.join(archive_name);
     let file = File::create(&target_path)?;
@@ -108,7 +116,6 @@ async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(
             )?;
         }
     }
-
     Ok(())
 }
 
@@ -141,6 +148,5 @@ async fn get_register_path() -> Result<PathBuf, AppError> {
     if !register_path.exists() {
         fs::create_dir_all(&register_path).await?;
     }
-
     Ok(register_path)
 }
