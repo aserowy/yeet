@@ -3,9 +3,6 @@
 
 // softdelete/yank: add entry with state processing and invoke task
 
-// handles are used in tasks: handles are pure functions defined here (equal to history/cache)
-// handle delete: move path to cache, compress
-
 // cleanup older files, thus all 10 registers are filled
 
 // refresh registers on notify
@@ -43,7 +40,7 @@ pub async fn cache_and_compress(path: &PathBuf) -> Result<(), AppError> {
     if let Some(file_name) = path.file_name() {
         let target_file = target_path.join(file_name);
         fs::rename(path, target_file.clone()).await?;
-        compress_to_name(&target_file, &get_compression_name(path)).await?;
+        compress_with_archive_name(&target_file, &get_compression_name(path)).await?;
     }
 
     fs::remove_dir_all(target_path).await?;
@@ -52,19 +49,25 @@ pub async fn cache_and_compress(path: &PathBuf) -> Result<(), AppError> {
 }
 
 pub async fn compress(path: &Path) -> Result<(), AppError> {
-    compress_to_name(path, &get_compression_name(path)).await
+    compress_with_archive_name(path, &get_compression_name(path)).await
 }
 
-async fn compress_to_name(path: &Path, archive_name: &str) -> Result<(), AppError> {
+async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(), AppError> {
     let target_path = get_register_path().await?.join(archive_name);
     let file = File::create(&target_path)?;
     let encoder = GzEncoder::new(file, Compression::default());
     let mut archive = tar::Builder::new(encoder);
 
-    if path.is_dir() {
-        archive.append_dir_all(".", path)?;
-    } else {
-        archive.append_file(".", &mut File::open(path)?)?;
+    if let Some(file_name) = path.file_name() {
+        if path.is_dir() {
+            let archive_directory = format!("{}/", file_name.to_string_lossy());
+            archive.append_dir_all(archive_directory, path)?;
+        } else {
+            archive.append_file(
+                file_name.to_string_lossy().to_string(),
+                &mut File::open(path)?,
+            )?;
+        }
     }
 
     Ok(())
