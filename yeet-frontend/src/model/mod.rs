@@ -8,10 +8,12 @@ use self::{
         Buffer, Cursor, CursorPosition,
     },
     history::History,
+    register::Register,
 };
 
 pub mod buffer;
 pub mod history;
+pub mod register;
 
 #[derive(Debug)]
 pub struct Model {
@@ -23,6 +25,7 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
+    pub register: Register,
 }
 
 impl Default for Model {
@@ -65,6 +68,7 @@ impl Default for Model {
                 ..Default::default()
             },
             preview: DirectoryBuffer::default(),
+            register: Register::default(),
         }
     }
 }

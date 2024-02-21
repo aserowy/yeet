@@ -73,7 +73,7 @@ impl Default for KeyMap {
             vec![
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
-                    Binding::Message(Message::OpenCurrentSelection),
+                    Binding::Message(Message::OpenSelected),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
@@ -102,7 +102,7 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
-                    Binding::Message(Message::NavigateToCurrent),
+                    Binding::Message(Message::NavigateToSelected),
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('m'), vec![])],
@@ -219,6 +219,13 @@ impl Default for KeyMap {
                     Binding::Message(Message::Buffer(Buffer::MoveViewPort(
                         ViewPortDirection::HalfPageUp,
                     ))),
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('y'), vec![]),
+                        Key::new(KeyCode::from_char('y'), vec![]),
+                    ],
+                    Binding::Message(Message::YankSelected),
                 ),
                 (
                     vec![

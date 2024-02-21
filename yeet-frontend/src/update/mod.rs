@@ -141,41 +141,6 @@ pub fn update(
             model.key_sequence = sequence.clone();
             None
         }
-        Message::NavigateToCurrent => {
-            if model.mode != Mode::Navigation {
-                None
-            } else if let Some(mut actions) = path::set_current_to_selected(model) {
-                let current_content = model.current.buffer.lines.clone();
-
-                buffer::set_content(
-                    &model.mode,
-                    &mut model.current.buffer,
-                    model.preview.buffer.lines.clone(),
-                );
-                current::update(model, layout, None);
-
-                history::set_cursor_index(
-                    &model.current.path,
-                    &model.history,
-                    &mut model.current.buffer,
-                );
-
-                if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
-                    actions.extend(preview_actions);
-                }
-                model.preview.buffer.lines.clear();
-                preview::update(model, layout, None);
-
-                buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
-                parent::update(model, layout, None);
-
-                model.history.add(&model.current.path);
-
-                Some(actions)
-            } else {
-                None
-            }
-        }
         Message::NavigateToParent => {
             if model.mode != Mode::Navigation {
                 None
@@ -235,7 +200,42 @@ pub fn update(
 
             Some(actions)
         }
-        Message::OpenCurrentSelection => {
+        Message::NavigateToSelected => {
+            if model.mode != Mode::Navigation {
+                None
+            } else if let Some(mut actions) = path::set_current_to_selected(model) {
+                let current_content = model.current.buffer.lines.clone();
+
+                buffer::set_content(
+                    &model.mode,
+                    &mut model.current.buffer,
+                    model.preview.buffer.lines.clone(),
+                );
+                current::update(model, layout, None);
+
+                history::set_cursor_index(
+                    &model.current.path,
+                    &model.history,
+                    &mut model.current.buffer,
+                );
+
+                if let Some(preview_actions) = path::set_preview_to_selected(model, false, true) {
+                    actions.extend(preview_actions);
+                }
+                model.preview.buffer.lines.clear();
+                preview::update(model, layout, None);
+
+                buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
+                parent::update(model, layout, None);
+
+                model.history.add(&model.current.path);
+
+                Some(actions)
+            } else {
+                None
+            }
+        }
+        Message::OpenSelected => {
             if model.mode != Mode::Navigation {
                 return None;
             }
@@ -367,6 +367,13 @@ pub fn update(
         }
         Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
+        Message::YankSelected => {
+            if let Some(selected) = path::get_selected_path(model) {
+                Some(vec![Action::PreView(PreView::YankPath(selected))])
+            } else {
+                None
+            }
+        }
     }
 }
 

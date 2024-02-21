@@ -45,6 +45,7 @@ to navigation.
 | o, O       | add a new line and change to insert mode                  |
 | i, a       | change to insert mode                                     |
 | I, A       | jump to line start/end and change to insert mode          |
+| yy         | yank file to register                                     |
 | :          | change to command mode                                    |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position |
 | C-u, C-d   | move viewport half screen up/down                         |

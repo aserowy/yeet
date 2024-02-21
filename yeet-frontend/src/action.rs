@@ -23,13 +23,7 @@ pub enum PreView {
     SleepBeforeRender,
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum PostView {
-    ModeChanged(Mode),
-    Quit(Option<String>),
-    Task(Task),
+    YankPath(PathBuf),
 }
 
 pub async fn execute_pre_view(
@@ -41,8 +35,6 @@ pub async fn execute_pre_view(
         if let Action::PreView(pre) = action {
             match pre {
                 PreView::Open(path) => {
-                    let path = path.clone();
-
                     // TODO: check with mime if suspend/resume is necessary?
                     match emitter.suspend().await {
                         Ok(result) => {
@@ -67,36 +59,49 @@ pub async fn execute_pre_view(
                 PreView::SleepBeforeRender => {
                     tokio::time::sleep(Duration::from_millis(50)).await;
                 }
-                PreView::UnwatchPath(p) => {
-                    if p == &PathBuf::default() {
+                PreView::UnwatchPath(path) => {
+                    if path == &PathBuf::default() {
                         continue;
                     }
 
-                    emitter.abort(&Task::EnumerateDirectory(p.clone()));
+                    emitter.abort(&Task::EnumerateDirectory(path.clone()));
 
-                    if let Err(_error) = emitter.unwatch(p.as_path()) {
+                    if let Err(_error) = emitter.unwatch(path.as_path()) {
                         // TODO: log error
                     }
                 }
-                PreView::WatchPath(p) => {
-                    if p == &PathBuf::default() {
+                PreView::WatchPath(path) => {
+                    if path == &PathBuf::default() {
                         continue;
                     }
 
-                    if p.is_dir() {
-                        emitter.run(Task::EnumerateDirectory(p.clone()));
+                    if path.is_dir() {
+                        emitter.run(Task::EnumerateDirectory(path.clone()));
                     } else {
-                        emitter.run(Task::LoadPreview(p.clone()));
+                        emitter.run(Task::LoadPreview(path.clone()));
                     }
 
-                    if let Err(_error) = emitter.watch(p.as_path()) {
+                    if let Err(_error) = emitter.watch(path.as_path()) {
                         // TODO: log error
                     }
+                }
+                PreView::YankPath(path) => {
+                    if path == &PathBuf::default() {
+                        continue;
+                    }
+                    emitter.run(Task::YankPath(path.clone()));
                 }
             }
         }
     }
     Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PostView {
+    ModeChanged(Mode),
+    Quit(Option<String>),
+    Task(Task),
 }
 
 pub async fn execute_post_view(

@@ -41,6 +41,7 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
                         PostView::Task(Task::AddPath(path.join(name))),
                     )),
                     BufferChanged::LineRemoved(_, name) => tasks.push(Action::PostView(
+                        // TODO: handle soft delete with register task
                         PostView::Task(Task::DeletePath(path.join(name))),
                     )),
                     BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::PostView(

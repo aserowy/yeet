@@ -42,7 +42,11 @@ fn get_position_content(model: &Model) -> Line {
         .map(|crsr| crsr.vertical_index + 1);
 
     let mut content = Vec::new();
-    if let Some(position) = current_position {
+    if let Some(mut position) = current_position {
+        if count == 0 {
+            position = 0;
+        }
+
         content.push(Span::styled(
             format!("{}/", position),
             Style::default().fg(Color::Green),

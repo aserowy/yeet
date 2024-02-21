@@ -17,10 +17,10 @@ pub enum Message {
     ExecuteCommand,
     ExecuteCommandString(String),
     KeySequenceChanged(String),
-    NavigateToCurrent,
     NavigateToParent,
     NavigateToPath(PathBuf),
-    OpenCurrentSelection,
+    NavigateToSelected,
+    OpenSelected,
     PathEnumerationContentChanged(PathBuf, Vec<(ContentKind, String)>),
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
@@ -28,6 +28,7 @@ pub enum Message {
     PreviewLoaded(PathBuf, Vec<String>),
     Resize(u16, u16),
     Quit,
+    YankSelected,
 }
 
 #[derive(Clone, Debug, PartialEq)]

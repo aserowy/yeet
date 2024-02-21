@@ -9,7 +9,10 @@ use yeet_keymap::message::{ContentKind, Message};
 
 use crate::{
     error::AppError,
-    model::history::{self, History},
+    model::{
+        history::{self, History},
+        register,
+    },
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,6 +24,7 @@ pub enum Task {
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
     SaveHistory(History),
+    YankPath(PathBuf),
 }
 
 pub struct TaskManager {
@@ -205,6 +209,14 @@ impl TaskManager {
 
                 Ok(())
             }),
+            Task::YankPath(path) => self.tasks.spawn(async move {
+                if let Err(_error) = register::compress(&path).await {
+                    // TODO: log error
+                    println!("Error: {:?}", _error);
+                }
+
+                Ok(())
+            }),
         };
 
         if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == &task) {
@@ -225,5 +237,6 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::OptimizeHistory => false,
         Task::RenamePath(_, _) => false,
         Task::SaveHistory(_) => false,
+        Task::YankPath(_) => false,
     }
 }

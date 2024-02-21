@@ -79,7 +79,7 @@ fn get_history_path() -> Result<String, AppError> {
         None => return Err(AppError::LoadHistoryFailed),
     };
 
-    Ok(format!("{}{}", cache_dir, "/yeet/.history"))
+    Ok(format!("{}{}", cache_dir, "/yeet/history"))
 }
 
 fn save_filtered(
