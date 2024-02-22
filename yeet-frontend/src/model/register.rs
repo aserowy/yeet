@@ -230,6 +230,8 @@ mod test {
 
     #[test]
     fn test_compression_name_compose_decompose() {
+        // TODO: Check windows path format as well!
+
         let path = std::path::Path::new("/home/U0025/sr%/y%et/%direnv");
         let name = super::compose_compression_name(&path);
 

@@ -45,7 +45,9 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
                         let (entry, old_entry) = model.register.add(&path.join(name));
                         tasks.push(Action::PostView(PostView::Task(Task::TrashPath(entry))));
                         if let Some(old_entry) = old_entry {
-                            tasks.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(old_entry))));
+                            tasks.push(Action::PostView(PostView::Task(
+                                Task::DeleteRegisterEntry(old_entry),
+                            )));
                         }
                     }
                     // TODO: new_name is empty, add to consolidated Trash operation
