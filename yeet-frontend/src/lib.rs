@@ -28,16 +28,15 @@ mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut terminal = TerminalWrapper::start()?;
-    let mut model = Model::new().await?;
-    if history::cache::load(&mut model.history).is_err() {
-        // TODO: add notifications in tui and show history load failed
-    }
 
     let initial_path = get_initial_path(&settings.startup_path);
     let mut emitter = Emitter::start(initial_path.clone());
 
-    let register_path = register::get_register_path().await?;
-    emitter.watch(&register_path)?;
+    let mut model = Model::default();
+    register::init(&mut model.register, &mut emitter).await?;
+    if history::cache::load(&mut model.history).is_err() {
+        // TODO: add notifications in tui and show history load failed
+    }
 
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
@@ -50,8 +49,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             .flatten()
             .collect();
 
-        action::execute_pre_view(&actions, &mut emitter, &mut terminal).await?;
-        view::view(&mut terminal, &mut model, &layout)?;
+        if action::execute_pre_view(&actions, &mut emitter, &mut terminal).await? {
+            view::view(&mut terminal, &mut model, &layout)?;
+        }
 
         if !action::execute_post_view(&actions, &mut emitter, &model).await? {
             break;

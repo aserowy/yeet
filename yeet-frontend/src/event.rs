@@ -1,5 +1,4 @@
 use std::{
-    io::{stdout, Write},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -231,8 +230,8 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
         | notify::EventKind::Other => {
-            let event = format!("{:?}", event);
-            let _ = stdout().lock().write_all(event.as_bytes());
+            // let event = format!("{:?}", event);
+            // let _ = stdout().lock().write_all(event.as_bytes());
 
             None
         }

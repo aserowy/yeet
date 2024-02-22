@@ -13,22 +13,15 @@ use std::{
 use flate2::{write::GzEncoder, Compression};
 use tokio::fs;
 
-use crate::error::AppError;
+use crate::{error::AppError, event::Emitter, task::Task};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
     pub path: PathBuf,
     entries: Vec<RegisterEntry>,
 }
 
 impl Register {
-    pub async fn new() -> Result<Self, AppError> {
-        Ok(Self {
-            path: get_register_path().await?,
-            entries: Vec::new(),
-        })
-    }
-
     pub fn add(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
         let entry = RegisterEntry::from(path);
         self.entries.insert(0, entry.clone());
@@ -42,11 +35,13 @@ impl Register {
         (entry, old_entry)
     }
 
-    pub fn add_or_update(&mut self, path: &Path) {
+    pub fn add_or_update(&mut self, path: &Path) -> Option<RegisterEntry> {
         if let Some((id, target)) = decompose_compression_path(path) {
             let index = self.entries.iter().position(|entry| entry.id == id);
             if let Some(index) = index {
                 self.entries[index].status = RegisterStatus::Ready;
+
+                None
             } else {
                 self.entries.push(RegisterEntry {
                     id,
@@ -56,7 +51,15 @@ impl Register {
 
                 self.entries
                     .sort_unstable_by_key(|entry| Reverse(entry.id.clone()));
+
+                if self.entries.len() > 10 {
+                    self.entries.pop()
+                } else {
+                    None
+                }
             }
+        } else {
+            None
         }
     }
 }
@@ -120,6 +123,33 @@ pub async fn delete(entry: RegisterEntry) -> Result<(), AppError> {
     Ok(())
 }
 
+pub async fn get_register_path() -> Result<PathBuf, AppError> {
+    let register_path = match dirs::cache_dir() {
+        Some(cache_dir) => cache_dir.join("yeet/register/"),
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    if !register_path.exists() {
+        fs::create_dir_all(&register_path).await?;
+    }
+    Ok(register_path)
+}
+
+pub async fn init(register: &mut Register, emitter: &mut Emitter) -> Result<(), AppError> {
+    register.path = get_register_path().await?;
+
+    let mut read_dir = fs::read_dir(&register.path).await?;
+    while let Some(entry) = read_dir.next_entry().await? {
+        if let Some(old_entry) = register.add_or_update(&entry.path()) {
+            emitter.run(Task::DeleteRegisterEntry(old_entry));
+        }
+    }
+
+    emitter.watch(&register.path)?;
+
+    Ok(())
+}
+
 async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(), AppError> {
     let target_path = get_register_path().await?.join(archive_name);
     let file = File::create(target_path)?;
@@ -160,7 +190,7 @@ fn decompose_compression_path(path: &Path) -> Option<(String, PathBuf)> {
     if let Some(file_name) = path.file_name() {
         let file_name = file_name.to_string_lossy();
         if let Some((_, path_string)) = file_name.split_once('%') {
-            let path = path_string.replace("%0025%", "%").replace("%002F%", "/");
+            let path = path_string.replace("%002F%", "/").replace("%0025%", "%");
 
             Some((file_name.to_string(), PathBuf::from(path)))
         } else {
@@ -177,18 +207,6 @@ async fn get_register_cache_path() -> Result<PathBuf, AppError> {
         fs::create_dir_all(&cache_path).await?;
     }
     Ok(cache_path)
-}
-
-pub async fn get_register_path() -> Result<PathBuf, AppError> {
-    let register_path = match dirs::cache_dir() {
-        Some(cache_dir) => cache_dir.join("yeet/register/"),
-        None => return Err(AppError::LoadHistoryFailed),
-    };
-
-    if !register_path.exists() {
-        fs::create_dir_all(&register_path).await?;
-    }
-    Ok(register_path)
 }
 
 mod test {
@@ -229,7 +247,7 @@ mod test {
     }
 
     #[test]
-    fn test_compression_name_compose_decompose() {
+    fn test_compose_decompose_compression_name() {
         // TODO: Check windows path format as well!
 
         let path = std::path::Path::new("/home/U0025/sr%/y%et/%direnv");

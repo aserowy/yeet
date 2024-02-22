@@ -14,6 +14,7 @@ pub fn load(history: &mut History) -> Result<(), AppError> {
         return Err(AppError::LoadHistoryFailed);
     }
 
+    // TODO: change to tokio fs
     let history_file = File::open(history_path)?;
     let mut history_csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)

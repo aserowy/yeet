@@ -20,6 +20,7 @@ pub enum Action {
 pub enum PreView {
     Open(PathBuf),
     Resize(u16, u16),
+    SkipRender,
     SleepBeforeRender,
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
@@ -29,7 +30,8 @@ pub async fn execute_pre_view(
     actions: &Vec<Action>,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-) -> Result<(), AppError> {
+) -> Result<bool, AppError> {
+    let mut result = true;
     for action in actions {
         if let Action::PreView(pre) = action {
             match pre {
@@ -55,6 +57,7 @@ pub async fn execute_pre_view(
                 PreView::Resize(x, y) => {
                     terminal.resize(*x, *y)?;
                 }
+                PreView::SkipRender => result = false,
                 PreView::SleepBeforeRender => {
                     tokio::time::sleep(Duration::from_millis(50)).await;
                 }
@@ -87,7 +90,7 @@ pub async fn execute_pre_view(
             }
         }
     }
-    Ok(())
+    Ok(result)
 }
 
 #[derive(Clone, Debug, PartialEq)]

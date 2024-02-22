@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use yeet_keymap::message::Mode;
 
-use crate::error::AppError;
-
 use self::{
     buffer::{
         viewport::{LineNumber, ViewPort},
@@ -30,9 +28,9 @@ pub struct Model {
     pub register: Register,
 }
 
-impl Model {
-    pub async fn new() -> Result<Self, AppError> {
-        Ok(Self {
+impl Default for Model {
+    fn default() -> Self {
+        Self {
             commandline: Buffer {
                 cursor: Some(Cursor {
                     hide_cursor: true,
@@ -70,8 +68,8 @@ impl Model {
                 ..Default::default()
             },
             preview: DirectoryBuffer::default(),
-            register: Register::new().await?,
-        })
+            register: Register::default(),
+        }
     }
 }
 

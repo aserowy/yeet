@@ -319,6 +319,8 @@ pub fn update(
             }
         }
         Message::PathRemoved(path) => {
+            // TODO: remove register entries
+
             directory::remove_path(model, path);
 
             let mut actions = Vec::new();
@@ -351,14 +353,18 @@ pub fn update(
             }
         }
         Message::PathsWriteFinished(paths) => {
+            let mut actions = vec![Action::PreView(PreView::SkipRender)];
             for path in paths {
                 if path.starts_with(&model.register.path) {
-                    model.register.add_or_update(path);
+                    if let Some(old_entry) = model.register.add_or_update(path) {
+                        actions.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(
+                            old_entry,
+                        ))));
+                    }
                 }
             }
 
-            // TODO: skip rewrite
-            None
+            Some(actions)
         }
         Message::PreviewLoaded(path, content) => {
             if path == &model.preview.path {
