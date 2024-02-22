@@ -1,6 +1,7 @@
 use std::{env, path::PathBuf};
 
 use model::register;
+use update::commandline;
 
 use crate::{
     error::AppError,
@@ -41,7 +42,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
-        let layout = AppLayout::default(size);
+        let layout = AppLayout::default(size, commandline::height(&messages));
 
         let actions: Vec<_> = messages
             .iter()

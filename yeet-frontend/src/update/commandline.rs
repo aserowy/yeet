@@ -1,4 +1,4 @@
-use yeet_keymap::message::{Buffer, Mode};
+use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
     layout::AppLayout,
@@ -31,4 +31,16 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Buffer) {
     }
 
     buffer::update(&model.mode, buffer, message);
+}
+
+pub fn height(messages: &Vec<Message>) -> u16 {
+    let mut height = 1;
+    for message in messages {
+        if let Message::Print(content) = message {
+            if content.len() > 1 {
+                height = content.len() as u16 + 1;
+            }
+        }
+    }
+    height
 }

@@ -53,6 +53,7 @@ impl TaskManager {
         }
     }
 
+    // TODO: remove Result and just log errors on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
         for (task, abort_handle) in self.abort_handles.drain(..) {

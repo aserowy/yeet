@@ -14,7 +14,7 @@ use crate::{
 
 mod buffer;
 mod command;
-mod commandline;
+pub mod commandline;
 mod current;
 mod directory;
 mod history;
@@ -392,6 +392,7 @@ pub fn update(
 
             None
         }
+        Message::Print(_) => todo!(),
         Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
         Message::YankSelected => {

@@ -10,13 +10,13 @@ pub struct AppLayout {
 }
 
 impl AppLayout {
-    pub fn default(rect: Rect) -> Self {
+    pub fn default(rect: Rect, commandline_height: u16) -> Self {
         let main = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Percentage(100),
                 Constraint::Length(1),
-                Constraint::Length(1),
+                Constraint::Length(commandline_height),
             ])
             .split(rect);
 

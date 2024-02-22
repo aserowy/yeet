@@ -28,9 +28,16 @@ pub enum Message {
     PathsAdded(Vec<PathBuf>),
     PathsWriteFinished(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
+    Print(Vec<PrintContent>),
     Resize(u16, u16),
     Quit,
     YankSelected,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PrintContent {
+    Error(String),
+    Info(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
