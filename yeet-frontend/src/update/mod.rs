@@ -319,21 +319,24 @@ pub fn update(
             }
         }
         Message::PathRemoved(path) => {
-            // TODO: remove register entries
-
-            directory::remove_path(model, path);
-
-            let mut actions = Vec::new();
-            if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
-                actions.extend(preview_actions);
-                model.preview.buffer.lines.clear();
-                preview::update(model, layout, None);
-            }
-
-            if actions.is_empty() {
+            if path.starts_with(&model.register.path) {
+                model.register.remove(path);
                 None
             } else {
-                Some(actions)
+                directory::remove_path(model, path);
+
+                let mut actions = Vec::new();
+                if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::update(model, layout, None);
+                }
+
+                if actions.is_empty() {
+                    None
+                } else {
+                    Some(actions)
+                }
             }
         }
         Message::PathsAdded(paths) => {

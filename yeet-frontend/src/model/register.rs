@@ -1,5 +1,3 @@
-// init register on start and delete entries > 10
-
 // :reg .. expand commandline and exit on enter
 // change state to echo path
 
@@ -60,6 +58,15 @@ impl Register {
             }
         } else {
             None
+        }
+    }
+
+    pub fn remove(&mut self, path: &Path) {
+        if let Some((id, _)) = decompose_compression_path(path) {
+            let index = self.entries.iter().position(|entry| entry.id == id);
+            if let Some(index) = index {
+                self.entries.remove(index);
+            }
         }
     }
 }
