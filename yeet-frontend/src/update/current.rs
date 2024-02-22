@@ -41,6 +41,7 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
                         PostView::Task(Task::AddPath(path.join(name))),
                     )),
                     // TODO: multiple deletes should get consolidated into a single task/archive
+                    // TODO: delete only inserts to " and 1-9 register
                     BufferChanged::LineRemoved(_, name) => {
                         let (entry, old_entry) = model.register.add(&path.join(name));
                         tasks.push(Action::PostView(PostView::Task(Task::TrashPath(entry))));

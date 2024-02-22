@@ -215,6 +215,10 @@ impl Default for KeyMap {
                     ),
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('p'), vec![])],
+                    Binding::Message(Message::PasteRegister("\"".to_string())),
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
                     Binding::Message(Message::Buffer(Buffer::MoveViewPort(
                         ViewPortDirection::HalfPageUp,

@@ -8,7 +8,8 @@ use std::{
     time,
 };
 
-use flate2::{write::GzEncoder, Compression};
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use tar::Archive;
 use tokio::fs;
 
 use crate::{error::AppError, event::Emitter, task::Task};
@@ -21,7 +22,7 @@ pub struct Register {
 
 impl Register {
     pub fn add(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
-        let entry = RegisterEntry::from(path);
+        let entry = RegisterEntry::from(path, self);
         self.entries.insert(0, entry.clone());
 
         let old_entry = if self.entries.len() > 10 {
@@ -42,9 +43,10 @@ impl Register {
                 None
             } else {
                 self.entries.push(RegisterEntry {
+                    cache: self.path.join(&id),
                     id,
-                    path: target,
                     status: RegisterStatus::Ready,
+                    target,
                 });
 
                 self.entries
@@ -61,6 +63,11 @@ impl Register {
         }
     }
 
+    pub fn get(&self, _register: &str) -> Option<RegisterEntry> {
+        // TODO: implement real logic for "/0/1-9
+        self.entries.get(0).cloned()
+    }
+
     pub fn remove(&mut self, path: &Path) {
         if let Some((id, _)) = decompose_compression_path(path) {
             let index = self.entries.iter().position(|entry| entry.id == id);
@@ -74,16 +81,20 @@ impl Register {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RegisterEntry {
     pub id: String,
-    pub path: PathBuf,
+    pub cache: PathBuf,
     pub status: RegisterStatus,
+    pub target: PathBuf,
 }
 
 impl RegisterEntry {
-    fn from(path: &Path) -> Self {
+    fn from(path: &Path, register: &Register) -> Self {
+        let id = compose_compression_name(path);
+
         Self {
-            id: compose_compression_name(path),
-            path: path.to_path_buf(),
+            cache: register.path.join(&id),
+            id,
             status: RegisterStatus::default(),
+            target: path.to_path_buf(),
         }
     }
 }
@@ -109,9 +120,9 @@ pub async fn cache_and_compress(entry: RegisterEntry) -> Result<(), AppError> {
         fs::create_dir_all(&target_path).await?;
     }
 
-    if let Some(file_name) = entry.path.file_name() {
+    if let Some(file_name) = entry.target.file_name() {
         let target_file = target_path.join(file_name);
-        fs::rename(entry.path, target_file.clone()).await?;
+        fs::rename(entry.target, target_file.clone()).await?;
         compress_with_archive_name(&target_file, &entry.id).await?;
     }
 
@@ -121,7 +132,7 @@ pub async fn cache_and_compress(entry: RegisterEntry) -> Result<(), AppError> {
 }
 
 pub async fn compress(entry: RegisterEntry) -> Result<(), AppError> {
-    compress_with_archive_name(&entry.path, &entry.id).await
+    compress_with_archive_name(&entry.target, &entry.id).await
 }
 
 pub async fn delete(entry: RegisterEntry) -> Result<(), AppError> {
@@ -153,6 +164,15 @@ pub async fn init(register: &mut Register, emitter: &mut Emitter) -> Result<(), 
     }
 
     emitter.watch(&register.path)?;
+
+    Ok(())
+}
+
+pub fn restore(entry: RegisterEntry, path: PathBuf) -> Result<(), AppError> {
+    let archive_file = File::open(entry.cache)?;
+    let archive_decoder = GzDecoder::new(archive_file);
+    let mut archive = Archive::new(archive_decoder);
+    archive.unpack(path)?;
 
     Ok(())
 }

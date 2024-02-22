@@ -24,6 +24,7 @@ pub enum Task {
     LoadPreview(PathBuf),
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
+    RestorePath(RegisterEntry, PathBuf),
     SaveHistory(History),
     TrashPath(RegisterEntry),
     YankPath(RegisterEntry),
@@ -211,6 +212,10 @@ impl TaskManager {
 
                 Ok(())
             }),
+            Task::RestorePath(entry, path) => self.tasks.spawn(async move {
+                register::restore(entry, path)?;
+                Ok(())
+            }),
             Task::SaveHistory(history) => self.tasks.spawn(async move {
                 if let Err(_error) = history::cache::save(&history) {
                     // TODO: log error
@@ -256,6 +261,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::LoadPreview(_) => true,
         Task::OptimizeHistory => false,
         Task::RenamePath(_, _) => false,
+        Task::RestorePath(_, _) => false,
         Task::SaveHistory(_) => false,
         Task::TrashPath(_) => false,
         Task::YankPath(_) => false,

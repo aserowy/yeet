@@ -253,6 +253,16 @@ pub fn update(
                 None
             }
         }
+        Message::PasteRegister(register) => {
+            if let Some(entry) = model.register.get(register) {
+                Some(vec![Action::PostView(PostView::Task(Task::RestorePath(
+                    entry,
+                    model.current.path.clone(),
+                )))])
+            } else {
+                None
+            }
+        }
         Message::PathEnumerationContentChanged(path, contents) => {
             // TODO: handle unsaved changes
             let mut buffer = vec![
