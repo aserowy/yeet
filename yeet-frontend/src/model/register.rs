@@ -66,7 +66,7 @@ impl Register {
     }
 
     pub fn get(&self, register: &str) -> Option<RegisterEntry> {
-        match register {
+        let entry = match register {
             "\"" => match self.current {
                 CurrentRegister::Trash => self.trashed.first().cloned(),
                 CurrentRegister::Yank => self.yanked.clone(),
@@ -84,6 +84,15 @@ impl Register {
             "9" => self.trashed.get(8).cloned(),
             // TODO: add custom register handling
             _ => None,
+        };
+
+        if entry
+            .as_ref()
+            .is_some_and(|entry| entry.status == RegisterStatus::Ready)
+        {
+            entry
+        } else {
+            None
         }
     }
 
