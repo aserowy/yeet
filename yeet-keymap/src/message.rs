@@ -25,6 +25,7 @@ pub enum Message {
     PathEnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
+    PathsWriteFinished(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
     Resize(u16, u16),
     Quit,

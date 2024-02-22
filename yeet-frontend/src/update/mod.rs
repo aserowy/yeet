@@ -350,6 +350,16 @@ pub fn update(
                 Some(actions)
             }
         }
+        Message::PathsWriteFinished(paths) => {
+            for path in paths {
+                if path.starts_with(&model.register.path) {
+                    model.register.add_or_update(path);
+                }
+            }
+
+            // TODO: skip rewrite
+            None
+        }
         Message::PreviewLoaded(path, content) => {
             if path == &model.preview.path {
                 let content = content

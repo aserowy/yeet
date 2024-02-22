@@ -47,7 +47,7 @@ pub async fn execute_pre_view(
                     terminal.suspend();
 
                     // FIX: remove flickering (alternate screen leave and cli started)
-                    open::path(&path).await?;
+                    open::path(path).await?;
 
                     emitter.resume();
                     terminal.resume()?;

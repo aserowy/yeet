@@ -1,11 +1,12 @@
 use std::{
+    io::{stdout, Write},
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use futures::{FutureExt, StreamExt};
 use notify::{
-    event::{ModifyKind, RenameMode},
+    event::{AccessKind, AccessMode, ModifyKind, RenameMode},
     RecommendedWatcher, RecursiveMode, Watcher,
 };
 use tokio::{
@@ -194,6 +195,13 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
     }
 
     match event.kind {
+        notify::EventKind::Access(AccessKind::Close(AccessMode::Write)) => Some(
+            event
+                .paths
+                .iter()
+                .map(|p| Message::PathsWriteFinished(vec![p.clone()]))
+                .collect(),
+        ),
         notify::EventKind::Create(_) => Some(
             event
                 .paths
@@ -222,6 +230,11 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         notify::EventKind::Any
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
-        | notify::EventKind::Other => None,
+        | notify::EventKind::Other => {
+            let event = format!("{:?}", event);
+            let _ = stdout().lock().write_all(event.as_bytes());
+
+            None
+        }
     }
 }
