@@ -1,7 +1,7 @@
 use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
-    action::{Action, PostView},
+    action::{Action, PostView, PreView},
     model::Model,
     task::Task,
 };
@@ -17,7 +17,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         change_mode_message.clone(),
     ])));
 
-    match cmd {
+    let mut actions = match cmd {
         "d!" => {
             if let Some(path) = path::get_selected_path(model) {
                 vec![
@@ -48,7 +48,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             Message::Quit,
         ])))],
         _ => vec![change_mode_action],
-    }
+    };
+    actions.push(Action::PreView(PreView::SkipRender));
+
+    actions
 }
 
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
