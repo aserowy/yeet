@@ -42,7 +42,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
-        let layout = AppLayout::default(size, commandline::height(&messages));
+        let layout = AppLayout::default(size, commandline::height(&model, &messages));
 
         let actions: Vec<_> = messages
             .iter()

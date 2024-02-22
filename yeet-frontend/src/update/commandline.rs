@@ -33,8 +33,8 @@ pub fn update(model: &mut Model, layout: &AppLayout, message: &Buffer) {
     buffer::update(&model.mode, buffer, message);
 }
 
-pub fn height(messages: &Vec<Message>) -> u16 {
-    let mut height = 1;
+pub fn height(model: &Model, messages: &Vec<Message>) -> u16 {
+    let mut height = model.commandline.lines.len() as u16;
     for message in messages {
         if let Message::Print(content) = message {
             if content.len() > 1 {

@@ -1,4 +1,4 @@
-use yeet_keymap::message::{Buffer, Message, Mode};
+use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
     action::{Action, PostView, PreView},
@@ -21,27 +21,33 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         "d!" => {
             if let Some(path) = path::get_selected_path(model) {
                 vec![
-                    Action::PostView(PostView::Task(Task::DeletePath(path.clone()))),
                     change_mode_action,
+                    Action::PostView(PostView::Task(Task::DeletePath(path.clone()))),
                 ]
             } else {
                 vec![]
             }
         }
         "e!" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
-            Message::NavigateToPath(model.current.path.clone()),
             change_mode_message,
+            Message::NavigateToPath(model.current.path.clone()),
         ])))],
         "histopt" => vec![
-            Action::PostView(PostView::Task(Task::OptimizeHistory)),
             change_mode_action,
+            Action::PostView(PostView::Task(Task::OptimizeHistory)),
         ],
         "q" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             Message::Quit,
         ])))],
+        "reg" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
+            Message::Print(vec![
+                PrintContent::Info("test2".to_string()),
+                PrintContent::Info("test".to_string()),
+            ]),
+        ])))],
         "w" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
-            Message::Buffer(Buffer::SaveBuffer(None)),
             change_mode_message,
+            Message::Buffer(Buffer::SaveBuffer(None)),
         ])))],
         "wq" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             Message::Buffer(Buffer::SaveBuffer(None)),

@@ -392,7 +392,10 @@ pub fn update(
 
             None
         }
-        Message::Print(_) => todo!(),
+        // TODO: print print print in command line
+        Message::Print(_) => {
+            None
+        },
         Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
         Message::YankSelected => {
