@@ -30,7 +30,6 @@ pub enum Message {
     PreviewLoaded(PathBuf, Vec<String>),
     Resize(u16, u16),
     Quit,
-    // TODO: yank only inserts to " and 0 register
     YankSelected,
 }
 

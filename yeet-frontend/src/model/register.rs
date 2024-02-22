@@ -16,44 +16,46 @@ use crate::{error::AppError, event::Emitter, task::Task};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
+    current: CurrentRegister,
     pub path: PathBuf,
-    entries: Vec<RegisterEntry>,
+    trashed: Vec<RegisterEntry>,
+    yanked: Option<RegisterEntry>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum CurrentRegister {
+    _Custom(String),
+    Trash,
+    #[default]
+    Yank,
 }
 
 impl Register {
-    pub fn add(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
-        let entry = RegisterEntry::from(path, self);
-        self.entries.insert(0, entry.clone());
-
-        let old_entry = if self.entries.len() > 10 {
-            self.entries.pop()
-        } else {
-            None
-        };
-
-        (entry, old_entry)
-    }
-
     pub fn add_or_update(&mut self, path: &Path) -> Option<RegisterEntry> {
         if let Some((id, target)) = decompose_compression_path(path) {
-            let index = self.entries.iter().position(|entry| entry.id == id);
-            if let Some(index) = index {
-                self.entries[index].status = RegisterStatus::Ready;
+            if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
+                self.yanked
+                    .as_mut()
+                    .map(|entry| entry.status = RegisterStatus::Ready);
+
+                None
+            } else if let Some(index) = self.trashed.iter().position(|entry| entry.id == id) {
+                self.trashed[index].status = RegisterStatus::Ready;
 
                 None
             } else {
-                self.entries.push(RegisterEntry {
+                self.trashed.push(RegisterEntry {
                     cache: self.path.join(&id),
                     id,
                     status: RegisterStatus::Ready,
                     target,
                 });
 
-                self.entries
+                self.trashed
                     .sort_unstable_by_key(|entry| Reverse(entry.id.clone()));
 
-                if self.entries.len() > 10 {
-                    self.entries.pop()
+                if self.trashed.len() > 9 {
+                    self.trashed.pop()
                 } else {
                     None
                 }
@@ -63,18 +65,57 @@ impl Register {
         }
     }
 
-    pub fn get(&self, _register: &str) -> Option<RegisterEntry> {
-        // TODO: implement real logic for "/0/1-9
-        self.entries.get(0).cloned()
+    pub fn get(&self, register: &str) -> Option<RegisterEntry> {
+        match register {
+            "\"" => match self.current {
+                CurrentRegister::Trash => self.trashed.first().cloned(),
+                CurrentRegister::Yank => self.yanked.clone(),
+                _ => None,
+            },
+            "0" => self.yanked.clone(),
+            "1" => self.trashed.get(0).cloned(),
+            "2" => self.trashed.get(1).cloned(),
+            "3" => self.trashed.get(2).cloned(),
+            "4" => self.trashed.get(3).cloned(),
+            "5" => self.trashed.get(4).cloned(),
+            "6" => self.trashed.get(5).cloned(),
+            "7" => self.trashed.get(6).cloned(),
+            "8" => self.trashed.get(7).cloned(),
+            "9" => self.trashed.get(8).cloned(),
+            // TODO: add custom register handling
+            _ => None,
+        }
     }
 
     pub fn remove(&mut self, path: &Path) {
         if let Some((id, _)) = decompose_compression_path(path) {
-            let index = self.entries.iter().position(|entry| entry.id == id);
+            let index = self.trashed.iter().position(|entry| entry.id == id);
             if let Some(index) = index {
-                self.entries.remove(index);
+                self.trashed.remove(index);
             }
         }
+    }
+
+    pub fn trash(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
+        self.current = CurrentRegister::Trash;
+
+        let entry = RegisterEntry::from(path, self);
+        self.trashed.insert(0, entry.clone());
+
+        let old_entry = if self.trashed.len() > 9 {
+            self.trashed.pop()
+        } else {
+            None
+        };
+
+        (entry, old_entry)
+    }
+
+    pub fn yank(&mut self, path: &PathBuf) -> (RegisterEntry, Option<RegisterEntry>) {
+        self.current = CurrentRegister::Yank;
+
+        let entry = RegisterEntry::from(path, self);
+        (entry.clone(), self.yanked.replace(entry))
     }
 }
 
@@ -197,6 +238,7 @@ async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(
     Ok(())
 }
 
+// TODO: add register name
 fn compose_compression_name(path: &Path) -> String {
     let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
         Ok(time) => time.as_millis(),
@@ -213,6 +255,7 @@ fn compose_compression_name(path: &Path) -> String {
     file_name
 }
 
+// TODO: read register name
 fn decompose_compression_path(path: &Path) -> Option<(String, PathBuf)> {
     if let Some(file_name) = path.file_name() {
         let file_name = file_name.to_string_lossy();
@@ -241,36 +284,38 @@ mod test {
     fn test_register_add_or_update() {
         use std::path::PathBuf;
         let mut register = super::Register {
+            current: Default::default(),
             path: std::path::PathBuf::from("/some/path"),
-            entries: Vec::new(),
+            trashed: Vec::new(),
+            yanked: None,
         };
 
         let path = PathBuf::from("/other/path/.direnv");
-        let (entry, _) = register.add(&path);
+        let (entry, _) = register.trash(&path);
 
-        assert_eq!(1, register.entries.len());
+        assert_eq!(1, register.trashed.len());
         assert_eq!(super::RegisterStatus::Processing, entry.status);
 
         let path = PathBuf::from("/some/path").join(entry.id);
         register.add_or_update(&path);
 
-        assert_eq!(1, register.entries.len());
-        assert_eq!(super::RegisterStatus::Ready, register.entries[0].status);
+        assert_eq!(1, register.trashed.len());
+        assert_eq!(super::RegisterStatus::Ready, register.trashed[0].status);
 
         let id = "1708576379595%%002F%home%002F%user%002F%src%002F%yeet%002F%.direnv";
         let path = PathBuf::from("/some/path").join(id);
         register.add_or_update(&path);
 
-        assert_eq!(2, register.entries.len());
-        assert_eq!(id, register.entries[1].id);
-        assert_eq!(super::RegisterStatus::Ready, register.entries[1].status);
+        assert_eq!(2, register.trashed.len());
+        assert_eq!(id, register.trashed[1].id);
+        assert_eq!(super::RegisterStatus::Ready, register.trashed[1].status);
 
         let id_new = "2708576379595%%002F%home%002F%user%002F%src%002F%yeet%002F%.direnv";
         let path = PathBuf::from("/some/path").join(id_new);
         register.add_or_update(&path);
 
-        assert_eq!(3, register.entries.len());
-        assert_eq!(id, register.entries[2].id);
+        assert_eq!(3, register.trashed.len());
+        assert_eq!(id, register.trashed[2].id);
     }
 
     #[test]

@@ -182,6 +182,7 @@ impl TaskManager {
                 self.tasks.spawn(async move {
                     if let Some(kind) = infer::get_from_path(path.clone())? {
                         // TODO: add preview for images here
+                        // TODO: add preview for archives here
                         if !kind.mime_type().starts_with("text") {
                             return Ok(());
                         }

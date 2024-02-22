@@ -401,7 +401,7 @@ pub fn update(
             if let Some(selected) = path::get_selected_path(model) {
                 let mut tasks = Vec::new();
 
-                let (entry, old_entry) = model.register.add(&selected);
+                let (entry, old_entry) = model.register.yank(&selected);
                 tasks.push(Action::PostView(PostView::Task(Task::YankPath(entry))));
                 if let Some(old_entry) = old_entry {
                     tasks.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(
