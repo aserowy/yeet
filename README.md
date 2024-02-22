@@ -61,6 +61,17 @@ interactions. To delete the selected path completly, call command `:d!`.
 | h, l | move cursor left/right        |
 | 0, $ | move cursor to line start/end |
 
+## commands
+
+| :       | action                              |
+| ------- | ----------------------------------- |
+| d!      | delete selected file/directory      |
+| e!      | reload current folder               |
+| histopt | optimize history                    |
+| q       | quit yeet                           |
+| w       | write changes without changing mode |
+| wq      | write changes and quit yeet         |
+
 ## faq
 
 ### how fast is yeet
