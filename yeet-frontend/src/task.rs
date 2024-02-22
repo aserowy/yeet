@@ -20,6 +20,7 @@ pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
     DeleteRegisterEntry(RegisterEntry),
+    EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf),
     LoadPreview(PathBuf),
     OptimizeHistory,
@@ -119,9 +120,18 @@ impl TaskManager {
                     // TODO: log error
                     println!("Error: {:?}", _error);
                 }
-
                 Ok(())
             }),
+            Task::EmitMessages(messages) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(_error) = sender.send(messages).await {
+                        // TODO: log error
+                        println!("Error: {:?}", _error);
+                    }
+                    Ok(())
+                })
+            }
             Task::EnumerateDirectory(path) => {
                 let internal_sender = self.sender.clone();
                 self.tasks.spawn(async move {
@@ -258,6 +268,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::AddPath(_) => false,
         Task::DeletePath(_) => false,
         Task::DeleteRegisterEntry(_) => false,
+        Task::EmitMessages(_) => true,
         Task::EnumerateDirectory(_) => true,
         Task::LoadPreview(_) => true,
         Task::OptimizeHistory => false,

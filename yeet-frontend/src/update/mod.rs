@@ -124,20 +124,17 @@ pub fn update(
             }
         }
         Message::ExecuteCommand => {
-            if let Some(cmd) = model.commandline.lines.first() {
-                update(
-                    settings,
-                    model,
-                    layout,
-                    &Message::ExecuteCommandString(cmd.content.clone()),
-                )
+            let action = if let Some(cmd) = model.commandline.lines.last() {
+                Message::ExecuteCommandString(cmd.content.clone())
             } else {
-                None
-            }
+                Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::Navigation))
+            };
+
+            Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
+                vec![action],
+            )))])
         }
-        Message::ExecuteCommandString(command) => {
-            command::execute(command, settings, model, layout)
-        }
+        Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
             None

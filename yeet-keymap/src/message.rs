@@ -11,7 +11,7 @@ pub enum Binding {
     RepeatOrMotion(usize, CursorDirection),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(Buffer),
     ExecuteCommand,
@@ -33,13 +33,13 @@ pub enum Message {
     YankSelected,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContentKind {
     Directory,
     File,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Buffer {
     ChangeMode(Mode, Mode),
     Modification(TextModification),
@@ -63,7 +63,7 @@ pub enum NewLineDirection {
     Under,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CursorDirection {
     Bottom,
     Down,
@@ -97,7 +97,7 @@ impl ToString for Mode {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ViewPortDirection {
     BottomOnCursor,
     CenterOnCursor,

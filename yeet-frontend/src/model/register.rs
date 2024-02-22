@@ -34,9 +34,9 @@ impl Register {
     pub fn add_or_update(&mut self, path: &Path) -> Option<RegisterEntry> {
         if let Some((id, target)) = decompose_compression_path(path) {
             if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
-                self.yanked
-                    .as_mut()
-                    .map(|entry| entry.status = RegisterStatus::Ready);
+                if let Some(entry) = self.yanked.as_mut() {
+                    entry.status = RegisterStatus::Ready;
+                }
 
                 None
             } else if let Some(index) = self.trashed.iter().position(|entry| entry.id == id) {
@@ -73,7 +73,7 @@ impl Register {
                 _ => None,
             },
             "0" => self.yanked.clone(),
-            "1" => self.trashed.get(0).cloned(),
+            "1" => self.trashed.first().cloned(),
             "2" => self.trashed.get(1).cloned(),
             "3" => self.trashed.get(2).cloned(),
             "4" => self.trashed.get(3).cloned(),
@@ -120,7 +120,7 @@ impl Register {
         (entry, old_entry)
     }
 
-    pub fn yank(&mut self, path: &PathBuf) -> (RegisterEntry, Option<RegisterEntry>) {
+    pub fn yank(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
         self.current = CurrentRegister::Yank;
 
         let entry = RegisterEntry::from(path, self);

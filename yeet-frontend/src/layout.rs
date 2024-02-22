@@ -13,7 +13,11 @@ impl AppLayout {
     pub fn default(rect: Rect) -> Self {
         let main = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Max(1), Constraint::Max(1)])
+            .constraints([
+                Constraint::Percentage(100),
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ])
             .split(rect);
 
         let files = Layout::default()
