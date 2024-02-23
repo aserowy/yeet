@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
+use ratatui::layout::Rect;
 use yeet_keymap::message::Mode;
+
+use crate::layout::AppLayout;
 
 use self::{
     buffer::{
@@ -21,6 +24,7 @@ pub struct Model {
     pub current: DirectoryBuffer,
     pub history: History,
     pub key_sequence: String,
+    pub layout: AppLayout,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
@@ -57,6 +61,7 @@ impl Default for Model {
             },
             history: History::default(),
             key_sequence: String::new(),
+            layout: AppLayout::default(Rect::default(), 0),
             mode: Mode::default(),
             mode_before: None,
             parent: OptionalDirectoryBuffer {

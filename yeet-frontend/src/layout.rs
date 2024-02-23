@@ -1,6 +1,6 @@
 use ratatui::prelude::{Constraint, Direction, Layout, Rect};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AppLayout {
     pub parent: Rect,
     pub current: Rect,

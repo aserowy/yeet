@@ -1,16 +1,13 @@
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use yeet_keymap::message::{Buffer, Message, Mode};
 
-use crate::{
-    layout::AppLayout,
-    model::{buffer::BufferLine, Model},
-};
+use crate::model::{buffer::BufferLine, Model};
 
 use super::buffer::{self, cursor};
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.commandline.buffer;
-    let layout = &layout.commandline;
+    let layout = &model.layout.commandline;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 

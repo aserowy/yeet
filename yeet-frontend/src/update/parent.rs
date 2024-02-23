@@ -1,18 +1,15 @@
 use yeet_keymap::message::{Buffer, ViewPortDirection};
 
-use crate::{
-    layout::AppLayout,
-    model::{
-        buffer::{Cursor, CursorPosition},
-        Model,
-    },
+use crate::model::{
+    buffer::{Cursor, CursorPosition},
+    Model,
 };
 
 use super::buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.parent.buffer;
-    let layout = &layout.parent;
+    let layout = &model.layout.parent;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 

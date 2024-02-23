@@ -3,7 +3,6 @@ use yeet_keymap::message::{Buffer, Message, Mode};
 
 use crate::{
     action::{Action, PostView, PreView},
-    layout::AppLayout,
     model::{
         buffer::{viewport::ViewPort, BufferLine},
         Model,
@@ -23,12 +22,7 @@ mod path;
 mod preview;
 
 // TODO: refactor into right abstraction level (what ever right means here :D)
-pub fn update(
-    settings: &Settings,
-    model: &mut Model,
-    layout: &AppLayout,
-    message: &Message,
-) -> Option<Vec<Action>> {
+pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
         Message::Buffer(msg) => {
             match msg {
@@ -43,7 +37,7 @@ pub fn update(
                     match from {
                         Mode::Command => {
                             buffer::unfocus_buffer(&mut model.commandline.buffer);
-                            commandline::update(model, layout, Some(msg));
+                            commandline::update(model, Some(msg));
                         }
                         Mode::Insert | Mode::Navigation | Mode::Normal => {
                             buffer::unfocus_buffer(&mut model.current.buffer);
@@ -53,14 +47,14 @@ pub fn update(
                     let post_render_actions = match to {
                         Mode::Command => {
                             buffer::focus_buffer(&mut model.commandline.buffer);
-                            commandline::update(model, layout, Some(msg));
+                            commandline::update(model, Some(msg));
 
                             None
                         }
                         Mode::Insert => {
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, layout, Some(msg));
-                            current::update(model, layout, Some(msg));
+                            commandline::update(model, Some(msg));
+                            current::update(model, Some(msg));
 
                             None
                         }
@@ -68,17 +62,17 @@ pub fn update(
                             // TODO: handle file operations: show pending with gray, refresh on operation success
                             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, layout, Some(msg));
-                            current::update(model, layout, Some(msg));
-                            preview::update(model, layout, None);
+                            commandline::update(model, Some(msg));
+                            current::update(model, Some(msg));
+                            preview::update(model, None);
 
                             current::save_changes(model)
                         }
                         Mode::Normal => {
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, layout, Some(msg));
-                            current::update(model, layout, Some(msg));
-                            preview::update(model, layout, None);
+                            commandline::update(model, Some(msg));
+                            current::update(model, Some(msg));
+                            preview::update(model, None);
 
                             None
                         }
@@ -95,8 +89,8 @@ pub fn update(
                 }
                 Buffer::Modification(_) => {
                     match model.mode {
-                        Mode::Command => commandline::update(model, layout, Some(msg)),
-                        Mode::Insert | Mode::Normal => current::update(model, layout, Some(msg)),
+                        Mode::Command => commandline::update(model, Some(msg)),
+                        Mode::Insert | Mode::Normal => current::update(model, Some(msg)),
                         Mode::Navigation => {}
                     }
 
@@ -104,20 +98,20 @@ pub fn update(
                 }
                 Buffer::MoveCursor(_, _) | Buffer::MoveViewPort(_) => match model.mode {
                     Mode::Command => {
-                        commandline::update(model, layout, Some(msg));
+                        commandline::update(model, Some(msg));
 
                         None
                     }
                     Mode::Insert | Mode::Navigation | Mode::Normal => {
                         let mut actions = Vec::new();
-                        current::update(model, layout, Some(msg));
+                        current::update(model, Some(msg));
 
                         if let Some(preview_actions) =
                             path::set_preview_to_selected(model, true, true)
                         {
                             actions.extend(preview_actions);
                             model.preview.buffer.lines.clear();
-                            preview::update(model, layout, None);
+                            preview::update(model, None);
                         }
 
                         Some(actions)
@@ -140,7 +134,7 @@ pub fn update(
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
-            commandline::update(model, layout, None);
+            commandline::update(model, None);
             None
         }
         Message::NavigateToParent => {
@@ -154,7 +148,7 @@ pub fn update(
                     &mut model.current.buffer,
                     model.parent.buffer.lines.clone(),
                 );
-                current::update(model, layout, None);
+                current::update(model, None);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -166,10 +160,10 @@ pub fn update(
                     actions.extend(preview_actions);
                 }
                 buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
-                preview::update(model, layout, None);
+                preview::update(model, None);
 
                 model.parent.buffer.lines.clear();
-                parent::update(model, layout, None);
+                parent::update(model, None);
 
                 Some(actions)
             } else {
@@ -190,13 +184,13 @@ pub fn update(
             }
 
             model.current.buffer.lines.clear();
-            current::update(model, layout, None);
+            current::update(model, None);
 
             model.parent.buffer.lines.clear();
-            parent::update(model, layout, None);
+            parent::update(model, None);
 
             model.preview.buffer.lines.clear();
-            preview::update(model, layout, None);
+            preview::update(model, None);
 
             model.history.add(&model.current.path);
 
@@ -213,7 +207,7 @@ pub fn update(
                     &mut model.current.buffer,
                     model.preview.buffer.lines.clone(),
                 );
-                current::update(model, layout, None);
+                current::update(model, None);
 
                 history::set_cursor_index(
                     &model.current.path,
@@ -225,10 +219,10 @@ pub fn update(
                     actions.extend(preview_actions);
                 }
                 model.preview.buffer.lines.clear();
-                preview::update(model, layout, None);
+                preview::update(model, None);
 
                 buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
-                parent::update(model, layout, None);
+                parent::update(model, None);
 
                 model.history.add(&model.current.path);
 
@@ -287,7 +281,7 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
                     model.preview.buffer.lines.clear();
-                    preview::update(model, layout, None);
+                    preview::update(model, None);
                 }
             }
 
@@ -319,7 +313,7 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
                     model.preview.buffer.lines.clear();
-                    preview::update(model, layout, None);
+                    preview::update(model, None);
                 }
             }
 
@@ -340,7 +334,7 @@ pub fn update(
                 if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                     actions.extend(preview_actions);
                     model.preview.buffer.lines.clear();
-                    preview::update(model, layout, None);
+                    preview::update(model, None);
                 }
 
                 if actions.is_empty() {
@@ -357,7 +351,7 @@ pub fn update(
             if let Some(preview_actions) = path::set_preview_to_selected(model, true, true) {
                 actions.extend(preview_actions);
                 model.preview.buffer.lines.clear();
-                preview::update(model, layout, None);
+                preview::update(model, None);
             }
 
             if actions.is_empty() {
@@ -391,7 +385,7 @@ pub fn update(
                     .collect();
 
                 buffer::set_content(&model.mode, &mut model.preview.buffer, content);
-                preview::update(model, layout, None);
+                preview::update(model, None);
             }
 
             None

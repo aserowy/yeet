@@ -2,7 +2,6 @@ use yeet_keymap::message::Buffer;
 
 use crate::{
     action::{Action, PostView},
-    layout::AppLayout,
     model::{
         buffer::{undo::BufferChanged, BufferResult},
         Model,
@@ -12,9 +11,9 @@ use crate::{
 
 use super::buffer;
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.current.buffer;
-    let layout = &layout.current;
+    let layout = &model.layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 

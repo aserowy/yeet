@@ -46,16 +46,16 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
-        let layout = AppLayout::default(size, commandline::height(&model, &messages));
+        model.layout = AppLayout::default(size, commandline::height(&model, &messages));
 
         let actions: Vec<_> = messages
             .iter()
-            .flat_map(|message| update::update(&settings, &mut model, &layout, message))
+            .flat_map(|message| update::update(&settings, &mut model, message))
             .flatten()
             .collect();
 
         if action::execute_pre_view(&actions, &mut emitter, &mut terminal).await? {
-            view::view(&mut terminal, &mut model, &layout)?;
+            view::view(&mut terminal, &mut model)?;
         }
 
         if !action::execute_post_view(&actions, &mut emitter, &model).await? {

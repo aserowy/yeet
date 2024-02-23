@@ -1,13 +1,13 @@
 use yeet_keymap::message::Buffer;
 
-use crate::{layout::AppLayout, model::Model};
+use crate::model::Model;
 
 use super::{buffer, history};
 
-pub fn update(model: &mut Model, layout: &AppLayout, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let target = &model.preview.path;
     let buffer = &mut model.preview.buffer;
-    let layout = &layout.preview;
+    let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
