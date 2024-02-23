@@ -41,7 +41,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         "reg" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             Message::Print(vec![
                 PrintContent::Info("test2".to_string()),
-                PrintContent::Info("test".to_string()),
+                PrintContent::Error("test".to_string()),
             ]),
         ])))],
         "w" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![

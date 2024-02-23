@@ -100,7 +100,7 @@ pub enum CommandLineState {
     #[default]
     Default,
 
-    _WaitingForInput,
+    WaitingForInput,
 }
 
 #[derive(Debug, Default)]

@@ -1,8 +1,14 @@
-use yeet_keymap::message::{Buffer, Message, Mode};
+use ratatui::style::Color;
+use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
+    action::{Action, PostView},
     layout::CommandLineLayout,
-    model::{buffer::BufferLine, Model},
+    model::{
+        buffer::{BufferLine, StylePartial},
+        CommandLineState, Model,
+    },
+    task::Task,
 };
 
 use super::buffer::{self, cursor};
@@ -47,6 +53,43 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
         }
 
         buffer::update(&model.mode, buffer, message);
+    }
+}
+
+pub fn print(model: &mut Model, content: &Vec<PrintContent>) -> Option<Vec<Action>> {
+    let commandline = &mut model.commandline;
+
+    commandline.buffer.lines = content
+        .iter()
+        .map(|content| match content {
+            PrintContent::Error(cntnt) => {
+                let cntnt_len = cntnt.chars().count();
+                BufferLine {
+                    content: cntnt.to_string(),
+                    style: vec![(0, cntnt_len, StylePartial::Foreground(Color::Red))],
+                    ..Default::default()
+                }
+            }
+            PrintContent::Info(cntnt) => BufferLine {
+                content: cntnt.to_string(),
+                ..Default::default()
+            },
+        })
+        .collect();
+
+    if content.len() > 1 {
+        commandline.state = CommandLineState::WaitingForInput;
+
+        Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
+            vec![Message::Buffer(Buffer::ChangeMode(
+                model.mode.clone(),
+                Mode::Command,
+            ))],
+        )))])
+    } else {
+        commandline.state = CommandLineState::Default;
+
+        None
     }
 }
 
