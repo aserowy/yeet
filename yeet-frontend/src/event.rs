@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
@@ -36,7 +33,7 @@ pub struct Emitter {
 }
 
 impl Emitter {
-    pub fn start(initial_path: PathBuf) -> Self {
+    pub fn start() -> Self {
         let (sender, receiver) = mpsc::channel(1);
         let internal_sender = sender.clone();
 
@@ -51,11 +48,6 @@ impl Emitter {
         let (task_sender, mut task_receiver) = mpsc::channel(1);
         let tasks = TaskManager::new(task_sender);
         tokio::spawn(async move {
-            internal_sender
-                .send(vec![Message::NavigateToPath(initial_path)])
-                .await
-                .expect("Failed to send message");
-
             loop {
                 let notify_event = notify_receiver.recv().fuse();
                 let task_event = task_receiver.recv().fuse();

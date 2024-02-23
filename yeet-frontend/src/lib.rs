@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use model::register;
 use task::Task;
 use update::commandline;
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
     error::AppError,
@@ -31,9 +31,13 @@ mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut terminal = TerminalWrapper::start()?;
+    let mut emitter = Emitter::start();
 
     let initial_path = get_initial_path(&settings.startup_path);
-    let mut emitter = Emitter::start(initial_path.clone());
+    emitter.run(Task::EmitMessages(vec![
+        Message::Buffer(Buffer::ChangeMode(Mode::Normal, Mode::Navigation)),
+        Message::NavigateToPath(initial_path),
+    ]));
 
     let mut model = Model::default();
     register::init(&mut model.register, &mut emitter).await?;
@@ -46,7 +50,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
-        model.layout = AppLayout::default(size, commandline::height(&model, &messages));
+        model.layout = AppLayout::new(size, commandline::height(&model, &messages));
 
         let actions: Vec<_> = messages
             .iter()

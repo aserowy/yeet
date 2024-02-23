@@ -9,7 +9,7 @@ pub fn view(terminal: &mut TerminalWrapper, model: &mut Model) -> Result<(), App
     terminal.draw(|frame| {
         let layout = model.layout.clone();
 
-        commandline::view(model, frame, layout.commandline);
+        commandline::view(model, frame);
 
         buffer::view(&model.mode, &model.current.buffer, frame, layout.current);
         buffer::view(&model.mode, &model.parent.buffer, frame, layout.parent);

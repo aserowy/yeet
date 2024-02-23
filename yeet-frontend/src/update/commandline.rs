@@ -1,26 +1,26 @@
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use yeet_keymap::message::{Buffer, Message, Mode};
 
-use crate::model::{buffer::BufferLine, Model};
+use crate::{
+    layout::CommandLineLayout,
+    model::{buffer::BufferLine, Model},
+};
 
 use super::buffer::{self, cursor};
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) {
-    let buffer = &mut model.commandline.buffer;
-    let layout = &model.layout.commandline;
+    let commandline = &mut model.commandline;
+    let buffer = &mut commandline.buffer;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, layout);
+    let sequence_len = model.key_sequence.chars().count() as u16;
+    commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-    // FIX: key_sequence changed not working
+    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+
     if let Some(message) = message {
         if let Buffer::ChangeMode(from, to) = message {
             if to != &Mode::Command {
                 let bl = BufferLine {
-                    content: get_content_with_keysequence(
-                        &layout,
-                        model.mode.to_string().to_uppercase(),
-                        model.key_sequence.clone(),
-                    ),
+                    content: format!("--{}--", model.mode.to_string().to_uppercase()),
                     ..Default::default()
                 };
 
@@ -50,26 +50,9 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     }
 }
 
-// TODO: rework layout into model
-pub fn get_content_with_keysequence(
-    layout: &Rect,
-    content: String,
-    key_sequence: String,
-) -> String {
-    let sequence_len = key_sequence.chars().count() as u16;
-    let _layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(100),
-            Constraint::Length(sequence_len),
-        ])
-        .split(layout.clone());
-
-    format!("--{}--{}", content, key_sequence)
-}
-
 pub fn height(model: &Model, messages: &Vec<Message>) -> u16 {
-    let mut height = model.commandline.buffer.lines.len() as u16;
+    let lines_len = model.commandline.buffer.lines.len();
+    let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
     for message in messages {
         if let Message::Print(content) = message {
             if content.len() > 1 {

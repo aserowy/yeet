@@ -1,9 +1,21 @@
-use ratatui::{prelude::Rect, Frame};
+use ratatui::{widgets::Paragraph, Frame};
 
 use crate::model::Model;
 
 use super::buffer;
 
-pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
-    buffer::view(&model.mode, &model.commandline.buffer, frame, rect);
+pub fn view(model: &mut Model, frame: &mut Frame) {
+    let commandline = &model.commandline;
+
+    buffer::view(
+        &model.mode,
+        &commandline.buffer,
+        frame,
+        commandline.layout.buffer.clone(),
+    );
+
+    frame.render_widget(
+        Paragraph::new(model.key_sequence.clone()),
+        commandline.layout.key_sequence,
+    );
 }

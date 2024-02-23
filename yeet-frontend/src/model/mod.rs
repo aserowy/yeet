@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use ratatui::layout::Rect;
 use yeet_keymap::message::Mode;
 
-use crate::layout::AppLayout;
+use crate::layout::{AppLayout, CommandLineLayout};
 
 use self::{
     buffer::{
@@ -35,18 +35,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            commandline: CommandLine {
-                buffer: Buffer {
-                    cursor: Some(Cursor {
-                        hide_cursor: true,
-                        hide_cursor_line: true,
-                        vertical_index: 0,
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            commandline: CommandLine::default(),
             current: DirectoryBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
@@ -61,7 +50,7 @@ impl Default for Model {
             },
             history: History::default(),
             key_sequence: String::new(),
-            layout: AppLayout::default(Rect::default(), 0),
+            layout: AppLayout::new(Rect::default(), 0),
             mode: Mode::default(),
             mode_before: None,
             parent: OptionalDirectoryBuffer {
@@ -81,10 +70,29 @@ impl Default for Model {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CommandLine {
     pub buffer: Buffer,
+    pub layout: CommandLineLayout,
     pub state: CommandLineState,
+}
+
+impl Default for CommandLine {
+    fn default() -> Self {
+        Self {
+            buffer: Buffer {
+                cursor: Some(Cursor {
+                    hide_cursor: true,
+                    hide_cursor_line: true,
+                    vertical_index: 0,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            layout: CommandLineLayout::new(Rect::default(), 0),
+            state: CommandLineState::default(),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
