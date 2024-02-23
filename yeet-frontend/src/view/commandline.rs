@@ -11,7 +11,7 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
         &model.mode,
         &commandline.buffer,
         frame,
-        commandline.layout.buffer.clone(),
+        commandline.layout.buffer,
     );
 
     frame.render_widget(

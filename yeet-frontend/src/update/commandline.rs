@@ -2,7 +2,7 @@ use ratatui::style::Color;
 use yeet_keymap::message::{Buffer, CursorDirection, Message, Mode, PrintContent};
 
 use crate::{
-    action::{Action, PostView},
+    action::{Action, PostView, PreView},
     layout::CommandLineLayout,
     model::{
         buffer::{BufferLine, StylePartial},
@@ -22,27 +22,77 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>
 
     super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
-    if let Some(message) = message {
-        if let Buffer::ChangeMode(from, to) = message {
-            if from != &Mode::Command && to == &Mode::Command {
-                buffer::reset_view(buffer);
+    match commandline.state {
+        CommandLineState::Default => {
+            if let Some(message) = message {
+                if let Buffer::ChangeMode(from, to) = message {
+                    if from != &Mode::Command && to == &Mode::Command {
+                        buffer::reset_view(buffer);
 
-                let bufferline = BufferLine {
-                    prefix: Some(":".to_string()),
-                    ..Default::default()
-                };
+                        let bufferline = BufferLine {
+                            prefix: Some(":".to_string()),
+                            ..Default::default()
+                        };
 
-                buffer::set_content(to, buffer, vec![bufferline]);
+                        buffer::set_content(to, buffer, vec![bufferline]);
+                    }
+                }
+
+                buffer::update(&model.mode, buffer, message);
             }
+
+            None
         }
+        CommandLineState::WaitingForInput => {
+            commandline.state = CommandLineState::Default;
+            buffer::set_content(&model.mode, buffer, vec![]);
 
-        buffer::update(&model.mode, buffer, message);
+            Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
+                vec![Message::Buffer(Buffer::ChangeMode(
+                    model.mode.clone(),
+                    Mode::default(),
+                ))],
+            )))])
+        }
     }
-
-    None
 }
 
-pub fn print(model: &mut Model, content: &Vec<PrintContent>) -> Option<Vec<Action>> {
+pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
+    let commandline = &mut model.commandline;
+    let buffer = &mut commandline.buffer;
+
+    match commandline.state {
+        CommandLineState::Default => {
+            let action = if let Some(cmd) = buffer.lines.last() {
+                Message::ExecuteCommandString(cmd.content.clone())
+            } else {
+                Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default()))
+            };
+
+            buffer::set_content(&model.mode, buffer, vec![]);
+
+            Some(vec![
+                Action::PreView(PreView::SkipRender),
+                Action::PostView(PostView::Task(Task::EmitMessages(vec![action]))),
+            ])
+        }
+        CommandLineState::WaitingForInput => {
+            commandline.state = CommandLineState::Default;
+
+            let bufferline = BufferLine {
+                prefix: Some(":".to_string()),
+                ..Default::default()
+            };
+
+            buffer.lines.pop();
+            buffer.lines.push(bufferline);
+
+            None
+        }
+    }
+}
+
+pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 

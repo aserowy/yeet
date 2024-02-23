@@ -36,7 +36,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                     model.mode_before = Some(from.clone());
 
                     let content = format!("--{}--", model.mode.to_string().to_uppercase());
-                    commandline::print(model, &vec![PrintContent::Info(content)]);
+                    commandline::print(model, &[PrintContent::Info(content)]);
 
                     match from {
                         Mode::Command => {
@@ -117,18 +117,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                 Buffer::SaveBuffer(_) => current::save_changes(model),
             }
         }
-        Message::ExecuteCommand => {
-            let action = if let Some(cmd) = model.commandline.buffer.lines.last() {
-                Message::ExecuteCommandString(cmd.content.clone())
-            } else {
-                Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::Navigation))
-            };
-
-            Some(vec![
-                Action::PreView(PreView::SkipRender),
-                Action::PostView(PostView::Task(Task::EmitMessages(vec![action]))),
-            ])
-        }
+        Message::ExecuteCommand => commandline::update_on_execute(model),
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
