@@ -69,6 +69,7 @@ interactions. To delete the selected path completly, call command `:d!`.
 | e!      | reload current folder               |
 | histopt | optimize history                    |
 | q       | quit yeet                           |
+| reg     | list register contents              |
 | w       | write changes without changing mode |
 | wq      | write changes and quit yeet         |
 
