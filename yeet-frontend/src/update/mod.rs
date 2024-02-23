@@ -87,15 +87,14 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                         Some(vec![Action::PostView(PostView::ModeChanged(to.clone()))])
                     }
                 }
-                Buffer::Modification(_) => {
-                    match model.mode {
-                        Mode::Command => commandline::update(model, Some(msg)),
-                        Mode::Insert | Mode::Normal => current::update(model, Some(msg)),
-                        Mode::Navigation => {}
+                Buffer::Modification(_) => match model.mode {
+                    Mode::Command => commandline::update(model, Some(msg)),
+                    Mode::Insert | Mode::Normal => {
+                        current::update(model, Some(msg));
+                        None
                     }
-
-                    None
-                }
+                    Mode::Navigation => None,
+                },
                 Buffer::MoveCursor(_, _) | Buffer::MoveViewPort(_) => match model.mode {
                     Mode::Command => {
                         commandline::update(model, Some(msg));
@@ -127,9 +126,10 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                 Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::Navigation))
             };
 
-            Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
-                vec![action],
-            )))])
+            Some(vec![
+                Action::PreView(PreView::SkipRender),
+                Action::PostView(PostView::Task(Task::EmitMessages(vec![action]))),
+            ])
         }
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {

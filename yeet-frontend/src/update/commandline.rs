@@ -1,5 +1,5 @@
 use ratatui::style::Color;
-use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
+use yeet_keymap::message::{Buffer, CursorDirection, Message, Mode, PrintContent};
 
 use crate::{
     action::{Action, PostView},
@@ -13,7 +13,7 @@ use crate::{
 
 use super::buffer::{self, cursor};
 
-pub fn update(model: &mut Model, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
@@ -25,17 +25,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     if let Some(message) = message {
         if let Buffer::ChangeMode(from, to) = message {
             if to != &Mode::Command {
-                let bl = BufferLine {
+                buffer.lines = vec![BufferLine {
                     content: format!("--{}--", model.mode.to_string().to_uppercase()),
                     ..Default::default()
-                };
-
-                if buffer.lines.is_empty() {
-                    buffer.lines.push(bl);
-                } else {
-                    let last = buffer.lines.len() - 1;
-                    buffer.lines[last] = bl;
-                }
+                }];
 
                 cursor::validate(to, buffer);
             }
@@ -54,10 +47,17 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
 
         buffer::update(&model.mode, buffer, message);
     }
+
+    None
 }
 
 pub fn print(model: &mut Model, content: &Vec<PrintContent>) -> Option<Vec<Action>> {
     let commandline = &mut model.commandline;
+    let buffer = &mut commandline.buffer;
+
+    commandline.layout = CommandLineLayout::new(model.layout.commandline, 0);
+
+    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
     commandline.buffer.lines = content
         .iter()
@@ -77,8 +77,19 @@ pub fn print(model: &mut Model, content: &Vec<PrintContent>) -> Option<Vec<Actio
         })
         .collect();
 
-    if content.len() > 1 {
+    let actions = if commandline.buffer.lines.len() > 1 {
         commandline.state = CommandLineState::WaitingForInput;
+
+        let content = "Press ENTER or type command to continue";
+        commandline.buffer.lines.push(BufferLine {
+            content: content.to_string(),
+            style: vec![(
+                0,
+                content.chars().count(),
+                StylePartial::Foreground(Color::LightBlue),
+            )],
+            ..Default::default()
+        });
 
         Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
             vec![Message::Buffer(Buffer::ChangeMode(
@@ -87,10 +98,21 @@ pub fn print(model: &mut Model, content: &Vec<PrintContent>) -> Option<Vec<Actio
             ))],
         )))])
     } else {
-        commandline.state = CommandLineState::Default;
-
         None
-    }
+    };
+
+    buffer::update(
+        &model.mode,
+        &mut commandline.buffer,
+        &Buffer::MoveCursor(1, CursorDirection::Bottom),
+    );
+    buffer::update(
+        &model.mode,
+        &mut commandline.buffer,
+        &Buffer::MoveCursor(1, CursorDirection::LineEnd),
+    );
+
+    actions
 }
 
 pub fn height(model: &Model, messages: &Vec<Message>) -> u16 {

@@ -35,7 +35,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
-        Message::Buffer(Buffer::ChangeMode(Mode::Normal, Mode::Navigation)),
+        Message::Buffer(Buffer::ChangeMode(Mode::Normal, Mode::default())),
         Message::NavigateToPath(initial_path),
     ]));
 

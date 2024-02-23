@@ -10,6 +10,7 @@ use crate::{
     error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
 };
 
+// TODO: consolidate preview and postview and resolve pre or post with match
 #[derive(Clone, Debug, PartialEq)]
 pub enum Action {
     PreView(PreView),
