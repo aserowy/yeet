@@ -21,7 +21,14 @@ pub fn update_by_cursor(model: &mut Buffer) {
                 current,
                 expanded: _,
             } => current,
-            CursorPosition::End => model.lines[cursor.vertical_index].len() - 1,
+            CursorPosition::End => {
+                let line_lenght = model.lines[cursor.vertical_index].len();
+                if line_lenght == 0 {
+                    0
+                } else {
+                    line_lenght - 1
+                }
+            }
             CursorPosition::None => return,
         };
 

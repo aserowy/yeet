@@ -11,7 +11,7 @@ use crate::{
     task::Task,
 };
 
-use super::buffer::{self, cursor};
+use super::buffer::{self};
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>> {
     let commandline = &mut model.commandline;
@@ -24,15 +24,6 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>
 
     if let Some(message) = message {
         if let Buffer::ChangeMode(from, to) = message {
-            if to != &Mode::Command {
-                buffer.lines = vec![BufferLine {
-                    content: format!("--{}--", model.mode.to_string().to_uppercase()),
-                    ..Default::default()
-                }];
-
-                cursor::validate(to, buffer);
-            }
-
             if from != &Mode::Command && to == &Mode::Command {
                 buffer::reset_view(buffer);
 

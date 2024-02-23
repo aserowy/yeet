@@ -1,5 +1,5 @@
 use ratatui::prelude::Rect;
-use yeet_keymap::message::{Buffer, Message, Mode};
+use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
     action::{Action, PostView, PreView},
@@ -25,6 +25,7 @@ mod preview;
 pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
         Message::Buffer(msg) => {
+            // TODO: refactor into buffer mod
             match msg {
                 Buffer::ChangeMode(from, to) => {
                     if from == to {
@@ -34,17 +35,19 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                     model.mode = to.clone();
                     model.mode_before = Some(from.clone());
 
+                    let content = format!("--{}--", model.mode.to_string().to_uppercase());
+                    commandline::print(model, &vec![PrintContent::Info(content)]);
+
                     match from {
                         Mode::Command => {
                             buffer::unfocus_buffer(&mut model.commandline.buffer);
-                            commandline::update(model, Some(msg));
                         }
                         Mode::Insert | Mode::Navigation | Mode::Normal => {
                             buffer::unfocus_buffer(&mut model.current.buffer);
                         }
                     }
 
-                    let post_render_actions = match to {
+                    let actions = match to {
                         Mode::Command => {
                             buffer::focus_buffer(&mut model.commandline.buffer);
                             commandline::update(model, Some(msg));
@@ -53,7 +56,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                         }
                         Mode::Insert => {
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, Some(msg));
                             current::update(model, Some(msg));
 
                             None
@@ -62,7 +64,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                             // TODO: handle file operations: show pending with gray, refresh on operation success
                             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, Some(msg));
                             current::update(model, Some(msg));
                             preview::update(model, None);
 
@@ -70,7 +71,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                         }
                         Mode::Normal => {
                             buffer::focus_buffer(&mut model.current.buffer);
-                            commandline::update(model, Some(msg));
                             current::update(model, Some(msg));
                             preview::update(model, None);
 
@@ -78,11 +78,9 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                         }
                     };
 
-                    if let Some(mut post_render_action_vec) = post_render_actions {
-                        post_render_action_vec
-                            .push(Action::PostView(PostView::ModeChanged(to.clone())));
-
-                        Some(post_render_action_vec)
+                    if let Some(mut actions) = actions {
+                        actions.push(Action::PostView(PostView::ModeChanged(to.clone())));
+                        Some(actions)
                     } else {
                         Some(vec![Action::PostView(PostView::ModeChanged(to.clone()))])
                     }
