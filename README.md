@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo.png" alt="yeet logo" width="20%">
+  <img src="assets/logo.svg" alt="yeet logo" width="20%">
 </div>
 
 ## yeet - the vision
