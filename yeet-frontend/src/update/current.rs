@@ -24,7 +24,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     }
 }
 
-pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
+pub fn save_changes(model: &mut Model) -> Vec<Action> {
     if let Some(result) = buffer::update(
         &model.mode,
         &mut model.current.buffer,
@@ -58,8 +58,8 @@ pub fn save_changes(model: &mut Model) -> Option<Vec<Action>> {
             }
         }
 
-        Some(tasks)
+        tasks
     } else {
-        None
+        vec![]
     }
 }

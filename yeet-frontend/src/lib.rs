@@ -1,5 +1,6 @@
 use std::{env, path::PathBuf};
 
+use layout::CommandLineLayout;
 use model::register;
 use task::Task;
 use update::commandline;
@@ -51,6 +52,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     while let Some(messages) = emitter.receiver.recv().await {
         let size = terminal.size().expect("Failed to get terminal size");
         model.layout = AppLayout::new(size, commandline::height(&model, &messages));
+
+        let sequence_len = model.key_sequence.chars().count() as u16;
+        model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
         let actions: Vec<_> = messages
             .iter()

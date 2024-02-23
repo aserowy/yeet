@@ -3,7 +3,6 @@ use yeet_keymap::message::{Buffer, CursorDirection, Message, Mode, PrintContent}
 
 use crate::{
     action::{Action, PostView, PreView},
-    layout::CommandLineLayout,
     model::{
         buffer::{BufferLine, StylePartial},
         CommandLineState, Model,
@@ -13,12 +12,9 @@ use crate::{
 
 use super::buffer::{self};
 
-pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>> {
+pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
-
-    let sequence_len = model.key_sequence.chars().count() as u16;
-    commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
     super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
@@ -35,24 +31,37 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Option<Vec<Action>
                         };
 
                         buffer::set_content(to, buffer, vec![bufferline]);
+                    } else if from == &Mode::Command && to != &Mode::Command {
+                        buffer::set_content(&model.mode, buffer, vec![]);
                     }
                 }
 
                 buffer::update(&model.mode, buffer, message);
             }
 
-            None
+            vec![
+                Action::PreView(PreView::SkipRender),
+                Action::PostView(PostView::Task(Task::EmitMessages(vec![Message::Rerender]))),
+            ]
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
             buffer::set_content(&model.mode, buffer, vec![]);
 
-            Some(vec![Action::PostView(PostView::Task(Task::EmitMessages(
-                vec![Message::Buffer(Buffer::ChangeMode(
-                    model.mode.clone(),
-                    Mode::default(),
-                ))],
-            )))])
+            let mut messages = vec![Message::Buffer(Buffer::ChangeMode(
+                model.mode.clone(),
+                Mode::default(),
+            ))];
+
+            // FIX: this emits Insert currently
+            if let Some(message) = message {
+                messages.push(Message::Buffer(message.clone()));
+            }
+
+            vec![
+                Action::PreView(PreView::SkipRender),
+                Action::PostView(PostView::Task(Task::EmitMessages(messages))),
+            ]
         }
     }
 }
@@ -95,8 +104,6 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
 pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
-
-    commandline.layout = CommandLineLayout::new(model.layout.commandline, 0);
 
     super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 

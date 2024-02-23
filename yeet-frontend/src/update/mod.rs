@@ -35,30 +35,30 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                     model.mode = to.clone();
                     model.mode_before = Some(from.clone());
 
-                    let content = format!("--{}--", model.mode.to_string().to_uppercase());
-                    commandline::print(model, &[PrintContent::Info(content)]);
-
-                    match from {
+                    let mut actions = vec![Action::PostView(PostView::ModeChanged(to.clone()))];
+                    actions.extend(match from {
                         Mode::Command => {
                             buffer::unfocus_buffer(&mut model.commandline.buffer);
+                            commandline::update(model, Some(msg))
                         }
                         Mode::Insert | Mode::Navigation | Mode::Normal => {
                             buffer::unfocus_buffer(&mut model.current.buffer);
+                            vec![]
                         }
-                    }
+                    });
 
-                    let actions = match to {
+                    let content = format!("--{}--", to.to_string().to_uppercase());
+                    commandline::print(model, &[PrintContent::Info(content)]);
+
+                    actions.extend(match to {
                         Mode::Command => {
                             buffer::focus_buffer(&mut model.commandline.buffer);
-                            commandline::update(model, Some(msg));
-
-                            None
+                            commandline::update(model, Some(msg))
                         }
                         Mode::Insert => {
                             buffer::focus_buffer(&mut model.current.buffer);
                             current::update(model, Some(msg));
-
-                            None
+                            vec![]
                         }
                         Mode::Navigation => {
                             // TODO: handle file operations: show pending with gray, refresh on operation success
@@ -66,27 +66,20 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                             buffer::focus_buffer(&mut model.current.buffer);
                             current::update(model, Some(msg));
                             preview::update(model, None);
-
                             current::save_changes(model)
                         }
                         Mode::Normal => {
                             buffer::focus_buffer(&mut model.current.buffer);
                             current::update(model, Some(msg));
                             preview::update(model, None);
-
-                            None
+                            vec![]
                         }
-                    };
+                    });
 
-                    if let Some(mut actions) = actions {
-                        actions.push(Action::PostView(PostView::ModeChanged(to.clone())));
-                        Some(actions)
-                    } else {
-                        Some(vec![Action::PostView(PostView::ModeChanged(to.clone()))])
-                    }
+                    Some(actions)
                 }
                 Buffer::Modification(_) => match model.mode {
-                    Mode::Command => commandline::update(model, Some(msg)),
+                    Mode::Command => Some(commandline::update(model, Some(msg))),
                     Mode::Insert | Mode::Normal => {
                         current::update(model, Some(msg));
                         None
@@ -114,7 +107,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                         Some(actions)
                     }
                 },
-                Buffer::SaveBuffer(_) => current::save_changes(model),
+                Buffer::SaveBuffer(_) => Some(current::save_changes(model)),
             }
         }
         Message::ExecuteCommand => commandline::update_on_execute(model),
@@ -378,6 +371,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
             None
         }
         Message::Print(content) => commandline::print(model, content),
+        Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
         Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
         Message::YankSelected => {

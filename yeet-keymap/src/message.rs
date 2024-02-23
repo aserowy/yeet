@@ -29,6 +29,7 @@ pub enum Message {
     PathsWriteFinished(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
     Print(Vec<PrintContent>),
+    Rerender,
     Resize(u16, u16),
     Quit,
     YankSelected,
