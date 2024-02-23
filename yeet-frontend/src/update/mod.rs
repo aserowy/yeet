@@ -42,8 +42,8 @@ pub fn update(
 
                     match from {
                         Mode::Command => {
-                            buffer::unfocus_buffer(&mut model.commandline);
-                            commandline::update(model, layout, msg);
+                            buffer::unfocus_buffer(&mut model.commandline.buffer);
+                            commandline::update(model, layout, Some(msg));
                         }
                         Mode::Insert | Mode::Navigation | Mode::Normal => {
                             buffer::unfocus_buffer(&mut model.current.buffer);
@@ -52,13 +52,14 @@ pub fn update(
 
                     let post_render_actions = match to {
                         Mode::Command => {
-                            buffer::focus_buffer(&mut model.commandline);
-                            commandline::update(model, layout, msg);
+                            buffer::focus_buffer(&mut model.commandline.buffer);
+                            commandline::update(model, layout, Some(msg));
 
                             None
                         }
                         Mode::Insert => {
                             buffer::focus_buffer(&mut model.current.buffer);
+                            commandline::update(model, layout, Some(msg));
                             current::update(model, layout, Some(msg));
 
                             None
@@ -67,6 +68,7 @@ pub fn update(
                             // TODO: handle file operations: show pending with gray, refresh on operation success
                             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                             buffer::focus_buffer(&mut model.current.buffer);
+                            commandline::update(model, layout, Some(msg));
                             current::update(model, layout, Some(msg));
                             preview::update(model, layout, None);
 
@@ -74,6 +76,7 @@ pub fn update(
                         }
                         Mode::Normal => {
                             buffer::focus_buffer(&mut model.current.buffer);
+                            commandline::update(model, layout, Some(msg));
                             current::update(model, layout, Some(msg));
                             preview::update(model, layout, None);
 
@@ -92,7 +95,7 @@ pub fn update(
                 }
                 Buffer::Modification(_) => {
                     match model.mode {
-                        Mode::Command => commandline::update(model, layout, msg),
+                        Mode::Command => commandline::update(model, layout, Some(msg)),
                         Mode::Insert | Mode::Normal => current::update(model, layout, Some(msg)),
                         Mode::Navigation => {}
                     }
@@ -101,7 +104,7 @@ pub fn update(
                 }
                 Buffer::MoveCursor(_, _) | Buffer::MoveViewPort(_) => match model.mode {
                     Mode::Command => {
-                        commandline::update(model, layout, msg);
+                        commandline::update(model, layout, Some(msg));
 
                         None
                     }
@@ -124,7 +127,7 @@ pub fn update(
             }
         }
         Message::ExecuteCommand => {
-            let action = if let Some(cmd) = model.commandline.lines.last() {
+            let action = if let Some(cmd) = model.commandline.buffer.lines.last() {
                 Message::ExecuteCommandString(cmd.content.clone())
             } else {
                 Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::Navigation))
@@ -137,6 +140,7 @@ pub fn update(
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
+            commandline::update(model, layout, None);
             None
         }
         Message::NavigateToParent => {

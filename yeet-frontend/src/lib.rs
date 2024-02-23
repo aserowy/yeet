@@ -1,7 +1,9 @@
 use std::{env, path::PathBuf};
 
 use model::register;
+use task::Task;
 use update::commandline;
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     error::AppError,
@@ -36,7 +38,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     let mut model = Model::default();
     register::init(&mut model.register, &mut emitter).await?;
     if history::cache::load(&mut model.history).is_err() {
-        // TODO: add notifications in tui and show history load failed
+        emitter.run(Task::EmitMessages(vec![Message::Print(vec![
+            PrintContent::Error("Failed to load history".to_string()),
+        ])]));
     }
 
     let mut result = Vec::new();

@@ -17,7 +17,7 @@ pub mod register;
 
 #[derive(Debug)]
 pub struct Model {
-    pub commandline: Buffer,
+    pub commandline: CommandLine,
     pub current: DirectoryBuffer,
     pub history: History,
     pub key_sequence: String,
@@ -31,13 +31,16 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            commandline: Buffer {
-                cursor: Some(Cursor {
-                    hide_cursor: true,
-                    hide_cursor_line: true,
-                    vertical_index: 0,
+            commandline: CommandLine {
+                buffer: Buffer {
+                    cursor: Some(Cursor {
+                        hide_cursor: true,
+                        hide_cursor_line: true,
+                        vertical_index: 0,
+                        ..Default::default()
+                    }),
                     ..Default::default()
-                }),
+                },
                 ..Default::default()
             },
             current: DirectoryBuffer {
@@ -71,6 +74,20 @@ impl Default for Model {
             register: Register::default(),
         }
     }
+}
+
+#[derive(Debug, Default)]
+pub struct CommandLine {
+    pub buffer: Buffer,
+    pub state: CommandLineState,
+}
+
+#[derive(Debug, Default)]
+pub enum CommandLineState {
+    #[default]
+    Default,
+
+    _WaitingForInput,
 }
 
 #[derive(Debug, Default)]

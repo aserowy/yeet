@@ -19,14 +19,13 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     let mut actions = match cmd {
         "d!" => {
+            let mut actions = vec![change_mode_action];
             if let Some(path) = path::get_selected_path(model) {
-                vec![
-                    change_mode_action,
-                    Action::PostView(PostView::Task(Task::DeletePath(path.clone()))),
-                ]
-            } else {
-                vec![]
+                actions.push(Action::PostView(PostView::Task(Task::DeletePath(
+                    path.clone(),
+                ))));
             }
+            actions
         }
         "e!" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             change_mode_message,
