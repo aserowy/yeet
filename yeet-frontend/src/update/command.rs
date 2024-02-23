@@ -38,12 +38,18 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         "q" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             Message::Quit,
         ])))],
-        "reg" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
-            Message::Print(vec![
-                PrintContent::Info("test2".to_string()),
-                PrintContent::Error("test".to_string()),
-            ]),
-        ])))],
+        "reg" => {
+            let content = model
+                .register
+                .print()
+                .iter()
+                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .collect();
+
+            vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
+                Message::Print(content),
+            ])))]
+        }
         "w" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(Buffer::SaveBuffer(None)),

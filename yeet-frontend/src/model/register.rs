@@ -96,6 +96,22 @@ impl Register {
         }
     }
 
+    pub fn print(&self) -> Vec<String> {
+        let mut contents = vec!["Name Content".to_string()];
+        if let Some(current) = &self.get("\"") {
+            contents.push(print_content("\"\"", current));
+        }
+        if let Some(yanked) = &self.yanked {
+            contents.push(print_content("\"0", yanked));
+        }
+        for (index, entry) in self.trashed.iter().enumerate() {
+            let register_name = format!("\"{}", index + 1);
+            contents.push(print_content(&register_name, entry));
+        }
+
+        contents
+    }
+
     pub fn remove(&mut self, path: &Path) {
         if let Some((id, _)) = decompose_compression_path(path) {
             let index = self.trashed.iter().position(|entry| entry.id == id);
@@ -286,6 +302,15 @@ async fn get_register_cache_path() -> Result<PathBuf, AppError> {
         fs::create_dir_all(&cache_path).await?;
     }
     Ok(cache_path)
+}
+
+fn print_content(register: &str, entry: &RegisterEntry) -> String {
+    let content = match entry.status {
+        RegisterStatus::Processing => "Processing".to_string(),
+        RegisterStatus::Ready => entry.target.to_string_lossy().to_string(),
+    };
+
+    format!("{:<4} {}", register, content)
 }
 
 mod test {
