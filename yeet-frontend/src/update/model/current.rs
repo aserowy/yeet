@@ -52,31 +52,39 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
     ) {
         let path = &model.current.path;
 
-        let mut tasks = Vec::new();
+        let mut actions = Vec::new();
         if let BufferResult::Changes(modifications) = result {
+            let mut trashes = Vec::new();
             for modification in crate::model::buffer::undo::consolidate(&modifications) {
                 match modification {
                     BufferChanged::LineAdded(_, name) => {
-                        tasks.push(Action::Task(Task::AddPath(path.join(name))))
+                        actions.push(Action::Task(Task::AddPath(path.join(name))))
                     }
-                    // TODO: multiple deletes should get consolidated into a single task/archive
-                    // TODO: delete only inserts to " and 1-9 register
                     BufferChanged::LineRemoved(_, name) => {
-                        let (entry, old_entry) = model.register.trash(&path.join(name));
-                        tasks.push(Action::Task(Task::TrashPath(entry)));
-                        if let Some(old_entry) = old_entry {
-                            tasks.push(Action::Task(Task::DeleteRegisterEntry(old_entry)));
-                        }
+                        trashes.push(path.join(name));
                     }
                     // TODO: new_name is empty, add to consolidated Trash operation
-                    BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::Task(
+                    BufferChanged::Content(_, old_name, new_name) => actions.push(Action::Task(
                         Task::RenamePath(path.join(old_name), path.join(new_name)),
                     )),
                 }
             }
+
+            if !trashes.is_empty() {
+                let (transaction, obsolete) = model.register.trash(trashes);
+                for entry in transaction.entries {
+                    actions.push(Action::Task(Task::TrashPath(entry)));
+                }
+
+                if let Some(obsolete) = obsolete {
+                    for entry in obsolete.entries {
+                        actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
+                    }
+                }
+            }
         }
 
-        tasks
+        actions
     } else {
         vec![]
     }
