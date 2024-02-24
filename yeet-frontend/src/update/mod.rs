@@ -1,9 +1,12 @@
 use ratatui::prelude::Rect;
-use yeet_keymap::message::Message;
+use yeet_keymap::message::{Message, Mode};
 
 use crate::{
     action::Action,
-    model::{buffer::viewport::ViewPort, Model},
+    model::{
+        buffer::{viewport::ViewPort, Buffer},
+        Model,
+    },
     settings::Settings,
 };
 
@@ -11,7 +14,6 @@ mod buffer;
 mod command;
 pub mod commandline;
 mod current;
-mod directory;
 mod enumeration;
 mod history;
 mod modification;
@@ -53,4 +55,13 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
 fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
     vp.height = usize::from(rect.height);
     vp.width = usize::from(rect.width);
+}
+
+fn sort_content(mode: &Mode, model: &mut Buffer) {
+    model.lines.sort_unstable_by(|a, b| {
+        a.content
+            .to_ascii_uppercase()
+            .cmp(&b.content.to_ascii_uppercase())
+    });
+    buffer::cursor::validate(mode, model);
 }

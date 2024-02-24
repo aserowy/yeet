@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-use super::{buffer, directory, history, preview};
+use super::{buffer, history, preview};
 
 pub fn changed(
     model: &mut Model,
@@ -67,7 +67,7 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
 
     let mut actions = Vec::new();
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
-        directory::sort_content(&model.mode, buffer);
+        super::sort_content(&model.mode, buffer);
         history::set_cursor_index(path, &model.history, buffer);
 
         if let Some(preview_actions) = preview::path(model, true, true) {
