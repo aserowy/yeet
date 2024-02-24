@@ -13,14 +13,14 @@ use crate::{error::AppError, event::Emitter, task::Task};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
-    current: CurrentRegister,
+    current: RegisterType,
     pub path: PathBuf,
-    trashed: Vec<RegisterEntry>,
-    yanked: Option<RegisterEntry>,
+    trashed: Vec<Entry>,
+    yanked: Option<Entry>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum CurrentRegister {
+pub enum RegisterType {
     _Custom(String),
     Trash,
     #[default]
@@ -28,7 +28,7 @@ pub enum CurrentRegister {
 }
 
 impl Register {
-    pub fn add_or_update(&mut self, path: &Path) -> Option<RegisterEntry> {
+    pub fn add_or_update(&mut self, path: &Path) -> Option<Entry> {
         if let Some((id, target)) = decompose_compression_path(path) {
             if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
                 if let Some(entry) = self.yanked.as_mut() {
@@ -41,7 +41,7 @@ impl Register {
 
                 None
             } else {
-                self.trashed.push(RegisterEntry {
+                self.trashed.push(Entry {
                     cache: self.path.join(&id),
                     id,
                     status: RegisterStatus::Ready,
@@ -62,11 +62,11 @@ impl Register {
         }
     }
 
-    pub fn get(&self, register: &str) -> Option<RegisterEntry> {
+    pub fn get(&self, register: &str) -> Option<Entry> {
         let entry = match register {
             "\"" => match self.current {
-                CurrentRegister::Trash => self.trashed.first().cloned(),
-                CurrentRegister::Yank => self.yanked.clone(),
+                RegisterType::Trash => self.trashed.first().cloned(),
+                RegisterType::Yank => self.yanked.clone(),
                 _ => None,
             },
             "0" => self.yanked.clone(),
@@ -119,10 +119,10 @@ impl Register {
         }
     }
 
-    pub fn trash(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
-        self.current = CurrentRegister::Trash;
+    pub fn trash(&mut self, path: &Path) -> (Entry, Option<Entry>) {
+        self.current = RegisterType::Trash;
 
-        let entry = RegisterEntry::from(path, self);
+        let entry = Entry::from(path, self);
         self.trashed.insert(0, entry.clone());
 
         let old_entry = if self.trashed.len() > 9 {
@@ -134,23 +134,23 @@ impl Register {
         (entry, old_entry)
     }
 
-    pub fn yank(&mut self, path: &Path) -> (RegisterEntry, Option<RegisterEntry>) {
-        self.current = CurrentRegister::Yank;
+    pub fn yank(&mut self, path: &Path) -> (Entry, Option<Entry>) {
+        self.current = RegisterType::Yank;
 
-        let entry = RegisterEntry::from(path, self);
+        let entry = Entry::from(path, self);
         (entry.clone(), self.yanked.replace(entry))
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RegisterEntry {
+pub struct Entry {
     pub id: String,
     pub cache: PathBuf,
     pub status: RegisterStatus,
     pub target: PathBuf,
 }
 
-impl RegisterEntry {
+impl Entry {
     fn from(path: &Path, register: &Register) -> Self {
         let id = compose_compression_name(path);
 
@@ -171,7 +171,7 @@ pub enum RegisterStatus {
     Ready,
 }
 
-pub async fn cache_and_compress(entry: RegisterEntry) -> Result<(), AppError> {
+pub async fn cache_and_compress(entry: Entry) -> Result<(), AppError> {
     let cache_path = get_register_cache_path().await?;
 
     let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
@@ -195,11 +195,11 @@ pub async fn cache_and_compress(entry: RegisterEntry) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn compress(entry: RegisterEntry) -> Result<(), AppError> {
+pub async fn compress(entry: Entry) -> Result<(), AppError> {
     compress_with_archive_name(&entry.target, &entry.id).await
 }
 
-pub async fn delete(entry: RegisterEntry) -> Result<(), AppError> {
+pub async fn delete(entry: Entry) -> Result<(), AppError> {
     let path = get_register_path().await?.join(&entry.id);
     fs::remove_file(path).await?;
     Ok(())
@@ -232,7 +232,7 @@ pub async fn init(register: &mut Register, emitter: &mut Emitter) -> Result<(), 
     Ok(())
 }
 
-pub fn restore(entry: RegisterEntry, path: PathBuf) -> Result<(), AppError> {
+pub fn restore(entry: Entry, path: PathBuf) -> Result<(), AppError> {
     let archive_file = File::open(entry.cache)?;
     let archive_decoder = GzDecoder::new(archive_file);
     let mut archive = Archive::new(archive_decoder);
@@ -302,7 +302,7 @@ async fn get_register_cache_path() -> Result<PathBuf, AppError> {
     Ok(cache_path)
 }
 
-fn print_content(register: &str, entry: &RegisterEntry) -> String {
+fn print_content(register: &str, entry: &Entry) -> String {
     let content = match entry.status {
         RegisterStatus::Processing => "Processing".to_string(),
         RegisterStatus::Ready => entry.target.to_string_lossy().to_string(),
