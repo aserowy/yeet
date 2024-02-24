@@ -162,7 +162,7 @@ impl TaskManager {
 
                                 if cache.len() >= cache_size {
                                     let _ = internal_sender
-                                        .send(vec![Message::PathEnumerationContentChanged(
+                                        .send(vec![Message::EnumerationChanged(
                                             path.clone(),
                                             cache.clone(),
                                         )])
@@ -174,11 +174,8 @@ impl TaskManager {
 
                             let _ = internal_sender
                                 .send(vec![
-                                    Message::PathEnumerationContentChanged(
-                                        path.clone(),
-                                        cache.clone(),
-                                    ),
-                                    Message::PathEnumerationFinished(path),
+                                    Message::EnumerationChanged(path.clone(), cache.clone()),
+                                    Message::EnumerationFinished(path),
                                 ])
                                 .await;
 

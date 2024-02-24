@@ -2,7 +2,7 @@ use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{action::Action, model::Model, task::Task};
 
-use super::path;
+use super::current;
 
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let change_mode_message = Message::Buffer(Buffer::ChangeMode(
@@ -14,7 +14,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let mut actions = match cmd {
         "d!" => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = path::get_selected_path(model) {
+            if let Some(path) = current::selection(model) {
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
             actions

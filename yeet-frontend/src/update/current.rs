@@ -1,4 +1,6 @@
-use yeet_keymap::message::Buffer;
+use std::path::PathBuf;
+
+use yeet_keymap::message::{Buffer, Mode};
 
 use crate::{
     action::Action,
@@ -6,6 +8,7 @@ use crate::{
         buffer::{undo::BufferChanged, BufferResult},
         Model,
     },
+    settings::Settings,
     task::Task,
 };
 
@@ -21,6 +24,24 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
         buffer::update(&model.mode, buffer, message);
     } else {
         buffer::reset_view(buffer);
+    }
+}
+
+pub fn open(model: &Model, settings: &Settings) -> Option<Vec<Action>> {
+    if model.mode != Mode::Navigation {
+        return None;
+    }
+
+    if let Some(selected) = selection(model) {
+        if settings.stdout_on_open {
+            Some(vec![Action::Quit(Some(
+                selected.to_string_lossy().to_string(),
+            ))])
+        } else {
+            Some(vec![Action::Open(selected)])
+        }
+    } else {
+        None
     }
 }
 
@@ -59,5 +80,25 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         tasks
     } else {
         vec![]
+    }
+}
+
+pub fn selection(model: &Model) -> Option<PathBuf> {
+    let buffer = &model.current.buffer;
+    if buffer.lines.is_empty() {
+        return None;
+    }
+
+    if let Some(cursor) = &buffer.cursor {
+        let current = &buffer.lines[cursor.vertical_index];
+        let target = model.current.path.join(&current.content);
+
+        if target.exists() {
+            Some(target)
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
