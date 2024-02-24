@@ -9,7 +9,6 @@ use crate::{
         buffer::{BufferLine, StylePartial},
         CommandLineState, Model,
     },
-    task::Task,
 };
 
 use super::buffer::{self};
@@ -43,7 +42,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 
             vec![
                 Action::SkipRender,
-                Action::Task(Task::EmitMessages(vec![Message::Rerender])),
+                Action::EmitMessages(vec![Message::Rerender]),
             ]
         }
         CommandLineState::WaitingForInput => {
@@ -68,10 +67,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                 Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default()))
             };
 
-            vec![
-                Action::SkipRender,
-                Action::Task(Task::EmitMessages(vec![action])),
-            ]
+            vec![Action::SkipRender, Action::EmitMessages(vec![action])]
         }
     }
 }
@@ -90,10 +86,7 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
 
             buffer::set_content(&model.mode, buffer, vec![]);
 
-            Some(vec![
-                Action::SkipRender,
-                Action::Task(Task::EmitMessages(vec![action])),
-            ])
+            Some(vec![Action::SkipRender, Action::EmitMessages(vec![action])])
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
@@ -101,9 +94,10 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
 
             Some(vec![
                 Action::SkipRender,
-                Action::Task(Task::EmitMessages(vec![Message::Buffer(
-                    Buffer::ChangeMode(model.mode.clone(), Mode::default()),
-                )])),
+                Action::EmitMessages(vec![Message::Buffer(Buffer::ChangeMode(
+                    model.mode.clone(),
+                    Mode::default(),
+                ))]),
             ])
         }
     }
@@ -147,9 +141,9 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
             ..Default::default()
         });
 
-        Some(vec![Action::Task(Task::EmitMessages(vec![
-            Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::Command)),
-        ]))])
+        Some(vec![Action::EmitMessages(vec![Message::Buffer(
+            Buffer::ChangeMode(model.mode.clone(), Mode::Command),
+        )])])
     } else {
         None
     };

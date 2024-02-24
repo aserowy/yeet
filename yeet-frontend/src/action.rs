@@ -4,12 +4,15 @@ use std::{
     time::Duration,
 };
 
+use yeet_keymap::message::Message;
+
 use crate::{
     error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
 };
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Action {
+    EmitMessages(Vec<Message>),
     ModeChanged,
     Open(PathBuf),
     Quit(Option<String>),
@@ -48,6 +51,7 @@ pub async fn post(
 
 fn is_preview_action(action: &Action) -> bool {
     match action {
+        Action::EmitMessages(_) => false,
         Action::ModeChanged => false,
         Action::Open(_) => true,
         Action::Quit(_) => false,
@@ -75,6 +79,9 @@ async fn execute(
         }
 
         match action {
+            Action::EmitMessages(messages) => {
+                emitter.run(Task::EmitMessages(messages.clone()));
+            }
             Action::ModeChanged => {
                 emitter.set_current_mode(model.mode.clone()).await;
             }

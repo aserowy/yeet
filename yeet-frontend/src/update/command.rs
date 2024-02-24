@@ -9,7 +9,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
     ));
-    let change_mode_action = Action::Task(Task::EmitMessages(vec![change_mode_message.clone()]));
+    let change_mode_action = Action::EmitMessages(vec![change_mode_message.clone()]);
 
     let mut actions = match cmd {
         "d!" => {
@@ -19,12 +19,12 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             }
             actions
         }
-        "e!" => vec![Action::Task(Task::EmitMessages(vec![
+        "e!" => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::NavigateToPath(model.current.path.clone()),
-        ]))],
+        ])],
         "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
-        "q" => vec![Action::Task(Task::EmitMessages(vec![Message::Quit]))],
+        "q" => vec![Action::EmitMessages(vec![Message::Quit])],
         "reg" => {
             let content = model
                 .register
@@ -33,18 +33,16 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
                 .collect();
 
-            vec![Action::Task(Task::EmitMessages(vec![Message::Print(
-                content,
-            )]))]
+            vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
-        "w" => vec![Action::Task(Task::EmitMessages(vec![
+        "w" => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(Buffer::SaveBuffer(None)),
-        ]))],
-        "wq" => vec![Action::Task(Task::EmitMessages(vec![
+        ])],
+        "wq" => vec![Action::EmitMessages(vec![
             Message::Buffer(Buffer::SaveBuffer(None)),
             Message::Quit,
-        ]))],
+        ])],
         _ => vec![change_mode_action],
     };
     actions.push(Action::SkipRender);
