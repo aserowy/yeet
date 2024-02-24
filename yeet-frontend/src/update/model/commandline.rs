@@ -9,9 +9,8 @@ use crate::{
         buffer::{BufferLine, StylePartial},
         CommandLineState, Model,
     },
+    update::buffer,
 };
-
-use super::buffer::{self};
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
     let commandline = &mut model.commandline;

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{action::Action, model::Model, task::Task};
 
-use super::current;
+use super::model::current;
 
 pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];

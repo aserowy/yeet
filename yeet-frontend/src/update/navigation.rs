@@ -4,7 +4,7 @@ use yeet_keymap::message::Mode;
 
 use crate::{action::Action, model::Model};
 
-use super::{buffer, current, history, parent, preview};
+use super::{buffer, current, history, model::parent, preview};
 
 pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     // TODO: check in set current to path and extend enumeration request with filename

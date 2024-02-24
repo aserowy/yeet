@@ -3,9 +3,10 @@ use std::path::PathBuf;
 use crate::{
     action::Action,
     model::{buffer::BufferLine, Model},
+    update::{buffer, history},
 };
 
-use super::{buffer, current, history};
+use super::current;
 
 pub fn path(
     model: &mut Model,

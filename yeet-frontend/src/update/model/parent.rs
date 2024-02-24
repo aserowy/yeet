@@ -1,11 +1,12 @@
 use yeet_keymap::message::{Buffer, ViewPortDirection};
 
-use crate::model::{
-    buffer::{Cursor, CursorPosition},
-    Model,
+use crate::{
+    model::{
+        buffer::{Cursor, CursorPosition},
+        Model,
+    },
+    update::buffer,
 };
-
-use super::buffer;
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.parent.buffer;

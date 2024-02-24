@@ -1,26 +1,21 @@
-use ratatui::prelude::Rect;
 use yeet_keymap::message::{Message, Mode};
 
 use crate::{
     action::Action,
-    model::{
-        buffer::{viewport::ViewPort, Buffer},
-        Model,
-    },
+    model::{buffer::Buffer, Model},
     settings::Settings,
 };
 
+use self::model::{commandline, current, preview};
+
 mod buffer;
 mod command;
-pub mod commandline;
-mod current;
 mod enumeration;
 mod history;
+pub mod model;
 mod modification;
 mod navigation;
-mod parent;
 mod path;
-mod preview;
 mod register;
 
 pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
@@ -50,11 +45,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Quit => Some(vec![Action::Quit(None)]),
         Message::YankSelected => register::yank(model),
     }
-}
-
-fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
-    vp.height = usize::from(rect.height);
-    vp.width = usize::from(rect.width);
 }
 
 fn sort_content(mode: &Mode, model: &mut Buffer) {

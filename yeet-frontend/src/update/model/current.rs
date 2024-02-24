@@ -10,9 +10,8 @@ use crate::{
     },
     settings::Settings,
     task::Task,
+    update::buffer,
 };
-
-use super::buffer;
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.current.buffer;

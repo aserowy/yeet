@@ -4,7 +4,7 @@ use action::ActionResult;
 use layout::CommandLineLayout;
 use model::register;
 use task::Task;
-use update::commandline;
+use update::model::commandline;
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
