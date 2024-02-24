@@ -61,22 +61,26 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 None
             }
         }
-        TextModification::DeleteLineOnCursor => {
+        TextModification::DeleteLineOnCursor(repeat) => {
             if model.lines.is_empty() {
                 None
             } else if let Some(cursor) = &mut model.cursor {
-                let line_index = cursor.vertical_index;
-                let line = model.lines.remove(line_index);
-                let content = line.content.to_string();
+                let mut changes = Vec::new();
+                for _ in 0..*repeat {
+                    let line_index = cursor.vertical_index;
+                    let line = model.lines.remove(line_index);
+                    let content = line.content.to_string();
 
-                let line_count = model.lines.len();
-                if line_count == 0 {
-                    cursor.vertical_index = 0;
-                } else if line_index >= line_count {
-                    cursor.vertical_index = line_count - 1;
+                    let line_count = model.lines.len();
+                    if line_count == 0 {
+                        cursor.vertical_index = 0;
+                    } else if line_index >= line_count {
+                        cursor.vertical_index = line_count - 1;
+                    }
+
+                    changes.push(BufferChanged::LineRemoved(line_index, content));
                 }
-
-                Some(vec![BufferChanged::LineRemoved(line_index, content)])
+                Some(changes)
             } else {
                 None
             }

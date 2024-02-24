@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use crate::{action::Action, model::Model, task::Task};
 
-use super::model::current;
-
 pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];
     for path in paths {
@@ -34,23 +32,33 @@ pub fn paste(model: &mut Model, register: &str) -> Option<Vec<Action>> {
     }
 }
 
-pub fn yank(model: &mut Model) -> Option<Vec<Action>> {
-    if let Some(selected) = current::selection(model) {
-        let mut tasks = Vec::new();
+pub fn yank(model: &mut Model, repeat: &usize) -> Option<Vec<Action>> {
+    let current_buffer = &model.current.buffer;
+    if current_buffer.lines.is_empty() {
+        None
+    } else if let Some(cursor) = &current_buffer.cursor {
+        let mut paths = Vec::new();
+        for rpt in 0..*repeat {
+            let line_index = cursor.vertical_index + rpt;
+            if let Some(line) = current_buffer.lines.get(line_index) {
+                let target = model.current.path.join(&line.content);
+                paths.push(target);
+            }
+        }
 
-        // TODO: multiple yanks into one transaction!
-        let (transaction, obsolete) = model.register.yank(vec![selected]);
+        let mut actions = Vec::new();
+        let (transaction, obsolete) = model.register.yank(paths);
         for entry in transaction.entries {
-            tasks.push(Action::Task(Task::YankPath(entry)));
+            actions.push(Action::Task(Task::YankPath(entry)));
         }
 
         if let Some(obsolete) = obsolete {
             for entry in obsolete.entries {
-                tasks.push(Action::Task(Task::DeleteRegisterEntry(entry)));
+                actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
             }
         }
 
-        Some(tasks)
+        Some(actions)
     } else {
         None
     }

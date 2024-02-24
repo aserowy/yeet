@@ -85,9 +85,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
         match binding {
             Binding::Message(msg) => match repeat {
                 Some(rpt) => {
-                    for _ in 0..rpt {
-                        messages.push(msg.clone());
-                    }
+                    messages.extend(get_repeated_messages(&msg, rpt));
                     repeat = None;
                 }
                 None => messages.push(msg),
@@ -116,9 +114,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 let msg = Message::Buffer(Buffer::Modification(mdfctn));
                 match repeat {
                     Some(rpt) => {
-                        for _ in 0..rpt {
-                            messages.push(msg.clone());
-                        }
+                        messages.extend(get_repeated_messages(&msg, rpt));
                         repeat = None;
                     }
                     None => messages.push(msg),
@@ -142,6 +138,23 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
         }
     }
 
+    messages
+}
+
+fn get_repeated_messages(msg: &Message, rpt: usize) -> Vec<Message> {
+    let mut messages = Vec::new();
+    match msg {
+        Message::Buffer(Buffer::Modification(TextModification::DeleteLineOnCursor(_))) => messages
+            .push(Message::Buffer(Buffer::Modification(
+                TextModification::DeleteLineOnCursor(rpt),
+            ))),
+        Message::YankSelected(_) => messages.push(Message::YankSelected(rpt)),
+        _ => {
+            for _ in 0..rpt {
+                messages.push(msg.clone());
+            }
+        }
+    }
     messages
 }
 

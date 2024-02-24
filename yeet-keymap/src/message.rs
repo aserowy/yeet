@@ -32,7 +32,7 @@ pub enum Message {
     Rerender,
     Resize(u16, u16),
     Quit,
-    YankSelected,
+    YankSelected(usize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -60,7 +60,7 @@ pub enum Buffer {
 pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
-    DeleteLineOnCursor,
+    DeleteLineOnCursor(usize),
     Insert(String),
     InsertNewLine(NewLineDirection),
 }

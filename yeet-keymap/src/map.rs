@@ -86,7 +86,7 @@ impl Default for KeyMap {
                     ],
                     Binding::ModeAndTextModification(
                         Mode::Normal,
-                        TextModification::DeleteLineOnCursor,
+                        TextModification::DeleteLineOnCursor(1),
                     ),
                 ),
                 (
@@ -229,7 +229,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('y'), vec![]),
                         Key::new(KeyCode::from_char('y'), vec![]),
                     ],
-                    Binding::Message(Message::YankSelected),
+                    Binding::Message(Message::YankSelected(1)),
                 ),
                 (
                     vec![
@@ -278,7 +278,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
                     Binding::Message(Message::Buffer(Buffer::Modification(
-                        TextModification::DeleteLineOnCursor,
+                        TextModification::DeleteLineOnCursor(1),
                     ))),
                 ),
                 (

@@ -43,7 +43,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::Quit => Some(vec![Action::Quit(None)]),
-        Message::YankSelected => register::yank(model),
+        Message::YankSelected(repeat) => register::yank(model, repeat),
     }
 }
 
