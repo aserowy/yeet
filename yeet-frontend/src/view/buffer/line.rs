@@ -5,8 +5,8 @@ use crate::model::buffer::{
 };
 
 use super::style::{
-    CURSORLINE_STYLE_PARTIAL, CURSOR_COMMAND_STYLE_PARTIAL, CURSOR_INSERT_STYLE_PARTIAL,
-    CURSOR_NORMAL_STYLE_PARTIAL,
+    CURSORLINE_NAV_STYLE_PARTIAL, CURSORLINE_NORMAL_STYLE_PARTIAL, CURSOR_COMMAND_STYLE_PARTIAL,
+    CURSOR_INSERT_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL,
 };
 
 pub fn get_cursor_style_partials(
@@ -37,7 +37,7 @@ pub fn get_cursor_style_partials(
 
         let mut spans = Vec::new();
         if !cursor.hide_cursor_line {
-            spans.push((offset, vp.width, CURSORLINE_STYLE_PARTIAL.clone()));
+            spans.push((offset, vp.width, get_cursorline_partial_style(mode)));
         }
 
         if cursor.hide_cursor {
@@ -56,7 +56,7 @@ pub fn get_cursor_style_partials(
         spans.push((
             offset + cursor_index,
             offset + cursor_index + 1,
-            get_partial_style(mode),
+            get_cursor_partial_style(mode),
         ));
 
         spans
@@ -65,7 +65,16 @@ pub fn get_cursor_style_partials(
     }
 }
 
-fn get_partial_style(mode: &Mode) -> StylePartial {
+fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
+    match mode {
+        Mode::Command => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
+        Mode::Insert => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
+        Mode::Navigation => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
+        Mode::Normal => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
+    }
+}
+
+fn get_cursor_partial_style(mode: &Mode) -> StylePartial {
     match mode {
         Mode::Command => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
