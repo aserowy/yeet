@@ -28,7 +28,11 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
             commandline::update(model, None);
-            None
+
+            Some(vec![
+                Action::SkipRender,
+                Action::EmitMessages(vec![Message::Rerender]),
+            ])
         }
         Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => navigation::path(model, path),
