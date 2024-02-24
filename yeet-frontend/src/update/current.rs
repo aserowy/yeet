@@ -1,7 +1,7 @@
 use yeet_keymap::message::Buffer;
 
 use crate::{
-    action::{Action, PostView},
+    action::Action,
     model::{
         buffer::{undo::BufferChanged, BufferResult},
         Model,
@@ -36,23 +36,21 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         if let BufferResult::Changes(modifications) = result {
             for modification in crate::model::buffer::undo::consolidate(&modifications) {
                 match modification {
-                    BufferChanged::LineAdded(_, name) => tasks.push(Action::PostView(
-                        PostView::Task(Task::AddPath(path.join(name))),
-                    )),
+                    BufferChanged::LineAdded(_, name) => {
+                        tasks.push(Action::Task(Task::AddPath(path.join(name))))
+                    }
                     // TODO: multiple deletes should get consolidated into a single task/archive
                     // TODO: delete only inserts to " and 1-9 register
                     BufferChanged::LineRemoved(_, name) => {
                         let (entry, old_entry) = model.register.trash(&path.join(name));
-                        tasks.push(Action::PostView(PostView::Task(Task::TrashPath(entry))));
+                        tasks.push(Action::Task(Task::TrashPath(entry)));
                         if let Some(old_entry) = old_entry {
-                            tasks.push(Action::PostView(PostView::Task(
-                                Task::DeleteRegisterEntry(old_entry),
-                            )));
+                            tasks.push(Action::Task(Task::DeleteRegisterEntry(old_entry)));
                         }
                     }
                     // TODO: new_name is empty, add to consolidated Trash operation
-                    BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::PostView(
-                        PostView::Task(Task::RenamePath(path.join(old_name), path.join(new_name))),
+                    BufferChanged::Content(_, old_name, new_name) => tasks.push(Action::Task(
+                        Task::RenamePath(path.join(old_name), path.join(new_name)),
                     )),
                 }
             }

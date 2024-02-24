@@ -1,10 +1,6 @@
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
-use crate::{
-    action::{Action, PostView, PreView},
-    model::Model,
-    task::Task,
-};
+use crate::{action::Action, model::Model, task::Task};
 
 use super::path;
 
@@ -13,31 +9,22 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
     ));
-    let change_mode_action = Action::PostView(PostView::Task(Task::EmitMessages(vec![
-        change_mode_message.clone(),
-    ])));
+    let change_mode_action = Action::Task(Task::EmitMessages(vec![change_mode_message.clone()]));
 
     let mut actions = match cmd {
         "d!" => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = path::get_selected_path(model) {
-                actions.push(Action::PostView(PostView::Task(Task::DeletePath(
-                    path.clone(),
-                ))));
+                actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
             actions
         }
-        "e!" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
+        "e!" => vec![Action::Task(Task::EmitMessages(vec![
             change_mode_message,
             Message::NavigateToPath(model.current.path.clone()),
-        ])))],
-        "histopt" => vec![
-            change_mode_action,
-            Action::PostView(PostView::Task(Task::OptimizeHistory)),
-        ],
-        "q" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
-            Message::Quit,
-        ])))],
+        ]))],
+        "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
+        "q" => vec![Action::Task(Task::EmitMessages(vec![Message::Quit]))],
         "reg" => {
             let content = model
                 .register
@@ -46,21 +33,21 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
                 .collect();
 
-            vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
-                Message::Print(content),
-            ])))]
+            vec![Action::Task(Task::EmitMessages(vec![Message::Print(
+                content,
+            )]))]
         }
-        "w" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
+        "w" => vec![Action::Task(Task::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(Buffer::SaveBuffer(None)),
-        ])))],
-        "wq" => vec![Action::PostView(PostView::Task(Task::EmitMessages(vec![
+        ]))],
+        "wq" => vec![Action::Task(Task::EmitMessages(vec![
             Message::Buffer(Buffer::SaveBuffer(None)),
             Message::Quit,
-        ])))],
+        ]))],
         _ => vec![change_mode_action],
     };
-    actions.push(Action::PreView(PreView::SkipRender));
+    actions.push(Action::SkipRender);
 
     actions
 }

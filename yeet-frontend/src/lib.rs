@@ -1,5 +1,6 @@
 use std::{env, path::PathBuf};
 
+use action::ActionResult;
 use layout::CommandLineLayout;
 use model::register;
 use task::Task;
@@ -62,11 +63,13 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             .flatten()
             .collect();
 
-        if action::execute_pre_view(&actions, &mut emitter, &mut terminal).await? {
+        let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
+        if result != ActionResult::SkipRender {
             view::view(&mut terminal, &mut model)?;
         }
 
-        if !action::execute_post_view(&actions, &mut emitter, &model).await? {
+        let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
+        if result == ActionResult::Quit {
             break;
         }
     }

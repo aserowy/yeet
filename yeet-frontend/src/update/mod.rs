@@ -2,7 +2,7 @@ use ratatui::prelude::Rect;
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
-    action::{Action, PostView, PreView},
+    action::Action,
     model::{
         buffer::{viewport::ViewPort, BufferLine},
         Model,
@@ -35,7 +35,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                     model.mode = to.clone();
                     model.mode_before = Some(from.clone());
 
-                    let mut actions = vec![Action::PostView(PostView::ModeChanged(to.clone()))];
+                    let mut actions = vec![Action::ModeChanged];
                     actions.extend(match from {
                         Mode::Command => {
                             buffer::unfocus_buffer(&mut model.commandline.buffer);
@@ -218,11 +218,11 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
 
             if let Some(selected) = path::get_selected_path(model) {
                 if settings.stdout_on_open {
-                    Some(vec![Action::PostView(PostView::Quit(Some(
+                    Some(vec![Action::Quit(Some(
                         selected.to_string_lossy().to_string(),
-                    )))])
+                    ))])
                 } else {
-                    Some(vec![Action::PreView(PreView::Open(selected))])
+                    Some(vec![Action::Open(selected)])
                 }
             } else {
                 None
@@ -230,10 +230,10 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         }
         Message::PasteRegister(register) => {
             if let Some(entry) = model.register.get(register) {
-                Some(vec![Action::PostView(PostView::Task(Task::RestorePath(
+                Some(vec![Action::Task(Task::RestorePath(
                     entry,
                     model.current.path.clone(),
-                )))])
+                ))])
             } else {
                 None
             }
@@ -341,13 +341,11 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
             }
         }
         Message::PathsWriteFinished(paths) => {
-            let mut actions = vec![Action::PreView(PreView::SkipRender)];
+            let mut actions = vec![Action::SkipRender];
             for path in paths {
                 if path.starts_with(&model.register.path) {
                     if let Some(old_entry) = model.register.add_or_update(path) {
-                        actions.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(
-                            old_entry,
-                        ))));
+                        actions.push(Action::Task(Task::DeleteRegisterEntry(old_entry)));
                     }
                 }
             }
@@ -372,18 +370,16 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         }
         Message::Print(content) => commandline::print(model, content),
         Message::Rerender => None,
-        Message::Resize(x, y) => Some(vec![Action::PreView(PreView::Resize(*x, *y))]),
-        Message::Quit => Some(vec![Action::PostView(PostView::Quit(None))]),
+        Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
+        Message::Quit => Some(vec![Action::Quit(None)]),
         Message::YankSelected => {
             if let Some(selected) = path::get_selected_path(model) {
                 let mut tasks = Vec::new();
 
                 let (entry, old_entry) = model.register.yank(&selected);
-                tasks.push(Action::PostView(PostView::Task(Task::YankPath(entry))));
+                tasks.push(Action::Task(Task::YankPath(entry)));
                 if let Some(old_entry) = old_entry {
-                    tasks.push(Action::PostView(PostView::Task(Task::DeleteRegisterEntry(
-                        old_entry,
-                    ))));
+                    tasks.push(Action::Task(Task::DeleteRegisterEntry(old_entry)));
                 }
 
                 Some(tasks)

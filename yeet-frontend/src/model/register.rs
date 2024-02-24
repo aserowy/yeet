@@ -1,6 +1,3 @@
-// :reg .. expand commandline and exit on enter
-// change state to echo path
-
 use std::{
     cmp::Reverse,
     fs::File,
@@ -86,10 +83,11 @@ impl Register {
             _ => None,
         };
 
-        if entry
+        let is_ready = entry
             .as_ref()
-            .is_some_and(|entry| entry.status == RegisterStatus::Ready)
-        {
+            .is_some_and(|entry| entry.status == RegisterStatus::Ready);
+
+        if is_ready {
             entry
         } else {
             None
