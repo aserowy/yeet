@@ -14,6 +14,7 @@ pub enum Binding {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(Buffer),
+    Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
     KeySequenceChanged(String),

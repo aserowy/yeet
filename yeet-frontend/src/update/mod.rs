@@ -1,4 +1,4 @@
-use yeet_keymap::message::{Message, Mode};
+use yeet_keymap::message::{Message, Mode, PrintContent};
 
 use crate::{
     action::Action,
@@ -23,6 +23,14 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Buffer(msg) => modification::buffer(model, msg),
         Message::EnumerationChanged(path, contents) => enumeration::changed(model, path, contents),
         Message::EnumerationFinished(path) => enumeration::finished(model, path),
+        Message::Error(error) => {
+            // TODO: buffer messages till command mode left
+            if model.mode != Mode::Command {
+                commandline::print(model, &[PrintContent::Error(error.to_string())]);
+            }
+
+            None
+        }
         Message::ExecuteCommand => commandline::update_on_execute(model),
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {

@@ -116,19 +116,20 @@ impl TaskManager {
 
                 Ok(())
             }),
-            Task::DeleteRegisterEntry(entry) => self.tasks.spawn(async move {
-                if let Err(_error) = register::delete(entry).await {
-                    // TODO: log error
-                    println!("Error: {:?}", _error);
-                }
-                Ok(())
-            }),
+            Task::DeleteRegisterEntry(entry) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(error) = register::delete(entry).await {
+                        emit_error(sender, error).await;
+                    }
+                    Ok(())
+                })
+            }
             Task::EmitMessages(messages) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(_error) = sender.send(messages).await {
-                        // TODO: log error
-                        println!("Error: {:?}", _error);
+                    if let Err(error) = sender.send(messages).await {
+                        emit_error(sender, AppError::ActionSendFailed(error)).await;
                     }
                     Ok(())
                 })
@@ -186,7 +187,7 @@ impl TaskManager {
                 })
             }
             Task::LoadPreview(path) => {
-                let internal_sender = self.sender.clone();
+                let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Some(kind) = infer::get_from_path(path.clone())? {
                         // TODO: add preview for images here
@@ -197,12 +198,16 @@ impl TaskManager {
                     }
 
                     let content = fs::read_to_string(path.clone()).await?;
-                    let _ = internal_sender
+                    let result = sender
                         .send(vec![Message::PreviewLoaded(
                             path.clone(),
                             content.lines().map(|s| s.to_string()).collect(),
                         )])
                         .await;
+
+                    if let Err(error) = result {
+                        emit_error(sender, AppError::ActionSendFailed(error)).await;
+                    }
 
                     Ok(())
                 })
@@ -225,31 +230,37 @@ impl TaskManager {
                 register::restore(entry, path)?;
                 Ok(())
             }),
-            Task::SaveHistory(history) => self.tasks.spawn(async move {
-                if let Err(_error) = history::cache::save(&history) {
-                    // TODO: log error
-                    println!("Error: {:?}", _error);
-                }
-                history::cache::optimize()?;
+            Task::SaveHistory(history) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(error) = history::cache::save(&history) {
+                        emit_error(sender, error).await;
+                    }
+                    history::cache::optimize()?;
 
-                Ok(())
-            }),
-            Task::TrashPath(entry) => self.tasks.spawn(async move {
-                if let Err(_error) = register::cache_and_compress(entry).await {
-                    // TODO: log error
-                    println!("Error: {:?}", _error);
-                }
+                    Ok(())
+                })
+            }
+            Task::TrashPath(entry) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(error) = register::cache_and_compress(entry).await {
+                        emit_error(sender, error).await;
+                    }
 
-                Ok(())
-            }),
-            Task::YankPath(entry) => self.tasks.spawn(async move {
-                if let Err(_error) = register::compress(entry).await {
-                    // TODO: log error
-                    println!("Error: {:?}", _error);
-                }
+                    Ok(())
+                })
+            }
+            Task::YankPath(entry) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(error) = register::compress(entry).await {
+                        emit_error(sender, error).await;
+                    }
 
-                Ok(())
-            }),
+                    Ok(())
+                })
+            }
         };
 
         if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == &task) {
@@ -259,6 +270,11 @@ impl TaskManager {
 
         self.abort_handles.push((task, abort_handle));
     }
+}
+
+async fn emit_error(sender: Sender<Vec<Message>>, error: AppError) {
+    let error = format!("Error: {:?}", error);
+    let _ = sender.send(vec![Message::Error(error)]).await;
 }
 
 fn should_abort_on_finish(task: Task) -> bool {
