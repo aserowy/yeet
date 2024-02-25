@@ -2,7 +2,11 @@ use yeet_keymap::message::{NewLineDirection, TextModification};
 
 use crate::model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition};
 
-pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec<BufferChanged>> {
+pub fn update(
+    model: &mut Buffer,
+    count: &usize,
+    modification: &TextModification,
+) -> Option<Vec<BufferChanged>> {
     match modification {
         TextModification::DeleteCharBeforeCursor => {
             let line = get_line(model);
@@ -61,12 +65,12 @@ pub fn update(model: &mut Buffer, modification: &TextModification) -> Option<Vec
                 None
             }
         }
-        TextModification::DeleteLineOnCursor(repeat) => {
+        TextModification::DeleteLineOnCursor => {
             if model.lines.is_empty() {
                 None
             } else if let Some(cursor) = &mut model.cursor {
                 let mut changes = Vec::new();
-                for _ in 0..*repeat {
+                for _ in 0..*count {
                     let line_index = cursor.vertical_index;
                     let line = model.lines.remove(line_index);
                     let content = line.content.to_string();

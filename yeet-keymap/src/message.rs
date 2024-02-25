@@ -57,7 +57,7 @@ pub enum Message {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Buffer {
     ChangeMode(Mode, Mode),
-    Modification(TextModification),
+    Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
     SaveBuffer(Option<usize>),
@@ -67,7 +67,7 @@ pub enum Buffer {
 pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
-    DeleteLineOnCursor(usize),
+    DeleteLineOnCursor,
     Insert(String),
     InsertNewLine(NewLineDirection),
 }

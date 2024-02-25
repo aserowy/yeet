@@ -47,9 +47,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
 
-            let action = if Some(&Buffer::Modification(TextModification::Insert(
-                ":".to_string(),
-            ))) == message
+            let action = if Some(&Buffer::Modification(
+                1,
+                TextModification::Insert(":".to_string()),
+            )) == message
             {
                 let bufferline = BufferLine {
                     prefix: Some(":".to_string()),

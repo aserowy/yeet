@@ -58,7 +58,7 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
 
             Some(actions)
         }
-        Buffer::Modification(_) => match model.mode {
+        Buffer::Modification(_, _) => match model.mode {
             Mode::Command => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Normal => {
                 current::update(model, Some(msg));
