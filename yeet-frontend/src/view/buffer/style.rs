@@ -10,8 +10,9 @@ type StyleSpan = (usize, usize, Style);
 pub const CURSOR_COMMAND_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
 pub const CURSOR_INSERT_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::UNDERLINED);
 pub const CURSOR_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
-pub const CURSORLINE_NAV_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
-pub const CURSORLINE_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
+pub const CURSOR_NAV_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
+pub const CURSORLINE_NAV_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
+pub const CURSORLINE_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::Black);
 pub const LINE_NUMBER_ABS_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::White);
 pub const LINE_NUMBER_REL_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::DarkGray);
 

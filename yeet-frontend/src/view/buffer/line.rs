@@ -6,7 +6,7 @@ use crate::model::buffer::{
 
 use super::style::{
     CURSORLINE_NAV_STYLE_PARTIAL, CURSORLINE_NORMAL_STYLE_PARTIAL, CURSOR_COMMAND_STYLE_PARTIAL,
-    CURSOR_INSERT_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL,
+    CURSOR_INSERT_STYLE_PARTIAL, CURSOR_NAV_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL,
 };
 
 pub fn get_cursor_style_partials(
@@ -67,7 +67,7 @@ pub fn get_cursor_style_partials(
 
 fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
     match mode {
-        Mode::Command => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
+        Mode::Command => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
         Mode::Navigation => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
         Mode::Normal => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
@@ -78,7 +78,7 @@ fn get_cursor_partial_style(mode: &Mode) -> StylePartial {
     match mode {
         Mode::Command => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
-        Mode::Navigation => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
+        Mode::Navigation => CURSOR_NAV_STYLE_PARTIAL.clone(),
         Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
     }
 }
