@@ -1,7 +1,7 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, Message, Mode};
+use message::{Binding, BindingKind, Message, Mode};
 use tree::KeyTree;
 
 use crate::message::{Buffer, TextModification};
@@ -82,21 +82,21 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
     let mut repeat = None;
     let mut messages = Vec::new();
     for binding in bindings {
-        match binding {
-            Binding::Message(msg) => match repeat {
+        match binding.kind {
+            BindingKind::Message(msg) => match repeat {
                 Some(rpt) => {
                     messages.extend(get_repeated_messages(&msg, rpt));
                     repeat = None;
                 }
                 None => messages.push(msg),
             },
-            Binding::Mode(md) => {
+            BindingKind::Mode(md) => {
                 messages.push(Message::Buffer(Buffer::ChangeMode(
                     mode.clone(),
                     md.clone(),
                 )));
             }
-            Binding::ModeAndNotRepeatedMotion(md, mtn) => {
+            BindingKind::ModeAndNotRepeatedMotion(md, mtn) => {
                 messages.push(Message::Buffer(Buffer::ChangeMode(
                     mode.clone(),
                     md.clone(),
@@ -105,7 +105,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
 
                 repeat = None;
             }
-            Binding::ModeAndTextModification(md, mdfctn) => {
+            BindingKind::ModeAndTextModification(md, mdfctn) => {
                 messages.push(Message::Buffer(Buffer::ChangeMode(
                     mode.clone(),
                     md.clone(),
@@ -120,18 +120,18 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                     None => messages.push(msg),
                 }
             }
-            Binding::Motion(mtn) => match repeat {
+            BindingKind::Motion(mtn) => match repeat {
                 Some(rpt) => {
                     messages.push(Message::Buffer(Buffer::MoveCursor(rpt, mtn)));
                     repeat = None;
                 }
                 None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },
-            Binding::Repeat(rpt) => match repeat {
+            BindingKind::Repeat(rpt) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
                 None => repeat = Some(rpt),
             },
-            Binding::RepeatOrMotion(rpt, mtn) => match repeat {
+            BindingKind::RepeatOrMotion(rpt, mtn) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
                 None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },

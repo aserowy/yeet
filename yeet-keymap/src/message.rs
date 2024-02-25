@@ -1,7 +1,12 @@
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Binding {
+pub struct Binding {
+    pub kind: BindingKind,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BindingKind {
     Message(Message),
     Mode(Mode),
     ModeAndNotRepeatedMotion(Mode, CursorDirection),
@@ -14,6 +19,8 @@ pub enum Binding {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(Buffer),
+    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>),
+    EnumerationFinished(PathBuf),
     Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
@@ -23,8 +30,6 @@ pub enum Message {
     NavigateToSelected,
     OpenSelected,
     PasteRegister(String),
-    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>),
-    EnumerationFinished(PathBuf),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
     PathsWriteFinished(Vec<PathBuf>),
@@ -34,18 +39,6 @@ pub enum Message {
     Resize(u16, u16),
     Quit,
     YankSelected(usize),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum PrintContent {
-    Error(String),
-    Info(String),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ContentKind {
-    Directory,
-    File,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -107,10 +100,22 @@ impl ToString for Mode {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ContentKind {
+    Directory,
+    File,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ViewPortDirection {
     BottomOnCursor,
     CenterOnCursor,
     HalfPageDown,
     HalfPageUp,
     TopOnCursor,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PrintContent {
+    Error(String),
+    Info(String),
 }
