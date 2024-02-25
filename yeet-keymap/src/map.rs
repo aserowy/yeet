@@ -30,6 +30,7 @@ impl KeyMap {
 }
 
 impl Default for KeyMap {
+    #[allow(clippy::needless_update)]
     fn default() -> Self {
         let mut mappings = HashMap::new();
 
@@ -43,18 +44,21 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::Modification(
                             TextModification::DeleteCharBeforeCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::ExecuteCommand),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::default()),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -63,18 +67,21 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::Modification(
                             TextModification::DeleteCharOnCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Left, vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Left),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Right, vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Right),
+                        ..Default::default()
                     },
                 ),
             ],
@@ -88,12 +95,14 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::OpenSelected),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(0),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -102,10 +111,11 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::ModeAndTextModification(
-                            Mode::Normal,
-                            TextModification::DeleteLineOnCursor(1),
-                        ),
+                        force: Some(Mode::Normal),
+                        kind: BindingKind::TextModification(TextModification::DeleteLineOnCursor(
+                            1,
+                        )),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -115,24 +125,28 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         kind: BindingKind::Message(Message::NavigateToPath(get_home_path())),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::NavigateToParent),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::NavigateToSelected),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('m'), vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::Normal),
+                        ..Default::default()
                     },
                 ),
             ],
@@ -146,84 +160,95 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::Navigation),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('1'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(1),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('2'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(2),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('3'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(3),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('4'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(4),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('5'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(5),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('6'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(6),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('7'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(7),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('8'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(8),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('9'), vec![])],
                     Binding {
                         kind: BindingKind::Repeat(9),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char(':'), vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::Command),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('a'), vec![])],
                     Binding {
-                        kind: BindingKind::ModeAndNotRepeatedMotion(
-                            Mode::Insert,
-                            CursorDirection::Right,
-                        ),
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::Motion(CursorDirection::Right),
+                        repeatable: false,
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('a'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::ModeAndNotRepeatedMotion(
-                            Mode::Insert,
-                            CursorDirection::LineEnd,
-                        ),
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::Motion(CursorDirection::LineEnd),
+                        repeatable: false,
+                        ..Default::default()
                     },
                 ),
                 (
@@ -232,12 +257,14 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::HalfPageDown,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('g'), vec![KeyModifier::Shift])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Bottom),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -247,57 +274,64 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Top),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('i'), vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::Insert),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('i'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::ModeAndNotRepeatedMotion(
-                            Mode::Insert,
-                            CursorDirection::LineStart,
-                        ),
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::Motion(CursorDirection::LineStart),
+                        repeatable: false,
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('j'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Down),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('k'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Up),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('o'), vec![])],
                     Binding {
-                        kind: BindingKind::ModeAndTextModification(
-                            Mode::Insert,
-                            TextModification::InsertNewLine(NewLineDirection::Under),
-                        ),
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::TextModification(TextModification::InsertNewLine(
+                            NewLineDirection::Under,
+                        )),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('o'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::ModeAndTextModification(
-                            Mode::Insert,
-                            TextModification::InsertNewLine(NewLineDirection::Above),
-                        ),
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::TextModification(TextModification::InsertNewLine(
+                            NewLineDirection::Above,
+                        )),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('p'), vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::PasteRegister("\"".to_string())),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -306,6 +340,7 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::HalfPageUp,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -315,6 +350,7 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         kind: BindingKind::Message(Message::YankSelected(1)),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -326,6 +362,7 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::BottomOnCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -337,6 +374,7 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::TopOnCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -348,6 +386,7 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::CenterOnCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
             ],
@@ -361,12 +400,14 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding {
                         kind: BindingKind::RepeatOrMotion(0, CursorDirection::LineStart),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::LineEnd),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -378,18 +419,21 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::Modification(
                             TextModification::DeleteLineOnCursor(1),
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Left),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Right),
+                        ..Default::default()
                     },
                 ),
             ],
@@ -405,12 +449,14 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::Modification(
                             TextModification::DeleteCharBeforeCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
                         kind: BindingKind::Mode(Mode::Normal),
+                        ..Default::default()
                     },
                 ),
                 (
@@ -419,18 +465,21 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(Message::Buffer(Buffer::Modification(
                             TextModification::DeleteCharOnCursor,
                         ))),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Left, vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Left),
+                        ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Right, vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Right),
+                        ..Default::default()
                     },
                 ),
             ],

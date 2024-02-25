@@ -82,6 +82,17 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
     let mut repeat = None;
     let mut messages = Vec::new();
     for binding in bindings {
+        if let Some(md) = binding.force {
+            messages.push(Message::Buffer(Buffer::ChangeMode(
+                mode.clone(),
+                md.clone(),
+            )));
+        }
+
+        if !binding.repeatable {
+            repeat = None;
+        }
+
         match binding.kind {
             BindingKind::Message(msg) => match repeat {
                 Some(rpt) => {
@@ -96,21 +107,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                     md.clone(),
                 )));
             }
-            BindingKind::ModeAndNotRepeatedMotion(md, mtn) => {
-                messages.push(Message::Buffer(Buffer::ChangeMode(
-                    mode.clone(),
-                    md.clone(),
-                )));
-                messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn)));
-
-                repeat = None;
-            }
-            BindingKind::ModeAndTextModification(md, mdfctn) => {
-                messages.push(Message::Buffer(Buffer::ChangeMode(
-                    mode.clone(),
-                    md.clone(),
-                )));
-
+            BindingKind::TextModification(mdfctn) => {
                 let msg = Message::Buffer(Buffer::Modification(mdfctn));
                 match repeat {
                     Some(rpt) => {
@@ -127,6 +124,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 }
                 None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },
+            BindingKind::None => unreachable!(),
             BindingKind::Repeat(rpt) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
                 None => repeat = Some(rpt),
