@@ -20,7 +20,6 @@ impl Default for Binding {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum BindingKind {
     Message(Message),
-    Mode(Mode),
     Motion(CursorDirection),
     #[default]
     None,

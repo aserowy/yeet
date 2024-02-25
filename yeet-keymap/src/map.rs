@@ -57,7 +57,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::default()),
+                        force: Some(Mode::default()),
                         ..Default::default()
                     },
                 ),
@@ -141,7 +141,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('m'), vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::Normal),
+                        force: Some(Mode::Normal),
                         ..Default::default()
                     },
                 ),
@@ -155,7 +155,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::Navigation),
+                        force: Some(Mode::Navigation),
                         ..Default::default()
                     },
                 ),
@@ -225,7 +225,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char(':'), vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::Command),
+                        force: Some(Mode::Command),
                         ..Default::default()
                     },
                 ),
@@ -276,7 +276,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('i'), vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::Insert),
+                        force: Some(Mode::Insert),
                         ..Default::default()
                     },
                 ),
@@ -449,7 +449,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
-                        kind: BindingKind::Mode(Mode::Normal),
+                        force: Some(Mode::Normal),
                         ..Default::default()
                     },
                 ),

@@ -101,12 +101,6 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 }
                 None => messages.push(msg),
             },
-            BindingKind::Mode(md) => {
-                messages.push(Message::Buffer(Buffer::ChangeMode(
-                    mode.clone(),
-                    md.clone(),
-                )));
-            }
             BindingKind::TextModification(tmd) => match repeat {
                 Some(rpt) => {
                     messages.push(Message::Buffer(Buffer::Modification(rpt, tmd)));
@@ -121,7 +115,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 }
                 None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
             },
-            BindingKind::None => unreachable!(),
+            BindingKind::None => {}
             BindingKind::Repeat(rpt) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
                 None => repeat = Some(rpt),
