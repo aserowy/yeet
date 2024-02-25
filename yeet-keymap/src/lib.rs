@@ -101,12 +101,12 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 }
                 None => messages.push(msg),
             },
-            BindingKind::TextModification(tmd) => match repeat {
+            BindingKind::Modification(mdf) => match repeat {
                 Some(rpt) => {
-                    messages.push(Message::Buffer(Buffer::Modification(rpt, tmd)));
+                    messages.push(Message::Buffer(Buffer::Modification(rpt, mdf)));
                     repeat = None;
                 }
-                None => messages.push(Message::Buffer(Buffer::Modification(1, tmd))),
+                None => messages.push(Message::Buffer(Buffer::Modification(1, mdf))),
             },
             BindingKind::Motion(mtn) => match repeat {
                 Some(rpt) => {

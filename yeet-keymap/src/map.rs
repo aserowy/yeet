@@ -41,9 +41,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
                     Binding {
-                        kind: BindingKind::TextModification(
-                            TextModification::DeleteCharBeforeCursor,
-                        ),
+                        kind: BindingKind::Modification(TextModification::DeleteCharBeforeCursor),
                         ..Default::default()
                     },
                 ),
@@ -64,7 +62,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
                     Binding {
-                        kind: BindingKind::TextModification(TextModification::DeleteCharOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteCharOnCursor),
                         ..Default::default()
                     },
                 ),
@@ -110,7 +108,7 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         force: Some(Mode::Normal),
-                        kind: BindingKind::TextModification(TextModification::DeleteLineOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteLineOnCursor),
                         ..Default::default()
                     },
                 ),
@@ -307,7 +305,7 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('o'), vec![])],
                     Binding {
                         force: Some(Mode::Insert),
-                        kind: BindingKind::TextModification(TextModification::InsertNewLine(
+                        kind: BindingKind::Modification(TextModification::InsertNewLine(
                             NewLineDirection::Under,
                         )),
                         ..Default::default()
@@ -317,7 +315,7 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('o'), vec![KeyModifier::Shift])],
                     Binding {
                         force: Some(Mode::Insert),
-                        kind: BindingKind::TextModification(TextModification::InsertNewLine(
+                        kind: BindingKind::Modification(TextModification::InsertNewLine(
                             NewLineDirection::Above,
                         )),
                         ..Default::default()
@@ -412,7 +410,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::TextModification(TextModification::DeleteLineOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteLineOnCursor),
                         ..Default::default()
                     },
                 ),
@@ -440,9 +438,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
                     Binding {
-                        kind: BindingKind::TextModification(
-                            TextModification::DeleteCharBeforeCursor,
-                        ),
+                        kind: BindingKind::Modification(TextModification::DeleteCharBeforeCursor),
                         ..Default::default()
                     },
                 ),
@@ -456,7 +452,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
                     Binding {
-                        kind: BindingKind::TextModification(TextModification::DeleteCharOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteCharOnCursor),
                         ..Default::default()
                     },
                 ),

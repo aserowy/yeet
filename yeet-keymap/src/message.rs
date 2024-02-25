@@ -25,7 +25,7 @@ pub enum BindingKind {
     None,
     Repeat(usize),
     RepeatOrMotion(usize, CursorDirection),
-    TextModification(TextModification),
+    Modification(TextModification),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

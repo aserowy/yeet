@@ -13,16 +13,25 @@ pub fn update(
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index > 0 {
-                    let next_index = index - 1;
+                    let next_index = if count > &index { 0 } else { index - count };
                     cursor.horizontial_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,
                     };
 
-                    let pre = &line.content[..index - 1];
-                    let post = &line.content[index..];
+                    let new: String = line
+                        .content
+                        .chars()
+                        .enumerate()
+                        .filter_map(|(i, c)| {
+                            if i >= next_index && i < index {
+                                None
+                            } else {
+                                Some(c)
+                            }
+                        })
+                        .collect();
 
-                    let new = format!("{}{}", pre, post);
                     let changed = BufferChanged::Content(
                         cursor.vertical_index,
                         line.content.to_string(),
