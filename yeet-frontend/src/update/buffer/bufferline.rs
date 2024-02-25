@@ -54,10 +54,19 @@ pub fn update(
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index < line.len() {
-                    let pre = &line.content[..index];
-                    let post = &line.content[index + 1..];
+                    let new: String = line
+                        .content
+                        .chars()
+                        .enumerate()
+                        .filter_map(|(i, c)| {
+                            if i >= index && i < index + count {
+                                None
+                            } else {
+                                Some(c)
+                            }
+                        })
+                        .collect();
 
-                    let new = format!("{}{}", pre, post);
                     let changed = BufferChanged::Content(
                         cursor.vertical_index,
                         line.content.to_string(),
