@@ -415,6 +415,13 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('f'), vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::FindForward('f')),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Left),

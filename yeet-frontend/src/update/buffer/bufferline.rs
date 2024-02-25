@@ -13,7 +13,7 @@ pub fn update(
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index > 0 {
-                    let next_index = if count > &index { 0 } else { index - count };
+                    let next_index = if count >= &index { 0 } else { index - count };
                     cursor.horizontial_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,

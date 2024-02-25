@@ -81,6 +81,7 @@ pub enum NewLineDirection {
 pub enum CursorDirection {
     Bottom,
     Down,
+    FindForward(char),
     Left,
     LineEnd,
     LineStart,

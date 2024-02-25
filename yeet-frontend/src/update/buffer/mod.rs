@@ -8,6 +8,8 @@ pub mod viewport;
 
 pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Option<BufferResult> {
     let result = match message {
+        // TODO: repeat actions by count when switching from insert to normal
+        // count is entered before going into insert. ChangeMode with count? Or Insert with count?
         message::Buffer::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();

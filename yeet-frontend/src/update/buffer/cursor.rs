@@ -14,7 +14,7 @@ pub fn update_by_direction(
 
     if let Some(cursor) = &mut model.cursor {
         for _ in 0..*count {
-            // TODO: replace all lines[..] calls with .get(..) everywhere
+            // TODO: replace all lines[..] calls with .chars().enumerate... everywhere
             match direction {
                 CursorDirection::Bottom => {
                     cursor.vertical_index = model.lines.len() - 1;
@@ -36,6 +36,38 @@ pub fn update_by_direction(
                     let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
+                }
+                CursorDirection::FindForward(find) => {
+                    if let Some(line) = model.lines.get(cursor.vertical_index) {
+                        let index = match &cursor.horizontial_index {
+                            CursorPosition::Absolute {
+                                current,
+                                expanded: _,
+                            } => *current,
+                            CursorPosition::End => {
+                                if line.len() == 0 {
+                                    0
+                                } else {
+                                    line.len() - 1
+                                }
+                            }
+                            CursorPosition::None => return,
+                        };
+
+                        let find = line
+                            .content
+                            .chars()
+                            .enumerate()
+                            .skip(index + 1)
+                            .find(|(_, c)| c == find);
+
+                        if let Some(found) = find {
+                            cursor.horizontial_index = CursorPosition::Absolute {
+                                current: found.0,
+                                expanded: found.0,
+                            };
+                        }
+                    }
                 }
                 CursorDirection::Left => {
                     let cursor_index = match cursor.horizontial_index {
