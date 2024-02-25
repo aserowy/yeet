@@ -3,8 +3,8 @@ use std::{collections::HashMap, path::PathBuf};
 use crate::{
     key::{Key, KeyCode, KeyModifier},
     message::{
-        Binding, BindingKind, Buffer, CursorDirection, NewLineDirection, TextModification,
-        ViewPortDirection,
+        Binding, BindingKind, Buffer, CursorDirection, NewLineDirection, NextBindingKind,
+        TextModification, ViewPortDirection,
     },
     tree::KeyTree,
     Message, Mode,
@@ -417,7 +417,8 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('f'), vec![])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::FindForward('f')),
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Motion(CursorDirection::FindForward('_')),
                         ..Default::default()
                     },
                 ),

@@ -2,7 +2,7 @@ use std::{collections::HashMap, slice::Iter};
 
 use crate::{
     key::Key,
-    message::{Binding, Mode},
+    message::{Binding, BindingKind, Mode, NextBindingKind},
     KeyMapError,
 };
 
@@ -33,7 +33,6 @@ impl KeyTree {
             match self.modes.get_mut(mode) {
                 Some(mode) => {
                     add_mapping_node(mode, key, &mut key_iter, binding);
-
                     Ok(())
                 }
                 None => Err(KeyMapError::ModeUnresolvable(mode.to_string())),
@@ -48,11 +47,33 @@ impl KeyTree {
             let mut bindings = Vec::new();
 
             let mut key_iter = keys.iter();
+            let mut expects = None;
             while let Some(key) = key_iter.next() {
+                if let Some(expects) = &expects {
+                    match expects {
+                        NextBindingKind::Raw => {
+                            let string = key.to_string();
+                            let chars: Vec<_> = string.chars().collect();
+                            if chars.len() != 1 {
+                                return (vec![], None);
+                            }
+
+                            bindings.push(Binding {
+                                kind: BindingKind::Raw(chars[0]),
+                                ..Default::default()
+                            });
+                            continue;
+                        }
+                    }
+                }
+
                 match get_node_from_tree(node, key, &mut key_iter) {
                     Some(node) => match node {
                         Node::Key(_) => return (bindings, Some(node)),
-                        Node::Binding(binding) => bindings.push(binding),
+                        Node::Binding(binding) => {
+                            expects = binding.expects.clone();
+                            bindings.push(binding)
+                        }
                     },
                     None => return (vec![], None),
                 }

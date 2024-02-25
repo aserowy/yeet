@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Binding {
+    pub expects: Option<NextBindingKind>,
     pub force: Option<Mode>,
     pub kind: BindingKind,
     pub repeatable: bool,
@@ -10,11 +11,17 @@ pub struct Binding {
 impl Default for Binding {
     fn default() -> Self {
         Self {
+            expects: None,
             force: None,
             kind: BindingKind::default(),
             repeatable: true,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NextBindingKind {
+    Raw,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -23,6 +30,7 @@ pub enum BindingKind {
     Motion(CursorDirection),
     #[default]
     None,
+    Raw(char),
     Repeat(usize),
     RepeatOrMotion(usize, CursorDirection),
     Modification(TextModification),

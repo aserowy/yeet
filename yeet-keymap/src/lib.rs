@@ -1,7 +1,7 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, Message, Mode};
+use message::{Binding, BindingKind, CursorDirection, Message, Mode, NextBindingKind};
 use tree::KeyTree;
 
 use crate::message::{Buffer, TextModification};
@@ -62,13 +62,21 @@ impl MessageResolver {
                     self.buffer.clear();
                     messages
                 } else {
-                    let messages = get_messages_from_bindings(bindings, &mut self.mode);
-                    if messages.is_empty() {
-                        Vec::new()
-                    } else {
+                    let messages = match get_messages_from_bindings(bindings, &mut self.mode) {
+                        Some(msgs) => msgs,
+                        None => {
+                            self.buffer.clear();
+                            return vec![Message::Error(
+                                "Failed to resolve key sequence".to_string(),
+                            )];
+                        }
+                    };
+
+                    if !messages.is_empty() {
                         self.buffer.clear();
-                        messages
                     }
+
+                    messages
                 }
             }
         };
@@ -78,7 +86,8 @@ impl MessageResolver {
     }
 }
 
-fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Message> {
+fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option<Vec<Message>> {
+    let mut pending = None;
     let mut repeat = None;
     let mut messages = Vec::new();
     for binding in bindings {
@@ -108,14 +117,42 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
                 }
                 None => messages.push(Message::Buffer(Buffer::Modification(1, mdf))),
             },
-            BindingKind::Motion(mtn) => match repeat {
-                Some(rpt) => {
-                    messages.push(Message::Buffer(Buffer::MoveCursor(rpt, mtn)));
-                    repeat = None;
+            BindingKind::Motion(mtn) => {
+                let message = match repeat {
+                    Some(rpt) => {
+                        let message = Message::Buffer(Buffer::MoveCursor(rpt, mtn));
+                        repeat = None;
+                        message
+                    }
+                    None => Message::Buffer(Buffer::MoveCursor(1, mtn)),
+                };
+
+                if let Some(expects) = binding.expects {
+                    pending = Some((expects, message));
+                } else {
+                    messages.push(message);
                 }
-                None => messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn))),
-            },
+            }
             BindingKind::None => {}
+            BindingKind::Raw(c) => {
+                let (expects, message) = match &pending {
+                    Some((xpc, msg)) => (xpc, msg),
+                    None => return None,
+                };
+
+                if expects != &NextBindingKind::Raw {
+                    return None;
+                }
+
+                let msg = match message {
+                    Message::Buffer(Buffer::MoveCursor(r, CursorDirection::FindForward(_))) => {
+                        Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::FindForward(c)))
+                    }
+                    _ => unreachable!(),
+                };
+
+                messages.push(msg);
+            }
             BindingKind::Repeat(rpt) => match repeat {
                 Some(r) => repeat = Some(r * 10 + rpt),
                 None => repeat = Some(rpt),
@@ -127,7 +164,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Vec<Me
         }
     }
 
-    messages
+    Some(messages)
 }
 
 fn get_repeated_messages(msg: &Message, rpt: usize) -> Vec<Message> {
