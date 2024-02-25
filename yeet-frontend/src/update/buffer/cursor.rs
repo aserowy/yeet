@@ -1,6 +1,6 @@
 use yeet_keymap::message::{CursorDirection, Mode};
 
-use crate::model::buffer::{Buffer, CursorPosition};
+use crate::model::buffer::{Buffer, BufferLine, CursorPosition};
 
 pub fn update_by_direction(
     mode: &Mode,
@@ -12,150 +12,187 @@ pub fn update_by_direction(
         return;
     }
 
-    if let Some(cursor) = &mut model.cursor {
-        for _ in 0..*count {
-            // TODO: replace all lines[..] calls with .chars().enumerate... everywhere
-            match direction {
-                CursorDirection::Bottom => {
-                    cursor.vertical_index = model.lines.len() - 1;
+    let cursor = match &mut model.cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
 
-                    let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(mode, line_length, &cursor.horizontial_index);
+    for _ in 0..*count {
+        match direction {
+            CursorDirection::Bottom => {
+                cursor.vertical_index = model.lines.len() - 1;
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
 
-                    cursor.horizontial_index = position;
+                let position = get_position(mode, &line.len(), &cursor.horizontial_index);
+                cursor.horizontial_index = position;
+            }
+            CursorDirection::Down => {
+                let max_index = model.lines.len() - 1;
+                if cursor.vertical_index >= max_index {
+                    cursor.vertical_index = max_index;
+                } else {
+                    cursor.vertical_index += 1
                 }
-                CursorDirection::Down => {
-                    let max_index = model.lines.len() - 1;
-                    if cursor.vertical_index >= max_index {
-                        cursor.vertical_index = max_index;
-                    } else {
-                        cursor.vertical_index += 1
-                    }
 
-                    let line_length = &model.lines[cursor.vertical_index].len();
-                    let position = get_position(mode, line_length, &cursor.horizontial_index);
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
 
-                    cursor.horizontial_index = position;
-                }
-                CursorDirection::FindForward(find) => {
-                    if let Some(line) = model.lines.get(cursor.vertical_index) {
-                        let index = match &cursor.horizontial_index {
-                            CursorPosition::Absolute {
-                                current,
-                                expanded: _,
-                            } => *current,
-                            CursorPosition::End => {
-                                if line.len() == 0 {
-                                    0
-                                } else {
-                                    line.len() - 1
-                                }
-                            }
-                            CursorPosition::None => return,
-                        };
+                let line_length = &line.len();
+                let position = get_position(mode, line_length, &cursor.horizontial_index);
 
-                        let find = line
-                            .content
-                            .chars()
-                            .enumerate()
-                            .skip(index + 1)
-                            .find(|(_, c)| c == find);
+                cursor.horizontial_index = position;
+            }
+            CursorDirection::FindForward(find) => {
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
 
-                        if let Some(found) = find {
-                            cursor.horizontial_index = CursorPosition::Absolute {
-                                current: found.0,
-                                expanded: found.0,
-                            };
-                        }
-                    }
-                }
-                CursorDirection::Left => {
-                    let cursor_index = match cursor.horizontial_index {
-                        CursorPosition::Absolute {
-                            current,
-                            expanded: _,
-                        } => current,
-                        CursorPosition::End => model.lines[cursor.vertical_index].len() - 1,
-                        CursorPosition::None => return,
-                    };
+                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+                    Some(index) => index,
+                    None => return,
+                };
 
-                    if cursor_index > 0 {
-                        let next_index = cursor_index - 1;
+                let find = line
+                    .content
+                    .chars()
+                    .enumerate()
+                    .skip(index + 1)
+                    .find(|(_, c)| c == find);
 
-                        cursor.horizontial_index = CursorPosition::Absolute {
-                            current: next_index,
-                            expanded: next_index,
-                        };
-                    }
-                }
-                CursorDirection::LineEnd => {
-                    if mode == &Mode::Insert {
-                        let index_correction = get_index_correction(mode);
-                        let max_index = model.lines[cursor.vertical_index].len() - index_correction;
-
-                        cursor.horizontial_index = CursorPosition::Absolute {
-                            current: max_index,
-                            expanded: max_index,
-                        };
-                    } else {
-                        cursor.horizontial_index = CursorPosition::End;
-                    }
-                }
-                CursorDirection::LineStart => {
+                if let Some(found) = find {
                     cursor.horizontial_index = CursorPosition::Absolute {
-                        current: 0,
-                        expanded: 0,
+                        current: found.0,
+                        expanded: found.0,
                     };
                 }
-                CursorDirection::Right => {
+            }
+            CursorDirection::Left => {
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
+
+                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+                    Some(index) => index,
+                    None => return,
+                };
+
+                if index > 0 {
+                    let next_index = index - 1;
+
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: next_index,
+                        expanded: next_index,
+                    };
+                }
+            }
+            CursorDirection::LineEnd => {
+                if mode == &Mode::Insert {
+                    let line = match model.lines.get(cursor.vertical_index) {
+                        Some(line) => line,
+                        None => return,
+                    };
+
                     let index_correction = get_index_correction(mode);
-                    let max_index = model.lines[cursor.vertical_index].len() - index_correction;
+                    let max_index = line.len() - index_correction;
 
-                    let cursor_index = match cursor.horizontial_index {
-                        CursorPosition::Absolute {
-                            current,
-                            expanded: _,
-                        } => current,
-                        CursorPosition::End => {
-                            if mode == &Mode::Insert {
-                                // NOTE: -1 to trigger replacement with absolute cursor
-                                max_index - 1
-                            } else {
-                                return;
-                            }
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: max_index,
+                        expanded: max_index,
+                    };
+                } else {
+                    cursor.horizontial_index = CursorPosition::End;
+                }
+            }
+            CursorDirection::LineStart => {
+                cursor.horizontial_index = CursorPosition::Absolute {
+                    current: 0,
+                    expanded: 0,
+                };
+            }
+            CursorDirection::Right => {
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
+
+                let index_correction = get_index_correction(mode);
+                let max_index = line.len() - index_correction;
+
+                let cursor_index = match cursor.horizontial_index {
+                    CursorPosition::Absolute {
+                        current,
+                        expanded: _,
+                    } => current,
+                    CursorPosition::End => {
+                        if mode == &Mode::Insert {
+                            // NOTE: -1 to trigger replacement with absolute cursor
+                            max_index - 1
+                        } else {
+                            return;
                         }
-                        CursorPosition::None => return,
+                    }
+                    CursorPosition::None => return,
+                };
+
+                if max_index > cursor_index {
+                    let next_index = cursor_index + 1;
+
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: next_index,
+                        expanded: next_index,
+                    };
+                }
+            }
+            CursorDirection::Top => {
+                cursor.vertical_index = 0;
+
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
+
+                let line_length = &line.len();
+                let position = get_position(mode, line_length, &cursor.horizontial_index);
+
+                cursor.horizontial_index = position;
+            }
+            CursorDirection::Up => {
+                if cursor.vertical_index > 0 {
+                    cursor.vertical_index -= 1;
+
+                    let line = match model.lines.get(cursor.vertical_index) {
+                        Some(line) => line,
+                        None => return,
                     };
 
-                    if max_index > cursor_index {
-                        let next_index = cursor_index + 1;
-
-                        cursor.horizontial_index = CursorPosition::Absolute {
-                            current: next_index,
-                            expanded: next_index,
-                        };
-                    }
-                }
-                CursorDirection::Top => {
-                    cursor.vertical_index = 0;
-
-                    let line_length = &model.lines[cursor.vertical_index].len();
+                    let line_length = &line.len();
                     let position = get_position(mode, line_length, &cursor.horizontial_index);
 
                     cursor.horizontial_index = position;
-                }
-                CursorDirection::Up => {
-                    if cursor.vertical_index > 0 {
-                        cursor.vertical_index -= 1;
-
-                        let line_length = &model.lines[cursor.vertical_index].len();
-                        let position = get_position(mode, line_length, &cursor.horizontial_index);
-
-                        cursor.horizontial_index = position;
-                    }
                 }
             }
         }
+    }
+}
+
+fn get_horizontal_index(horizontial_index: &CursorPosition, line: &BufferLine) -> Option<usize> {
+    match horizontial_index {
+        CursorPosition::Absolute {
+            current,
+            expanded: _,
+        } => Some(*current),
+        CursorPosition::End => {
+            let index = if line.len() == 0 { 0 } else { line.len() - 1 };
+            Some(index)
+        }
+        CursorPosition::None => None,
     }
 }
 
@@ -169,7 +206,12 @@ pub fn validate(mode: &Mode, model: &mut Buffer) {
                 cursor.vertical_index = max_index;
             }
 
-            let line_length = &model.lines[cursor.vertical_index].len();
+            let line = match model.lines.get(cursor.vertical_index) {
+                Some(line) => line,
+                None => return,
+            };
+
+            let line_length = &line.len();
             get_position(mode, line_length, &cursor.horizontial_index)
         };
 
