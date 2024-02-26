@@ -444,6 +444,22 @@ impl Default for KeyMap {
                         ..Default::default()
                     },
                 ),
+                (
+                    vec![Key::new(KeyCode::from_char('t'), vec![])],
+                    Binding {
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Motion(CursorDirection::TillForward('_')),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('t'), vec![KeyModifier::Shift])],
+                    Binding {
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Motion(CursorDirection::TillBackward('_')),
+                        ..Default::default()
+                    },
+                ),
             ],
         );
 

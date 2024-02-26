@@ -151,6 +151,12 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option
                     Message::Buffer(Buffer::MoveCursor(r, CursorDirection::FindForward(_))) => {
                         Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::FindForward(c)))
                     }
+                    Message::Buffer(Buffer::MoveCursor(r, CursorDirection::TillBackward(_))) => {
+                        Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::TillBackward(c)))
+                    }
+                    Message::Buffer(Buffer::MoveCursor(r, CursorDirection::TillForward(_))) => {
+                        Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::TillForward(c)))
+                    }
                     _ => unreachable!(),
                 };
 

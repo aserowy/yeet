@@ -1,6 +1,6 @@
 use yeet_keymap::message::{CursorDirection, Mode};
 
-use crate::model::buffer::{Buffer, BufferLine, CursorPosition};
+use crate::model::buffer::{Buffer, BufferLine, Cursor, CursorPosition};
 
 pub fn update_by_direction(
     mode: &Mode,
@@ -48,29 +48,7 @@ pub fn update_by_direction(
                 cursor.horizontial_index = position;
             }
             CursorDirection::FindBackward(find) => {
-                let line = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return,
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
-                    Some(index) => index,
-                    None => return,
-                };
-
-                if index <= 1 {
-                    return;
-                }
-
-                let find = line
-                    .content
-                    .chars()
-                    .take(index)
-                    .collect::<Vec<_>>()
-                    .iter()
-                    .rposition(|c| c == find);
-
-                if let Some(found) = find {
+                if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
                     cursor.horizontial_index = CursorPosition::Absolute {
                         current: found,
                         expanded: found,
@@ -78,27 +56,10 @@ pub fn update_by_direction(
                 }
             }
             CursorDirection::FindForward(find) => {
-                let line = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return,
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
-                    Some(index) => index,
-                    None => return,
-                };
-
-                let find = line
-                    .content
-                    .chars()
-                    .skip(index + 1)
-                    .position(|c| &c == find);
-
-                if let Some(found) = find {
-                    let new = index + found + 1;
+                if let Some(found) = find_char_forward(find, &model.lines, cursor) {
                     cursor.horizontial_index = CursorPosition::Absolute {
-                        current: new,
-                        expanded: new,
+                        current: found,
+                        expanded: found,
                     };
                 }
             }
@@ -180,6 +141,24 @@ pub fn update_by_direction(
                     };
                 }
             }
+            CursorDirection::TillBackward(find) => {
+                if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
+                    let new = found + 1;
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: new,
+                        expanded: new,
+                    };
+                }
+            }
+            CursorDirection::TillForward(find) => {
+                if let Some(found) = find_char_forward(find, &model.lines, cursor) {
+                    let new = found - 1;
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: new,
+                        expanded: new,
+                    };
+                }
+            }
             CursorDirection::Top => {
                 cursor.vertical_index = 0;
 
@@ -210,6 +189,53 @@ pub fn update_by_direction(
             }
         }
     }
+}
+
+fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> Option<usize> {
+    let line = match lines.get(cursor.vertical_index) {
+        Some(line) => line,
+        None => return None,
+    };
+
+    let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+        Some(index) => index,
+        None => return None,
+    };
+
+    let find = line
+        .content
+        .chars()
+        .skip(index + 1)
+        .position(|c| &c == find);
+
+    if let Some(found) = find {
+        Some(index + found + 1)
+    } else {
+        None
+    }
+}
+
+fn find_char_backwards(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
+    let line = match lines.get(cursor.vertical_index) {
+        Some(line) => line,
+        None => return None,
+    };
+
+    let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+        Some(index) => index,
+        None => return None,
+    };
+
+    if index <= 1 {
+        return None;
+    }
+
+    line.content
+        .chars()
+        .take(index)
+        .collect::<Vec<_>>()
+        .iter()
+        .rposition(|c| c == find)
 }
 
 fn get_horizontal_index(horizontial_index: &CursorPosition, line: &BufferLine) -> Option<usize> {

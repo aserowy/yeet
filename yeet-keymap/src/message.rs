@@ -95,6 +95,8 @@ pub enum CursorDirection {
     LineEnd,
     LineStart,
     Right,
+    TillBackward(char),
+    TillForward(char),
     Top,
     Up,
 }
