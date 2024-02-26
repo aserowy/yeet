@@ -56,10 +56,11 @@ interactions. To delete the selected path completly, call command `:d!`.
 
 ### normal mode
 
-| keys | action                        |
-| ---- | ----------------------------- |
-| h, l | move cursor left/right        |
-| 0, $ | move cursor to line start/end |
+| keys               | action                                    |
+| ------------------ | ----------------------------------------- |
+| h, l               | move cursor left/right                    |
+| 0, $               | move cursor to line start/end             |
+| f\<char>, F\<char> | move cursor to next char forward/backward |
 
 ## commands
 
