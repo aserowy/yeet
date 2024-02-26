@@ -47,6 +47,36 @@ pub fn update_by_direction(
 
                 cursor.horizontial_index = position;
             }
+            CursorDirection::FindBackward(find) => {
+                let line = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return,
+                };
+
+                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+                    Some(index) => index,
+                    None => return,
+                };
+
+                if index <= 1 {
+                    return;
+                }
+
+                let find = line
+                    .content
+                    .chars()
+                    .take(index)
+                    .collect::<Vec<_>>()
+                    .iter()
+                    .rposition(|c| c == find);
+
+                if let Some(found) = find {
+                    cursor.horizontial_index = CursorPosition::Absolute {
+                        current: found,
+                        expanded: found,
+                    };
+                }
+            }
             CursorDirection::FindForward(find) => {
                 let line = match model.lines.get(cursor.vertical_index) {
                     Some(line) => line,
@@ -61,14 +91,14 @@ pub fn update_by_direction(
                 let find = line
                     .content
                     .chars()
-                    .enumerate()
                     .skip(index + 1)
-                    .find(|(_, c)| c == find);
+                    .position(|c| &c == find);
 
                 if let Some(found) = find {
+                    let new = index + found + 1;
                     cursor.horizontial_index = CursorPosition::Absolute {
-                        current: found.0,
-                        expanded: found.0,
+                        current: new,
+                        expanded: new,
                     };
                 }
             }

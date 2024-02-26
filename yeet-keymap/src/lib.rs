@@ -145,6 +145,9 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option
                 }
 
                 let msg = match message {
+                    Message::Buffer(Buffer::MoveCursor(r, CursorDirection::FindBackward(_))) => {
+                        Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::FindBackward(c)))
+                    }
                     Message::Buffer(Buffer::MoveCursor(r, CursorDirection::FindForward(_))) => {
                         Message::Buffer(Buffer::MoveCursor(*r, CursorDirection::FindForward(c)))
                     }
