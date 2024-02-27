@@ -13,7 +13,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-parts, rust-overlay }@inputs:
+  outputs = { self, nixpkgs, flake-parts, rust-overlay, ... }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.flake-parts.flakeModules.easyOverlay
@@ -21,7 +21,7 @@
 
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
-      perSystem = { config, self', inputs', pkgs, system, ... }:
+      perSystem = { config, self', inputs', pkgs, system, lib, ... }:
         let
           overlays = [ (import rust-overlay) ];
           pkgs = import nixpkgs {
@@ -35,8 +35,13 @@
             rustc = pkgs.rust-bin.stable.latest.minimal;
           }).buildRustPackage {
             inherit (toml.package) name version;
+
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
+
+            buildInputs = lib.optionals pkgs.stdenv.isDarwin (
+                with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+            );
           };
 
           rust-stable = inputs'.rust-overlay.packages.rust.override {
@@ -44,6 +49,9 @@
           };
 
           shell = pkgs.mkShell {
+            buildInputs = lib.optionals pkgs.stdenv.isDarwin (
+                with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+            );
             nativeBuildInputs = [
               rust-stable
               pkgs.vscode-extensions.vadimcn.vscode-lldb
