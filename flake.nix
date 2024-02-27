@@ -40,7 +40,7 @@
             cargoLock.lockFile = ./Cargo.lock;
 
             buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-                with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+              with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
             );
           };
 
@@ -50,21 +50,26 @@
 
           shell = pkgs.mkShell {
             buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-                with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+              with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
             );
             nativeBuildInputs = [
               rust-stable
-              pkgs.vscode-extensions.vadimcn.vscode-lldb
               pkgs.gh
               pkgs.nil
               pkgs.nixpkgs-fmt
               pkgs.nodejs_20
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier
+            ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
+              pkgs.vscode-extensions.vadimcn.vscode-lldb
             ];
             shellHook = ''
               export PATH=~/.cargo/bin:$PATH
-              export PATH=${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter:$PATH
+              ${ if (!pkgs.stdenv.isDarwin) then
+                  "export PATH=${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter:$PATH"
+                else
+                  ""
+              }
             '';
 
             RUST_BACKTRACE = "full";
