@@ -47,38 +47,35 @@ impl MessageResolver {
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
-        let (bindings, node) = self.tree.get_bindings(&self.mode, &keys);
-        let mut messages = match (bindings, node) {
-            (_, Some(_)) => Vec::new(),
-            (bindings, None) => {
-                if bindings.is_empty() {
-                    let messages = if get_passthrough_by_mode(&self.mode) {
-                        let message = TextModification::Insert(self.buffer.to_string());
-                        vec![Message::Buffer(Buffer::Modification(1, message))]
-                    } else {
-                        Vec::new()
-                    };
+        let bindings = match self.tree.get_bindings(&self.mode, &keys) {
+            Some(bindings) => bindings,
+            None => return vec![Message::KeySequenceChanged(self.buffer.to_string())],
+        };
 
+        let mut messages = if bindings.is_empty() {
+            let messages = if get_passthrough_by_mode(&self.mode) {
+                let message = TextModification::Insert(self.buffer.to_string());
+                vec![Message::Buffer(Buffer::Modification(1, message))]
+            } else {
+                Vec::new()
+            };
+
+            self.buffer.clear();
+            messages
+        } else {
+            let messages = match get_messages_from_bindings(bindings, &mut self.mode) {
+                Some(msgs) => msgs,
+                None => {
                     self.buffer.clear();
-                    messages
-                } else {
-                    let messages = match get_messages_from_bindings(bindings, &mut self.mode) {
-                        Some(msgs) => msgs,
-                        None => {
-                            self.buffer.clear();
-                            return vec![Message::Error(
-                                "Failed to resolve key sequence".to_string(),
-                            )];
-                        }
-                    };
-
-                    if !messages.is_empty() {
-                        self.buffer.clear();
-                    }
-
-                    messages
+                    return vec![Message::Error("Failed to resolve key sequence".to_string())];
                 }
+            };
+
+            if !messages.is_empty() {
+                self.buffer.clear();
             }
+
+            messages
         };
 
         messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
@@ -86,6 +83,7 @@ impl MessageResolver {
     }
 }
 
+// TODO: reverse the order of the bindings to build messages for op pending
 fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option<Vec<Message>> {
     let mut pending = None;
     let mut repeat = None;

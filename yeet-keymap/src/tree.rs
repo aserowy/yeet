@@ -1,4 +1,4 @@
-use std::{collections::HashMap, slice::Iter};
+use std::{collections::HashMap, iter::Enumerate, slice::Iter};
 
 use crate::{
     key::Key,
@@ -8,13 +8,14 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct KeyTree {
-    modes: HashMap<Mode, HashMap<Key, Node>>,
+    modes: HashMap<Mode, Node>,
 }
 
 #[derive(Clone, Debug)]
 pub enum Node {
-    Key(HashMap<Key, Node>),
     Binding(Binding),
+    ExpectsOr(Binding, HashMap<Key, Node>),
+    Key(HashMap<Key, Node>),
 }
 
 impl KeyTree {
@@ -25,104 +26,141 @@ impl KeyTree {
         binding: Binding,
     ) -> Result<(), KeyMapError> {
         if !self.modes.contains_key(mode) {
-            self.modes.insert(mode.clone(), HashMap::new());
+            self.modes.insert(mode.clone(), Node::Key(HashMap::new()));
         }
 
-        let mut key_iter = keys.iter();
-        if let Some(key) = key_iter.next() {
-            match self.modes.get_mut(mode) {
-                Some(mode) => {
-                    add_mapping_node(mode, key, &mut key_iter, binding);
-                    Ok(())
-                }
-                None => Err(KeyMapError::ModeUnresolvable(mode.to_string())),
+        let max_index = keys.len() - 1;
+        let mut iter = keys.iter().enumerate();
+        match self.modes.get_mut(mode) {
+            Some(node) => {
+                add_mapping_node(&max_index, &mut iter, node, binding);
+                Ok(())
             }
-        } else {
-            Ok(())
+            None => Err(KeyMapError::ModeUnresolvable(mode.to_string())),
         }
     }
 
-    pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> (Vec<Binding>, Option<Node>) {
+    pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> Option<Vec<Binding>> {
         if let Some(node) = self.modes.get(mode) {
-            let mut bindings = Vec::new();
-
             let mut key_iter = keys.iter();
-            let mut expects = None;
-            while let Some(key) = key_iter.next() {
-                if let Some(expects) = &expects {
-                    match expects {
-                        NextBindingKind::Raw => {
-                            let string = key.to_string();
-                            let chars: Vec<_> = string.chars().collect();
-                            if chars.len() != 1 {
-                                return (vec![], None);
-                            }
 
-                            bindings.push(Binding {
-                                kind: BindingKind::Raw(chars[0]),
-                                ..Default::default()
-                            });
-                            continue;
-                        }
+            let mut bindings = Vec::new();
+            while let Some(node) = get_bindings_from_node(node, true, &mut key_iter) {
+                let expects = match node {
+                    Node::Binding(binding) => {
+                        bindings.push(binding.clone());
+                        binding.expects
                     }
-                }
+                    Node::ExpectsOr(binding, _) => {
+                        bindings.push(binding.clone());
+                        binding.expects
+                    }
+                    Node::Key(_) => return None,
+                };
 
-                match get_node_from_tree(node, key, &mut key_iter) {
-                    Some(node) => match node {
-                        Node::Key(_) => return (bindings, Some(node)),
-                        Node::Binding(binding) => {
-                            expects = binding.expects.clone();
-                            bindings.push(binding)
-                        }
-                    },
-                    None => return (vec![], None),
+                if let Some(NextBindingKind::Raw) = expects {
+                    let key = key_iter.next()?;
+
+                    let string = key.to_string();
+                    let chars: Vec<_> = string.chars().collect();
+                    if chars.len() != 1 {
+                        return None;
+                    }
+
+                    bindings.push(Binding {
+                        kind: BindingKind::Raw(chars[0]),
+                        ..Default::default()
+                    });
                 }
             }
 
-            (bindings, None)
+            Some(bindings)
         } else {
-            (vec![], None)
+            Some(vec![])
         }
     }
 }
 
 fn add_mapping_node(
-    nodes: &mut HashMap<Key, Node>,
-    key: &Key,
-    key_iter: &mut Iter<'_, Key>,
+    max_index: &usize,
+    iter: &mut Enumerate<Iter<'_, Key>>,
+    node: &mut Node,
     binding: Binding,
 ) {
-    if !nodes.contains_key(key) {
-        nodes.insert(key.clone(), Node::Key(HashMap::new()));
-    }
-
-    if let Some(Node::Key(hm)) = nodes.get_mut(key) {
-        if let Some(next_key) = key_iter.next() {
-            add_mapping_node(hm, next_key, key_iter, binding)
-        } else {
-            nodes.insert(key.clone(), Node::Binding(binding));
+    match iter.next() {
+        Some((index, key)) => {
+            if &index == max_index {
+                match node {
+                    Node::Binding(_) => unreachable!(),
+                    Node::ExpectsOr(_, map) | Node::Key(map) => {
+                        if binding.expects.is_some() {
+                            if let Some(node) = map.remove(key) {
+                                match node {
+                                    Node::Binding(_) | Node::ExpectsOr(_, _) => unreachable!(),
+                                    Node::Key(m) => {
+                                        map.insert(
+                                            key.clone(),
+                                            Node::ExpectsOr(binding, m.clone()),
+                                        );
+                                    }
+                                }
+                            } else {
+                                map.insert(key.clone(), Node::ExpectsOr(binding, HashMap::new()));
+                            }
+                        } else {
+                            if map.insert(key.clone(), Node::Binding(binding)).is_some() {
+                                panic!("This should not happen");
+                            }
+                        }
+                    }
+                }
+            } else {
+                match node {
+                    Node::Binding(_) => unreachable!(),
+                    Node::ExpectsOr(_, map) | Node::Key(map) => {
+                        if !map.contains_key(key) {
+                            map.insert(key.clone(), Node::Key(HashMap::new()));
+                        }
+                        let node = map.get_mut(key).expect("Must exist");
+                        add_mapping_node(max_index, iter, node, binding);
+                    }
+                }
+            }
         }
+        None => (),
     }
 }
 
-fn get_node_from_tree(
-    nodes: &HashMap<Key, Node>,
-    key: &Key,
-    key_iter: &mut Iter<'_, Key>,
+fn get_bindings_from_node(
+    node: &Node,
+    initial_node: bool,
+    iter: &mut Iter<'_, Key>,
 ) -> Option<Node> {
-    if let Some(node) = nodes.get(key) {
-        if let Node::Binding(_) = node {
-            return Some(node.clone());
-        }
+    match node {
+        Node::Binding(_) => Some(node.clone()),
+        Node::ExpectsOr(_, map) | Node::Key(map) => {
+            let mut peak_iter = iter.clone();
+            let key = match peak_iter.next() {
+                Some(it) => it,
+                None => {
+                    if initial_node {
+                        return None;
+                    } else {
+                        return Some(node.clone());
+                    }
+                }
+            };
 
-        if let Some(next_key) = key_iter.next() {
-            if let Node::Key(hm) = node {
-                return get_node_from_tree(hm, next_key, key_iter);
+            if let Some(node) = map.get(key) {
+                let _ = iter.next();
+                get_bindings_from_node(node, false, iter)
+            } else {
+                match node {
+                    Node::ExpectsOr(_, _) => Some(node.clone()),
+                    Node::Key(_) => None,
+                    Node::Binding(_) => unreachable!(),
+                }
             }
         }
-
-        Some(node.clone())
-    } else {
-        None
     }
 }

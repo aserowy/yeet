@@ -192,27 +192,22 @@ pub fn update_by_direction(
 }
 
 fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> Option<usize> {
-    let line = match lines.get(cursor.vertical_index) {
+    let current = match lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return None,
     };
 
-    let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+    let index = match get_horizontal_index(&cursor.horizontial_index, current) {
         Some(index) => index,
         None => return None,
     };
 
-    let find = line
+    current
         .content
         .chars()
         .skip(index + 1)
-        .position(|c| &c == find);
-
-    if let Some(found) = find {
-        Some(index + found + 1)
-    } else {
-        None
-    }
+        .position(|c| &c == find)
+        .map(|i| index + i + 1)
 }
 
 fn find_char_backwards(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {

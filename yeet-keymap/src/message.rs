@@ -21,6 +21,7 @@ impl Default for Binding {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NextBindingKind {
+    Motion,
     Raw,
 }
 
@@ -75,6 +76,7 @@ pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
     DeleteLineOnCursor,
+    DeleteMotion(usize, CursorDirection),
     Insert(String),
     InsertNewLine(NewLineDirection),
 }
@@ -85,7 +87,7 @@ pub enum NewLineDirection {
     Under,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CursorDirection {
     Bottom,
     Down,

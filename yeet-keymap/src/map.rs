@@ -113,6 +113,18 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('d'), vec![])],
+                    Binding {
+                        expects: Some(NextBindingKind::Motion),
+                        force: Some(Mode::Normal),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            0,
+                            CursorDirection::Right,
+                        )),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('h'), vec![]),
@@ -401,6 +413,17 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::LineEnd),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('d'), vec![])],
+                    Binding {
+                        expects: Some(NextBindingKind::Motion),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            0,
+                            CursorDirection::Right,
+                        )),
                         ..Default::default()
                     },
                 ),

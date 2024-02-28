@@ -107,6 +107,12 @@ pub fn update(
                 None
             }
         }
+        TextModification::DeleteMotion(_count, _motion) => {
+            // update cursor position with count and motion
+            // resolve delete line or chars by motion
+            // delete cursor position difference
+            todo!()
+        }
         TextModification::Insert(raw) => {
             let line = get_line(model);
             if let Some((cursor, line)) = line {
