@@ -87,47 +87,39 @@ fn add_mapping_node(
     node: &mut Node,
     binding: Binding,
 ) {
-    match iter.next() {
-        Some((index, key)) => {
-            if &index == max_index {
-                match node {
-                    Node::Binding(_) => unreachable!(),
-                    Node::ExpectsOr(_, map) | Node::Key(map) => {
-                        if binding.expects.is_some() {
-                            if let Some(node) = map.remove(key) {
-                                match node {
-                                    Node::Binding(_) | Node::ExpectsOr(_, _) => unreachable!(),
-                                    Node::Key(m) => {
-                                        map.insert(
-                                            key.clone(),
-                                            Node::ExpectsOr(binding, m.clone()),
-                                        );
-                                    }
+    if let Some((index, key)) = iter.next() {
+        if &index == max_index {
+            match node {
+                Node::Binding(_) => unreachable!(),
+                Node::ExpectsOr(_, map) | Node::Key(map) => {
+                    if binding.expects.is_some() {
+                        if let Some(node) = map.remove(key) {
+                            match node {
+                                Node::Binding(_) | Node::ExpectsOr(_, _) => unreachable!(),
+                                Node::Key(m) => {
+                                    map.insert(key.clone(), Node::ExpectsOr(binding, m.clone()));
                                 }
-                            } else {
-                                map.insert(key.clone(), Node::ExpectsOr(binding, HashMap::new()));
                             }
                         } else {
-                            if map.insert(key.clone(), Node::Binding(binding)).is_some() {
-                                panic!("This should not happen");
-                            }
+                            map.insert(key.clone(), Node::ExpectsOr(binding, HashMap::new()));
                         }
-                    }
-                }
-            } else {
-                match node {
-                    Node::Binding(_) => unreachable!(),
-                    Node::ExpectsOr(_, map) | Node::Key(map) => {
-                        if !map.contains_key(key) {
-                            map.insert(key.clone(), Node::Key(HashMap::new()));
-                        }
-                        let node = map.get_mut(key).expect("Must exist");
-                        add_mapping_node(max_index, iter, node, binding);
+                    } else if map.insert(key.clone(), Node::Binding(binding)).is_some() {
+                        panic!("This should not happen");
                     }
                 }
             }
+        } else {
+            match node {
+                Node::Binding(_) => unreachable!(),
+                Node::ExpectsOr(_, map) | Node::Key(map) => {
+                    if !map.contains_key(key) {
+                        map.insert(key.clone(), Node::Key(HashMap::new()));
+                    }
+                    let node = map.get_mut(key).expect("Must exist");
+                    add_mapping_node(max_index, iter, node, binding);
+                }
+            }
         }
-        None => (),
     }
 }
 

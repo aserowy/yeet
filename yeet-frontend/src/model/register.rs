@@ -402,7 +402,7 @@ mod test {
 
         let transaction = "1708576379595";
         let id = transaction.to_owned() + "%%002F%home%002F%user%002F%src%002F%yeet%002F%.direnv";
-        let path = PathBuf::from("/some/path").join(id.to_string());
+        let path = PathBuf::from("/some/path").join(id);
         register.add_or_update(&path);
 
         assert_eq!(2, register.trashed.len());
@@ -414,7 +414,7 @@ mod test {
 
         let file = "%%002F%home%002F%user%002F%src%002F%yeet%002F%awesome".to_owned();
         let id = transaction.to_owned() + &file;
-        let path = PathBuf::from("/some/path").join(id.to_string());
+        let path = PathBuf::from("/some/path").join(&id);
         register.add_or_update(&path);
 
         assert_eq!(2, register.trashed.len());
@@ -439,7 +439,7 @@ mod test {
         let id = "1708576379595".to_string();
 
         let path = std::path::Path::new("/home/U0025/sr%/y%et/%direnv");
-        let name = super::compose_compression_name(id.to_string(), &path);
+        let name = super::compose_compression_name(id.to_string(), path);
 
         let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
@@ -449,7 +449,7 @@ mod test {
         assert_eq!(path, dec_path);
 
         let path = std::path::Path::new("/home/user/sr%/y%et/%direnv");
-        let name = super::compose_compression_name(id.to_string(), &path);
+        let name = super::compose_compression_name(id.to_string(), path);
 
         let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
@@ -459,7 +459,7 @@ mod test {
         assert_eq!(path, dec_path);
 
         let path = std::path::Path::new("/home/user/src/yeet/.direnv");
-        let name = super::compose_compression_name(id.to_string(), &path);
+        let name = super::compose_compression_name(id.to_string(), path);
 
         let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
