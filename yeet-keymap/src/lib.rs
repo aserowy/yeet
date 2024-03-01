@@ -54,12 +54,12 @@ impl MessageResolver {
             Ok(None) => return vec![Message::KeySequenceChanged(self.buffer.to_string())],
             Err(err) => {
                 self.buffer.clear();
-                println!("{:?}", err);
+                // println!("{:?}", err);
                 return vec![Message::KeySequenceChanged("".to_string())];
             }
         };
 
-        println!("{:?}", bindings);
+        // println!("{:?}", bindings);
         let mut messages = if bindings.is_empty() {
             let messages = if get_passthrough_by_mode(&self.mode) {
                 let message = TextModification::Insert(self.buffer.to_string());
@@ -86,7 +86,7 @@ impl MessageResolver {
             messages
         };
 
-        println!("{:?}", messages);
+        // println!("{:?}", messages);
         messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
         messages
     }
@@ -103,7 +103,7 @@ fn get_passthrough_by_mode(mode: &Mode) -> bool {
 
 fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option<Vec<Message>> {
     let mut consolidated: Vec<Binding> = Vec::new();
-    println!("{:?}", bindings);
+    // println!("{:?}", bindings);
     for binding in bindings.iter().rev() {
         if let Some(expects) = &binding.expects {
             let last = match consolidated.last_mut() {
@@ -112,7 +112,7 @@ fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option
             };
 
             if !last.equals(expects) {
-                println!("Expects not equal");
+                // println!("Expects not equal");
                 return None;
             }
 
