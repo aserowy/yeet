@@ -5,7 +5,18 @@ pub struct Binding {
     pub expects: Option<NextBindingKind>,
     pub force: Option<Mode>,
     pub kind: BindingKind,
+    pub repeat: Option<usize>,
     pub repeatable: bool,
+}
+
+impl Binding {
+    pub fn equals(&self, kind: &NextBindingKind) -> bool {
+        match (&self.kind, kind) {
+            (BindingKind::Motion(_), NextBindingKind::Motion) => true,
+            (BindingKind::Raw(_), NextBindingKind::Raw) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Default for Binding {
@@ -14,6 +25,7 @@ impl Default for Binding {
             expects: None,
             force: None,
             kind: BindingKind::default(),
+            repeat: None,
             repeatable: true,
         }
     }
@@ -32,8 +44,8 @@ pub enum BindingKind {
     #[default]
     None,
     Raw(char),
-    Repeat(usize),
-    RepeatOrMotion(usize, CursorDirection),
+    Repeat,
+    RepeatOrMotion(CursorDirection),
     Modification(TextModification),
 }
 

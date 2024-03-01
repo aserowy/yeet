@@ -20,9 +20,8 @@ impl KeyMap {
         let mut tree = KeyTree::default();
         for (mode, mappings) in self.mappings {
             for (keys, message) in mappings {
-                if let Err(_error) = tree.add_mapping(&mode, keys, message) {
-                    // TODO: add logging
-                }
+                tree.add_mapping(&mode, keys, message)
+                    .expect("Default mappings must form a valid tree.");
             }
         }
         tree
@@ -97,7 +96,8 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(0),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(0),
                         ..Default::default()
                     },
                 ),
@@ -172,63 +172,72 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('1'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(1),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(1),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('2'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(2),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(2),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('3'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(3),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(3),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('4'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(4),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(4),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('5'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(5),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(5),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('6'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(6),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(6),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('7'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(7),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(7),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('8'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(8),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(8),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('9'), vec![])],
                     Binding {
-                        kind: BindingKind::Repeat(9),
+                        kind: BindingKind::Repeat,
+                        repeat: Some(9),
                         ..Default::default()
                     },
                 ),
@@ -236,6 +245,7 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char(':'), vec![])],
                     Binding {
                         force: Some(Mode::Command),
+                        repeatable: false,
                         ..Default::default()
                     },
                 ),
@@ -244,7 +254,7 @@ impl Default for KeyMap {
                     Binding {
                         force: Some(Mode::Insert),
                         kind: BindingKind::Motion(CursorDirection::Right),
-                        repeatable: false,
+                        repeat: None,
                         ..Default::default()
                     },
                 ),
@@ -253,7 +263,7 @@ impl Default for KeyMap {
                     Binding {
                         force: Some(Mode::Insert),
                         kind: BindingKind::Motion(CursorDirection::LineEnd),
-                        repeatable: false,
+                        repeat: None,
                         ..Default::default()
                     },
                 ),
@@ -295,7 +305,7 @@ impl Default for KeyMap {
                     Binding {
                         force: Some(Mode::Insert),
                         kind: BindingKind::Motion(CursorDirection::LineStart),
-                        repeatable: false,
+                        repeat: None,
                         ..Default::default()
                     },
                 ),
@@ -405,7 +415,8 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding {
-                        kind: BindingKind::RepeatOrMotion(0, CursorDirection::LineStart),
+                        kind: BindingKind::RepeatOrMotion(CursorDirection::LineStart),
+                        repeat: Some(1),
                         ..Default::default()
                     },
                 ),

@@ -40,12 +40,16 @@ impl KeyTree {
         }
     }
 
-    pub fn get_bindings(&self, mode: &Mode, keys: &[Key]) -> Option<Vec<Binding>> {
+    pub fn get_bindings(
+        &self,
+        mode: &Mode,
+        keys: &[Key],
+    ) -> Result<Option<Vec<Binding>>, KeyMapError> {
         if let Some(node) = self.modes.get(mode) {
             let mut key_iter = keys.iter();
 
             let mut bindings = Vec::new();
-            while let Some(node) = get_bindings_from_node(node, true, &mut key_iter) {
+            while let Some(node) = get_bindings_from_node(node, true, &mut key_iter)? {
                 let expects = match node {
                     Node::Binding(binding) => {
                         bindings.push(binding.clone());
@@ -55,16 +59,19 @@ impl KeyTree {
                         bindings.push(binding.clone());
                         binding.expects
                     }
-                    Node::Key(_) => return None,
+                    Node::Key(_) => return Ok(None),
                 };
 
                 if let Some(NextBindingKind::Raw) = expects {
-                    let key = key_iter.next()?;
+                    let key = match key_iter.next() {
+                        Some(it) => it,
+                        None => return Ok(None),
+                    };
 
                     let string = key.to_string();
                     let chars: Vec<_> = string.chars().collect();
                     if chars.len() != 1 {
-                        return None;
+                        return Err(KeyMapError::NoValidBindingFound);
                     }
 
                     bindings.push(Binding {
@@ -74,9 +81,10 @@ impl KeyTree {
                 }
             }
 
-            Some(bindings)
+            println!("{:?}", bindings);
+            Ok(Some(bindings))
         } else {
-            Some(vec![])
+            Err(KeyMapError::ModeUnresolvable(mode.to_string()))
         }
     }
 }
@@ -127,18 +135,18 @@ fn get_bindings_from_node(
     node: &Node,
     initial_node: bool,
     iter: &mut Iter<'_, Key>,
-) -> Option<Node> {
+) -> Result<Option<Node>, KeyMapError> {
     match node {
-        Node::Binding(_) => Some(node.clone()),
+        Node::Binding(_) => Ok(Some(node.clone())),
         Node::ExpectsOr(_, map) | Node::Key(map) => {
             let mut peak_iter = iter.clone();
             let key = match peak_iter.next() {
                 Some(it) => it,
                 None => {
                     if initial_node {
-                        return None;
+                        return Ok(None);
                     } else {
-                        return Some(node.clone());
+                        return Ok(Some(node.clone()));
                     }
                 }
             };
@@ -148,8 +156,8 @@ fn get_bindings_from_node(
                 get_bindings_from_node(node, false, iter)
             } else {
                 match node {
-                    Node::ExpectsOr(_, _) => Some(node.clone()),
-                    Node::Key(_) => None,
+                    Node::ExpectsOr(_, _) => Ok(Some(node.clone())),
+                    Node::Key(_) => Err(KeyMapError::NoValidBindingFound),
                     Node::Binding(_) => unreachable!(),
                 }
             }
