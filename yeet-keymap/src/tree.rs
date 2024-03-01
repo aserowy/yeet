@@ -81,7 +81,6 @@ impl KeyTree {
                 }
             }
 
-            // println!("{:?}", bindings);
             Ok(Some(bindings))
         } else {
             Err(KeyMapError::ModeUnresolvable(mode.to_string()))

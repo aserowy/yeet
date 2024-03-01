@@ -52,14 +52,9 @@ impl MessageResolver {
         let bindings = match self.tree.get_bindings(&self.mode, &keys) {
             Ok(Some(bindings)) => bindings,
             Ok(None) => return vec![Message::KeySequenceChanged(self.buffer.to_string())],
-            Err(err) => {
-                self.buffer.clear();
-                // println!("{:?}", err);
-                return vec![Message::KeySequenceChanged("".to_string())];
-            }
+            Err(_err) => Vec::new(),
         };
 
-        // println!("{:?}", bindings);
         let mut messages = if bindings.is_empty() {
             let messages = if get_passthrough_by_mode(&self.mode) {
                 let message = TextModification::Insert(self.buffer.to_string());
@@ -86,7 +81,6 @@ impl MessageResolver {
             messages
         };
 
-        // println!("{:?}", messages);
         messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
         messages
     }
@@ -94,10 +88,8 @@ impl MessageResolver {
 
 fn get_passthrough_by_mode(mode: &Mode) -> bool {
     match mode {
-        Mode::Command => true,
-        Mode::Insert => true,
-        Mode::Navigation => false,
-        Mode::Normal => false,
+        Mode::Command | Mode::Insert => true,
+        Mode::Navigation | Mode::Normal => false,
     }
 }
 
@@ -341,6 +333,31 @@ mod test {
             Some(&Message::Buffer(Buffer::Modification(
                 1,
                 TextModification::DeleteMotion(1, CursorDirection::FindForward('q'))
+            ))),
+            messages.first()
+        );
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_in_command_mode_with_pass_through() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Buffer, Message, Mode, TextModification};
+
+        let mut resolver = super::MessageResolver::default();
+        resolver.mode = Mode::Command;
+
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+        println!("{:?}", messages);
+
+        assert_eq!(
+            Some(&Message::Buffer(Buffer::Modification(
+                1,
+                TextModification::Insert("q".to_string())
             ))),
             messages.first()
         );
