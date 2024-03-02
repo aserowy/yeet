@@ -365,7 +365,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('y'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::YankSelected(1)),
+                        kind: BindingKind::Message(Message::YankSelected(0)),
                         ..Default::default()
                     },
                 ),
@@ -416,7 +416,8 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('0'), vec![])],
                     Binding {
                         kind: BindingKind::RepeatOrMotion(CursorDirection::LineStart),
-                        repeat: Some(1),
+                        repeat: Some(0),
+                        repeatable: false,
                         ..Default::default()
                     },
                 ),

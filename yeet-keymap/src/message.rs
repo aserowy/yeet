@@ -9,16 +9,6 @@ pub struct Binding {
     pub repeatable: bool,
 }
 
-impl Binding {
-    pub fn equals(&self, kind: &NextBindingKind) -> bool {
-        match (&self.kind, kind) {
-            (BindingKind::Motion(_), NextBindingKind::Motion) => true,
-            (BindingKind::Raw(_), NextBindingKind::Raw) => true,
-            _ => false,
-        }
-    }
-}
-
 impl Default for Binding {
     fn default() -> Self {
         Self {
@@ -27,6 +17,15 @@ impl Default for Binding {
             kind: BindingKind::default(),
             repeat: None,
             repeatable: true,
+        }
+    }
+}
+
+impl Binding {
+    pub fn from_motion(motion: CursorDirection) -> Self {
+        Self {
+            kind: BindingKind::Motion(motion),
+            ..Default::default()
         }
     }
 }

@@ -1,10 +1,10 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, CursorDirection, Message, Mode};
+use message::{Binding, BindingKind, CursorDirection, Message, Mode, TextModification};
 use tree::KeyTree;
 
-use crate::message::{Buffer, TextModification};
+use crate::message::Buffer;
 
 mod buffer;
 pub mod conversion;
@@ -13,8 +13,10 @@ mod map;
 pub mod message;
 mod tree;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq)]
 enum KeyMapError {
+    #[error("Key sequence is incomplete.")]
+    KeySequenceIncomplete,
     #[error("Failed to add mapping for mode {0}")]
     ModeUnresolvable(String),
     #[error("Failed to resolve valid binding.")]
@@ -47,43 +49,79 @@ impl MessageResolver {
         }
 
         self.buffer.add_key(key);
+        println!("buffer: {:?}", self.buffer);
 
         let keys = self.buffer.get_keys();
-        let bindings = match self.tree.get_bindings(&self.mode, &keys) {
-            Ok(Some(bindings)) => bindings,
-            Ok(None) => return vec![Message::KeySequenceChanged(self.buffer.to_string())],
-            Err(_err) => Vec::new(),
-        };
+        let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
 
-        let mut messages = if bindings.is_empty() {
-            let messages = if get_passthrough_by_mode(&self.mode) {
-                let message = TextModification::Insert(self.buffer.to_string());
-                vec![Message::Buffer(Buffer::Modification(1, message))]
-            } else {
-                Vec::new()
-            };
-
-            self.buffer.clear();
-            messages
-        } else {
-            let messages = match get_messages_from_bindings(bindings, &mut self.mode) {
-                Some(msgs) => msgs,
-                None => {
-                    self.buffer.clear();
-                    Vec::new()
-                }
-            };
-
-            if !messages.is_empty() {
+        let mut messages = match binding {
+            Ok(Some(binding)) => {
                 self.buffer.clear();
+                get_messages_from_binding(&self.mode, binding)
             }
+            Ok(None) => Vec::new(),
+            Err(KeyMapError::KeySequenceIncomplete) => Vec::new(),
+            Err(_) => {
+                let messages = if get_passthrough_by_mode(&self.mode) {
+                    let message = TextModification::Insert(self.buffer.to_string());
+                    vec![Message::Buffer(Buffer::Modification(1, message))]
+                } else {
+                    Vec::new()
+                };
 
-            messages
+                self.buffer.clear();
+                messages
+            }
         };
 
         messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
         messages
     }
+}
+
+fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
+    let mut messages = Vec::new();
+    if let Some(md) = &binding.force {
+        messages.push(Message::Buffer(Buffer::ChangeMode(
+            mode.clone(),
+            md.clone(),
+        )));
+    };
+
+    let repeat = match binding.repeat {
+        Some(it) => it,
+        None => 1,
+    };
+
+    match &binding.kind {
+        BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
+        BindingKind::Modification(mdf) => {
+            messages.push(Message::Buffer(Buffer::Modification(1, mdf.clone())))
+        }
+        BindingKind::Motion(mtn) => {
+            messages.push(Message::Buffer(Buffer::MoveCursor(repeat, mtn.clone())))
+        }
+        BindingKind::None => {}
+        BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
+            unreachable!()
+        }
+    }
+
+    messages
+}
+
+fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
+    let mut messages = Vec::new();
+    match msg {
+        Message::YankSelected(_) => messages.push(Message::YankSelected(repeat)),
+        _ => {
+            for _ in 0..repeat {
+                messages.push(msg.clone());
+            }
+        }
+    }
+
+    messages
 }
 
 fn get_passthrough_by_mode(mode: &Mode) -> bool {
@@ -93,81 +131,100 @@ fn get_passthrough_by_mode(mode: &Mode) -> bool {
     }
 }
 
-fn get_messages_from_bindings(bindings: Vec<Binding>, mode: &mut Mode) -> Option<Vec<Message>> {
-    let mut consolidated: Vec<Binding> = Vec::new();
-    // println!("{:?}", bindings);
-    for binding in bindings.iter().rev() {
-        if let Some(expects) = &binding.expects {
-            let last = match consolidated.last_mut() {
-                Some(it) => it,
-                None => return Some(Vec::new()),
-            };
-
-            if !last.equals(expects) {
-                // println!("Expects not equal");
-                return None;
-            }
-
-            last.kind = combine(&binding, last)?;
-        } else {
-            handle_binding(&mut consolidated, binding);
-        }
+fn resolve_binding(
+    tree: &KeyTree,
+    mode: &Mode,
+    keys: &Vec<Key>,
+    before: Option<&Binding>,
+) -> Result<Option<Binding>, KeyMapError> {
+    if keys.is_empty() {
+        return Ok(None);
     }
 
-    Some(map_bindings(consolidated.iter().rev().collect(), mode))
-}
-
-fn handle_binding(consolidated: &mut Vec<Binding>, binding: &Binding) {
-    match &binding.kind {
-        // TODO: test repeat or motion on input start to convert to motion
-        BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
-            let last = match consolidated.last_mut() {
+    if let Some(before) = before {
+        if let Some(message::NextBindingKind::Raw) = before.expects {
+            let key = match keys.first() {
                 Some(it) => it,
                 None => {
-                    consolidated.push(binding.clone());
-                    return;
+                    return Err(KeyMapError::KeySequenceIncomplete);
                 }
             };
 
-            if !last.repeatable {
-                return;
+            let string = key.to_string();
+            let chars: Vec<_> = string.chars().collect();
+            if chars.len() != 1 {
+                return Err(KeyMapError::NoValidBindingFound);
             }
 
-            let front = match binding.repeat {
-                Some(it) => it,
-                None => return,
-            };
-
-            let repeat = match last.repeat {
-                Some(it) => {
-                    let repeat_len = it.to_string().len();
-                    front * 10 ^ repeat_len + it
-                }
-                None => front,
-            };
-
-            last.repeat = Some(repeat);
+            return Ok(Some(Binding {
+                kind: BindingKind::Raw(chars[0]),
+                ..Default::default()
+            }));
         }
-        _ => consolidated.push(binding.clone()),
     }
+
+    let (mut binding, unused_keys) = {
+        let (mut binding, unused_keys) = tree.get_binding(mode, &keys)?;
+
+        let binding = if let BindingKind::RepeatOrMotion(motion) = binding.kind {
+            if let Some(before) = before {
+                if let BindingKind::Repeat = before.kind {
+                    binding.kind = BindingKind::Repeat;
+                    binding
+                } else {
+                    Binding::from_motion(motion)
+                }
+            } else {
+                Binding::from_motion(motion)
+            }
+        } else {
+            binding
+        };
+
+        (binding, unused_keys)
+    };
+
+    let mut next = match resolve_binding(tree, mode, &unused_keys, Some(&binding))? {
+        Some(it) => it,
+        None => {
+            if binding.expects.is_some() {
+                return Err(KeyMapError::KeySequenceIncomplete);
+            } else if let BindingKind::Repeat = binding.kind {
+                return Err(KeyMapError::KeySequenceIncomplete);
+            } else {
+                return Ok(Some(binding));
+            }
+        }
+    };
+
+    let result = if binding.expects.is_some() {
+        binding.kind = combine(&binding, &next)?;
+        binding
+    } else if let BindingKind::Repeat = binding.kind {
+        next.repeat = get_repeat(&binding, &next);
+        next
+    } else {
+        binding
+    };
+
+    Ok(Some(result))
 }
 
-fn combine(current: &Binding, last: &Binding) -> Option<BindingKind> {
-    match (&current.kind, &last.kind) {
+fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError> {
+    match (&current.kind, &next.kind) {
         (BindingKind::Motion(direction), BindingKind::Raw(raw)) => {
             let direction = match direction {
                 CursorDirection::FindBackward(_) => CursorDirection::FindBackward(*raw),
                 CursorDirection::FindForward(_) => CursorDirection::FindForward(*raw),
                 CursorDirection::TillBackward(_) => CursorDirection::TillBackward(*raw),
                 CursorDirection::TillForward(_) => CursorDirection::TillForward(*raw),
-                _ => return None,
+                _ => return Err(KeyMapError::NoValidBindingFound),
             };
 
-            Some(BindingKind::Motion(direction))
+            Ok(BindingKind::Motion(direction))
         }
-        (BindingKind::Modification(mdf), BindingKind::Motion(mtn))
-        | (BindingKind::Modification(mdf), BindingKind::RepeatOrMotion(mtn)) => {
-            let repeat = match last.repeat {
+        (BindingKind::Modification(mdf), BindingKind::Motion(mtn)) => {
+            let repeat = match next.repeat {
                 Some(it) => it,
                 None => 1,
             };
@@ -176,52 +233,53 @@ fn combine(current: &Binding, last: &Binding) -> Option<BindingKind> {
                 TextModification::DeleteMotion(_, _) => {
                     TextModification::DeleteMotion(repeat, mtn.clone())
                 }
-                _ => return None,
+                _ => return Err(KeyMapError::NoValidBindingFound),
             };
 
-            Some(BindingKind::Modification(modification))
+            Ok(BindingKind::Modification(modification))
         }
-        (_, _) => None,
+        (_, _) => Err(KeyMapError::NoValidBindingFound),
     }
 }
 
-fn map_bindings(bindings: Vec<&Binding>, mode: &Mode) -> Vec<Message> {
-    let mut messages = Vec::new();
-    for binding in bindings {
-        if let Some(md) = &binding.force {
-            messages.push(Message::Buffer(Buffer::ChangeMode(
-                mode.clone(),
-                md.clone(),
-            )));
-        }
-
-        // TODO: handle repeat value
-        match &binding.kind {
-            BindingKind::Message(msg) => messages.push(msg.clone()),
-            BindingKind::Modification(mdf) => {
-                messages.push(Message::Buffer(Buffer::Modification(1, mdf.clone())))
-            }
-            BindingKind::Motion(mtn) => {
-                messages.push(Message::Buffer(Buffer::MoveCursor(1, mtn.clone())))
-            }
-            BindingKind::None => {}
-            BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
-                unreachable!()
-            }
-        }
+fn get_repeat(current: &Binding, next: &Binding) -> Option<usize> {
+    if !next.repeatable {
+        return next.repeat;
     }
 
-    messages
+    let current_repeat = match current.repeat {
+        Some(it) => it,
+        None => return next.repeat,
+    };
+
+    let repeat = match next.repeat {
+        Some(it) => {
+            let repeat_len = it.to_string().len();
+            let pow = match 10_usize.checked_pow(repeat_len as u32) {
+                Some(it) => it,
+                None => {
+                    return next.repeat;
+                }
+            };
+
+            current_repeat * pow + it
+        }
+        None => current_repeat,
+    };
+
+    Some(repeat)
 }
 
 mod test {
     #[test]
-    fn add_and_resolve_key_with_binding_forcemode_only() {
+    fn add_and_resolve_key_navigation_colon() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Buffer, Message, Mode};
 
         let mut resolver = super::MessageResolver::default();
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::Buffer(Buffer::ChangeMode(
@@ -238,12 +296,14 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_with_expector() {
+    fn add_and_resolve_key_navigation_d() {
         use crate::key::{Key, KeyCode};
         use crate::message::Message;
 
         let mut resolver = super::MessageResolver::default();
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::KeySequenceChanged("d".to_string())),
@@ -253,13 +313,15 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_with_expector_and_wrong_followup() {
+    fn add_and_resolve_key_navigation_dq() {
         use crate::key::{Key, KeyCode};
         use crate::message::Message;
 
         let mut resolver = super::MessageResolver::default();
         let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::KeySequenceChanged("".to_string())),
@@ -269,14 +331,17 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_with_expector_and_hashmap_hit() {
+    fn add_and_resolve_key_normal_dd() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Buffer, Message, Mode, TextModification};
 
         let mut resolver = super::MessageResolver::default();
         resolver.mode = Mode::Normal;
+
         let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::Buffer(Buffer::Modification(
@@ -293,7 +358,7 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_with_expector_and_raw() {
+    fn add_and_resolve_key_normal_fq() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Buffer, CursorDirection, Message, Mode};
 
@@ -302,6 +367,8 @@ mod test {
 
         let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::Buffer(Buffer::MoveCursor(
@@ -318,7 +385,7 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_with_expector_and_motion() {
+    fn add_and_resolve_key_normal_dfq() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Buffer, CursorDirection, Message, Mode, TextModification};
 
@@ -328,6 +395,8 @@ mod test {
         let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
         let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+        println!("{:?}", messages);
 
         assert_eq!(
             Some(&Message::Buffer(Buffer::Modification(
@@ -344,7 +413,63 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_in_command_mode_with_pass_through() {
+    fn add_and_resolve_key_normal_10fq() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Buffer, CursorDirection, Message, Mode};
+
+        let mut resolver = super::MessageResolver::default();
+        resolver.mode = Mode::Normal;
+
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+        println!("{:?}", messages);
+
+        assert_eq!(
+            Some(&Message::Buffer(Buffer::MoveCursor(
+                10,
+                CursorDirection::FindForward('q')
+            ))),
+            messages.first()
+        );
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_normal_d0() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Buffer, CursorDirection, Message, Mode, TextModification};
+
+        let mut resolver = super::MessageResolver::default();
+        resolver.mode = Mode::Normal;
+
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+
+        println!("{:?}", messages);
+
+        assert_eq!(
+            Some(&Message::Buffer(Buffer::Modification(
+                1,
+                TextModification::DeleteMotion(1, CursorDirection::LineStart)
+            ))),
+            messages.first()
+        );
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_command_q() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Buffer, Message, Mode, TextModification};
 
@@ -352,6 +477,7 @@ mod test {
         resolver.mode = Mode::Command;
 
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
         println!("{:?}", messages);
 
         assert_eq!(
@@ -369,7 +495,7 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_in_navigation_mode_with_pass_through() {
+    fn add_and_resolve_key_navigation_q() {
         use crate::key::{Key, KeyCode};
         use crate::message::{Message, Mode};
 
@@ -377,6 +503,7 @@ mod test {
         resolver.mode = Mode::Navigation;
 
         let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
         println!("{:?}", messages);
 
         assert_eq!(
@@ -387,19 +514,93 @@ mod test {
     }
 
     #[test]
-    fn add_and_resolve_key_repeated_message() {
+    fn add_and_resolve_key_navigation_10h() {
         use crate::key::{Key, KeyCode};
-        use crate::message::{Buffer, Message, TextModification};
+        use crate::message::Message;
 
         let mut resolver = super::MessageResolver::default();
 
-        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('h'), vec![]));
+
+        println!("{:?}", messages);
+
+        assert_eq!(Some(&Message::NavigateToParent), messages.first());
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(1));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(2));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(3));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(4));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(5));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(6));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(7));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(8));
+        assert_eq!(Some(&Message::NavigateToParent), messages.get(9));
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(11, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_navigation_yy() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::Message;
+
+        let mut resolver = super::MessageResolver::default();
+
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+
+        println!("{:?}", messages);
+
+        assert_eq!(Some(&Message::YankSelected(1)), messages.first());
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_navigation_10yy() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::Message;
+
+        let mut resolver = super::MessageResolver::default();
+
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+        let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+
+        println!("{:?}", messages);
+
+        assert_eq!(Some(&Message::YankSelected(10)), messages.first());
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_normal_0() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Buffer, CursorDirection, Message, Mode};
+
+        let mut resolver = super::MessageResolver::default();
+        resolver.mode = Mode::Normal;
+
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+
         println!("{:?}", messages);
 
         assert_eq!(
-            Some(&Message::Buffer(Buffer::Modification(
+            Some(&Message::Buffer(Buffer::MoveCursor(
                 1,
-                TextModification::Insert("q".to_string())
+                CursorDirection::LineStart
             ))),
             messages.first()
         );
