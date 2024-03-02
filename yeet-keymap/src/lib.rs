@@ -49,7 +49,6 @@ impl MessageResolver {
         }
 
         self.buffer.add_key(key);
-        println!("buffer: {:?}", self.buffer);
 
         let keys = self.buffer.get_keys();
         let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
