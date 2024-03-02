@@ -88,11 +88,7 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
         )));
     };
 
-    let repeat = match binding.repeat {
-        Some(it) => it,
-        None => 1,
-    };
-
+    let repeat = binding.repeat.unwrap_or(1);
     match &binding.kind {
         BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
         BindingKind::Modification(mdf) => {
@@ -134,7 +130,7 @@ fn get_passthrough_by_mode(mode: &Mode) -> bool {
 fn resolve_binding(
     tree: &KeyTree,
     mode: &Mode,
-    keys: &Vec<Key>,
+    keys: &[Key],
     before: Option<&Binding>,
 ) -> Result<Option<Binding>, KeyMapError> {
     if keys.is_empty() {
@@ -164,7 +160,7 @@ fn resolve_binding(
     }
 
     let (mut binding, unused_keys) = {
-        let (mut binding, unused_keys) = tree.get_binding(mode, &keys)?;
+        let (mut binding, unused_keys) = tree.get_binding(mode, keys)?;
 
         let binding = if let BindingKind::RepeatOrMotion(motion) = binding.kind {
             if let Some(before) = before {
@@ -224,11 +220,7 @@ fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError
             Ok(BindingKind::Motion(direction))
         }
         (BindingKind::Modification(mdf), BindingKind::Motion(mtn)) => {
-            let repeat = match next.repeat {
-                Some(it) => it,
-                None => 1,
-            };
-
+            let repeat = next.repeat.unwrap_or(1);
             let modification = match mdf {
                 TextModification::DeleteMotion(_, _) => {
                     TextModification::DeleteMotion(repeat, mtn.clone())

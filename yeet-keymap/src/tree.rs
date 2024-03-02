@@ -50,9 +50,9 @@ impl KeyTree {
             let node = get_bindings_from_node(node, &mut iter)?;
             match node {
                 Node::Binding(binding) | Node::ExpectsOr(binding, _) => {
-                    return Ok((binding, iter.cloned().collect()));
+                    Ok((binding, iter.cloned().collect()))
                 }
-                Node::Key(_) => return Err(KeyMapError::KeySequenceIncomplete),
+                Node::Key(_) => Err(KeyMapError::KeySequenceIncomplete),
             }
         } else {
             Err(KeyMapError::ModeUnresolvable(mode.to_string()))
