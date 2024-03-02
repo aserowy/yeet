@@ -367,4 +367,46 @@ mod test {
         );
         assert_eq!(2, messages.len());
     }
+
+    #[test]
+    fn add_and_resolve_key_in_navigation_mode_with_pass_through() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Message, Mode};
+
+        let mut resolver = super::MessageResolver::default();
+        resolver.mode = Mode::Navigation;
+
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+        println!("{:?}", messages);
+
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.first()
+        );
+        assert_eq!(1, messages.len());
+    }
+
+    #[test]
+    fn add_and_resolve_key_repeated_message() {
+        use crate::key::{Key, KeyCode};
+        use crate::message::{Buffer, Message, TextModification};
+
+        let mut resolver = super::MessageResolver::default();
+
+        let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+        println!("{:?}", messages);
+
+        assert_eq!(
+            Some(&Message::Buffer(Buffer::Modification(
+                1,
+                TextModification::Insert("q".to_string())
+            ))),
+            messages.first()
+        );
+        assert_eq!(
+            Some(&Message::KeySequenceChanged("".to_string())),
+            messages.last()
+        );
+        assert_eq!(2, messages.len());
+    }
 }
