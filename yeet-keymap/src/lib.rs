@@ -92,7 +92,7 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
     match &binding.kind {
         BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
         BindingKind::Modification(mdf) => {
-            messages.push(Message::Buffer(Buffer::Modification(1, mdf.clone())))
+            messages.push(Message::Buffer(Buffer::Modification(repeat, mdf.clone())))
         }
         BindingKind::Motion(mtn) => {
             messages.push(Message::Buffer(Buffer::MoveCursor(repeat, mtn.clone())))

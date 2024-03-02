@@ -301,3 +301,83 @@ fn add_and_resolve_key_normal_0() {
     );
     assert_eq!(2, messages.len());
 }
+
+#[test]
+fn add_and_resolve_key_normal_d10fq() {
+    let mut resolver = MessageResolver::default();
+    resolver.mode = Mode::Normal;
+
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
+    let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+    println!("{:?}", messages);
+
+    assert_eq!(
+        Some(&Message::Buffer(Buffer::Modification(
+            1,
+            TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
+        ))),
+        messages.first()
+    );
+    assert_eq!(
+        Some(&Message::KeySequenceChanged("".to_string())),
+        messages.last()
+    );
+    assert_eq!(2, messages.len());
+}
+
+#[test]
+fn add_and_resolve_key_normal_10d10fq() {
+    let mut resolver = MessageResolver::default();
+    resolver.mode = Mode::Normal;
+
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
+    let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+
+    println!("{:?}", messages);
+
+    assert_eq!(
+        Some(&Message::Buffer(Buffer::Modification(
+            10,
+            TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
+        ))),
+        messages.first()
+    );
+    assert_eq!(
+        Some(&Message::KeySequenceChanged("".to_string())),
+        messages.last()
+    );
+    assert_eq!(2, messages.len());
+}
+
+#[test]
+fn add_and_resolve_key_normal_10colon() {
+    let mut resolver = MessageResolver::default();
+
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
+
+    println!("{:?}", messages);
+
+    assert_eq!(
+        Some(&Message::Buffer(Buffer::ChangeMode(
+            Mode::Navigation,
+            Mode::Command
+        ))),
+        messages.first()
+    );
+    assert_eq!(
+        Some(&Message::KeySequenceChanged("".to_string())),
+        messages.last()
+    );
+    assert_eq!(2, messages.len());
+}
