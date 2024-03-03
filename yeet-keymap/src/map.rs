@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use crate::{
     key::{Key, KeyCode, KeyModifier},
     message::{
-        Binding, BindingKind, Buffer, CursorDirection, NewLineDirection, NextBindingKind,
+        Binding, BindingKind, Buffer, CursorDirection, LineDirection, NextBindingKind,
         TextModification, ViewPortDirection,
     },
     tree::KeyTree,
@@ -108,7 +108,9 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         force: Some(Mode::Normal),
-                        kind: BindingKind::Modification(TextModification::DeleteLineOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteLine(
+                            LineDirection::Down,
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -328,7 +330,7 @@ impl Default for KeyMap {
                     Binding {
                         force: Some(Mode::Insert),
                         kind: BindingKind::Modification(TextModification::InsertNewLine(
-                            NewLineDirection::Under,
+                            LineDirection::Down,
                         )),
                         ..Default::default()
                     },
@@ -338,7 +340,7 @@ impl Default for KeyMap {
                     Binding {
                         force: Some(Mode::Insert),
                         kind: BindingKind::Modification(TextModification::InsertNewLine(
-                            NewLineDirection::Above,
+                            LineDirection::Up,
                         )),
                         ..Default::default()
                     },
@@ -445,7 +447,9 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteLineOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteLine(
+                            LineDirection::Down,
+                        )),
                         ..Default::default()
                     },
                 ),

@@ -86,16 +86,16 @@ pub enum Buffer {
 pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
-    DeleteLineOnCursor,
+    DeleteLine(LineDirection),
     DeleteMotion(usize, CursorDirection),
     Insert(String),
-    InsertNewLine(NewLineDirection),
+    InsertNewLine(LineDirection),
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum NewLineDirection {
-    Above,
-    Under,
+pub enum LineDirection {
+    Up,
+    Down,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

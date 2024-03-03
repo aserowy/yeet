@@ -18,7 +18,7 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Opt
             None
         }
         message::Buffer::Modification(count, modification) => {
-            let buffer_changes = bufferline::update(model, count, modification);
+            let buffer_changes = bufferline::update(mode, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }

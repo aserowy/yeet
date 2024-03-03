@@ -1,8 +1,12 @@
-use yeet_keymap::message::{NewLineDirection, TextModification};
+use yeet_keymap::message::{CursorDirection, LineDirection, Mode, TextModification};
 
-use crate::model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition};
+use crate::{
+    model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition},
+    update::buffer::cursor,
+};
 
 pub fn update(
+    mode: &Mode,
     model: &mut Buffer,
     count: &usize,
     modification: &TextModification,
@@ -83,22 +87,29 @@ pub fn update(
                 None
             }
         }
-        TextModification::DeleteLineOnCursor => {
+        TextModification::DeleteLine(direction) => {
             if model.lines.is_empty() {
                 None
             } else if let Some(cursor) = &mut model.cursor {
                 let mut changes = Vec::new();
                 for _ in 0..*count {
-                    let line_index = cursor.vertical_index;
-                    let line = model.lines.remove(line_index);
-                    let content = line.content.to_string();
+                    let (line_index, content) = match direction {
+                        LineDirection::Up => todo!(),
+                        LineDirection::Down => {
+                            let line_index = cursor.vertical_index;
+                            let line = model.lines.remove(line_index);
+                            let content = line.content.to_string();
 
-                    let line_count = model.lines.len();
-                    if line_count == 0 {
-                        cursor.vertical_index = 0;
-                    } else if line_index >= line_count {
-                        cursor.vertical_index = line_count - 1;
-                    }
+                            let line_count = model.lines.len();
+                            if line_count == 0 {
+                                cursor.vertical_index = 0;
+                            } else if line_index >= line_count {
+                                cursor.vertical_index = line_count - 1;
+                            }
+
+                            (line_index, content)
+                        }
+                    };
 
                     changes.push(BufferChanged::LineRemoved(line_index, content));
                 }
@@ -107,11 +118,44 @@ pub fn update(
                 None
             }
         }
-        TextModification::DeleteMotion(_count, _motion) => {
-            // update cursor position with count and motion
-            // resolve delete line or chars by motion
-            // delete cursor position difference
-            todo!()
+        TextModification::DeleteMotion(delete_count, motion) => {
+            let cursor = &model.cursor;
+            let pre_motion_cursor = match cursor.clone() {
+                Some(it) => it,
+                None => return None,
+            };
+
+            for _ in 0..*count {
+                cursor::update_by_direction(mode, model, delete_count, motion);
+            }
+
+            let post_motion_cursor = match &model.cursor {
+                Some(it) => it,
+                None => return None,
+            };
+
+            let mut changes = Vec::new();
+            if is_line_delete(motion) {
+                let pre_index = pre_motion_cursor.vertical_index;
+                let post_index = post_motion_cursor.vertical_index;
+
+                let (direction, count) = if pre_index > post_index {
+                    (LineDirection::Down, pre_index - post_index + 1)
+                } else {
+                    (LineDirection::Up, post_index - pre_index)
+                };
+
+                update(
+                    mode,
+                    model,
+                    &count,
+                    &TextModification::DeleteLine(direction),
+                )
+                .map(|it| changes.extend(it));
+            } else {
+            }
+
+            Some(changes)
         }
         TextModification::Insert(raw) => {
             let line = get_line(model);
@@ -147,8 +191,8 @@ pub fn update(
         TextModification::InsertNewLine(direction) => {
             if let Some(cursor) = &mut model.cursor {
                 let index = match direction {
-                    NewLineDirection::Above => cursor.vertical_index,
-                    NewLineDirection::Under => {
+                    LineDirection::Up => cursor.vertical_index,
+                    LineDirection::Down => {
                         if model.lines.is_empty() {
                             cursor.vertical_index = 0;
 
@@ -174,6 +218,24 @@ pub fn update(
                 None
             }
         }
+    }
+}
+
+fn is_line_delete(motion: &CursorDirection) -> bool {
+    match motion {
+        CursorDirection::Up
+        | CursorDirection::Down
+        | CursorDirection::Bottom
+        | CursorDirection::Top => true,
+
+        CursorDirection::FindBackward(_)
+        | CursorDirection::FindForward(_)
+        | CursorDirection::TillBackward(_)
+        | CursorDirection::TillForward(_)
+        | CursorDirection::Left
+        | CursorDirection::Right
+        | CursorDirection::LineEnd
+        | CursorDirection::LineStart => false,
     }
 }
 
