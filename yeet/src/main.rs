@@ -25,7 +25,7 @@ async fn main() {
 
     let logfile = tracing_appender::rolling::daily(logpath, "log");
     tracing_subscriber::fmt()
-        .compact()
+        .pretty()
         .with_writer(logfile)
         .init();
 
