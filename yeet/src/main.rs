@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{debug, error, Level};
 use yeet_frontend::settings::Settings;
 
 #[derive(Debug, Error)]
@@ -11,28 +11,31 @@ pub enum Error {
     App,
     #[error("Initialization error")]
     Initialization,
-    #[error("Tracing error")]
-    Tracing(#[from] tracing::subscriber::SetGlobalDefaultError),
 }
 
 #[tokio::main]
 async fn main() {
+    let cli = cli().get_matches();
+
     // TODO: start application with printing an error in tui
     let logpath = match get_logging_path() {
         Ok(it) => it,
         Err(_) => return,
     };
 
+    let loglevel = get_log_level_filter(&cli);
     let logfile = tracing_appender::rolling::daily(logpath, "log");
     tracing_subscriber::fmt()
         .pretty()
+        .with_max_level(loglevel)
+        .with_file(false)
         .with_writer(logfile)
         .init();
 
     debug!("starting application");
 
     let mut settings = Settings::default();
-    map_args_to_settings(&cli().get_matches(), &mut settings);
+    map_args_to_settings(&cli, &mut settings);
 
     match yeet_frontend::run(settings).await {
         Ok(()) => {
@@ -59,7 +62,28 @@ fn cli() -> Command {
                 .action(ArgAction::SetTrue)
                 .default_value("false")
                 .help("on open print selected paths to stdout instead and close the application"),
+            Arg::new("verbosity")
+                .short('v')
+                .long("verbosity")
+                .default_value("warn")
+                .value_parser(["error", "warn", "info", "debug", "trace"])
+                .help("set verbosity level for file logging"),
         ])
+}
+
+fn get_log_level_filter(args: &ArgMatches) -> Level {
+    match args
+        .get_one::<String>("verbosity")
+        .expect("default for verbosity set")
+        .as_str()
+    {
+        "error" => Level::ERROR,
+        "warn" => Level::WARN,
+        "info" => Level::INFO,
+        "debug" => Level::DEBUG,
+        "trace" => Level::TRACE,
+        _ => Level::WARN,
+    }
 }
 
 fn map_args_to_settings(args: &ArgMatches, settings: &mut Settings) {
