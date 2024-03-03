@@ -126,7 +126,6 @@ fn get_passthrough_by_mode(mode: &Mode) -> bool {
     }
 }
 
-// TODO: refactor!
 fn resolve_binding(
     tree: &KeyTree,
     mode: &Mode,
@@ -137,6 +136,39 @@ fn resolve_binding(
         return Ok(None);
     }
 
+    if let Some(raw) = return_raw_if_expected(keys, before)? {
+        return Ok(Some(raw));
+    }
+
+    let (mut binding, unused_keys) = get_binding_by_keys(before, tree, mode, keys)?;
+    let mut next = match resolve_binding(tree, mode, &unused_keys, Some(&binding))? {
+        Some(it) => it,
+        None => {
+            if binding.expects.is_some() || binding.kind == BindingKind::Repeat {
+                return Err(KeyMapError::KeySequenceIncomplete);
+            } else {
+                return Ok(Some(binding));
+            }
+        }
+    };
+
+    let result = if binding.expects.is_some() {
+        binding.kind = combine(&binding, &next)?;
+        binding
+    } else if let BindingKind::Repeat = binding.kind {
+        next.repeat = get_repeat(&binding, &next);
+        next
+    } else {
+        binding
+    };
+
+    Ok(Some(result))
+}
+
+fn return_raw_if_expected(
+    keys: &[Key],
+    before: Option<&Binding>,
+) -> Result<Option<Binding>, KeyMapError> {
     if let Some(before) = before {
         if let Some(message::NextBindingKind::Raw) = before.expects {
             let key = match keys.first() {
@@ -159,51 +191,33 @@ fn resolve_binding(
         }
     }
 
-    let (mut binding, unused_keys) = {
-        let (mut binding, unused_keys) = tree.get_binding(mode, keys)?;
+    Ok(None)
+}
 
-        let binding = if let BindingKind::RepeatOrMotion(motion) = binding.kind {
-            if let Some(before) = before {
-                if let BindingKind::Repeat = before.kind {
-                    binding.kind = BindingKind::Repeat;
-                    binding
-                } else {
-                    Binding::from_motion(motion)
-                }
+fn get_binding_by_keys(
+    before: Option<&Binding>,
+    tree: &KeyTree,
+    mode: &Mode,
+    keys: &[Key],
+) -> Result<(Binding, Vec<Key>), KeyMapError> {
+    let (mut binding, unused_keys) = tree.get_binding(mode, keys)?;
+
+    let binding = if let BindingKind::RepeatOrMotion(motion) = binding.kind {
+        if let Some(before) = before {
+            if let BindingKind::Repeat = before.kind {
+                binding.kind = BindingKind::Repeat;
+                binding
             } else {
                 Binding::from_motion(motion)
             }
         } else {
-            binding
-        };
-
-        (binding, unused_keys)
-    };
-
-    let mut next = match resolve_binding(tree, mode, &unused_keys, Some(&binding))? {
-        Some(it) => it,
-        None => {
-            if binding.expects.is_some() {
-                return Err(KeyMapError::KeySequenceIncomplete);
-            } else if let BindingKind::Repeat = binding.kind {
-                return Err(KeyMapError::KeySequenceIncomplete);
-            } else {
-                return Ok(Some(binding));
-            }
+            Binding::from_motion(motion)
         }
-    };
-
-    let result = if binding.expects.is_some() {
-        binding.kind = combine(&binding, &next)?;
-        binding
-    } else if let BindingKind::Repeat = binding.kind {
-        next.repeat = get_repeat(&binding, &next);
-        next
     } else {
         binding
     };
 
-    Ok(Some(result))
+    Ok((binding, unused_keys))
 }
 
 fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError> {
