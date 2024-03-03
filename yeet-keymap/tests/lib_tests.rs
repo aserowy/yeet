@@ -1,6 +1,6 @@
 use yeet_keymap::{
     key::{Key, KeyCode},
-    message::{Buffer, CursorDirection, LineDirection, Message, Mode, TextModification},
+    message::{Buffer, CursorDirection, Message, Mode, TextModification},
     MessageResolver,
 };
 
@@ -67,7 +67,7 @@ fn add_and_resolve_key_normal_dd() {
     assert_eq!(
         Some(&Message::Buffer(Buffer::Modification(
             1,
-            TextModification::DeleteLine(LineDirection::Down)
+            TextModification::DeleteLine
         ))),
         messages.first()
     );

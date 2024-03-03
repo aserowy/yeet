@@ -108,9 +108,7 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         force: Some(Mode::Normal),
-                        kind: BindingKind::Modification(TextModification::DeleteLine(
-                            LineDirection::Down,
-                        )),
+                        kind: BindingKind::Modification(TextModification::DeleteLine),
                         ..Default::default()
                     },
                 ),
@@ -447,9 +445,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('d'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteLine(
-                            LineDirection::Down,
-                        )),
+                        kind: BindingKind::Modification(TextModification::DeleteLine),
                         ..Default::default()
                     },
                 ),

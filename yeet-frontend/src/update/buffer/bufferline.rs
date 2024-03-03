@@ -87,29 +87,22 @@ pub fn update(
                 None
             }
         }
-        TextModification::DeleteLine(direction) => {
+        TextModification::DeleteLine => {
             if model.lines.is_empty() {
                 None
             } else if let Some(cursor) = &mut model.cursor {
                 let mut changes = Vec::new();
                 for _ in 0..*count {
-                    let (line_index, content) = match direction {
-                        LineDirection::Up => todo!(),
-                        LineDirection::Down => {
-                            let line_index = cursor.vertical_index;
-                            let line = model.lines.remove(line_index);
-                            let content = line.content.to_string();
+                    let line_index = cursor.vertical_index;
+                    let line = model.lines.remove(line_index);
+                    let content = line.content.to_string();
 
-                            let line_count = model.lines.len();
-                            if line_count == 0 {
-                                cursor.vertical_index = 0;
-                            } else if line_index >= line_count {
-                                cursor.vertical_index = line_count - 1;
-                            }
-
-                            (line_index, content)
-                        }
-                    };
+                    let line_count = model.lines.len();
+                    if line_count == 0 {
+                        cursor.vertical_index = 0;
+                    } else if line_index >= line_count {
+                        cursor.vertical_index = line_count - 1;
+                    }
 
                     changes.push(BufferChanged::LineRemoved(line_index, content));
                 }
@@ -139,20 +132,22 @@ pub fn update(
                 let pre_index = pre_motion_cursor.vertical_index;
                 let post_index = post_motion_cursor.vertical_index;
 
-                let (direction, count) = if pre_index > post_index {
-                    (LineDirection::Down, pre_index - post_index + 1)
+                if pre_index == post_index {
+                    return None;
+                }
+
+                let count = if pre_index > post_index {
+                    pre_index - post_index + 1
                 } else {
-                    (LineDirection::Up, post_index - pre_index)
+                    model.cursor = Some(pre_motion_cursor.clone());
+                    post_index - pre_index + 1
                 };
 
-                update(
-                    mode,
-                    model,
-                    &count,
-                    &TextModification::DeleteLine(direction),
-                )
-                .map(|it| changes.extend(it));
+                if let Some(cng) = update(mode, model, &count, &TextModification::DeleteLine) {
+                    changes.extend(cng);
+                }
             } else {
+                //
             }
 
             Some(changes)

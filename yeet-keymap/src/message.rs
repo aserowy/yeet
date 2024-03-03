@@ -86,7 +86,7 @@ pub enum Buffer {
 pub enum TextModification {
     DeleteCharBeforeCursor,
     DeleteCharOnCursor,
-    DeleteLine(LineDirection),
+    DeleteLine,
     DeleteMotion(usize, CursorDirection),
     Insert(String),
     InsertNewLine(LineDirection),
