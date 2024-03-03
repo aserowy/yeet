@@ -71,18 +71,6 @@ pub fn save(history: &History) -> Result<(), AppError> {
     save_filtered(history, HistoryState::Added, false)
 }
 
-fn get_history_path() -> Result<String, AppError> {
-    let cache_dir = match dirs::cache_dir() {
-        Some(cache_dir) => match cache_dir.to_str() {
-            Some(cache_dir_string) => cache_dir_string.to_string(),
-            None => return Err(AppError::LoadHistoryFailed),
-        },
-        None => return Err(AppError::LoadHistoryFailed),
-    };
-
-    Ok(format!("{}{}", cache_dir, "/yeet/history"))
-}
-
 fn save_filtered(
     history: &History,
     state_filter: HistoryState,
@@ -147,4 +135,16 @@ fn get_paths(
     }
 
     result
+}
+
+fn get_history_path() -> Result<String, AppError> {
+    let cache_dir = match dirs::cache_dir() {
+        Some(cache_dir) => match cache_dir.to_str() {
+            Some(cache_dir_string) => cache_dir_string.to_string(),
+            None => return Err(AppError::LoadHistoryFailed),
+        },
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    Ok(format!("{}{}", cache_dir, "/yeet/history"))
 }

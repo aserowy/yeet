@@ -43,6 +43,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     let mut model = Model::default();
     register::init(&mut model.register, &mut emitter).await?;
+
     if history::cache::load(&mut model.history).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load history".to_string()),
