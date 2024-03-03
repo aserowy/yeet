@@ -78,54 +78,6 @@ impl MessageResolver {
     }
 }
 
-fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
-    let mut messages = Vec::new();
-    if let Some(md) = &binding.force {
-        messages.push(Message::Buffer(Buffer::ChangeMode(
-            mode.clone(),
-            md.clone(),
-        )));
-    };
-
-    let repeat = binding.repeat.unwrap_or(1);
-    match &binding.kind {
-        BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
-        BindingKind::Modification(mdf) => {
-            messages.push(Message::Buffer(Buffer::Modification(repeat, mdf.clone())))
-        }
-        BindingKind::Motion(mtn) => {
-            messages.push(Message::Buffer(Buffer::MoveCursor(repeat, mtn.clone())))
-        }
-        BindingKind::None => {}
-        BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
-            unreachable!()
-        }
-    }
-
-    messages
-}
-
-fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
-    let mut messages = Vec::new();
-    match msg {
-        Message::YankSelected(_) => messages.push(Message::YankSelected(repeat)),
-        _ => {
-            for _ in 0..repeat {
-                messages.push(msg.clone());
-            }
-        }
-    }
-
-    messages
-}
-
-fn get_passthrough_by_mode(mode: &Mode) -> bool {
-    match mode {
-        Mode::Command | Mode::Insert => true,
-        Mode::Navigation | Mode::Normal => false,
-    }
-}
-
 fn resolve_binding(
     tree: &KeyTree,
     mode: &Mode,
@@ -136,7 +88,7 @@ fn resolve_binding(
         return Ok(None);
     }
 
-    if let Some(raw) = return_raw_if_expected(keys, before)? {
+    if let Some(raw) = return_raw_if_expected(before, keys)? {
         return Ok(Some(raw));
     }
 
@@ -166,8 +118,8 @@ fn resolve_binding(
 }
 
 fn return_raw_if_expected(
-    keys: &[Key],
     before: Option<&Binding>,
+    keys: &[Key],
 ) -> Result<Option<Binding>, KeyMapError> {
     if let Some(before) = before {
         if let Some(message::NextBindingKind::Raw) = before.expects {
@@ -274,4 +226,52 @@ fn get_repeat(current: &Binding, next: &Binding) -> Option<usize> {
     };
 
     Some(repeat)
+}
+
+fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
+    let mut messages = Vec::new();
+    if let Some(md) = &binding.force {
+        messages.push(Message::Buffer(Buffer::ChangeMode(
+            mode.clone(),
+            md.clone(),
+        )));
+    };
+
+    let repeat = binding.repeat.unwrap_or(1);
+    match &binding.kind {
+        BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
+        BindingKind::Modification(mdf) => {
+            messages.push(Message::Buffer(Buffer::Modification(repeat, mdf.clone())))
+        }
+        BindingKind::Motion(mtn) => {
+            messages.push(Message::Buffer(Buffer::MoveCursor(repeat, mtn.clone())))
+        }
+        BindingKind::None => {}
+        BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
+            unreachable!()
+        }
+    }
+
+    messages
+}
+
+fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
+    let mut messages = Vec::new();
+    match msg {
+        Message::YankSelected(_) => messages.push(Message::YankSelected(repeat)),
+        _ => {
+            for _ in 0..repeat {
+                messages.push(msg.clone());
+            }
+        }
+    }
+
+    messages
+}
+
+fn get_passthrough_by_mode(mode: &Mode) -> bool {
+    match mode {
+        Mode::Command | Mode::Insert => true,
+        Mode::Navigation | Mode::Normal => false,
+    }
 }
