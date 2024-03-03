@@ -13,7 +13,7 @@ pub fn update(
 ) -> Option<Vec<BufferChanged>> {
     match modification {
         TextModification::DeleteCharBeforeCursor => {
-            let line = get_line(model);
+            let line = get_line_or_create_on_empty(model);
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index > 0 {
@@ -54,7 +54,7 @@ pub fn update(
             }
         }
         TextModification::DeleteCharOnCursor => {
-            let line = get_line(model);
+            let line = get_line_or_create_on_empty(model);
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
                 if index < line.len() {
@@ -143,17 +143,37 @@ pub fn update(
                     post_index - pre_index + 1
                 };
 
-                if let Some(cng) = update(mode, model, &count, &TextModification::DeleteLine) {
+                let action = &TextModification::DeleteLine;
+                if let Some(cng) = update(mode, model, &count, action) {
                     changes.extend(cng);
                 }
             } else {
-                //
+                // TODO: multi line motion like search
+                let line = match model.lines.get(pre_motion_cursor.vertical_index) {
+                    Some(it) => it,
+                    None => return None,
+                };
+
+                let pre_index = get_cursor_index(&pre_motion_cursor, line);
+                let post_index = get_cursor_index(post_motion_cursor, line);
+
+                let count = if pre_index > post_index {
+                    pre_index - post_index + 1
+                } else {
+                    model.cursor = Some(pre_motion_cursor.clone());
+                    post_index - pre_index + 1
+                };
+
+                let action = &TextModification::DeleteCharOnCursor;
+                if let Some(cng) = update(mode, model, &count, action) {
+                    changes.extend(cng);
+                }
             }
 
             Some(changes)
         }
         TextModification::Insert(raw) => {
-            let line = get_line(model);
+            let line = get_line_or_create_on_empty(model);
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
 
@@ -234,7 +254,7 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
     }
 }
 
-fn get_line(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
+fn get_line_or_create_on_empty(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
     if let Some(cursor) = &mut model.cursor {
         if cursor.horizontial_index == CursorPosition::None {
             return None;
@@ -248,9 +268,12 @@ fn get_line(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
 
             Some((cursor, &mut model.lines[0]))
         } else {
-            let line_index = cursor.vertical_index;
+            let line = match model.lines.get_mut(cursor.vertical_index) {
+                Some(it) => it,
+                None => return None,
+            };
 
-            Some((cursor, &mut model.lines[line_index]))
+            Some((cursor, line))
         }
     } else {
         None

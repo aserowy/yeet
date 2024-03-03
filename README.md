@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo.svg" alt="yeet logo" width="20%">
+  <img src="assets/logo.svg" alt="yeet logo" width="25%">
 </div>
 
 ## yeet - the vision
@@ -38,18 +38,19 @@ to navigation.
 
 ### navigation and normal mode
 
-| keys       | action                                                    |
-| ---------- | --------------------------------------------------------- |
-| j, k       | navigating the current directory down/up                  |
-| o, O       | add a new line and change to insert mode                  |
-| i, a       | change to insert mode                                     |
-| I, A       | jump to line start/end and change to insert mode          |
-| dd         | go into normal and trash\* the current line               |
-| yy         | yank file to register                                     |
-| p          | paste " register to current path                          |
-| :          | change to command mode                                    |
-| zt, zz, zb | move viewport to start, center, bottom of cursor position |
-| C-u, C-d   | move viewport half screen up/down                         |
+| keys        | action                                                      |
+| ----------- | ----------------------------------------------------------- |
+| j, k        | navigating the current directory down/up                    |
+| o, O        | add a new line and change to insert mode                    |
+| i, a        | change to insert mode                                       |
+| I, A        | jump to line start/end and change to insert mode            |
+| d \<motion> | delete according to motion (must be valid for current mode) |
+| dd          | go into normal and trash\* the current line                 |
+| yy          | yank file to register                                       |
+| p           | paste " register to current path                            |
+| :           | change to command mode                                      |
+| zt, zz, zb  | move viewport to start, center, bottom of cursor position   |
+| C-u, C-d    | move viewport half screen up/down                           |
 
 \*trash: files are not deleted but moved to yeets cache folder to enable register
 interactions. To delete the selected path completly, call command `:d!`.

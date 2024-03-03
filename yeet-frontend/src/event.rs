@@ -70,6 +70,7 @@ impl Emitter {
         let (cancellation, cancellation_receiver) = oneshot::channel();
         let resolver = Arc::new(Mutex::new(MessageResolver::default()));
 
+        // FIX: button repeats feel not precise enough (on load) e.g. j/k in nav mode
         start_crossterm_listener(cancellation_receiver, resolver.clone(), sender.clone());
 
         Self {
