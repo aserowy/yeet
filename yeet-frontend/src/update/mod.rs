@@ -107,13 +107,11 @@ pub fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                     buffer::focus_buffer(&mut model.current.buffer);
                     current::update(model, Some(msg));
-                    preview::viewport(model);
                     current::save_changes(model)
                 }
                 Mode::Normal => {
                     buffer::focus_buffer(&mut model.current.buffer);
                     current::update(model, Some(msg));
-                    preview::viewport(model);
                     vec![]
                 }
             });

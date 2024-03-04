@@ -25,10 +25,7 @@ pub fn path(
         }
 
         if watch_new_path {
-            actions.extend(vec![
-                Action::SleepBeforeRender,
-                Action::WatchPath(selected.clone()),
-            ]);
+            actions.push(Action::WatchPath(selected.clone()));
         }
 
         model.preview.path = selected.to_path_buf();

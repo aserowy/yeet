@@ -124,12 +124,10 @@ pub enum Mode {
 
     Normal,
 }
+
 impl Mode {
     pub fn is_command(&self) -> bool {
-        match self {
-            Mode::Command(_) => true,
-            _ => false,
-        }
+        matches!(self, Mode::Command(_))
     }
 }
 

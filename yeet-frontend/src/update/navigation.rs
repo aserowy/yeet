@@ -113,10 +113,7 @@ fn set_current_to_parent(model: &mut Model) -> Option<Vec<Action>> {
 
         let mut actions = Vec::new();
         if let Some(parent) = parent_parent {
-            actions.extend(vec![
-                Action::SleepBeforeRender,
-                Action::WatchPath(parent.to_path_buf()),
-            ]);
+            actions.push(Action::WatchPath(parent.to_path_buf()));
         }
 
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
@@ -143,16 +140,12 @@ fn set_current_to_path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
 
         let parent_parent = directory.parent();
         if let Some(parent) = parent_parent {
-            actions.extend(vec![
-                Action::SleepBeforeRender,
-                Action::WatchPath(parent.to_path_buf()),
-            ]);
+            actions.push(Action::WatchPath(parent.to_path_buf()));
         }
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
 
         actions.extend(vec![
             Action::UnwatchPath(model.current.path.clone()),
-            Action::SleepBeforeRender,
             Action::WatchPath(directory.clone()),
         ]);
         model.current.path = directory;

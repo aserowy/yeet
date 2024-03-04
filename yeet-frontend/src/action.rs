@@ -1,7 +1,6 @@
 use std::{
     io::{stdout, Write},
     path::PathBuf,
-    time::Duration,
 };
 
 use yeet_keymap::message::Message;
@@ -18,7 +17,6 @@ pub enum Action {
     Quit(Option<String>),
     Resize(u16, u16),
     SkipRender,
-    SleepBeforeRender,
     Task(Task),
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
@@ -57,7 +55,6 @@ fn is_preview_action(action: &Action) -> bool {
         Action::Quit(_) => false,
         Action::Resize(_, _) => true,
         Action::SkipRender => true,
-        Action::SleepBeforeRender => true,
         Action::Task(_) => true,
         Action::UnwatchPath(_) => true,
         Action::WatchPath(_) => true,
@@ -116,9 +113,6 @@ async fn execute(
                 terminal.resize(*x, *y)?;
             }
             Action::SkipRender => result = ActionResult::SkipRender,
-            Action::SleepBeforeRender => {
-                tokio::time::sleep(Duration::from_millis(50)).await;
-            }
             Action::Task(task) => emitter.run(task.clone()),
             Action::UnwatchPath(path) => {
                 if path == &PathBuf::default() {

@@ -108,6 +108,7 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
         ..Default::default()
     }
 }
+
 pub fn remove(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     if path.starts_with(&model.register.path) {
         model.register.remove(path);
