@@ -34,10 +34,7 @@ async fn main() {
 
     tracing::debug!("starting application");
 
-    let mut settings = Settings::default();
-    map_args_to_settings(&cli, &mut settings);
-
-    match yeet_frontend::run(settings).await {
+    match yeet_frontend::run(get_settings(&cli)).await {
         Ok(()) => {
             tracing::debug!("closing application");
         }
@@ -86,11 +83,6 @@ fn get_log_level(args: &ArgMatches) -> Level {
     }
 }
 
-fn map_args_to_settings(args: &ArgMatches, settings: &mut Settings) {
-    settings.stdout_on_open = args.get_flag("stdout-on-open");
-    settings.startup_path = args.get_one("path").cloned();
-}
-
 fn get_logging_path() -> Result<String, Error> {
     let cache_dir = match dirs::cache_dir() {
         Some(cache_dir) => match cache_dir.to_str() {
@@ -101,4 +93,11 @@ fn get_logging_path() -> Result<String, Error> {
     };
 
     Ok(format!("{}{}", cache_dir, "/yeet/logs"))
+}
+
+fn get_settings(args: &ArgMatches) -> Settings {
+    Settings {
+        stdout_on_open: args.get_flag("stdout-on-open"),
+        startup_path: args.get_one("path").cloned(),
+    }
 }
