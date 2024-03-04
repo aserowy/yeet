@@ -93,7 +93,7 @@ fn save_filtered(
         .append(!overwrite)
         .open(history_path)?;
 
-    let mut history_csv_writer = csv::Writer::from_writer(history_writer);
+    let mut writer = csv::Writer::from_writer(history_writer);
     for (changed_at, state, path) in entries {
         if state != state_filter {
             continue;
@@ -104,16 +104,14 @@ fn save_filtered(
         }
 
         if let Some(path) = path.to_str() {
-            if history_csv_writer
-                .write_record([changed_at.to_string().as_str(), path])
-                .is_err()
-            {
-                // TODO: log error
+            let write_result = writer.write_record([changed_at.to_string().as_str(), path]);
+            if let Err(error) = write_result {
+                tracing::error!("writing history failed: {:?}", error);
             }
         }
     }
 
-    history_csv_writer.flush()?;
+    writer.flush()?;
 
     Ok(())
 }

@@ -90,7 +90,9 @@ async fn execute(
                             continue;
                         }
                     }
-                    Err(_err) => {} // TODO: log error
+                    Err(error) => {
+                        tracing::error!("emitter suspend failed: {:?}", error);
+                    }
                 }
 
                 terminal.suspend();
@@ -121,8 +123,8 @@ async fn execute(
 
                 emitter.abort(&Task::EnumerateDirectory(path.clone()));
 
-                if let Err(_error) = emitter.unwatch(path.as_path()) {
-                    // TODO: log error
+                if let Err(error) = emitter.unwatch(path.as_path()) {
+                    tracing::error!("emitting unwatch path failed: {:?}", error);
                 }
             }
             Action::WatchPath(path) => {
@@ -136,8 +138,8 @@ async fn execute(
                     emitter.run(Task::LoadPreview(path.clone()));
                 }
 
-                if let Err(_error) = emitter.watch(path.as_path()) {
-                    // TODO: log error
+                if let Err(error) = emitter.watch(path.as_path()) {
+                    tracing::error!("emitting watch path failed: {:?}", error);
                 }
             }
         }

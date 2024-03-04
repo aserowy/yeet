@@ -65,10 +65,13 @@ impl TaskManager {
         while let Some(task) = self.tasks.join_next().await {
             match task {
                 Ok(Ok(())) => (),
-                // TODO: log error
-                Ok(Err(error)) => errors.push(error),
-                // TODO: log error
-                Err(_) => (),
+                Ok(Err(error)) => {
+                    tracing::error!("task result returned error: {:?}", error);
+                    errors.push(error)
+                }
+                Err(error) => {
+                    tracing::error!("task failed: {:?}", error);
+                }
             };
         }
 

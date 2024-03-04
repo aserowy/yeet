@@ -39,8 +39,8 @@ impl Emitter {
 
         let (watcher_sender, mut notify_receiver) = mpsc::unbounded_channel();
         let watcher = notify::recommended_watcher(move |res| {
-            if let Err(_err) = watcher_sender.send(res) {
-                // TODO: log error
+            if let Err(error) = watcher_sender.send(res) {
+                tracing::error!("sending watched directory changes failed: {:?}", error);
             }
         })
         .expect("Failed to create watcher");
@@ -85,8 +85,8 @@ impl Emitter {
     pub async fn suspend(&mut self) -> Result<bool, oneshot::error::RecvError> {
         if let Some(cancellation) = self.cancellation.take() {
             let (sender, receiver) = oneshot::channel();
-            if let Err(_err) = cancellation.send(sender) {
-                // TODO: log error
+            if let Err(error) = cancellation.send(sender) {
+                tracing::error!("sending cancellation failed: {:?}", error);
             }
 
             receiver.await
