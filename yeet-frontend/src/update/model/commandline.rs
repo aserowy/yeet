@@ -20,14 +20,27 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 
     match commandline.state {
         CommandLineState::Default => {
+            let mut actions = vec![
+                Action::SkipRender,
+                Action::EmitMessages(vec![Message::Rerender]),
+            ];
+
             if let Some(message) = message {
                 if let Buffer::ChangeMode(from, to) = message {
                     if !from.is_command() && to.is_command() {
                         buffer::reset_view(buffer);
 
-                        // TODO: remove prefix and add as line content: leave mode when content is empty
+                        let prefix = match to {
+                            Mode::Command(cmd) => match cmd {
+                                CommandMode::Command => Some(":".to_string()),
+                                CommandMode::SearchUp => Some("?".to_string()),
+                                CommandMode::SearchDown => Some("/".to_string()),
+                            },
+                            _ => None,
+                        };
+
                         let bufferline = BufferLine {
-                            prefix: Some(":".to_string()),
+                            prefix,
                             ..Default::default()
                         };
 
@@ -37,38 +50,50 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                     }
                 }
 
+                if let &Buffer::Modification(_, TextModification::DeleteCharBeforeCursor) = message
+                {
+                    if let Some(line) = buffer.lines.last() {
+                        if line.content.is_empty() {
+                            actions.pop();
+                            actions.push(Action::EmitMessages(vec![Message::Buffer(
+                                Buffer::ChangeMode(model.mode.clone(), Mode::default()),
+                            )]));
+                        }
+                    }
+                }
+
                 buffer::update(&model.mode, buffer, message);
             }
 
-            vec![
-                Action::SkipRender,
-                Action::EmitMessages(vec![Message::Rerender]),
-            ]
+            actions
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
 
-            let action = if Some(&Buffer::Modification(
-                1,
-                TextModification::Insert(":".to_string()),
-            )) == message
+            let mut messages = Vec::new();
+            if let Some(&Buffer::Modification(_, TextModification::Insert(cnt))) = message.as_ref()
             {
-                let bufferline = BufferLine {
-                    prefix: Some(":".to_string()),
-                    ..Default::default()
+                let action = if matches!(cnt.as_str(), ":" | "/" | "?") {
+                    let bufferline = BufferLine {
+                        prefix: Some(cnt.to_string()),
+                        ..Default::default()
+                    };
+
+                    buffer.lines.pop();
+                    buffer.lines.push(bufferline);
+
+                    Message::Rerender
+                } else {
+                    buffer::set_content(&model.mode, buffer, vec![]);
+
+                    Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default()))
                 };
 
-                buffer.lines.pop();
-                buffer.lines.push(bufferline);
+                messages.push(Action::SkipRender);
+                messages.push(Action::EmitMessages(vec![action]));
+            }
 
-                Message::Rerender
-            } else {
-                buffer::set_content(&model.mode, buffer, vec![]);
-
-                Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default()))
-            };
-
-            vec![Action::SkipRender, Action::EmitMessages(vec![action])]
+            messages
         }
     }
 }

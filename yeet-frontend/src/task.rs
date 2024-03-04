@@ -82,7 +82,6 @@ impl TaskManager {
         }
     }
 
-    // TODO: if error occurs, enable handling in model with RenderAction + sender
     pub fn run(&mut self, task: Task) {
         let abort_handle = match task.clone() {
             Task::AddPath(path) => self.tasks.spawn(async move {

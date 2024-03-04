@@ -254,6 +254,22 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('/'), vec![])],
+                    Binding {
+                        force: Some(Mode::Command(CommandMode::SearchDown)),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('?'), vec![])],
+                    Binding {
+                        force: Some(Mode::Command(CommandMode::SearchUp)),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('a'), vec![])],
                     Binding {
                         force: Some(Mode::Insert),
