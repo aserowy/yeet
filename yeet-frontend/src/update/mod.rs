@@ -1,4 +1,4 @@
-use yeet_keymap::message::{Message, Mode, PrintContent};
+use yeet_keymap::message::{self, Message, Mode, PrintContent};
 
 use crate::{
     action::Action,
@@ -13,14 +13,13 @@ mod command;
 mod enumeration;
 mod history;
 pub mod model;
-mod modification;
 mod navigation;
 mod path;
 mod register;
 
 pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
-        Message::Buffer(msg) => modification::buffer(model, msg),
+        Message::Buffer(msg) => buffer(model, msg),
         Message::EnumerationChanged(path, contents) => enumeration::changed(model, path, contents),
         Message::EnumerationFinished(path) => enumeration::finished(model, path),
         Message::Error(error) => {
@@ -66,4 +65,95 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
             .cmp(&b.content.to_ascii_uppercase())
     });
     buffer::cursor::validate(mode, model);
+}
+
+pub fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
+    match msg {
+        message::Buffer::ChangeMode(from, to) => {
+            if from == to {
+                return None;
+            }
+
+            model.mode = to.clone();
+            model.mode_before = Some(from.clone());
+
+            let mut actions = vec![Action::ModeChanged];
+            actions.extend(match from {
+                Mode::Command(_) => {
+                    buffer::unfocus_buffer(&mut model.commandline.buffer);
+                    commandline::update(model, Some(msg))
+                }
+                Mode::Insert | Mode::Navigation | Mode::Normal => {
+                    buffer::unfocus_buffer(&mut model.current.buffer);
+                    vec![]
+                }
+            });
+
+            let content = format!("--{}--", to.to_string().to_uppercase());
+            commandline::print(model, &[PrintContent::Info(content)]);
+
+            actions.extend(match to {
+                Mode::Command(_) => {
+                    buffer::focus_buffer(&mut model.commandline.buffer);
+                    commandline::update(model, Some(msg))
+                }
+                Mode::Insert => {
+                    buffer::focus_buffer(&mut model.current.buffer);
+                    current::update(model, Some(msg));
+                    vec![]
+                }
+                Mode::Navigation => {
+                    // TODO: handle file operations: show pending with gray, refresh on operation success
+                    // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
+                    buffer::focus_buffer(&mut model.current.buffer);
+                    current::update(model, Some(msg));
+                    preview::viewport(model);
+                    current::save_changes(model)
+                }
+                Mode::Normal => {
+                    buffer::focus_buffer(&mut model.current.buffer);
+                    current::update(model, Some(msg));
+                    preview::viewport(model);
+                    vec![]
+                }
+            });
+
+            Some(actions)
+        }
+        message::Buffer::Modification(_, _) => match model.mode {
+            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
+            Mode::Insert | Mode::Normal => {
+                let mut actions = Vec::new();
+                current::update(model, Some(msg));
+
+                if let Some(preview_actions) = preview::path(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::viewport(model);
+                }
+
+                Some(actions)
+            }
+            Mode::Navigation => None,
+        },
+        message::Buffer::MoveCursor(_, _) | message::Buffer::MoveViewPort(_) => match model.mode {
+            Mode::Command(_) => {
+                commandline::update(model, Some(msg));
+                None
+            }
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
+                let mut actions = Vec::new();
+                current::update(model, Some(msg));
+
+                if let Some(preview_actions) = preview::path(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::viewport(model);
+                }
+
+                Some(actions)
+            }
+        },
+        message::Buffer::SaveBuffer(_) => Some(current::save_changes(model)),
+    }
 }
