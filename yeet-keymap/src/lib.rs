@@ -271,7 +271,7 @@ fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
 
 fn get_passthrough_by_mode(mode: &Mode) -> bool {
     match mode {
-        Mode::Command | Mode::Insert => true,
+        Mode::Command(_) | Mode::Insert => true,
         Mode::Navigation | Mode::Normal => false,
     }
 }

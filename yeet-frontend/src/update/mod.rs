@@ -25,7 +25,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::EnumerationFinished(path) => enumeration::finished(model, path),
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
-            if model.mode != Mode::Command {
+            if !model.mode.is_command() {
                 commandline::print(model, &[PrintContent::Error(error.to_string())]);
             }
 

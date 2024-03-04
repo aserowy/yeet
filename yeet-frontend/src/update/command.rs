@@ -53,7 +53,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     if let Some(mode) = mode_before {
         match mode {
-            Mode::Command => unreachable!(),
+            Mode::Command(_) => unreachable!(),
             Mode::Insert | Mode::Normal => Mode::Normal,
             Mode::Navigation => Mode::Navigation,
         }
@@ -64,7 +64,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 
 mod test {
     #[test]
-    fn test_get_mode_after_command() {
+    fn get_mode_after_command() {
         use yeet_keymap::message::Mode;
 
         let mode_before = Some(Mode::Normal);

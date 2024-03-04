@@ -1,6 +1,6 @@
 use yeet_keymap::{
     key::{Key, KeyCode},
-    message::{Buffer, CursorDirection, Message, Mode, TextModification},
+    message::{Buffer, CursorDirection, Message, Mode, TextModification, CommandMode},
     MessageResolver,
 };
 
@@ -14,7 +14,7 @@ fn add_and_resolve_key_navigation_colon() {
     assert_eq!(
         Some(&Message::Buffer(Buffer::ChangeMode(
             Mode::Navigation,
-            Mode::Command
+            Mode::Command(CommandMode::Command)
         ))),
         messages.first()
     );
@@ -180,7 +180,7 @@ fn add_and_resolve_key_normal_d0() {
 #[test]
 fn add_and_resolve_key_command_q() {
     let mut resolver = MessageResolver::default();
-    resolver.mode = Mode::Command;
+    resolver.mode = Mode::Command(CommandMode::Command);
 
     let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
 
@@ -371,7 +371,7 @@ fn add_and_resolve_key_normal_10colon() {
     assert_eq!(
         Some(&Message::Buffer(Buffer::ChangeMode(
             Mode::Navigation,
-            Mode::Command
+            Mode::Command(CommandMode::Command)
         ))),
         messages.first()
     );

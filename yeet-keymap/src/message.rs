@@ -116,7 +116,7 @@ pub enum CursorDirection {
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub enum Mode {
-    Command,
+    Command(CommandMode),
     Insert,
 
     #[default]
@@ -124,16 +124,30 @@ pub enum Mode {
 
     Normal,
 }
+impl Mode {
+    pub fn is_command(&self) -> bool {
+        match self {
+            Mode::Command(_) => true,
+            _ => false,
+        }
+    }
+}
 
 impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
-            Mode::Command => "command".to_string(),
+            Mode::Command(_) => "command".to_string(),
             Mode::Insert => "insert".to_string(),
             Mode::Navigation => "navigation".to_string(),
             Mode::Normal => "normal".to_string(),
         }
     }
+}
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum CommandMode {
+    Command,
+    SearchUp,
+    SearchDown,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

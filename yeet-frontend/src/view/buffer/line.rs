@@ -67,7 +67,7 @@ pub fn get_cursor_style_partials(
 
 fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
     match mode {
-        Mode::Command => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
+        Mode::Command(_) => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
         Mode::Navigation => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
         Mode::Normal => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
@@ -76,7 +76,7 @@ fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
 
 fn get_cursor_partial_style(mode: &Mode) -> StylePartial {
     match mode {
-        Mode::Command => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
+        Mode::Command(_) => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
         Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
         Mode::Navigation => CURSOR_NAV_STYLE_PARTIAL.clone(),
         Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),

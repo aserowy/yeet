@@ -302,7 +302,7 @@ fn get_position(mode: &Mode, line_length: &usize, position: &CursorPosition) -> 
 
 fn get_index_correction(mode: &Mode) -> usize {
     match mode {
-        Mode::Command => 0,
+        Mode::Command(_) => 0,
         Mode::Insert => 0,
         Mode::Navigation => 1,
         Mode::Normal => 1,

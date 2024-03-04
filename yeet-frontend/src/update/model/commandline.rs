@@ -1,6 +1,6 @@
 use ratatui::style::Color;
 use yeet_keymap::message::{
-    Buffer, CursorDirection, Message, Mode, PrintContent, TextModification,
+    Buffer, CommandMode, CursorDirection, Message, Mode, PrintContent, TextModification,
 };
 
 use crate::{
@@ -22,16 +22,17 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
         CommandLineState::Default => {
             if let Some(message) = message {
                 if let Buffer::ChangeMode(from, to) = message {
-                    if from != &Mode::Command && to == &Mode::Command {
+                    if !from.is_command() && to.is_command() {
                         buffer::reset_view(buffer);
 
+                        // TODO: remove prefix and add as line content: leave mode when content is empty
                         let bufferline = BufferLine {
                             prefix: Some(":".to_string()),
                             ..Default::default()
                         };
 
                         buffer::set_content(to, buffer, vec![bufferline]);
-                    } else if from == &Mode::Command && to != &Mode::Command {
+                    } else if from.is_command() && !to.is_command() {
                         buffer::set_content(&model.mode, buffer, vec![]);
                     }
                 }
@@ -142,7 +143,7 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
         });
 
         Some(vec![Action::EmitMessages(vec![Message::Buffer(
-            Buffer::ChangeMode(model.mode.clone(), Mode::Command),
+            Buffer::ChangeMode(model.mode.clone(), Mode::Command(CommandMode::Command)),
         )])])
     } else {
         None

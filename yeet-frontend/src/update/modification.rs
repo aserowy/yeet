@@ -17,7 +17,7 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
 
             let mut actions = vec![Action::ModeChanged];
             actions.extend(match from {
-                Mode::Command => {
+                Mode::Command(_) => {
                     buffer::unfocus_buffer(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
@@ -31,7 +31,7 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
             commandline::print(model, &[PrintContent::Info(content)]);
 
             actions.extend(match to {
-                Mode::Command => {
+                Mode::Command(_) => {
                     buffer::focus_buffer(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
@@ -59,7 +59,7 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
             Some(actions)
         }
         Buffer::Modification(_, _) => match model.mode {
-            Mode::Command => Some(commandline::update(model, Some(msg))),
+            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Normal => {
                 current::update(model, Some(msg));
                 None
@@ -67,9 +67,8 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
             Mode::Navigation => None,
         },
         Buffer::MoveCursor(_, _) | Buffer::MoveViewPort(_) => match model.mode {
-            Mode::Command => {
+            Mode::Command(_) => {
                 commandline::update(model, Some(msg));
-
                 None
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {

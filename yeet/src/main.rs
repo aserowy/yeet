@@ -23,7 +23,7 @@ async fn main() {
         Err(_) => return,
     };
 
-    let loglevel = get_log_level_filter(&cli);
+    let loglevel = get_log_level(&cli);
     let logfile = tracing_appender::rolling::daily(logpath, "log");
     tracing_subscriber::fmt()
         .pretty()
@@ -71,7 +71,7 @@ fn cli() -> Command {
         ])
 }
 
-fn get_log_level_filter(args: &ArgMatches) -> Level {
+fn get_log_level(args: &ArgMatches) -> Level {
     match args
         .get_one::<String>("verbosity")
         .expect("default for verbosity set")

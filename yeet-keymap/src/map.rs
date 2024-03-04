@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use crate::{
     key::{Key, KeyCode, KeyModifier},
     message::{
-        Binding, BindingKind, Buffer, CursorDirection, LineDirection, NextBindingKind,
+        Binding, BindingKind, Buffer, CommandMode, CursorDirection, LineDirection, NextBindingKind,
         TextModification, ViewPortDirection,
     },
     tree::KeyTree,
@@ -35,7 +35,11 @@ impl Default for KeyMap {
 
         add_mapping(
             &mut mappings,
-            vec![Mode::Command],
+            vec![
+                Mode::Command(CommandMode::Command),
+                Mode::Command(CommandMode::SearchUp),
+                Mode::Command(CommandMode::SearchDown),
+            ],
             vec![
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
@@ -244,7 +248,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char(':'), vec![])],
                     Binding {
-                        force: Some(Mode::Command),
+                        force: Some(Mode::Command(CommandMode::Command)),
                         repeatable: false,
                         ..Default::default()
                     },
