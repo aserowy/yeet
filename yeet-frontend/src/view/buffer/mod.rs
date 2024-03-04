@@ -50,6 +50,11 @@ fn get_styled_lines<'a>(
         // NOTE: higher order (higher index) styles take precedence
         spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
         spans.extend(correct_index(&content.chars().count(), &bl.style));
+
+        if let Some(search) = &bl.search {
+            spans.extend(correct_index(&content.chars().count(), search));
+        }
+
         content.push_str(&bl.content);
 
         result.push(style::get_line(vp, content, spans));
@@ -61,11 +66,15 @@ fn get_styled_lines<'a>(
 fn correct_index(offset: &usize, style_partials: &Vec<StylePartialSpan>) -> Vec<StylePartialSpan> {
     let mut corrected_style_partials = Vec::new();
 
-    for (start, end, style) in style_partials {
-        let s = start + offset;
-        let e = end + offset;
+    for partial in style_partials {
+        let start = partial.start + offset;
+        let end = partial.end + offset;
 
-        corrected_style_partials.push((s, e, style.clone()));
+        corrected_style_partials.push(StylePartialSpan {
+            start,
+            end,
+            style: partial.style.clone(),
+        });
     }
     corrected_style_partials
 }

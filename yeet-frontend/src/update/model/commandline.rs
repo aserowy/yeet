@@ -6,7 +6,7 @@ use yeet_keymap::message::{
 use crate::{
     action::Action,
     model::{
-        buffer::{BufferLine, StylePartial},
+        buffer::{BufferLine, StylePartial, StylePartialSpan},
         CommandLineState, Model,
     },
     update::buffer,
@@ -142,7 +142,11 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
                 let cntnt_len = cntnt.chars().count();
                 BufferLine {
                     content: cntnt.to_string(),
-                    style: vec![(0, cntnt_len, StylePartial::Foreground(Color::Red))],
+                    style: vec![StylePartialSpan {
+                        end: cntnt_len,
+                        style: StylePartial::Foreground(Color::Red),
+                        ..Default::default()
+                    }],
                     ..Default::default()
                 }
             }
@@ -159,11 +163,11 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
         let content = "Press ENTER or type command to continue";
         commandline.buffer.lines.push(BufferLine {
             content: content.to_string(),
-            style: vec![(
-                0,
-                content.chars().count(),
-                StylePartial::Foreground(Color::LightBlue),
-            )],
+            style: vec![StylePartialSpan {
+                end: content.chars().count(),
+                style: StylePartial::Foreground(Color::LightBlue),
+                ..Default::default()
+            }],
             ..Default::default()
         });
 

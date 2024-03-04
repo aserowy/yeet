@@ -9,7 +9,7 @@ use yeet_keymap::message::Mode;
 use crate::{
     action::Action,
     model::{
-        buffer::{BufferLine, StylePartial},
+        buffer::{BufferLine, StylePartial, StylePartialSpan},
         Model,
     },
 };
@@ -97,7 +97,11 @@ fn get_bufferline_by_path(path: &Path) -> BufferLine {
     // TODO: Handle transition states like adding, removing, renaming
     let style = if path.is_dir() {
         let length = content.chars().count();
-        vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
+        vec![StylePartialSpan {
+            end: length,
+            style: StylePartial::Foreground(Color::LightBlue),
+            ..Default::default()
+        }]
     } else {
         vec![]
     };

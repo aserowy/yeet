@@ -70,7 +70,11 @@ pub fn get_line_number_style_partials(
 
     if let Some(cursor) = cursor {
         if cursor.vertical_index - view_port.vertical_index == *index {
-            vec![(0, width, LINE_NUMBER_ABS_STYLE_PARTIAL.clone())]
+            vec![StylePartialSpan {
+                end: width,
+                style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
+                ..Default::default()
+            }]
         } else {
             let style_partial = match view_port.line_number {
                 LineNumber::_Absolute => LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
@@ -78,9 +82,17 @@ pub fn get_line_number_style_partials(
                 LineNumber::Relative => LINE_NUMBER_REL_STYLE_PARTIAL.clone(),
             };
 
-            vec![(0, width, style_partial)]
+            vec![StylePartialSpan {
+                end: width,
+                style: style_partial,
+                ..Default::default()
+            }]
         }
     } else {
-        vec![(0, width, LINE_NUMBER_ABS_STYLE_PARTIAL.clone())]
+        vec![StylePartialSpan {
+            end: width,
+            style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
+            ..Default::default()
+        }]
     }
 }

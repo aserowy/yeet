@@ -1,4 +1,4 @@
-use yeet_keymap::message::{self, Message, Mode, PrintContent};
+use yeet_keymap::message::{self, CommandMode, Message, Mode, PrintContent};
 
 use crate::{
     action::Action,
@@ -16,6 +16,7 @@ pub mod model;
 mod navigation;
 mod path;
 mod register;
+mod search;
 
 pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
@@ -67,7 +68,7 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
     buffer::cursor::validate(mode, model);
 }
 
-pub fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
+fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
     match msg {
         message::Buffer::ChangeMode(from, to) => {
             if from == to {
@@ -119,7 +120,13 @@ pub fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
             Some(actions)
         }
         message::Buffer::Modification(_, _) => match model.mode {
-            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
+            Mode::Command(CommandMode::Command) => Some(commandline::update(model, Some(msg))),
+            Mode::Command(_) => {
+                let actions = commandline::update(model, Some(msg));
+                search::update(model);
+
+                Some(actions)
+            }
             Mode::Insert | Mode::Normal => {
                 let mut actions = Vec::new();
                 current::update(model, Some(msg));
@@ -135,10 +142,7 @@ pub fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
             Mode::Navigation => None,
         },
         message::Buffer::MoveCursor(_, _) | message::Buffer::MoveViewPort(_) => match model.mode {
-            Mode::Command(_) => {
-                commandline::update(model, Some(msg));
-                None
-            }
+            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 let mut actions = Vec::new();
                 current::update(model, Some(msg));

@@ -44,6 +44,7 @@ impl Default for CursorPosition {
 pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: String,
+    pub search: Option<Vec<StylePartialSpan>>,
     pub style: Vec<StylePartialSpan>,
 }
 
@@ -53,9 +54,14 @@ impl BufferLine {
     }
 }
 
-pub type StylePartialSpan = (usize, usize, StylePartial);
+#[derive(Clone, Debug, Default)]
+pub struct StylePartialSpan {
+    pub start: usize,
+    pub end: usize,
+    pub style: StylePartial,
+}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StylePartial {
     Background(Color),
     Foreground(Color),

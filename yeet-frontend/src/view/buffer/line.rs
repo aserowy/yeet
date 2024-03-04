@@ -37,7 +37,11 @@ pub fn get_cursor_style_partials(
 
         let mut spans = Vec::new();
         if !cursor.hide_cursor_line {
-            spans.push((offset, vp.width, get_cursorline_partial_style(mode)));
+            spans.push(StylePartialSpan {
+                start: offset,
+                end: vp.width,
+                style: get_cursorline_partial_style(mode),
+            });
         }
 
         if cursor.hide_cursor {
@@ -53,11 +57,11 @@ pub fn get_cursor_style_partials(
             } => *current - vp.horizontal_index,
         };
 
-        spans.push((
-            offset + cursor_index,
-            offset + cursor_index + 1,
-            get_cursor_partial_style(mode),
-        ));
+        spans.push(StylePartialSpan {
+            start: offset + cursor_index,
+            end: offset + cursor_index + 1,
+            style: get_cursor_partial_style(mode),
+        });
 
         spans
     } else {

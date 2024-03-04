@@ -6,7 +6,7 @@ use yeet_keymap::message::{ContentKind, Mode};
 use crate::{
     action::Action,
     model::{
-        buffer::{BufferLine, StylePartial},
+        buffer::{BufferLine, StylePartial, StylePartialSpan},
         Model,
     },
 };
@@ -88,7 +88,11 @@ fn get_bufferline_by_enumeration_content(kind: &ContentKind, content: &String) -
     // TODO: refactor with by path
     let style = if kind == &ContentKind::Directory {
         let length = content.chars().count();
-        vec![(0, length, StylePartial::Foreground(Color::LightBlue))]
+        vec![StylePartialSpan {
+            end: length,
+            style: StylePartial::Foreground(Color::LightBlue),
+            ..Default::default()
+        }]
     } else {
         vec![]
     };

@@ -33,21 +33,30 @@ fn merge_style_partial_spans(
 ) -> Vec<StyleSpan> {
     let mut result = vec![(0, view_port.width, Style::default())];
 
-    for (sp_start, sp_end, sp_style) in &style_partials {
+    for partial in &style_partials {
         let mut styles = Vec::new();
         for (start, end, style) in &result {
-            if sp_start > end || sp_end < start {
+            if &partial.start > end || &partial.end < start {
                 styles.push((*start, *end, *style));
                 continue;
             }
 
-            let split_start = if sp_start > start { sp_start } else { start };
-            let split_end = if sp_end < end { sp_end } else { end };
+            let split_start = if &partial.start > start {
+                &partial.start
+            } else {
+                start
+            };
 
-            let mixed_style = match sp_style {
-                StylePartial::Foreground(clr) => style.fg(*clr),
-                StylePartial::Modifier(mdfr) => style.add_modifier(*mdfr),
-                StylePartial::Background(clr) => style.bg(*clr),
+            let split_end = if &partial.end < end {
+                &partial.end
+            } else {
+                end
+            };
+
+            let mixed_style = match partial.style {
+                StylePartial::Foreground(clr) => style.fg(clr),
+                StylePartial::Modifier(mdfr) => style.add_modifier(mdfr),
+                StylePartial::Background(clr) => style.bg(clr),
             };
 
             if split_start == start && split_end == end {
