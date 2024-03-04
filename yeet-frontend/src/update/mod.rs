@@ -21,6 +21,10 @@ mod search;
 pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
         Message::Buffer(msg) => buffer(model, msg),
+        Message::ClearSearchHighlight => {
+            search::clear(model);
+            None
+        }
         Message::EnumerationChanged(path, contents) => enumeration::changed(model, path, contents),
         Message::EnumerationFinished(path) => enumeration::finished(model, path),
         Message::Error(error) => {
@@ -28,7 +32,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
             if !model.mode.is_command() {
                 commandline::print(model, &[PrintContent::Error(error.to_string())]);
             }
-
             None
         }
         Message::ExecuteCommand => commandline::update_on_execute(model),

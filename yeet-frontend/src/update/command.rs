@@ -24,6 +24,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             Message::NavigateToPath(model.current.path.clone()),
         ])],
         "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
+        "noh" => vec![Action::EmitMessages(vec![
+            change_mode_message,
+            Message::ClearSearchHighlight,
+        ])],
         "q" => vec![Action::EmitMessages(vec![Message::Quit])],
         "reg" => {
             let content = model

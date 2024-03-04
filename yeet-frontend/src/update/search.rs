@@ -6,6 +6,7 @@ use crate::model::{
     Model,
 };
 
+// TODO: nohl, n, N, enter
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {
         Some(line) => &line.content,
@@ -18,10 +19,22 @@ pub fn update(model: &mut Model) {
         mark_search_results(&mut model.parent.buffer, search);
     }
 
-    mark_search_results(&mut model.current.buffer, search);
-
     if model.preview.path.is_dir() {
         mark_search_results(&mut model.preview.buffer, search);
+    }
+
+    mark_search_results(&mut model.current.buffer, search);
+}
+
+pub fn clear(model: &mut Model) {
+    for line in &mut model.parent.buffer.lines {
+        line.search = None;
+    }
+    for line in &mut model.preview.buffer.lines {
+        line.search = None;
+    }
+    for line in &mut model.current.buffer.lines {
+        line.search = None;
     }
 }
 

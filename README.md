@@ -71,6 +71,7 @@ interactions. To delete the selected path completly, call command `:d!`.
 | d!      | delete selected file/directory      |
 | e!      | reload current folder               |
 | histopt | optimize history                    |
+| noh     | remove search highlights            |
 | q       | quit yeet                           |
 | reg     | list register contents              |
 | w       | write changes without changing mode |
