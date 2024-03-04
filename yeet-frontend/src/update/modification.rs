@@ -5,7 +5,6 @@ use crate::{action::Action, model::Model, update::current};
 use super::{buffer, commandline, preview};
 
 pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
-    // TODO: refactor into buffer mod
     match msg {
         Buffer::ChangeMode(from, to) => {
             if from == to {
@@ -61,8 +60,16 @@ pub fn buffer(model: &mut Model, msg: &Buffer) -> Option<Vec<Action>> {
         Buffer::Modification(_, _) => match model.mode {
             Mode::Command(_) => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Normal => {
+                let mut actions = Vec::new();
                 current::update(model, Some(msg));
-                None
+
+                if let Some(preview_actions) = preview::path(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::viewport(model);
+                }
+
+                Some(actions)
             }
             Mode::Navigation => None,
         },
