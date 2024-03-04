@@ -1,6 +1,6 @@
 use yeet_keymap::{
     key::{Key, KeyCode},
-    message::{Buffer, CursorDirection, Message, Mode, TextModification, CommandMode},
+    message::{Buffer, CommandMode, CursorDirection, Message, Mode, TextModification},
     MessageResolver,
 };
 
