@@ -43,7 +43,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         (
             model.preview.path.as_path(),
             &mut model.preview.buffer,
-            true,
+            model.preview.path.is_dir(),
         ),
     ];
 

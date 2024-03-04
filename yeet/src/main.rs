@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use thiserror::Error;
-use tracing::{debug, error, Level};
+use tracing::Level;
 use yeet_frontend::settings::Settings;
 
 #[derive(Debug, Error)]
@@ -32,17 +32,17 @@ async fn main() {
         .with_writer(logfile)
         .init();
 
-    debug!("starting application");
+    tracing::debug!("starting application");
 
     let mut settings = Settings::default();
     map_args_to_settings(&cli, &mut settings);
 
     match yeet_frontend::run(settings).await {
         Ok(()) => {
-            debug!("closing application");
+            tracing::debug!("closing application");
         }
         Err(err) => {
-            error!("closing application with error: {:?}", err);
+            tracing::error!("closing application with error: {:?}", err);
         }
     }
 }
