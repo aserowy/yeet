@@ -106,6 +106,9 @@ pub fn update(
 
                     changes.push(BufferChanged::LineRemoved(line_index, content));
                 }
+
+                cursor::validate(mode, model);
+
                 Some(changes)
             } else {
                 None
@@ -169,6 +172,8 @@ pub fn update(
                     changes.extend(cng);
                 }
             }
+
+            cursor::validate(mode, model);
 
             Some(changes)
         }
