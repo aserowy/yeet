@@ -6,7 +6,7 @@ use crate::model::{
     Model,
 };
 
-// TODO: nohl, n, N, enter
+// TODO: n, N, enter, save in reg (add reg types?)
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {
         Some(line) => &line.content,

@@ -74,8 +74,12 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
 fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
     match msg {
         message::Buffer::ChangeMode(from, to) => {
-            if from == to {
-                return None;
+            match (from, to) {
+                (Mode::Command(_), Mode::Command(_))
+                | (Mode::Insert, Mode::Insert)
+                | (Mode::Navigation, Mode::Navigation)
+                | (Mode::Normal, Mode::Normal) => return None,
+                _ => {}
             }
 
             model.mode = to.clone();

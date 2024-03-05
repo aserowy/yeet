@@ -74,6 +74,13 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
             if let Some(&Buffer::Modification(_, TextModification::Insert(cnt))) = message.as_ref()
             {
                 let action = if matches!(cnt.as_str(), ":" | "/" | "?") {
+                    model.mode = Mode::Command(match cnt.as_str() {
+                        ":" => CommandMode::Command,
+                        "/" => CommandMode::SearchDown,
+                        "?" => CommandMode::SearchUp,
+                        _ => unreachable!(),
+                    });
+
                     let bufferline = BufferLine {
                         prefix: Some(cnt.to_string()),
                         ..Default::default()
