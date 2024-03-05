@@ -106,11 +106,15 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 }
 
 pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
+    let mut actions = vec![Action::SkipRender];
     if matches!(
         model.mode,
         Mode::Command(CommandMode::SearchUp) | Mode::Command(CommandMode::SearchDown)
     ) {
-        search::select(model);
+        match search::select(model) {
+            Some(actns) => actions.extend(actns),
+            None => {}
+        };
     }
 
     let commandline = &mut model.commandline;
@@ -125,21 +129,19 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
 
             buffer::set_content(&model.mode, buffer, vec![]);
 
-            Some(vec![Action::SkipRender, Action::EmitMessages(vec![action])])
+            actions.push(Action::EmitMessages(vec![action]));
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
             buffer::set_content(&model.mode, buffer, vec![]);
 
-            Some(vec![
-                Action::SkipRender,
-                Action::EmitMessages(vec![Message::Buffer(Buffer::ChangeMode(
-                    model.mode.clone(),
-                    Mode::default(),
-                ))]),
-            ])
+            actions.push(Action::EmitMessages(vec![Message::Buffer(
+                Buffer::ChangeMode(model.mode.clone(), Mode::default()),
+            )]));
         }
     }
+
+    Some(actions)
 }
 
 pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>> {

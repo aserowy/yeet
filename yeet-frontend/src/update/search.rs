@@ -9,6 +9,8 @@ use crate::{
     },
 };
 
+use super::model::preview;
+
 // TODO: n, N, enter, save in reg (add reg types?)
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {
@@ -115,10 +117,19 @@ pub fn select(model: &mut Model) -> Option<Vec<Action>> {
             expanded: start,
         };
 
-        // TODO: return actions to refresh preview?
-
         break;
     }
 
-    None
+    let mut actions = Vec::new();
+    if let Some(preview_actions) = preview::path(model, true, true) {
+        actions.extend(preview_actions);
+        model.preview.buffer.lines.clear();
+        preview::viewport(model);
+    }
+
+    if actions.is_empty() {
+        None
+    } else {
+        Some(actions)
+    }
 }
