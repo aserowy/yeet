@@ -11,7 +11,7 @@ use self::{
         Buffer, Cursor, CursorPosition,
     },
     history::History,
-    register::Register,
+    register::FileRegister,
 };
 
 pub mod buffer;
@@ -29,7 +29,7 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
-    pub register: Register,
+    pub file_register: FileRegister,
 }
 
 impl Default for Model {
@@ -65,7 +65,7 @@ impl Default for Model {
                 ..Default::default()
             },
             preview: DirectoryBuffer::default(),
-            register: Register::default(),
+            file_register: FileRegister::default(),
         }
     }
 }

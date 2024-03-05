@@ -49,7 +49,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::NavigateToPath(path) => navigation::path(model, path),
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model, settings),
-        Message::PasteRegister(register) => register::paste(model, register),
+        Message::PasteFileRegister(register) => register::paste(model, register),
         Message::PathRemoved(path) => path::remove(model, path),
         Message::PathsAdded(paths) => path::add(model, paths),
         Message::PathsWriteFinished(paths) => register::add(model, paths),
@@ -58,7 +58,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::Quit => Some(vec![Action::Quit(None)]),
-        Message::YankSelected(repeat) => register::yank(model, repeat),
+        Message::YankToFileRegister(repeat) => register::yank(model, repeat),
     }
 }
 

@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     model::{
         history::{self, History},
-        register::{self, Entry},
+        register::{self, FileEntry},
     },
 };
 
@@ -19,16 +19,16 @@ use crate::{
 pub enum Task {
     AddPath(PathBuf),
     DeletePath(PathBuf),
-    DeleteRegisterEntry(Entry),
+    DeleteRegisterEntry(FileEntry),
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf),
     LoadPreview(PathBuf),
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
-    RestorePath(Entry, PathBuf),
+    RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
-    TrashPath(Entry),
-    YankPath(Entry),
+    TrashPath(FileEntry),
+    YankPath(FileEntry),
 }
 
 pub struct TaskManager {

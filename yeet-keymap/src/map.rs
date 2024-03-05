@@ -159,6 +159,23 @@ impl Default for KeyMap {
                         ..Default::default()
                     },
                 ),
+                (
+                    vec![Key::new(KeyCode::from_char('p'), vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::PasteFileRegister("\"".to_string())),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('y'), vec![]),
+                        Key::new(KeyCode::from_char('y'), vec![]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(Message::YankToFileRegister(0)),
+                        ..Default::default()
+                    },
+                ),
             ],
         );
 
@@ -364,28 +381,11 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    vec![Key::new(KeyCode::from_char('p'), vec![])],
-                    Binding {
-                        kind: BindingKind::Message(Message::PasteRegister("\"".to_string())),
-                        ..Default::default()
-                    },
-                ),
-                (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
                     Binding {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
                             ViewPortDirection::HalfPageUp,
                         ))),
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![
-                        Key::new(KeyCode::from_char('y'), vec![]),
-                        Key::new(KeyCode::from_char('y'), vec![]),
-                    ],
-                    Binding {
-                        kind: BindingKind::Message(Message::YankSelected(0)),
                         ..Default::default()
                     },
                 ),

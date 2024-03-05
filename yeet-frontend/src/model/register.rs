@@ -12,7 +12,7 @@ use tokio::fs;
 use crate::{error::AppError, event::Emitter, task::Task};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Register {
+pub struct FileRegister {
     current: RegisterType,
     pub path: PathBuf,
     trashed: Vec<Transaction>,
@@ -27,7 +27,7 @@ pub enum RegisterType {
     Yank,
 }
 
-impl Register {
+impl FileRegister {
     pub fn add_or_update(&mut self, path: &Path) -> Option<Transaction> {
         if let Some((id, file, target)) = decompose_compression_path(path) {
             if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
@@ -40,7 +40,7 @@ impl Register {
                     if let Some(entry) = entry {
                         entry.status = RegisterStatus::Ready;
                     } else {
-                        let mut entry = Entry::from(id.to_string(), &target, &self.path);
+                        let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
                         entry.status = RegisterStatus::Ready;
                         transaction.entries.push(entry);
                     }
@@ -57,14 +57,14 @@ impl Register {
                 if let Some(entry) = entry {
                     entry.status = RegisterStatus::Ready;
                 } else {
-                    let mut entry = Entry::from(id.to_string(), &target, &self.path);
+                    let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
                     entry.status = RegisterStatus::Ready;
                     transaction.entries.push(entry);
                 }
 
                 None
             } else {
-                let mut entry = Entry::from(id.to_string(), &target, &self.path);
+                let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
                 entry.status = RegisterStatus::Ready;
 
                 self.trashed.push(Transaction {
@@ -122,7 +122,7 @@ impl Register {
     }
 
     pub fn print(&self) -> Vec<String> {
-        let mut contents = vec!["Name Content".to_string()];
+        let mut contents = vec![":freg".to_string(), "Name Content".to_string()];
         if let Some(current) = &self.get("\"") {
             contents.push(print_content("\"\"", current));
         }
@@ -172,11 +172,11 @@ impl Register {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Transaction {
     pub id: String,
-    pub entries: Vec<Entry>,
+    pub entries: Vec<FileEntry>,
 }
 
 impl Transaction {
-    fn from(paths: Vec<PathBuf>, register: &Register) -> Self {
+    fn from(paths: Vec<PathBuf>, register: &FileRegister) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
             Ok(time) => time.as_millis(),
             Err(_) => 0,
@@ -184,7 +184,7 @@ impl Transaction {
 
         let entries = paths
             .into_iter()
-            .map(|path| Entry::from(added_at.to_string(), &path, &register.path))
+            .map(|path| FileEntry::from(added_at.to_string(), &path, &register.path))
             .collect();
 
         Self {
@@ -195,14 +195,14 @@ impl Transaction {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Entry {
+pub struct FileEntry {
     pub id: String,
     pub cache: PathBuf,
     pub status: RegisterStatus,
     pub target: PathBuf,
 }
 
-impl Entry {
+impl FileEntry {
     fn from(id: String, path: &Path, cache: &Path) -> Self {
         let id = compose_compression_name(id, path);
 
@@ -223,7 +223,7 @@ pub enum RegisterStatus {
     Ready,
 }
 
-pub async fn cache_and_compress(entry: Entry) -> Result<(), AppError> {
+pub async fn cache_and_compress(entry: FileEntry) -> Result<(), AppError> {
     let cache_path = get_register_cache_path().await?;
 
     let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
@@ -247,11 +247,11 @@ pub async fn cache_and_compress(entry: Entry) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn compress(entry: Entry) -> Result<(), AppError> {
+pub async fn compress(entry: FileEntry) -> Result<(), AppError> {
     compress_with_archive_name(&entry.target, &entry.id).await
 }
 
-pub async fn delete(entry: Entry) -> Result<(), AppError> {
+pub async fn delete(entry: FileEntry) -> Result<(), AppError> {
     let path = get_register_path().await?.join(&entry.id);
     fs::remove_file(path).await?;
     Ok(())
@@ -269,7 +269,7 @@ pub async fn get_register_path() -> Result<PathBuf, AppError> {
     Ok(register_path)
 }
 
-pub async fn init(register: &mut Register, emitter: &mut Emitter) -> Result<(), AppError> {
+pub async fn init(register: &mut FileRegister, emitter: &mut Emitter) -> Result<(), AppError> {
     register.path = get_register_path().await?;
 
     let mut read_dir = fs::read_dir(&register.path).await?;
@@ -286,7 +286,7 @@ pub async fn init(register: &mut Register, emitter: &mut Emitter) -> Result<(), 
     Ok(())
 }
 
-pub fn restore(entry: Entry, path: PathBuf) -> Result<(), AppError> {
+pub fn restore(entry: FileEntry, path: PathBuf) -> Result<(), AppError> {
     let archive_file = File::open(entry.cache)?;
     let archive_decoder = GzDecoder::new(archive_file);
     let mut archive = Archive::new(archive_decoder);
@@ -372,9 +372,9 @@ fn print_content(register: &str, transaction: &Transaction) -> String {
 
 mod test {
     #[test]
-    fn test_register_add_or_update() {
+    fn register_add_or_update() {
         use std::path::PathBuf;
-        let mut register = super::Register {
+        let mut register = super::FileRegister {
             current: Default::default(),
             path: std::path::PathBuf::from("/some/path"),
             trashed: Vec::new(),
@@ -434,7 +434,7 @@ mod test {
     }
 
     #[test]
-    fn test_compose_decompose_compression_name() {
+    fn compose_decompose_compression_name() {
         // TODO: Check windows path format as well!
         let id = "1708576379595".to_string();
 

@@ -30,11 +30,16 @@ to navigation.
 
 ### navigation mode
 
-| keys | action                   |
-| ---- | ------------------------ |
-| h, l | navigating the file tree |
-| gh   | goto home directory      |
-| m    | go into normal mode      |
+In navigation mode, all register interactions target the file register. The file
+register holds all files which got yanked and the last nine trashes.
+
+| keys | action                                     |
+| ---- | ------------------------------------------ |
+| gh   | goto home directory                        |
+| h, l | navigating the file tree                   |
+| m    | go into normal mode                        |
+| p    | paste " from file register to current path |
+| yy   | yank file to file register                 |
 
 ### navigation and normal mode
 
@@ -46,16 +51,18 @@ to navigation.
 | I, A        | jump to line start/end and change to insert mode            |
 | d \<motion> | delete according to motion (must be valid for current mode) |
 | dd          | go into normal and trash\* the current line                 |
-| yy          | yank file to register                                       |
-| p           | paste " register to current path                            |
 | :           | change to command mode                                      |
 | zt, zz, zb  | move viewport to start, center, bottom of cursor position   |
 | C-u, C-d    | move viewport half screen up/down                           |
 
 \*trash: files are not deleted but moved to yeets cache folder to enable register
-interactions. To delete the selected path completly, call command `:d!`.
+interactions. Trashes get executed when leaving normal to navigation or saving the
+current buffer. To delete the selected path completly, call command `:d!`.
 
 ### normal mode
+
+In normal mode, all register interactions target the default register (equal to
+`:reg` in nvim).
 
 | keys               | action                                        |
 | ------------------ | --------------------------------------------- |
@@ -73,7 +80,7 @@ interactions. To delete the selected path completly, call command `:d!`.
 | histopt | optimize history                    |
 | noh     | remove search highlights            |
 | q       | quit yeet                           |
-| reg     | list register contents              |
+| freg    | list file register contents         |
 | w       | write changes without changing mode |
 | wq      | write changes and quit yeet         |
 

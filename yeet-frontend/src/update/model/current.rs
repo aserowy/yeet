@@ -71,7 +71,7 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
             }
 
             if !trashes.is_empty() {
-                let (transaction, obsolete) = model.register.trash(trashes);
+                let (transaction, obsolete) = model.file_register.trash(trashes);
                 for entry in transaction.entries {
                     actions.push(Action::Task(Task::TrashPath(entry)));
                 }

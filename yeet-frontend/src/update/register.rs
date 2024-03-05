@@ -5,8 +5,8 @@ use crate::{action::Action, model::Model, task::Task};
 pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];
     for path in paths {
-        if path.starts_with(&model.register.path) {
-            if let Some(obsolete) = model.register.add_or_update(path) {
+        if path.starts_with(&model.file_register.path) {
+            if let Some(obsolete) = model.file_register.add_or_update(path) {
                 for entry in obsolete.entries {
                     actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
                 }
@@ -18,7 +18,7 @@ pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Option<Vec<Action>> {
 }
 
 pub fn paste(model: &mut Model, register: &str) -> Option<Vec<Action>> {
-    if let Some(transaction) = model.register.get(register) {
+    if let Some(transaction) = model.file_register.get(register) {
         let mut actions = Vec::new();
         for entry in transaction.entries {
             actions.push(Action::Task(Task::RestorePath(
@@ -47,7 +47,7 @@ pub fn yank(model: &mut Model, repeat: &usize) -> Option<Vec<Action>> {
         }
 
         let mut actions = Vec::new();
-        let (transaction, obsolete) = model.register.yank(paths);
+        let (transaction, obsolete) = model.file_register.yank(paths);
         for entry in transaction.entries {
             actions.push(Action::Task(Task::YankPath(entry)));
         }
