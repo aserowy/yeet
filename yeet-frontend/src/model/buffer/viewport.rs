@@ -49,9 +49,7 @@ impl ViewPort {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LineNumber {
     _Absolute,
-
     #[default]
     None,
-
     Relative,
 }

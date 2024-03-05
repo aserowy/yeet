@@ -22,7 +22,6 @@ pub struct HistoryNode {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum HistoryState {
     Added,
-
     #[default]
     Loaded,
 }

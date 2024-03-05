@@ -96,15 +96,12 @@ pub fn selection(model: &Model) -> Option<PathBuf> {
         return None;
     }
 
-    if let Some(cursor) = &buffer.cursor {
-        let current = &buffer.lines[cursor.vertical_index];
-        let target = model.current.path.join(&current.content);
+    let cursor = &buffer.cursor.as_ref()?;
+    let current = &buffer.lines.get(cursor.vertical_index)?;
+    let target = model.current.path.join(&current.content);
 
-        if target.exists() {
-            Some(target)
-        } else {
-            None
-        }
+    if target.exists() {
+        Some(target)
     } else {
         None
     }

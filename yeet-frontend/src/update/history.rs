@@ -20,7 +20,7 @@ pub fn set_cursor_index(path: &Path, history: &History, buffer: &mut Buffer) -> 
                 cursor.vertical_index = index;
             } else {
                 buffer.cursor = Some(Cursor {
-                    horizontial_index: CursorPosition::None,
+                    horizontal_index: CursorPosition::None,
                     vertical_index: index,
                     ..Default::default()
                 });

@@ -34,7 +34,10 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
             }
             None
         }
-        Message::ExecuteCommand => commandline::update_on_execute(model),
+        Message::ExecuteCommand => match &model.mode {
+            Mode::Command(_) => commandline::update_on_execute(model),
+            _ => None,
+        },
         Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();

@@ -16,7 +16,7 @@ pub fn update_by_cursor(model: &mut Buffer) {
             viewport.vertical_index = cursor.vertical_index - (viewport.height - 1);
         }
 
-        let cursor_index = match cursor.horizontial_index {
+        let cursor_index = match cursor.horizontal_index {
             CursorPosition::Absolute {
                 current,
                 expanded: _,

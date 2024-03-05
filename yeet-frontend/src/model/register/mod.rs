@@ -36,6 +36,5 @@ pub struct FileEntry {
 pub enum RegisterStatus {
     #[default]
     Processing,
-
     Ready,
 }

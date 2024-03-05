@@ -56,7 +56,7 @@ impl Default for Model {
             parent: OptionalDirectoryBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor {
-                        horizontial_index: CursorPosition::None,
+                        horizontal_index: CursorPosition::None,
                         vertical_index: 0,
                         ..Default::default()
                     }),
@@ -99,7 +99,6 @@ impl Default for CommandLine {
 pub enum CommandLineState {
     #[default]
     Default,
-
     WaitingForInput,
 }
 

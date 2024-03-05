@@ -52,6 +52,8 @@ register holds all files which got yanked and the last nine trashes.
 | d \<motion> | delete according to motion (must be valid for current mode) |
 | dd          | go into normal and trash\* the current line                 |
 | :           | change to command mode                                      |
+| /           | change to search downward                                   |
+| ?           | change to search upward                                     |
 | zt, zz, zb  | move viewport to start, center, bottom of cursor position   |
 | C-u, C-d    | move viewport half screen up/down                           |
 

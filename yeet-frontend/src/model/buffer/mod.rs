@@ -20,7 +20,7 @@ pub struct Buffer {
 pub struct Cursor {
     pub hide_cursor: bool,
     pub hide_cursor_line: bool,
-    pub horizontial_index: CursorPosition,
+    pub horizontal_index: CursorPosition,
     pub vertical_index: usize,
 }
 

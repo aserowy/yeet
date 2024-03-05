@@ -48,7 +48,7 @@ pub fn get_cursor_style_partials(
             return spans;
         }
 
-        let cursor_index = match &cursor.horizontial_index {
+        let cursor_index = match &cursor.horizontal_index {
             CursorPosition::End => line_length - vp.horizontal_index - 1,
             CursorPosition::None => return spans,
             CursorPosition::Absolute {

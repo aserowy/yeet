@@ -9,7 +9,7 @@ use crate::{
         buffer::{BufferLine, StylePartial, StylePartialSpan},
         CommandLineState, Model,
     },
-    update::buffer,
+    update::{buffer, search},
 };
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
@@ -106,9 +106,15 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 }
 
 pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
+    if matches!(
+        model.mode,
+        Mode::Command(CommandMode::SearchUp) | Mode::Command(CommandMode::SearchDown)
+    ) {
+        search::select(model);
+    }
+
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
-
     match commandline.state {
         CommandLineState::Default => {
             let action = if let Some(cmd) = buffer.lines.last() {

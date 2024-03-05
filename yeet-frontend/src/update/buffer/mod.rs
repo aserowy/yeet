@@ -57,7 +57,7 @@ pub fn reset_view(model: &mut Buffer) {
     if let Some(cursor) = &mut model.cursor {
         cursor.vertical_index = 0;
 
-        cursor.horizontial_index = match &cursor.horizontial_index {
+        cursor.horizontal_index = match &cursor.horizontal_index {
             CursorPosition::Absolute {
                 current: _,
                 expanded: _,

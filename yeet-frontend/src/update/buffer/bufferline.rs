@@ -18,7 +18,7 @@ pub fn update(
                 let index = get_cursor_index(cursor, line);
                 if index > 0 {
                     let next_index = if count >= &index { 0 } else { index - count };
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,
                     };
@@ -183,7 +183,7 @@ pub fn update(
                 let index = get_cursor_index(cursor, line);
 
                 let next_index = index + raw.chars().count();
-                cursor.horizontial_index = CursorPosition::Absolute {
+                cursor.horizontal_index = CursorPosition::Absolute {
                     current: next_index,
                     expanded: next_index,
                 };
@@ -226,7 +226,7 @@ pub fn update(
                     }
                 };
 
-                cursor.horizontial_index = CursorPosition::Absolute {
+                cursor.horizontal_index = CursorPosition::Absolute {
                     current: 0,
                     expanded: 0,
                 };
@@ -261,7 +261,7 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
 
 fn get_line_or_create_on_empty(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
     if let Some(cursor) = &mut model.cursor {
-        if cursor.horizontial_index == CursorPosition::None {
+        if cursor.horizontal_index == CursorPosition::None {
             return None;
         }
 
@@ -286,7 +286,7 @@ fn get_line_or_create_on_empty(model: &mut Buffer) -> Option<(&mut Cursor, &mut 
 }
 
 fn get_cursor_index(cursor: &Cursor, line: &BufferLine) -> usize {
-    match cursor.horizontial_index {
+    match cursor.horizontal_index {
         CursorPosition::Absolute {
             current,
             expanded: _,

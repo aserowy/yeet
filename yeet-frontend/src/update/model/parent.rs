@@ -35,7 +35,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
                     cursor.vertical_index = index;
                 } else {
                     buffer.cursor = Some(Cursor {
-                        horizontial_index: CursorPosition::None,
+                        horizontal_index: CursorPosition::None,
                         vertical_index: index,
                         ..Default::default()
                     });

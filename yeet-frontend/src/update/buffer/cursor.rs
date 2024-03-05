@@ -26,8 +26,8 @@ pub fn update_by_direction(
                     None => return,
                 };
 
-                let position = get_position(mode, &line.len(), &cursor.horizontial_index);
-                cursor.horizontial_index = position;
+                let position = get_position(mode, &line.len(), &cursor.horizontal_index);
+                cursor.horizontal_index = position;
             }
             CursorDirection::Down => {
                 let max_index = model.lines.len() - 1;
@@ -43,13 +43,13 @@ pub fn update_by_direction(
                 };
 
                 let line_length = &line.len();
-                let position = get_position(mode, line_length, &cursor.horizontial_index);
+                let position = get_position(mode, line_length, &cursor.horizontal_index);
 
-                cursor.horizontial_index = position;
+                cursor.horizontal_index = position;
             }
             CursorDirection::FindBackward(find) => {
                 if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: found,
                         expanded: found,
                     };
@@ -57,7 +57,7 @@ pub fn update_by_direction(
             }
             CursorDirection::FindForward(find) => {
                 if let Some(found) = find_char_forward(find, &model.lines, cursor) {
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: found,
                         expanded: found,
                     };
@@ -69,7 +69,7 @@ pub fn update_by_direction(
                     None => return,
                 };
 
-                let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+                let index = match get_horizontal_index(&cursor.horizontal_index, line) {
                     Some(index) => index,
                     None => return,
                 };
@@ -77,7 +77,7 @@ pub fn update_by_direction(
                 if index > 0 {
                     let next_index = index - 1;
 
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,
                     };
@@ -93,16 +93,16 @@ pub fn update_by_direction(
                     let index_correction = get_index_correction(mode);
                     let max_index = line.len() - index_correction;
 
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: max_index,
                         expanded: max_index,
                     };
                 } else {
-                    cursor.horizontial_index = CursorPosition::End;
+                    cursor.horizontal_index = CursorPosition::End;
                 }
             }
             CursorDirection::LineStart => {
-                cursor.horizontial_index = CursorPosition::Absolute {
+                cursor.horizontal_index = CursorPosition::Absolute {
                     current: 0,
                     expanded: 0,
                 };
@@ -116,7 +116,7 @@ pub fn update_by_direction(
                 let index_correction = get_index_correction(mode);
                 let max_index = line.len() - index_correction;
 
-                let cursor_index = match cursor.horizontial_index {
+                let cursor_index = match cursor.horizontal_index {
                     CursorPosition::Absolute {
                         current,
                         expanded: _,
@@ -135,7 +135,7 @@ pub fn update_by_direction(
                 if max_index > cursor_index {
                     let next_index = cursor_index + 1;
 
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,
                     };
@@ -144,7 +144,7 @@ pub fn update_by_direction(
             CursorDirection::TillBackward(find) => {
                 if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
                     let new = found + 1;
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: new,
                         expanded: new,
                     };
@@ -153,7 +153,7 @@ pub fn update_by_direction(
             CursorDirection::TillForward(find) => {
                 if let Some(found) = find_char_forward(find, &model.lines, cursor) {
                     let new = found - 1;
-                    cursor.horizontial_index = CursorPosition::Absolute {
+                    cursor.horizontal_index = CursorPosition::Absolute {
                         current: new,
                         expanded: new,
                     };
@@ -168,9 +168,9 @@ pub fn update_by_direction(
                 };
 
                 let line_length = &line.len();
-                let position = get_position(mode, line_length, &cursor.horizontial_index);
+                let position = get_position(mode, line_length, &cursor.horizontal_index);
 
-                cursor.horizontial_index = position;
+                cursor.horizontal_index = position;
             }
             CursorDirection::Up => {
                 if cursor.vertical_index > 0 {
@@ -182,9 +182,9 @@ pub fn update_by_direction(
                     };
 
                     let line_length = &line.len();
-                    let position = get_position(mode, line_length, &cursor.horizontial_index);
+                    let position = get_position(mode, line_length, &cursor.horizontal_index);
 
-                    cursor.horizontial_index = position;
+                    cursor.horizontal_index = position;
                 }
             }
         }
@@ -197,7 +197,7 @@ fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> 
         None => return None,
     };
 
-    let index = match get_horizontal_index(&cursor.horizontial_index, current) {
+    let index = match get_horizontal_index(&cursor.horizontal_index, current) {
         Some(index) => index,
         None => return None,
     };
@@ -216,7 +216,7 @@ fn find_char_backwards(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Op
         None => return None,
     };
 
-    let index = match get_horizontal_index(&cursor.horizontial_index, line) {
+    let index = match get_horizontal_index(&cursor.horizontal_index, line) {
         Some(index) => index,
         None => return None,
     };
@@ -250,7 +250,7 @@ fn get_horizontal_index(horizontial_index: &CursorPosition, line: &BufferLine) -
 pub fn validate(mode: &Mode, model: &mut Buffer) {
     if let Some(cursor) = &mut model.cursor {
         let position = if model.lines.is_empty() {
-            get_position(mode, &0, &cursor.horizontial_index)
+            get_position(mode, &0, &cursor.horizontal_index)
         } else {
             let max_index = model.lines.len() - 1;
             if cursor.vertical_index >= max_index {
@@ -263,10 +263,10 @@ pub fn validate(mode: &Mode, model: &mut Buffer) {
             };
 
             let line_length = &line.len();
-            get_position(mode, line_length, &cursor.horizontial_index)
+            get_position(mode, line_length, &cursor.horizontal_index)
         };
 
-        cursor.horizontial_index = position;
+        cursor.horizontal_index = position;
     }
 }
 

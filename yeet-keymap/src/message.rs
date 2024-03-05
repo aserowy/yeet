@@ -77,6 +77,7 @@ pub enum Message {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Buffer {
+    // TODO: Yank & Paste in normal mode into reg (not freg!)
     ChangeMode(Mode, Mode),
     Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
@@ -120,10 +121,8 @@ pub enum CursorDirection {
 pub enum Mode {
     Command(CommandMode),
     Insert,
-
     #[default]
     Navigation,
-
     Normal,
 }
 
