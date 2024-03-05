@@ -77,10 +77,10 @@ In normal mode, all register interactions target the default register (equal to
 | ------- | ----------------------------------- |
 | d!      | delete selected file/directory      |
 | e!      | reload current folder               |
+| freg    | list file register contents         |
 | histopt | optimize history                    |
 | noh     | remove search highlights            |
 | q       | quit yeet                           |
-| freg    | list file register contents         |
 | w       | write changes without changing mode |
 | wq      | write changes and quit yeet         |
 

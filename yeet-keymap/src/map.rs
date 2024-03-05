@@ -153,6 +153,7 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    // TODO: m should be for marks
                     vec![Key::new(KeyCode::from_char('m'), vec![])],
                     Binding {
                         force: Some(Mode::Normal),

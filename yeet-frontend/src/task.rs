@@ -121,7 +121,7 @@ impl TaskManager {
             Task::DeleteRegisterEntry(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = register::delete(entry).await {
+                    if let Err(error) = register::file::delete(entry).await {
                         emit_error(sender, error).await;
                     }
                     Ok(())
@@ -229,7 +229,7 @@ impl TaskManager {
                 Ok(())
             }),
             Task::RestorePath(entry, path) => self.tasks.spawn(async move {
-                register::restore(entry, path)?;
+                register::file::restore(entry, path)?;
                 Ok(())
             }),
             Task::SaveHistory(history) => {
@@ -246,7 +246,7 @@ impl TaskManager {
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = register::cache_and_compress(entry).await {
+                    if let Err(error) = register::file::cache_and_compress(entry).await {
                         emit_error(sender, error).await;
                     }
 
@@ -256,7 +256,7 @@ impl TaskManager {
             Task::YankPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = register::compress(entry).await {
+                    if let Err(error) = register::file::compress(entry).await {
                         emit_error(sender, error).await;
                     }
 

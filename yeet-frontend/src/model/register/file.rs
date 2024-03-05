@@ -11,21 +11,7 @@ use tokio::fs;
 
 use crate::{error::AppError, event::Emitter, task::Task};
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FileRegister {
-    current: RegisterType,
-    pub path: PathBuf,
-    trashed: Vec<Transaction>,
-    yanked: Option<Transaction>,
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum RegisterType {
-    _Custom(String),
-    Trash,
-    #[default]
-    Yank,
-}
+use super::{FileEntry, FileRegister, RegisterStatus, RegisterType, Transaction};
 
 impl FileRegister {
     pub fn add_or_update(&mut self, path: &Path) -> Option<Transaction> {
@@ -169,12 +155,6 @@ impl FileRegister {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Transaction {
-    pub id: String,
-    pub entries: Vec<FileEntry>,
-}
-
 impl Transaction {
     fn from(paths: Vec<PathBuf>, register: &FileRegister) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
@@ -194,14 +174,6 @@ impl Transaction {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FileEntry {
-    pub id: String,
-    pub cache: PathBuf,
-    pub status: RegisterStatus,
-    pub target: PathBuf,
-}
-
 impl FileEntry {
     fn from(id: String, path: &Path, cache: &Path) -> Self {
         let id = compose_compression_name(id, path);
@@ -213,14 +185,6 @@ impl FileEntry {
             target: path.to_path_buf(),
         }
     }
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum RegisterStatus {
-    #[default]
-    Processing,
-
-    Ready,
 }
 
 pub async fn cache_and_compress(entry: FileEntry) -> Result<(), AppError> {
