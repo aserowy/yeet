@@ -39,6 +39,7 @@ impl Default for Model {
             current: DirectoryBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
+                    show_border: true,
                     view_port: ViewPort {
                         line_number: LineNumber::Relative,
                         line_number_width: 3,
@@ -60,6 +61,7 @@ impl Default for Model {
                         vertical_index: 0,
                         ..Default::default()
                     }),
+                    show_border: true,
                     ..Default::default()
                 },
                 ..Default::default()

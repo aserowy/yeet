@@ -1,4 +1,10 @@
-use ratatui::{prelude::Rect, text::Line, widgets::Paragraph, Frame};
+use ratatui::{
+    prelude::Rect,
+    style::{Color, Style},
+    text::Line,
+    widgets::{Block, Borders, Paragraph},
+    Frame,
+};
 use yeet_keymap::message::Mode;
 
 use crate::model::buffer::{viewport::ViewPort, Buffer, BufferLine, Cursor, StylePartialSpan};
@@ -10,6 +16,20 @@ mod style;
 pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     let rendered = get_rendered_lines(model);
     let styled = get_styled_lines(&model.view_port, mode, &model.cursor, rendered);
+
+    let rect = if model.show_border {
+        let block = Block::default()
+            .borders(Borders::RIGHT)
+            .border_style(Style::default().fg(Color::Black));
+
+        let inner = block.inner(rect);
+
+        frame.render_widget(block, rect);
+
+        inner
+    } else {
+        rect
+    };
 
     frame.render_widget(Paragraph::new(styled), rect);
 }

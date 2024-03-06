@@ -12,6 +12,7 @@ pub mod viewport;
 pub struct Buffer {
     pub cursor: Option<Cursor>,
     pub lines: Vec<BufferLine>,
+    pub show_border: bool,
     pub undo: Undo,
     pub view_port: ViewPort,
 }
