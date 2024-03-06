@@ -11,9 +11,9 @@ use tokio::fs;
 
 use crate::{error::AppError, event::Emitter, task::Task};
 
-use super::{FileEntry, FileRegister, RegisterStatus, RegisterType, Transaction};
+use super::{FileEntry, JunkYard, RegisterStatus, RegisterType, Transaction};
 
-impl FileRegister {
+impl JunkYard {
     pub fn add_or_update(&mut self, path: &Path) -> Option<Transaction> {
         if let Some((id, file, target)) = decompose_compression_path(path) {
             if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
@@ -108,7 +108,7 @@ impl FileRegister {
     }
 
     pub fn print(&self) -> Vec<String> {
-        let mut contents = vec![":freg".to_string(), "Name Content".to_string()];
+        let mut contents = vec![":jnk".to_string(), "Name Content".to_string()];
         if let Some(current) = &self.get("\"") {
             contents.push(print_content("\"\"", current));
         }
@@ -156,7 +156,7 @@ impl FileRegister {
 }
 
 impl Transaction {
-    fn from(paths: Vec<PathBuf>, register: &FileRegister) -> Self {
+    fn from(paths: Vec<PathBuf>, register: &JunkYard) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
             Ok(time) => time.as_millis(),
             Err(_) => 0,
@@ -233,7 +233,7 @@ pub async fn get_register_path() -> Result<PathBuf, AppError> {
     Ok(register_path)
 }
 
-pub async fn init(register: &mut FileRegister, emitter: &mut Emitter) -> Result<(), AppError> {
+pub async fn init(register: &mut JunkYard, emitter: &mut Emitter) -> Result<(), AppError> {
     register.path = get_register_path().await?;
 
     let mut read_dir = fs::read_dir(&register.path).await?;
@@ -338,7 +338,7 @@ mod test {
     #[test]
     fn register_add_or_update() {
         use std::path::PathBuf;
-        let mut register = super::FileRegister {
+        let mut register = super::JunkYard {
             current: Default::default(),
             path: std::path::PathBuf::from("/some/path"),
             trashed: Vec::new(),

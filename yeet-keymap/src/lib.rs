@@ -258,7 +258,7 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
 fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
     let mut messages = Vec::new();
     match msg {
-        Message::YankToFileRegister(_) => messages.push(Message::YankToFileRegister(repeat)),
+        Message::YankToJunkYard(_) => messages.push(Message::YankToJunkYard(repeat)),
         _ => {
             for _ in 0..repeat {
                 messages.push(msg.clone());

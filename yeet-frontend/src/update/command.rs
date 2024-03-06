@@ -23,9 +23,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             change_mode_message,
             Message::NavigateToPath(model.current.path.clone()),
         ])],
-        "freg" => {
+        "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
+        "jnk" => {
             let content = model
-                .file_register
+                .junk
                 .print()
                 .iter()
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
@@ -33,7 +34,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
-        "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
         "noh" => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::ClearSearchHighlight,

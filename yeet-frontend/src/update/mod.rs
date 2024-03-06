@@ -52,7 +52,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::NavigateToPath(path) => navigation::path(model, path),
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model, settings),
-        Message::PasteFileRegister(register) => register::paste(model, register),
+        Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => path::remove(model, path),
         Message::PathsAdded(paths) => path::add(model, paths),
         Message::PathsWriteFinished(paths) => register::add(model, paths),
@@ -62,7 +62,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::SearchAndSelect(is_next) => search::search_and_select(model, *is_next),
         Message::Quit => Some(vec![Action::Quit(None)]),
-        Message::YankToFileRegister(repeat) => register::yank(model, repeat),
+        Message::YankToJunkYard(repeat) => register::yank(model, repeat),
     }
 }
 

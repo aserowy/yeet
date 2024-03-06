@@ -62,7 +62,7 @@ pub enum Message {
     NavigateToPath(PathBuf),
     NavigateToSelected,
     OpenSelected,
-    PasteFileRegister(String),
+    PasteFromJunkYard(String),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
     PathsWriteFinished(Vec<PathBuf>),
@@ -72,8 +72,8 @@ pub enum Message {
     Resize(u16, u16),
     SearchAndSelect(bool),
     Quit,
-    // TODO: yank to file register with motion
-    YankToFileRegister(usize),
+    // TODO: yank to junk with motion
+    YankToJunkYard(usize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

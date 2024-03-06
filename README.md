@@ -30,16 +30,16 @@ to navigation.
 
 ### navigation mode
 
-In navigation mode, all register interactions target the file register. The file
+In navigation mode, all register interactions target the junk yard. The file
 register holds all files which got yanked and the last nine trashes.
 
-| keys | action                                     |
-| ---- | ------------------------------------------ |
-| gh   | goto home directory                        |
-| h, l | navigating the file tree                   |
-| m    | go into normal mode                        |
-| p    | paste " from file register to current path |
-| yy   | yank file to file register                 |
+| keys | action                                 |
+| ---- | -------------------------------------- |
+| gh   | goto home directory                    |
+| h, l | navigating the file tree               |
+| m    | go into normal mode                    |
+| p    | paste " from junk yard to current path |
+| yy   | yank file to junk yard                 |
 
 ### navigation and normal mode
 
@@ -80,7 +80,7 @@ In normal mode, all register interactions target the default register (equal to
 | ------- | ----------------------------------- |
 | d!      | delete selected file/directory      |
 | e!      | reload current folder               |
-| freg    | list file register contents         |
+| jnk     | list junk yard contents             |
 | histopt | optimize history                    |
 | noh     | remove search highlights            |
 | q       | quit yeet                           |

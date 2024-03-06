@@ -163,7 +163,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('p'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::PasteFileRegister("\"".to_string())),
+                        kind: BindingKind::Message(Message::PasteFromJunkYard("\"".to_string())),
                         ..Default::default()
                     },
                 ),
@@ -173,7 +173,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('y'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::YankToFileRegister(0)),
+                        kind: BindingKind::Message(Message::YankToJunkYard(0)),
                         ..Default::default()
                     },
                 ),

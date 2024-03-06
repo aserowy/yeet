@@ -252,7 +252,7 @@ fn add_and_resolve_key_navigation_yy() {
 
     println!("{:?}", messages);
 
-    assert_eq!(Some(&Message::YankToFileRegister(1)), messages.first());
+    assert_eq!(Some(&Message::YankToJunkYard(1)), messages.first());
     assert_eq!(
         Some(&Message::KeySequenceChanged("".to_string())),
         messages.last()
@@ -271,7 +271,7 @@ fn add_and_resolve_key_navigation_10yy() {
 
     println!("{:?}", messages);
 
-    assert_eq!(Some(&Message::YankToFileRegister(10)), messages.first());
+    assert_eq!(Some(&Message::YankToJunkYard(10)), messages.first());
     assert_eq!(
         Some(&Message::KeySequenceChanged("".to_string())),
         messages.last()

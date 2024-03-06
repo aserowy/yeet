@@ -3,7 +3,7 @@ use std::path::PathBuf;
 pub mod file;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FileRegister {
+pub struct JunkYard {
     current: RegisterType,
     pub path: PathBuf,
     trashed: Vec<Transaction>,
