@@ -125,16 +125,16 @@ pub fn select(model: &SearchModel, buffer: &mut Buffer, is_next: bool) {
         .filter(|(_, bl)| bl.search.is_some())
         .collect();
 
-    enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
-        let direction = if is_next {
-            &model.direction
-        } else {
-            match model.direction {
-                SearchDirection::Down => &SearchDirection::Up,
-                SearchDirection::Up => &SearchDirection::Down,
-            }
-        };
+    let direction = if is_next {
+        &model.direction
+    } else {
+        match model.direction {
+            SearchDirection::Down => &SearchDirection::Up,
+            SearchDirection::Up => &SearchDirection::Down,
+        }
+    };
 
+    enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
         sort_by_index(*current, *cmp, vertical_index, direction)
     });
 
@@ -147,7 +147,7 @@ pub fn select(model: &SearchModel, buffer: &mut Buffer, is_next: bool) {
             None => continue,
         };
 
-        let downward = model.direction == SearchDirection::Down;
+        let downward = direction == &SearchDirection::Down;
         if i == vertical_index {
             if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
                 if downward && current >= &start || !downward && current <= &start {
