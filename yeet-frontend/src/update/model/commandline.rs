@@ -107,13 +107,13 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 
 pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];
+
     if matches!(
         model.mode,
         Mode::Command(CommandMode::SearchUp) | Mode::Command(CommandMode::SearchDown)
     ) {
-        match search::select(model) {
-            Some(actns) => actions.extend(actns),
-            None => {}
+        if let Some(actns) = search::select(model) {
+            actions.extend(actns)
         };
     }
 
