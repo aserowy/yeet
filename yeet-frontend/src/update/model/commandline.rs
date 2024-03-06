@@ -13,6 +13,8 @@ use crate::{
     update::{buffer, search},
 };
 
+use super::preview;
+
 pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
@@ -109,16 +111,27 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];
 
-    let is_downward = matches!(
-        model.mode,
-        Mode::Command(CommandMode::Search(SearchDirection::Up))
-            | Mode::Command(CommandMode::Search(SearchDirection::Down))
-    );
+    'search: {
+        let is_search = matches!(
+            model.mode,
+            Mode::Command(CommandMode::Search(SearchDirection::Up))
+                | Mode::Command(CommandMode::Search(SearchDirection::Down))
+        );
 
-    if is_downward {
-        if let Some(actns) = search::select(model) {
-            actions.extend(actns)
-        };
+        if is_search {
+            let search_model = match &mut model.commandline.search {
+                Some(it) => it,
+                None => break 'search,
+            };
+
+            search::select(search_model, &mut model.current.buffer);
+
+            if let Some(preview_actions) = preview::path(model, true, true) {
+                actions.extend(preview_actions);
+                model.preview.buffer.lines.clear();
+                preview::viewport(model);
+            }
+        }
     }
 
     let commandline = &mut model.commandline;

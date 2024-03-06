@@ -74,7 +74,7 @@ impl Default for Model {
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
-    pub search: SearchModel,
+    pub search: Option<SearchModel>,
     pub state: CommandLineState,
 }
 
@@ -91,7 +91,7 @@ impl Default for CommandLine {
                 ..Default::default()
             },
             layout: CommandLineLayout::new(Rect::default(), 0),
-            search: SearchModel::default(),
+            search: None,
             state: CommandLineState::default(),
         }
     }
@@ -109,7 +109,6 @@ pub struct SearchModel {
     pub last: String,
     pub direction: SearchDirection,
 }
-
 
 #[derive(Debug, Default)]
 pub struct OptionalDirectoryBuffer {
