@@ -2,7 +2,7 @@ use ratatui::{
     prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::Paragraph,
+    widgets::{Block, Paragraph},
     Frame,
 };
 
@@ -13,7 +13,7 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
     let position = get_position_content(model);
 
     let content = model.current.path.to_str().unwrap_or("");
-    let style = Style::default().fg(Color::Green);
+    let style = Style::default().fg(Color::Gray);
     let span = Span::styled(content, style);
     let path = Line::from(span);
 
@@ -26,6 +26,11 @@ pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
             Constraint::Length(position.width() as u16),
         ])
         .split(rect);
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        rect,
+    );
 
     frame.render_widget(Paragraph::new(path), layout[0]);
     frame.render_widget(Paragraph::new(changes), layout[2]);
@@ -49,13 +54,13 @@ fn get_position_content(model: &Model) -> Line {
 
         content.push(Span::styled(
             format!("{}/", position),
-            Style::default().fg(Color::Green),
+            Style::default().fg(Color::Gray),
         ));
     }
 
     content.push(Span::styled(
         format!("{}", count),
-        Style::default().fg(Color::Green),
+        Style::default().fg(Color::Gray),
     ));
 
     Line::from(content)
