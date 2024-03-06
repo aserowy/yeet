@@ -1,6 +1,7 @@
 use ratatui::style::Color;
 use yeet_keymap::message::{
-    Buffer, CommandMode, CursorDirection, Message, Mode, PrintContent, TextModification,
+    Buffer, CommandMode, CursorDirection, Message, Mode, PrintContent, SearchDirection,
+    TextModification,
 };
 
 use crate::{
@@ -33,8 +34,8 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                         let prefix = match to {
                             Mode::Command(cmd) => match cmd {
                                 CommandMode::Command => Some(":".to_string()),
-                                CommandMode::SearchUp => Some("?".to_string()),
-                                CommandMode::SearchDown => Some("/".to_string()),
+                                CommandMode::Search(SearchDirection::Up) => Some("?".to_string()),
+                                CommandMode::Search(SearchDirection::Down) => Some("/".to_string()),
                             },
                             _ => None,
                         };
@@ -76,8 +77,8 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                 let action = if matches!(cnt.as_str(), ":" | "/" | "?") {
                     model.mode = Mode::Command(match cnt.as_str() {
                         ":" => CommandMode::Command,
-                        "/" => CommandMode::SearchDown,
-                        "?" => CommandMode::SearchUp,
+                        "/" => CommandMode::Search(SearchDirection::Down),
+                        "?" => CommandMode::Search(SearchDirection::Up),
                         _ => unreachable!(),
                     });
 
@@ -108,10 +109,13 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
     let mut actions = vec![Action::SkipRender];
 
-    if matches!(
+    let is_downward = matches!(
         model.mode,
-        Mode::Command(CommandMode::SearchUp) | Mode::Command(CommandMode::SearchDown)
-    ) {
+        Mode::Command(CommandMode::Search(SearchDirection::Up))
+            | Mode::Command(CommandMode::Search(SearchDirection::Down))
+    );
+
+    if is_downward {
         if let Some(actns) = search::select(model) {
             actions.extend(actns)
         };

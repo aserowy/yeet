@@ -48,7 +48,7 @@ pub fn update_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::FindBackward(find) => {
-                if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
+                if let Some(found) = find_char_backward(find, &model.lines, cursor) {
                     cursor.horizontal_index = CursorPosition::Absolute {
                         current: found,
                         expanded: found,
@@ -142,7 +142,7 @@ pub fn update_by_direction(
                 }
             }
             CursorDirection::TillBackward(find) => {
-                if let Some(found) = find_char_backwards(find, &model.lines, cursor) {
+                if let Some(found) = find_char_backward(find, &model.lines, cursor) {
                     let new = found + 1;
                     cursor.horizontal_index = CursorPosition::Absolute {
                         current: new,
@@ -210,7 +210,7 @@ fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> 
         .map(|i| index + i + 1)
 }
 
-fn find_char_backwards(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
+fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
     let line = match lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return None,

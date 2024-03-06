@@ -4,7 +4,7 @@ use crate::{
     key::{Key, KeyCode, KeyModifier},
     message::{
         Binding, BindingKind, Buffer, CommandMode, CursorDirection, LineDirection, NextBindingKind,
-        TextModification, ViewPortDirection,
+        SearchDirection, TextModification, ViewPortDirection,
     },
     tree::KeyTree,
     Message, Mode,
@@ -37,8 +37,8 @@ impl Default for KeyMap {
             &mut mappings,
             vec![
                 Mode::Command(CommandMode::Command),
-                Mode::Command(CommandMode::SearchUp),
-                Mode::Command(CommandMode::SearchDown),
+                Mode::Command(CommandMode::Search(SearchDirection::Up)),
+                Mode::Command(CommandMode::Search(SearchDirection::Down)),
             ],
             vec![
                 (
@@ -274,7 +274,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('/'), vec![])],
                     Binding {
-                        force: Some(Mode::Command(CommandMode::SearchDown)),
+                        force: Some(Mode::Command(CommandMode::Search(SearchDirection::Down))),
                         repeatable: false,
                         ..Default::default()
                     },
@@ -282,7 +282,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('?'), vec![])],
                     Binding {
-                        force: Some(Mode::Command(CommandMode::SearchUp)),
+                        force: Some(Mode::Command(CommandMode::Search(SearchDirection::Up))),
                         repeatable: false,
                         ..Default::default()
                     },

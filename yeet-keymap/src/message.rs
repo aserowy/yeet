@@ -145,8 +145,14 @@ impl ToString for Mode {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CommandMode {
     Command,
-    SearchUp,
-    SearchDown,
+    Search(SearchDirection),
+}
+
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+pub enum SearchDirection {
+    Up,
+    #[default]
+    Down,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

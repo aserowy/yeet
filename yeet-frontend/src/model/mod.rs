@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use ratatui::layout::Rect;
-use yeet_keymap::message::Mode;
+use yeet_keymap::message::{Mode, SearchDirection};
 
 use crate::layout::{AppLayout, CommandLineLayout};
 
@@ -74,6 +74,7 @@ impl Default for Model {
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
+    pub search: SearchModel,
     pub state: CommandLineState,
 }
 
@@ -90,6 +91,7 @@ impl Default for CommandLine {
                 ..Default::default()
             },
             layout: CommandLineLayout::new(Rect::default(), 0),
+            search: SearchModel::default(),
             state: CommandLineState::default(),
         }
     }
@@ -101,6 +103,13 @@ pub enum CommandLineState {
     Default,
     WaitingForInput,
 }
+
+#[derive(Debug, Default)]
+pub struct SearchModel {
+    pub last: String,
+    pub direction: SearchDirection,
+}
+
 
 #[derive(Debug, Default)]
 pub struct OptionalDirectoryBuffer {

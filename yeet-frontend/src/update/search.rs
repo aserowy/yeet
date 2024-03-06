@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use ratatui::style::Color;
-use yeet_keymap::message::{CommandMode, Mode};
+use yeet_keymap::message::{CommandMode, Mode, SearchDirection};
 
 use crate::{
     action::Action,
@@ -13,7 +13,7 @@ use crate::{
 
 use super::model::preview;
 
-// TODO: n, N, enter, save in reg (add reg types?)
+// TODO: n, N, save in reg (add reg types?)
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {
         Some(line) => &line.content,
@@ -71,7 +71,11 @@ fn set_styles(buffer: &mut Buffer, search: &str) {
 
 // TODO: refactor
 pub fn select(model: &mut Model) -> Option<Vec<Action>> {
-    let downwards = matches!(model.mode, Mode::Command(CommandMode::SearchDown));
+    let downward = matches!(
+        model.mode,
+        Mode::Command(CommandMode::Search(SearchDirection::Down))
+    );
+
     let cursor = model.current.buffer.cursor.as_mut()?;
     if cursor.horizontal_index == CursorPosition::None {
         return None;
@@ -84,11 +88,11 @@ pub fn select(model: &mut Model) -> Option<Vec<Action>> {
         .lines
         .iter()
         .enumerate()
-        .filter(|(_, l)| l.search.is_some())
+        .filter(|(_, bl)| bl.search.is_some())
         .collect();
 
     enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
-        sort_by_index(*current, *cmp, vertical_index, downwards)
+        sort_by_index(*current, *cmp, vertical_index, downward)
     });
 
     for (i, line) in enumeration {
@@ -103,7 +107,7 @@ pub fn select(model: &mut Model) -> Option<Vec<Action>> {
         if i == vertical_index {
             if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
                 let index_cmp = current <= &start;
-                if downwards ^ index_cmp {
+                if downward ^ index_cmp {
                     continue;
                 }
             }
@@ -132,12 +136,12 @@ pub fn select(model: &mut Model) -> Option<Vec<Action>> {
     }
 }
 
-fn sort_by_index(current: usize, cmp: usize, index: usize, downwards: bool) -> Ordering {
+fn sort_by_index(current: usize, cmp: usize, index: usize, downward: bool) -> Ordering {
     if current == cmp {
         return Ordering::Equal;
     }
 
-    if downwards {
+    if downward {
         if current >= index {
             if current > cmp {
                 if cmp >= index {
@@ -172,7 +176,7 @@ fn sort_by_index(current: usize, cmp: usize, index: usize, downwards: bool) -> O
 
 mod test {
     #[test]
-    fn sort_by_index_downwards() {
+    fn sort_by_index_downward() {
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, true));
@@ -181,7 +185,7 @@ mod test {
     }
 
     #[test]
-    fn sort_by_index_upwards() {
+    fn sort_by_index_upward() {
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, false));
