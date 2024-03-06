@@ -3,12 +3,16 @@ use std::cmp::Ordering;
 use ratatui::style::Color;
 use yeet_keymap::message::{CommandMode, Mode, SearchDirection};
 
-use crate::model::{
-    buffer::{Buffer, CursorPosition, StylePartial, StylePartialSpan},
-    Model, SearchModel,
+use crate::{
+    action::Action,
+    model::{
+        buffer::{Buffer, CursorPosition, StylePartial, StylePartialSpan},
+        Model, SearchModel,
+    },
 };
 
-// TODO: n, N, save in reg (add reg types?)
+use super::model::preview;
+
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {
         Some(line) => &line.content,
@@ -25,6 +29,15 @@ pub fn update(model: &mut Model) {
         last: search.to_owned(),
         direction,
     });
+
+    super::search::search(model);
+}
+
+fn search(model: &mut Model) {
+    let search = match &model.commandline.search {
+        Some(it) => it.last.as_str(),
+        None => return,
+    };
 
     if model.parent.path.is_some() {
         set_styles(&mut model.parent.buffer, search);
@@ -75,7 +88,26 @@ fn set_styles(buffer: &mut Buffer, search: &str) {
     }
 }
 
-pub fn select(model: &mut SearchModel, buffer: &mut Buffer) {
+pub fn search_and_select(model: &mut Model, is_next: bool) -> Option<Vec<Action>> {
+    search(model);
+
+    let search_model = match &model.commandline.search {
+        Some(it) => it,
+        None => return None,
+    };
+
+    select(search_model, &mut model.current.buffer, is_next);
+
+    if let Some(preview_actions) = preview::path(model, true, true) {
+        model.preview.buffer.lines.clear();
+        preview::viewport(model);
+        Some(preview_actions)
+    } else {
+        None
+    }
+}
+
+pub fn select(model: &SearchModel, buffer: &mut Buffer, is_next: bool) {
     let cursor = match buffer.cursor.as_mut() {
         Some(it) => it,
         None => return,
@@ -94,7 +126,16 @@ pub fn select(model: &mut SearchModel, buffer: &mut Buffer) {
         .collect();
 
     enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
-        sort_by_index(*current, *cmp, vertical_index, &model.direction)
+        let direction = if is_next {
+            &model.direction
+        } else {
+            match model.direction {
+                SearchDirection::Down => &SearchDirection::Up,
+                SearchDirection::Up => &SearchDirection::Down,
+            }
+        };
+
+        sort_by_index(*current, *cmp, vertical_index, direction)
     });
 
     for (i, line) in enumeration {
@@ -109,8 +150,7 @@ pub fn select(model: &mut SearchModel, buffer: &mut Buffer) {
         let downward = model.direction == SearchDirection::Down;
         if i == vertical_index {
             if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
-                let index_cmp = current <= &start;
-                if downward ^ index_cmp {
+                if downward && current >= &start || !downward && current <= &start {
                     continue;
                 }
             }

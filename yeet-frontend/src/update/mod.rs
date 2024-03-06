@@ -60,6 +60,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Print(content) => commandline::print(model, content),
         Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
+        Message::SearchAndSelect(is_next) => search::search_and_select(model, *is_next),
         Message::Quit => Some(vec![Action::Quit(None)]),
         Message::YankToFileRegister(repeat) => register::yank(model, repeat),
     }

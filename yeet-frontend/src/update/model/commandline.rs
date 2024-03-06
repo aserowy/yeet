@@ -124,7 +124,7 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
                 None => break 'search,
             };
 
-            search::select(search_model, &mut model.current.buffer);
+            search::select(search_model, &mut model.current.buffer, true);
 
             if let Some(preview_actions) = preview::path(model, true, true) {
                 actions.extend(preview_actions);

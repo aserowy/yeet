@@ -54,6 +54,7 @@ register holds all files which got yanked and the last nine trashes.
 | :           | change to command mode                                      |
 | /           | change to search downward                                   |
 | ?           | change to search upward                                     |
+| n, N        | repeat last search in same/reverse direction                |
 | zt, zz, zb  | move viewport to start, center, bottom of cursor position   |
 | C-u, C-d    | move viewport half screen up/down                           |
 

@@ -362,6 +362,20 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('n'), vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::SearchAndSelect(true)),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Shift])],
+                    Binding {
+                        kind: BindingKind::Message(Message::SearchAndSelect(false)),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('o'), vec![])],
                     Binding {
                         force: Some(Mode::Insert),

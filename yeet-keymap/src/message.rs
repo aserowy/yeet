@@ -70,6 +70,7 @@ pub enum Message {
     Print(Vec<PrintContent>),
     Rerender,
     Resize(u16, u16),
+    SearchAndSelect(bool),
     Quit,
     // TODO: yank to file register with motion
     YankToFileRegister(usize),
