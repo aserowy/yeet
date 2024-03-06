@@ -54,10 +54,6 @@ pub fn load(mark: &mut Marks) -> Result<(), AppError> {
 }
 
 pub fn save(marks: &Marks) -> Result<(), AppError> {
-    let mut current_marks = Marks::default();
-    load(&mut current_marks)?;
-    current_marks.entries.extend(marks.entries.clone());
-
     let mark_path = get_mark_path()?;
     let mark_dictionary = match Path::new(&mark_path).parent() {
         Some(path) => path,
@@ -71,6 +67,14 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
         .create(true)
         .truncate(true)
         .open(mark_path)?;
+
+    tracing::debug!("marks file opened for writing");
+
+    let mut persisted = Marks::default();
+    load(&mut persisted)?;
+    persisted.entries.extend(marks.entries.clone());
+
+    tracing::debug!("persisted marks loaded and merged");
 
     let mut writer = csv::Writer::from_writer(mark_writer);
     for (char, path) in marks.entries.iter() {
@@ -87,6 +91,8 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
     }
 
     writer.flush()?;
+
+    tracing::debug!("marks file written");
 
     Ok(())
 }

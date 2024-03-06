@@ -39,6 +39,7 @@ pub struct TaskManager {
     tasks: JoinSet<Result<(), AppError>>,
 }
 
+// TODO: harmonize error handling and tracing
 impl TaskManager {
     pub fn new(sender: Sender<Vec<Message>>) -> Self {
         Self {
@@ -248,6 +249,8 @@ impl TaskManager {
             Task::SaveMarks(marks) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
+                    tracing::debug!("saving marks");
+
                     if let Err(error) = mark::save(&marks) {
                         emit_error(sender, error).await;
                     }
@@ -287,6 +290,8 @@ impl TaskManager {
 }
 
 async fn emit_error(sender: Sender<Vec<Message>>, error: AppError) {
+    tracing::error!("task failed: {:?}", error);
+
     let error = format!("Error: {:?}", error);
     let _ = sender.send(vec![Message::Error(error)]).await;
 }
