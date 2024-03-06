@@ -64,12 +64,20 @@ pub fn clear(model: &mut Model) {
 
 fn set_styles(buffer: &mut Buffer, search: &str) {
     let len = search.chars().count();
+    let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
+
     for line in &mut buffer.lines {
         line.search = None;
 
-        // TODO: smart search
-        let start = match line.content.find(search) {
-            Some(it) => line.content[..it].chars().count(),
+        let mut content = line.content.as_str();
+
+        let lower = content.to_lowercase();
+        if smart_case {
+            content = lower.as_str();
+        };
+
+        let start = match content.find(search) {
+            Some(it) => content[..it].chars().count(),
             None => continue,
         };
 
