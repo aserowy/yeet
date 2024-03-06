@@ -11,6 +11,7 @@ use crate::{
     error::AppError,
     model::{
         history::{self, History},
+        mark::{self, Marks},
         register::{self, FileEntry},
     },
 };
@@ -27,6 +28,7 @@ pub enum Task {
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
+    SaveMarks(Marks),
     TrashPath(FileEntry),
     YankPath(FileEntry),
 }
@@ -243,6 +245,16 @@ impl TaskManager {
                     Ok(())
                 })
             }
+            Task::SaveMarks(marks) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    if let Err(error) = mark::save(&marks) {
+                        emit_error(sender, error).await;
+                    }
+
+                    Ok(())
+                })
+            }
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
@@ -291,6 +303,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::RenamePath(_, _) => false,
         Task::RestorePath(_, _) => false,
         Task::SaveHistory(_) => false,
+        Task::SaveMarks(_) => false,
         Task::TrashPath(_) => false,
         Task::YankPath(_) => false,
     }

@@ -13,6 +13,8 @@ pub enum AppError {
     InvalidTargetPath,
     #[error("Loading navigation history failed")]
     LoadHistoryFailed,
+    #[error("Loading marks failed")]
+    LoadMarkFailed,
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
     #[error("Watch operation on path failed")]

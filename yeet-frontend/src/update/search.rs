@@ -115,6 +115,7 @@ pub fn search_and_select(model: &mut Model, is_next: bool) -> Option<Vec<Action>
     }
 }
 
+// TODO: as motion to enable e.g. dn/dN
 pub fn select(model: &SearchModel, buffer: &mut Buffer, is_next: bool) {
     let cursor = match buffer.cursor.as_mut() {
         Some(it) => it,

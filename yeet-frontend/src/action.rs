@@ -108,6 +108,7 @@ async fn execute(
                     stdout().lock().write_all(stdout_result.as_bytes())?;
                 }
                 emitter.run(Task::SaveHistory(model.history.clone()));
+                emitter.run(Task::SaveMarks(model.marks.clone()));
 
                 result = ActionResult::Quit;
             }

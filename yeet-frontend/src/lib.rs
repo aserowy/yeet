@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use action::ActionResult;
 use layout::CommandLineLayout;
-use model::register;
+use model::{mark, register};
 use task::Task;
 use update::model::commandline;
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
@@ -47,6 +47,12 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     if history::cache::load(&mut model.history).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load history".to_string()),
+        ])]));
+    }
+
+    if mark::load(&mut model.marks).is_err() {
+        emitter.run(Task::EmitMessages(vec![Message::Print(vec![
+            PrintContent::Error("Failed to load marks".to_string()),
         ])]));
     }
 

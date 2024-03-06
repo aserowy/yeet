@@ -11,11 +11,13 @@ use self::{
         Buffer, Cursor, CursorPosition,
     },
     history::History,
+    mark::Marks,
     register::JunkYard,
 };
 
 pub mod buffer;
 pub mod history;
+pub mod mark;
 pub mod register;
 
 #[derive(Debug)]
@@ -25,6 +27,7 @@ pub struct Model {
     pub history: History,
     pub key_sequence: String,
     pub layout: AppLayout,
+    pub marks: Marks,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
@@ -52,6 +55,7 @@ impl Default for Model {
             history: History::default(),
             key_sequence: String::new(),
             layout: AppLayout::new(Rect::default(), 0),
+            marks: Marks::default(),
             mode: Mode::default(),
             mode_before: None,
             parent: OptionalDirectoryBuffer {
