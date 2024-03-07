@@ -46,6 +46,7 @@ impl Default for Model {
                     view_port: ViewPort {
                         line_number: LineNumber::Relative,
                         line_number_width: 3,
+                        sign_column_width: 1,
                         ..Default::default()
                     },
                     ..Default::default()

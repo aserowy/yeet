@@ -59,40 +59,47 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
 }
 
 pub fn get_line_number_style_partials(
-    view_port: &ViewPort,
+    vp: &ViewPort,
     cursor: &Option<Cursor>,
     index: &usize,
 ) -> Vec<StylePartialSpan> {
-    let width = view_port.get_line_number_width();
-    if width == 0 {
+    let start = vp.sign_column_width;
+
+    let end = start + vp.get_line_number_width();
+    if start == end {
         return Vec::new();
     }
 
     if let Some(cursor) = cursor {
-        if cursor.vertical_index - view_port.vertical_index == *index {
+        if cursor.vertical_index - vp.vertical_index == *index {
             vec![StylePartialSpan {
-                end: width,
+                start,
+                end,
                 style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-                ..Default::default()
             }]
         } else {
-            let style_partial = match view_port.line_number {
+            let style_partial = match vp.line_number {
                 LineNumber::_Absolute => LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
                 LineNumber::None => unreachable!(),
                 LineNumber::Relative => LINE_NUMBER_REL_STYLE_PARTIAL.clone(),
             };
 
             vec![StylePartialSpan {
-                end: width,
+                start,
+                end,
                 style: style_partial,
-                ..Default::default()
             }]
         }
     } else {
         vec![StylePartialSpan {
-            end: width,
+            start,
+            end,
             style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-            ..Default::default()
         }]
     }
+}
+
+pub fn get_signs(vp: &ViewPort, _bl: &BufferLine) -> String {
+    let max_sign_count = vp.sign_column_width;
+    format!("{:>max_sign_count$}", "")
 }
