@@ -11,9 +11,12 @@ pub struct Marks {
     pub entries: HashMap<char, PathBuf>,
 }
 
+#[tracing::instrument]
 pub fn load(mark: &mut Marks) -> Result<(), AppError> {
     let mark_path = get_mark_path()?;
     if !Path::new(&mark_path).exists() {
+        tracing::debug!("marks file does not exist on path {}", mark_path);
+
         return Ok(());
     }
 
@@ -22,6 +25,8 @@ pub fn load(mark: &mut Marks) -> Result<(), AppError> {
     let mut mark_csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .from_reader(mark_file);
+
+    tracing::trace!("marks file opened for reading");
 
     for result in mark_csv_reader.records() {
         let record = match result {
@@ -50,9 +55,12 @@ pub fn load(mark: &mut Marks) -> Result<(), AppError> {
         }
     }
 
+    tracing::trace!("marks file read");
+
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn save(marks: &Marks) -> Result<(), AppError> {
     let mark_path = get_mark_path()?;
     let mark_dictionary = match Path::new(&mark_path).parent() {

@@ -55,7 +55,7 @@ register holds all files which got yanked and the last nine trashes.
 | /          | change to search downward                                   |
 | ?          | change to search upward                                     |
 | n, N       | repeat last search in same/reverse direction                |
-| m\<char>   | set mark to current selection                               |
+| m\<char>   | set mark for current selection                              |
 | '\<char>   | jump to mark                                                |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position   |
 | C-u, C-d   | move viewport half screen up/down                           |
