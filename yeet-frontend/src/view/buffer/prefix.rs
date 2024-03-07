@@ -99,7 +99,7 @@ pub fn get_line_number_style_partials(
     }
 }
 
-pub fn get_signs(vp: &ViewPort, _bl: &BufferLine) -> String {
+pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
     let max_sign_count = vp.sign_column_width;
     format!("{:>max_sign_count$}", "")
 }

@@ -36,8 +36,8 @@ register holds all files which got yanked and the last nine trashes.
 | keys | action                                 |
 | ---- | -------------------------------------- |
 | gh   | goto home directory                    |
+| gn   | go into normal mode                    |
 | h, l | navigating the file tree               |
-| m    | go into normal mode                    |
 | p    | paste " from junk yard to current path |
 | yy   | yank file to junk yard                 |
 
