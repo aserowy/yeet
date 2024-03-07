@@ -32,11 +32,11 @@ async fn main() {
         .with_writer(logfile)
         .init();
 
-    tracing::debug!("starting application");
+    tracing::info!("starting application");
 
     match yeet_frontend::run(get_settings(&cli)).await {
         Ok(()) => {
-            tracing::debug!("closing application");
+            tracing::info!("closing application");
         }
         Err(err) => {
             tracing::error!("closing application with error: {:?}", err);

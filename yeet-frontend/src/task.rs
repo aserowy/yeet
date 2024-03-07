@@ -249,7 +249,7 @@ impl TaskManager {
             Task::SaveMarks(marks) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    tracing::debug!("saving marks");
+                    tracing::trace!("saving marks");
 
                     if let Err(error) = mark::save(&marks) {
                         emit_error(sender, error).await;

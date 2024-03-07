@@ -68,13 +68,13 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
         .truncate(true)
         .open(mark_path)?;
 
-    tracing::debug!("marks file opened for writing");
+    tracing::trace!("marks file opened for writing");
 
     let mut persisted = Marks::default();
     load(&mut persisted)?;
     persisted.entries.extend(marks.entries.clone());
 
-    tracing::debug!("persisted marks loaded and merged");
+    tracing::trace!("persisted marks loaded and merged");
 
     let mut writer = csv::Writer::from_writer(mark_writer);
     for (char, path) in marks.entries.iter() {
@@ -92,7 +92,7 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
 
     writer.flush()?;
 
-    tracing::debug!("marks file written");
+    tracing::trace!("marks file written");
 
     Ok(())
 }
