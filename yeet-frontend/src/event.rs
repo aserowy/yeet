@@ -180,6 +180,7 @@ async fn handle_crossterm_event(
     }
 }
 
+#[tracing::instrument]
 fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
     if event.need_rescan() {
         // TODO: Refresh directory states
@@ -207,7 +208,7 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                     Message::PathsAdded(vec![event.paths[1].clone()]),
                 ])
             } else {
-                // TODO: log invalid event
+                tracing::warn!("event is invalid");
                 None
             }
         }
@@ -221,11 +222,6 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         notify::EventKind::Any
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
-        | notify::EventKind::Other => {
-            // let event = format!("{:?}", event);
-            // let _ = stdout().lock().write_all(event.as_bytes());
-
-            None
-        }
+        | notify::EventKind::Other => None,
     }
 }

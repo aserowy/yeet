@@ -7,8 +7,6 @@ use yeet_frontend::settings::Settings;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Application error")]
-    App,
     #[error("Initialization error")]
     Initialization,
 }
@@ -17,20 +15,16 @@ pub enum Error {
 async fn main() {
     let cli = cli().get_matches();
 
-    // TODO: start application with printing an error in tui
-    let logpath = match get_logging_path() {
-        Ok(it) => it,
-        Err(_) => return,
-    };
-
-    let loglevel = get_log_level(&cli);
-    let logfile = tracing_appender::rolling::daily(logpath, "log");
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_max_level(loglevel)
-        .with_file(false)
-        .with_writer(logfile)
-        .init();
+    if let Ok(logpath) = get_logging_path() {
+        let loglevel = get_log_level(&cli);
+        let logfile = tracing_appender::rolling::daily(logpath, "log");
+        tracing_subscriber::fmt()
+            .pretty()
+            .with_max_level(loglevel)
+            .with_file(false)
+            .with_writer(logfile)
+            .init();
+    }
 
     tracing::info!("starting application");
 

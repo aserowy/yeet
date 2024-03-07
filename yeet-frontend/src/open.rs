@@ -62,7 +62,6 @@ pub async fn path(path: &Path) -> Result<ExitStatus, io::Error> {
     let mut cmd = if is_wsl().await {
         Command::new("wslview").arg(wsl_path(path)).spawn()?
     } else {
-        // FIX: stdout gets filled, if xdg-open has no valid entries for selection
         Command::new("xdg-open").arg(path).spawn()?
     };
     cmd.wait().await
