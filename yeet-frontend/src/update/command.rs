@@ -1,6 +1,6 @@
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
-use crate::{action::Action, model::Model, task::Task};
+use crate::{action::Action, model::Model, task::Task, update::mark};
 
 use super::current;
 
@@ -28,6 +28,14 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             let content = model
                 .junk
                 .print()
+                .iter()
+                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .collect();
+
+            vec![Action::EmitMessages(vec![Message::Print(content)])]
+        }
+        "marks" => {
+            let content = mark::print(&model.marks)
                 .iter()
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
                 .collect();

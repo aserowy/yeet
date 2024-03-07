@@ -84,6 +84,7 @@ In normal mode, all register interactions target the default register (equal to
 | e!      | reload current folder               |
 | jnk     | list junk yard contents             |
 | histopt | optimize history                    |
+| marks   | list all given marks                |
 | noh     | remove search highlights            |
 | q       | quit yeet                           |
 | w       | write changes without changing mode |

@@ -12,6 +12,7 @@ mod buffer;
 mod command;
 mod enumeration;
 mod history;
+mod mark;
 pub mod model;
 mod navigation;
 mod path;
