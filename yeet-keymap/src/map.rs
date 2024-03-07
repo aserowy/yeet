@@ -153,8 +153,10 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    // TODO: m should be for marks
-                    vec![Key::new(KeyCode::from_char('m'), vec![])],
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('n'), vec![]),
+                    ],
                     Binding {
                         force: Some(Mode::Normal),
                         ..Default::default()
@@ -264,6 +266,15 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('\''), vec![])],
+                    Binding {
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Message(Message::NavigateToMark(' ')),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char(':'), vec![])],
                     Binding {
                         force: Some(Mode::Command(CommandMode::Command)),
@@ -358,6 +369,15 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('k'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Up),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('m'), vec![])],
+                    Binding {
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Message(Message::SetMark(' ')),
+                        repeatable: false,
                         ..Default::default()
                     },
                 ),

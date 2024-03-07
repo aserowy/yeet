@@ -11,7 +11,7 @@ use super::{History, HistoryNode, HistoryState};
 pub fn load(history: &mut History) -> Result<(), AppError> {
     let history_path = get_history_path()?;
     if !Path::new(&history_path).exists() {
-        return Err(AppError::LoadHistoryFailed);
+        return Ok(());
     }
 
     // TODO: change to tokio fs

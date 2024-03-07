@@ -58,6 +58,7 @@ pub enum Message {
     ExecuteCommand,
     ExecuteCommandString(String),
     KeySequenceChanged(String),
+    NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),
     NavigateToSelected,
@@ -71,6 +72,7 @@ pub enum Message {
     Rerender,
     Resize(u16, u16),
     SearchAndSelect(bool),
+    SetMark(char),
     Quit,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),

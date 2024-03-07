@@ -48,6 +48,14 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
                 Action::EmitMessages(vec![Message::Rerender]),
             ])
         }
+        Message::NavigateToMark(char) => {
+            let path = match model.marks.entries.get(char) {
+                Some(it) => it.clone(),
+                None => return None,
+            };
+
+            navigation::path(model, &path)
+        }
         Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => navigation::path(model, path),
         Message::NavigateToSelected => navigation::selected(model),
@@ -61,6 +69,13 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::SearchAndSelect(is_next) => search::search_and_select(model, *is_next),
+        Message::SetMark(char) => {
+            let selected = current::selection(model);
+            if let Some(selected) = selected {
+                model.marks.entries.insert(*char, selected);
+            }
+            None
+        }
         Message::Quit => Some(vec![Action::Quit(None)]),
         Message::YankToJunkYard(repeat) => register::yank(model, repeat),
     }

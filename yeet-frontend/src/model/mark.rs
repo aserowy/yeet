@@ -14,7 +14,7 @@ pub struct Marks {
 pub fn load(mark: &mut Marks) -> Result<(), AppError> {
     let mark_path = get_mark_path()?;
     if !Path::new(&mark_path).exists() {
-        return Err(AppError::LoadMarkFailed);
+        return Ok(());
     }
 
     // TODO: change to tokio fs

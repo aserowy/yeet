@@ -105,7 +105,13 @@ fn resolve_binding(
     };
 
     let result = if binding.expects.is_some() {
-        binding.kind = combine(&binding, &next)?;
+        binding.kind = match combine(&binding, &next) {
+            Ok(it) => it,
+            Err(err) => {
+                tracing::debug!("binding combine failed for {:?}: {:?}", binding, err);
+                return Err(err);
+            }
+        };
         binding
     } else if let BindingKind::Repeat = binding.kind {
         next.repeat = get_repeat(&binding, &next);
@@ -174,6 +180,15 @@ fn get_binding_by_keys(
 
 fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError> {
     match (&current.kind, &next.kind) {
+        (BindingKind::Message(msg), BindingKind::Raw(raw)) => {
+            let message = match msg {
+                Message::NavigateToMark(_) => Message::NavigateToMark(*raw),
+                Message::SetMark(_) => Message::SetMark(*raw),
+                _ => return Err(KeyMapError::NoValidBindingFound),
+            };
+
+            Ok(BindingKind::Message(message))
+        }
         (BindingKind::Motion(direction), BindingKind::Raw(raw)) => {
             let direction = match direction {
                 CursorDirection::FindBackward(_) => CursorDirection::FindBackward(*raw),
