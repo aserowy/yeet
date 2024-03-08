@@ -25,6 +25,7 @@ pub struct Model {
     pub commandline: CommandLine,
     pub current: DirectoryBuffer,
     pub history: History,
+    pub junk: JunkYard,
     pub key_sequence: String,
     pub layout: AppLayout,
     pub marks: Marks,
@@ -32,7 +33,7 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
-    pub junk: JunkYard,
+    pub search: Option<SearchModel>,
 }
 
 impl Default for Model {
@@ -54,6 +55,7 @@ impl Default for Model {
                 ..Default::default()
             },
             history: History::default(),
+            junk: JunkYard::default(),
             key_sequence: String::new(),
             layout: AppLayout::new(Rect::default(), 0),
             marks: Marks::default(),
@@ -85,7 +87,7 @@ impl Default for Model {
                 },
                 ..Default::default()
             },
-            junk: JunkYard::default(),
+            search: None,
         }
     }
 }
@@ -94,7 +96,6 @@ impl Default for Model {
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
-    pub search: Option<SearchModel>,
     pub state: CommandLineState,
 }
 
@@ -111,7 +112,6 @@ impl Default for CommandLine {
                 ..Default::default()
             },
             layout: CommandLineLayout::new(Rect::default(), 0),
-            search: None,
             state: CommandLineState::default(),
         }
     }

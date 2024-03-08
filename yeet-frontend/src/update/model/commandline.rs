@@ -63,7 +63,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                     }
                 }
 
-                buffer::update(&model.mode, &commandline.search, buffer, message);
+                buffer::update(&model.mode, &model.search, buffer, message);
             }
 
             actions
@@ -201,13 +201,13 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
 
     buffer::update(
         &model.mode,
-        &commandline.search,
+        &model.search,
         &mut commandline.buffer,
         &Buffer::MoveCursor(1, CursorDirection::Bottom),
     );
     buffer::update(
         &model.mode,
-        &commandline.search,
+        &model.search,
         &mut commandline.buffer,
         &Buffer::MoveCursor(1, CursorDirection::LineEnd),
     );

@@ -17,7 +17,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     match &model.parent.path {
         Some(_) => {
             if let Some(message) = message {
-                buffer::update(&model.mode, &model.commandline.search, buffer, message);
+                buffer::update(&model.mode, &model.search, buffer, message);
             }
 
             let current_filename = match model.current.path.file_name() {
@@ -43,7 +43,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
 
                 buffer::update(
                     &model.mode,
-                    &model.commandline.search,
+                    &model.search,
                     buffer,
                     &Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
                 );
@@ -55,7 +55,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
             buffer::set_content(&model.mode, buffer, vec![]);
 
             if let Some(message) = message {
-                buffer::update(&model.mode, &model.commandline.search, buffer, message);
+                buffer::update(&model.mode, &model.search, buffer, message);
             }
         }
     }

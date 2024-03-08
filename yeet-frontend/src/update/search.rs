@@ -18,7 +18,7 @@ pub fn update(model: &mut Model) {
         return;
     };
 
-    model.commandline.search = Some(SearchModel {
+    model.search = Some(SearchModel {
         last: search.to_owned(),
         direction,
     });
@@ -27,7 +27,7 @@ pub fn update(model: &mut Model) {
 }
 
 pub fn search(model: &mut Model) {
-    let search = match &model.commandline.search {
+    let search = match &model.search {
         Some(it) => it.last.as_str(),
         None => return,
     };
