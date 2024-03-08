@@ -5,7 +5,7 @@ use yeet_keymap::message::{Buffer, Mode};
 use crate::{
     action::Action,
     model::{
-        buffer::{undo::BufferChanged, BufferResult},
+        buffer::{undo::BufferChanged, BufferLine, BufferResult},
         Model,
     },
     settings::Settings,
@@ -105,4 +105,15 @@ pub fn selection(model: &Model) -> Option<PathBuf> {
     } else {
         None
     }
+}
+
+pub fn selected_bufferline(model: &mut Model) -> Option<&mut BufferLine> {
+    let buffer = &mut model.current.buffer;
+    if buffer.lines.is_empty() {
+        return None;
+    }
+
+    let cursor = &buffer.cursor.as_ref()?;
+
+    buffer.lines.get_mut(cursor.vertical_index)
 }

@@ -72,13 +72,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::SearchAndSelect(is_next) => search::search_and_select(model, *is_next),
         Message::SetMark(char) => {
-            let selected = current::selection(model);
-            if let Some(selected) = selected {
-                let removed = model.marks.entries.insert(*char, selected);
-                if let Some(removed) = removed {
-                    mark::unset_sign(model, &removed);
-                }
-            }
+            mark::add(model, *char);
             None
         }
         Message::Quit => Some(vec![Action::Quit(None)]),

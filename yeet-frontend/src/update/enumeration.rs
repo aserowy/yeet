@@ -27,7 +27,7 @@ pub fn changed(
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = bufferline::from_enumeration(cntnt, knd);
-                mark::set_sign(&model.marks, &mut line, &path.join(cntnt));
+                mark::set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
                 line
             })
             .collect();

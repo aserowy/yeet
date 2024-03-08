@@ -8,6 +8,8 @@ use crate::model::{
     Model,
 };
 
+use super::model::current;
+
 pub fn print(marks: &Marks) -> Vec<String> {
     let mut marks: Vec<_> = marks
         .entries
@@ -24,12 +26,30 @@ pub fn print(marks: &Marks) -> Vec<String> {
     contents
 }
 
-pub fn set_sign(marks: &Marks, bl: &mut BufferLine, path: &Path) {
+pub fn add(model: &mut Model, char: char) {
+    let selected = current::selection(model);
+    if let Some(selected) = selected {
+        if let Some(bl) = current::selected_bufferline(model) {
+            set_sign(bl);
+        }
+
+        let removed = model.marks.entries.insert(char, selected);
+        if let Some(removed) = removed {
+            unset_sign(model, &removed);
+        }
+    }
+}
+
+pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
     let is_marked = marks.entries.values().any(|p| p == path);
     if !is_marked {
         return;
     }
 
+    set_sign(bl);
+}
+
+fn set_sign(bl: &mut BufferLine) {
     let sign = 'm';
     let is_signed = bl.signs.iter().any(|s| s.content == sign);
     if is_signed {
@@ -47,17 +67,17 @@ pub fn set_sign(marks: &Marks, bl: &mut BufferLine, path: &Path) {
     });
 }
 
-pub fn unset_sign(model: &mut Model, removed: &Path) {
+fn unset_sign(model: &mut Model, removed: &Path) {
     let parent = match removed.parent() {
         Some(it) => it,
         None => return,
     };
 
-    let lines = if parent == &model.current.path {
+    let lines = if parent == model.current.path {
         &mut model.current.buffer.lines
-    } else if parent == &model.preview.path {
+    } else if parent == model.preview.path {
         &mut model.preview.buffer.lines
-    } else if Some(parent) == model.parent.path.as_ref().map(|p| p.as_path()) {
+    } else if Some(parent) == model.parent.path.as_deref() {
         &mut model.parent.buffer.lines
     } else {
         return;
