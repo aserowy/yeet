@@ -60,7 +60,7 @@ impl BufferLine {
 pub struct Sign {
     pub content: char,
     pub priority: usize,
-    pub style: Vec<StylePartialSpan>,
+    pub style: Vec<StylePartial>,
 }
 
 #[derive(Clone, Debug, Default)]

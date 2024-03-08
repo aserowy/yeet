@@ -3,7 +3,7 @@ use std::path::Path;
 use ratatui::style::Color;
 
 use crate::model::{
-    buffer::{BufferLine, Sign, StylePartial, StylePartialSpan},
+    buffer::{BufferLine, Sign, StylePartial},
     mark::Marks,
     Model,
 };
@@ -59,11 +59,7 @@ fn set_sign(bl: &mut BufferLine) {
     bl.signs.push(Sign {
         content: sign,
         priority: 0,
-        style: vec![StylePartialSpan {
-            start: 0,
-            end: 1,
-            style: StylePartial::Foreground(Color::Yellow),
-        }],
+        style: vec![StylePartial::Foreground(Color::LightMagenta)],
     });
 }
 

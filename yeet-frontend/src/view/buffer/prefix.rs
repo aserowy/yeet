@@ -115,3 +115,27 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
 
     format!("{:<max_sign_count$}", signs)
 }
+
+pub fn get_sign_style_partials(vp: &ViewPort, bl: &BufferLine) -> Vec<StylePartialSpan> {
+    let max_sign_count = vp.sign_column_width;
+
+    let mut sorted = bl.signs.clone();
+    sorted.sort_unstable_by_key(|s| Reverse(s.priority));
+
+    sorted
+        .iter()
+        .take(max_sign_count)
+        .enumerate()
+        .flat_map(|(i, s)| {
+            let mut styles = Vec::new();
+            for style in &s.style {
+                styles.push(StylePartialSpan {
+                    start: i,
+                    end: i + 1,
+                    style: style.clone(),
+                });
+            }
+            styles
+        })
+        .collect()
+}

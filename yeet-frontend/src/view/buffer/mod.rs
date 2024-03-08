@@ -60,15 +60,16 @@ fn get_styled_lines<'a>(
     for (i, bl) in lines.iter().enumerate() {
         let corrected_index = i + vp.vertical_index;
 
-        let mut spans: Vec<_> = Vec::new();
         let mut content = String::new();
-        spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
         content.push_str(&prefix::get_signs(vp, bl));
         content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
         content.push_str(&prefix::get_custom_prefix(bl));
         content.push_str(&prefix::get_border(vp));
 
         // NOTE: higher order (higher index) styles take precedence
+        let mut spans: Vec<_> = Vec::new();
+        spans.extend(prefix::get_sign_style_partials(vp, bl));
+        spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
         spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
         spans.extend(correct_index(&content.chars().count(), &bl.style));
 
