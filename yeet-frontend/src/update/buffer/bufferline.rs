@@ -1,12 +1,16 @@
 use yeet_keymap::message::{CursorDirection, LineDirection, Mode, TextModification};
 
 use crate::{
-    model::buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition},
+    model::{
+        buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition},
+        SearchModel,
+    },
     update::buffer::cursor,
 };
 
 pub fn update(
     mode: &Mode,
+    search: &Option<SearchModel>,
     model: &mut Buffer,
     count: &usize,
     modification: &TextModification,
@@ -122,7 +126,7 @@ pub fn update(
             };
 
             for _ in 0..*count {
-                cursor::update_by_direction(mode, model, delete_count, motion);
+                cursor::update_by_direction(mode, search, model, delete_count, motion);
             }
 
             let post_motion_cursor = match &model.cursor {
@@ -147,7 +151,7 @@ pub fn update(
                 };
 
                 let action = &TextModification::DeleteLine;
-                if let Some(cng) = update(mode, model, &count, action) {
+                if let Some(cng) = update(mode, search, model, &count, action) {
                     changes.extend(cng);
                 }
             } else {
@@ -168,7 +172,7 @@ pub fn update(
                 };
 
                 let action = &TextModification::DeleteCharOnCursor;
-                if let Some(cng) = update(mode, model, &count, action) {
+                if let Some(cng) = update(mode, search, model, &count, action) {
                     changes.extend(cng);
                 }
             }
@@ -254,6 +258,7 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
         | CursorDirection::TillForward(_)
         | CursorDirection::Left
         | CursorDirection::Right
+        | CursorDirection::Search(_)
         | CursorDirection::LineEnd
         | CursorDirection::LineStart => false,
     }

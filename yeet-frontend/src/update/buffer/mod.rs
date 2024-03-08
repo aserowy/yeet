@@ -1,31 +1,39 @@
 use yeet_keymap::message::{self, CursorDirection, Mode};
 
-use crate::model::buffer::{Buffer, BufferLine, BufferResult, CursorPosition};
+use crate::model::{
+    buffer::{Buffer, BufferLine, BufferResult, CursorPosition},
+    SearchModel,
+};
 
 mod bufferline;
 pub mod cursor;
 pub mod viewport;
 
-pub fn update(mode: &Mode, model: &mut Buffer, message: &message::Buffer) -> Option<BufferResult> {
+pub fn update(
+    mode: &Mode,
+    search: &Option<SearchModel>,
+    model: &mut Buffer,
+    message: &message::Buffer,
+) -> Option<BufferResult> {
     let result = match message {
         // TODO: repeat actions by count when switching from insert to normal
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
         message::Buffer::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
-                cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
+                cursor::update_by_direction(mode, search, model, &1, &CursorDirection::Left);
             }
             None
         }
         message::Buffer::Modification(count, modification) => {
-            let buffer_changes = bufferline::update(mode, model, count, modification);
+            let buffer_changes = bufferline::update(mode, search, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
             None
         }
         message::Buffer::MoveCursor(count, direction) => {
-            cursor::update_by_direction(mode, model, count, direction);
+            cursor::update_by_direction(mode, search, model, count, direction);
             None
         }
         message::Buffer::MoveViewPort(direction) => {

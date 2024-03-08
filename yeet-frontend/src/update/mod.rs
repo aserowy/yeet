@@ -1,4 +1,4 @@
-use yeet_keymap::message::{self, CommandMode, Message, Mode, PrintContent};
+use yeet_keymap::message::{self, CommandMode, CursorDirection, Message, Mode, PrintContent};
 
 use crate::{
     action::Action,
@@ -70,7 +70,6 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::Print(content) => commandline::print(model, content),
         Message::Rerender => None,
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
-        Message::SearchAndSelect(is_next) => search::search_and_select(model, *is_next),
         Message::SetMark(char) => {
             mark::add(model, *char);
             None
@@ -166,7 +165,26 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
             }
             Mode::Navigation => None,
         },
-        message::Buffer::MoveCursor(_, _) | message::Buffer::MoveViewPort(_) => match model.mode {
+        message::Buffer::MoveCursor(_, mtn) => match model.mode {
+            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
+                if matches!(mtn, &CursorDirection::Search(_)) {
+                    search::search(model);
+                }
+
+                let mut actions = Vec::new();
+                current::update(model, Some(msg));
+
+                if let Some(preview_actions) = preview::path(model, true, true) {
+                    actions.extend(preview_actions);
+                    model.preview.buffer.lines.clear();
+                    preview::viewport(model);
+                }
+
+                Some(actions)
+            }
+        },
+        message::Buffer::MoveViewPort(_) => match model.mode {
             Mode::Command(_) => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 let mut actions = Vec::new();

@@ -20,7 +20,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
-        buffer::update(&model.mode, buffer, message);
+        buffer::update(&model.mode, &model.commandline.search, buffer, message);
     } else {
         buffer::reset_view(buffer);
     }
@@ -47,6 +47,7 @@ pub fn open(model: &Model, settings: &Settings) -> Option<Vec<Action>> {
 pub fn save_changes(model: &mut Model) -> Vec<Action> {
     if let Some(result) = buffer::update(
         &model.mode,
+        &model.commandline.search,
         &mut model.current.buffer,
         &Buffer::SaveBuffer(None),
     ) {

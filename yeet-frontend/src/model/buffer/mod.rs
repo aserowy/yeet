@@ -79,7 +79,7 @@ pub enum StylePartial {
 
 impl Default for StylePartial {
     fn default() -> Self {
-        StylePartial::Foreground(Color::White)
+        StylePartial::Foreground(Color::default())
     }
 }
 

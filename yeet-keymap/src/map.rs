@@ -384,14 +384,14 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::SearchAndSelect(true)),
+                        kind: BindingKind::Motion(CursorDirection::Search(true)),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::Message(Message::SearchAndSelect(false)),
+                        kind: BindingKind::Motion(CursorDirection::Search(false)),
                         ..Default::default()
                     },
                 ),

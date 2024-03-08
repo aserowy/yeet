@@ -1,9 +1,16 @@
-use yeet_keymap::message::{CursorDirection, Mode};
+use std::cmp::Ordering;
 
-use crate::model::buffer::{Buffer, BufferLine, Cursor, CursorPosition};
+use yeet_keymap::message::{CursorDirection, Mode, SearchDirection};
 
+use crate::model::{
+    buffer::{Buffer, BufferLine, Cursor, CursorPosition},
+    SearchModel,
+};
+
+// TODO: refactor
 pub fn update_by_direction(
     mode: &Mode,
+    search: &Option<SearchModel>,
     model: &mut Buffer,
     count: &usize,
     direction: &CursorDirection,
@@ -140,6 +147,9 @@ pub fn update_by_direction(
                         expanded: next_index,
                     };
                 }
+            }
+            CursorDirection::Search(is_next) => {
+                select(search, cursor, &model.lines, *is_next);
             }
             CursorDirection::TillBackward(find) => {
                 if let Some(found) = find_char_backward(find, &model.lines, cursor) {
@@ -306,5 +316,131 @@ fn get_index_correction(mode: &Mode) -> usize {
         Mode::Insert => 0,
         Mode::Navigation => 1,
         Mode::Normal => 1,
+    }
+}
+
+fn select(model: &Option<SearchModel>, cursor: &mut Cursor, lines: &[BufferLine], is_next: bool) {
+    let model = match &model {
+        Some(it) => it,
+        None => return,
+    };
+
+    if cursor.horizontal_index == CursorPosition::None {
+        return;
+    }
+
+    let vertical_index = cursor.vertical_index;
+    let mut enumeration: Vec<_> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, bl)| bl.search.is_some())
+        .collect();
+
+    let direction = if is_next {
+        &model.direction
+    } else {
+        match model.direction {
+            SearchDirection::Down => &SearchDirection::Up,
+            SearchDirection::Up => &SearchDirection::Down,
+        }
+    };
+
+    enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
+        sort_by_index(*current, *cmp, vertical_index, direction)
+    });
+
+    for (i, line) in enumeration {
+        let start = match &line.search {
+            Some(it) => match it.first() {
+                Some(s) => s.start,
+                None => continue,
+            },
+            None => continue,
+        };
+
+        let downward = direction == &SearchDirection::Down;
+        if i == vertical_index {
+            if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
+                if downward && current >= &start || !downward && current <= &start {
+                    continue;
+                }
+            }
+        }
+
+        cursor.vertical_index = i;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: start,
+            expanded: start,
+        };
+
+        break;
+    }
+}
+
+fn sort_by_index(
+    current: usize,
+    cmp: usize,
+    index: usize,
+    direction: &SearchDirection,
+) -> Ordering {
+    let downward = direction == &SearchDirection::Down;
+    if current == cmp {
+        return Ordering::Equal;
+    }
+
+    if downward {
+        if current >= index {
+            if current > cmp {
+                if cmp >= index {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            } else {
+                Ordering::Less
+            }
+        } else {
+            current.cmp(&cmp)
+        }
+    } else if current <= index {
+        if current > cmp {
+            Ordering::Less
+        } else if cmp <= index {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    } else if current > cmp {
+        if cmp <= index {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    } else {
+        Ordering::Greater
+    }
+}
+
+mod test {
+    #[test]
+    fn sort_by_index_downward() {
+        use yeet_keymap::message::SearchDirection;
+
+        let vertical = 5;
+        let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &SearchDirection::Down));
+
+        assert_eq!(vec![5, 6, 7, 8, 9, 0, 1, 2, 3, 4], sorted);
+    }
+
+    #[test]
+    fn sort_by_index_upward() {
+        use yeet_keymap::message::SearchDirection;
+
+        let vertical = 5;
+        let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &SearchDirection::Up));
+
+        assert_eq!(vec![5, 4, 3, 2, 1, 0, 9, 8, 7, 6], sorted);
     }
 }

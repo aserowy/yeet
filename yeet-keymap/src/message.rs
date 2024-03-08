@@ -71,7 +71,6 @@ pub enum Message {
     Print(Vec<PrintContent>),
     Rerender,
     Resize(u16, u16),
-    SearchAndSelect(bool),
     SetMark(char),
     Quit,
     // TODO: yank to junk with motion
@@ -114,6 +113,7 @@ pub enum CursorDirection {
     LineEnd,
     LineStart,
     Right,
+    Search(bool),
     TillBackward(char),
     TillForward(char),
     Top,
