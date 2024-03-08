@@ -93,5 +93,6 @@ fn get_settings(args: &ArgMatches) -> Settings {
     Settings {
         stdout_on_open: args.get_flag("stdout-on-open"),
         startup_path: args.get_one("path").cloned(),
+        ..Default::default()
     }
 }

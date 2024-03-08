@@ -41,7 +41,11 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         Message::NavigateToPath(initial_path),
     ]));
 
-    let mut model = Model::default();
+    let mut model = Model {
+        settings,
+        ..Default::default()
+    };
+
     register::file::init(&mut model.junk, &mut emitter).await?;
 
     if history::cache::load(&mut model.history).is_err() {
@@ -66,7 +70,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let actions: Vec<_> = messages
             .iter()
-            .flat_map(|message| update::update(&settings, &mut model, message))
+            .flat_map(|message| update::update(&mut model, message))
             .flatten()
             .collect();
 

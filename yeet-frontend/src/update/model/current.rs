@@ -8,7 +8,6 @@ use crate::{
         buffer::{undo::BufferChanged, BufferLine, BufferResult},
         Model,
     },
-    settings::Settings,
     task::Task,
     update::buffer,
 };
@@ -26,13 +25,13 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     }
 }
 
-pub fn open(model: &Model, settings: &Settings) -> Option<Vec<Action>> {
+pub fn open(model: &Model) -> Option<Vec<Action>> {
     if model.mode != Mode::Navigation {
         return None;
     }
 
     if let Some(selected) = selection(model) {
-        if settings.stdout_on_open {
+        if model.settings.stdout_on_open {
             Some(vec![Action::Quit(Some(
                 selected.to_string_lossy().to_string(),
             ))])

@@ -3,7 +3,6 @@ use yeet_keymap::message::{self, CommandMode, CursorDirection, Message, Mode, Pr
 use crate::{
     action::Action,
     model::{buffer::Buffer, Model},
-    settings::Settings,
 };
 
 use self::model::{commandline, current, preview};
@@ -20,7 +19,7 @@ mod path;
 mod register;
 mod search;
 
-pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Option<Vec<Action>> {
+pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
     match message {
         Message::Buffer(msg) => buffer(model, msg),
         Message::ClearSearchHighlight => {
@@ -61,7 +60,7 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => navigation::path(model, path),
         Message::NavigateToSelected => navigation::selected(model),
-        Message::OpenSelected => current::open(model, settings),
+        Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => path::remove(model, path),
         Message::PathsAdded(paths) => path::add(model, paths),

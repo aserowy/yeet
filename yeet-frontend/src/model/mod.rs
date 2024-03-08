@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use ratatui::layout::Rect;
 use yeet_keymap::message::{Mode, SearchDirection};
 
-use crate::layout::{AppLayout, CommandLineLayout};
+use crate::{
+    layout::{AppLayout, CommandLineLayout},
+    settings::Settings,
+};
 
 use self::{
     buffer::{
@@ -34,6 +37,7 @@ pub struct Model {
     pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
     pub search: Option<SearchModel>,
+    pub settings: Settings,
 }
 
 impl Default for Model {
@@ -88,6 +92,7 @@ impl Default for Model {
                 ..Default::default()
             },
             search: None,
+            settings: Settings::default(),
         }
     }
 }

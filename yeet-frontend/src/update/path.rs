@@ -64,7 +64,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let mut line = bufferline::from(path);
-                mark::set_sign_if_marked(&model.marks, &mut line, path);
+                mark::set_sign_if_marked(&model.settings, &model.marks, &mut line, path);
 
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;

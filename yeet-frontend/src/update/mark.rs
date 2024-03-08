@@ -2,10 +2,13 @@ use std::path::Path;
 
 use ratatui::style::Color;
 
-use crate::model::{
-    buffer::{BufferLine, Sign, StylePartial},
-    mark::Marks,
-    Model,
+use crate::{
+    model::{
+        buffer::{BufferLine, Sign, StylePartial},
+        mark::Marks,
+        Model,
+    },
+    settings::Settings,
 };
 
 use super::model::current;
@@ -27,6 +30,10 @@ pub fn print(marks: &Marks) -> Vec<String> {
 }
 
 pub fn add(model: &mut Model, char: char) {
+    if !model.settings.show_mark_signs {
+        return;
+    }
+
     let selected = current::selection(model);
     if let Some(selected) = selected {
         if let Some(bl) = current::selected_bufferline(model) {
@@ -40,7 +47,11 @@ pub fn add(model: &mut Model, char: char) {
     }
 }
 
-pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
+pub fn set_sign_if_marked(settings: &Settings, marks: &Marks, bl: &mut BufferLine, path: &Path) {
+    if !settings.show_mark_signs {
+        return;
+    }
+
     let is_marked = marks.entries.values().any(|p| p == path);
     if !is_marked {
         return;
