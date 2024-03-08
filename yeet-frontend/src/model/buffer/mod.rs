@@ -46,6 +46,7 @@ pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: String,
     pub search: Option<Vec<StylePartialSpan>>,
+    pub signs: Vec<Sign>,
     pub style: Vec<StylePartialSpan>,
 }
 
@@ -53,6 +54,13 @@ impl BufferLine {
     pub fn len(&self) -> usize {
         self.content.chars().count()
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Sign {
+    pub content: char,
+    pub priority: usize,
+    pub style: Vec<StylePartialSpan>,
 }
 
 #[derive(Clone, Debug, Default)]

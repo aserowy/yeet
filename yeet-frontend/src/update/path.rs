@@ -3,18 +3,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ratatui::style::Color;
 use yeet_keymap::message::Mode;
 
-use crate::{
-    action::Action,
-    model::{
-        buffer::{BufferLine, StylePartial, StylePartialSpan},
-        Model,
-    },
-};
+use crate::{action::Action, model::Model};
 
-use super::preview;
+use super::{bufferline, mark, preview};
 
 pub fn add(model: &mut Model, paths: &[PathBuf]) -> Option<Vec<Action>> {
     add_paths(model, paths);
@@ -70,7 +63,9 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
 
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
-                let line = get_bufferline_by_path(path);
+                let mut line = bufferline::from(path);
+                mark::set_sign(&model.marks, &mut line, &path);
+
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;
                 } else {
@@ -85,31 +80,6 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
 
         super::buffer::cursor::validate(&model.mode, buffer);
         // TODO: correct cursor to stay on selection
-    }
-}
-
-fn get_bufferline_by_path(path: &Path) -> BufferLine {
-    let content = match path.file_name() {
-        Some(content) => content.to_str().unwrap_or("").to_string(),
-        None => "".to_string(),
-    };
-
-    // TODO: Handle transition states like adding, removing, renaming
-    let style = if path.is_dir() {
-        let length = content.chars().count();
-        vec![StylePartialSpan {
-            end: length,
-            style: StylePartial::Foreground(Color::LightBlue),
-            ..Default::default()
-        }]
-    } else {
-        vec![]
-    };
-
-    BufferLine {
-        content,
-        style,
-        ..Default::default()
     }
 }
 

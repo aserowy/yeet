@@ -1,17 +1,10 @@
 use std::path::PathBuf;
 
-use ratatui::style::Color;
 use yeet_keymap::message::{ContentKind, Mode};
 
-use crate::{
-    action::Action,
-    model::{
-        buffer::{BufferLine, StylePartial, StylePartialSpan},
-        Model,
-    },
-};
+use crate::{action::Action, model::Model};
 
-use super::{buffer, history, preview};
+use super::{buffer, bufferline, history, mark, preview};
 
 pub fn changed(
     model: &mut Model,
@@ -32,7 +25,11 @@ pub fn changed(
     if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         let content = contents
             .iter()
-            .map(|(knd, cntnt)| get_bufferline_by_enumeration_content(knd, cntnt))
+            .map(|(knd, cntnt)| {
+                let mut line = bufferline::from_enumeration(cntnt, knd);
+                mark::set_sign(&model.marks, &mut line, &path.join(cntnt));
+                line
+            })
             .collect();
 
         buffer::set_content(&model.mode, buffer, content);
@@ -81,25 +78,5 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
         None
     } else {
         Some(actions)
-    }
-}
-
-fn get_bufferline_by_enumeration_content(kind: &ContentKind, content: &String) -> BufferLine {
-    // TODO: refactor with by path
-    let style = if kind == &ContentKind::Directory {
-        let length = content.chars().count();
-        vec![StylePartialSpan {
-            end: length,
-            style: StylePartial::Foreground(Color::LightBlue),
-            ..Default::default()
-        }]
-    } else {
-        vec![]
-    };
-
-    BufferLine {
-        content: content.to_string(),
-        style,
-        ..Default::default()
     }
 }

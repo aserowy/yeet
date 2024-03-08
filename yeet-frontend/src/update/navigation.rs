@@ -8,11 +8,7 @@ use super::{buffer, current, history, model::parent, preview};
 
 pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     // TODO: check in set current to path and extend enumeration request with filename
-    let directory = if path.is_file() {
-        path.parent().unwrap()
-    } else {
-        path
-    };
+    let directory = if path.is_file() { path.parent()? } else { path };
 
     let mut actions = Vec::new();
     if let Some(current_actions) = set_current_to_path(model, directory) {

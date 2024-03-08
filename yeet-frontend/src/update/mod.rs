@@ -9,6 +9,7 @@ use crate::{
 use self::model::{commandline, current, preview};
 
 mod buffer;
+mod bufferline;
 mod command;
 mod enumeration;
 mod history;
@@ -73,7 +74,10 @@ pub fn update(settings: &Settings, model: &mut Model, message: &Message) -> Opti
         Message::SetMark(char) => {
             let selected = current::selection(model);
             if let Some(selected) = selected {
-                model.marks.entries.insert(*char, selected);
+                let removed = model.marks.entries.insert(*char, selected);
+                if let Some(removed) = removed {
+                    mark::unset_sign(model, &removed);
+                }
             }
             None
         }

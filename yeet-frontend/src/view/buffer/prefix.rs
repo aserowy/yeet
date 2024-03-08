@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use crate::{
     model::buffer::{
         viewport::{LineNumber, ViewPort},
@@ -101,5 +103,15 @@ pub fn get_line_number_style_partials(
 
 pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
     let max_sign_count = vp.sign_column_width;
-    format!("{:>max_sign_count$}", "")
+
+    let mut sorted = bl.signs.clone();
+    sorted.sort_unstable_by_key(|s| Reverse(s.priority));
+
+    let signs = sorted
+        .iter()
+        .take(max_sign_count)
+        .map(|s| s.content)
+        .collect::<String>();
+
+    format!("{:>max_sign_count$}", signs)
 }
