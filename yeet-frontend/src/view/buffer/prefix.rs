@@ -113,5 +113,5 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
         .map(|s| s.content)
         .collect::<String>();
 
-    format!("{:>max_sign_count$}", signs)
+    format!("{:<max_sign_count$}", signs)
 }

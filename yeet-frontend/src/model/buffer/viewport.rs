@@ -39,14 +39,11 @@ impl ViewPort {
             0
         };
 
-        self.sign_column_width
-            + self.get_line_number_width()
-            + self.get_border_width()
-            + custom_prefix_width
+        self.get_prefix_width() + self.get_border_width() + custom_prefix_width
     }
 
     fn get_prefix_width(&self) -> usize {
-        self.get_line_number_width()
+        self.sign_column_width + self.get_line_number_width()
     }
 }
 
