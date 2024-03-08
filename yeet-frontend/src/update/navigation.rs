@@ -70,10 +70,9 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     if let Some(preview) = path_preview.clone() {
         match current.get(&preview) {
             Some(it) => {
-                model.preview.path = preview.to_path_buf();
-
                 buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
                 preview::viewport(model);
+                model.preview.path = preview.to_path_buf();
             }
             None => {
                 if let Some(preview_actions) = preview::path(model, true, true) {
