@@ -2,7 +2,10 @@ use yeet_keymap::message::{self, CommandMode, CursorDirection, Message, Mode, Pr
 
 use crate::{
     action::Action,
-    model::{buffer::Buffer, Model},
+    model::{
+        buffer::{Buffer, SignIdentifier},
+        Model,
+    },
 };
 
 use self::model::{commandline, current, preview};
@@ -95,6 +98,24 @@ fn settings(model: &mut Model) {
     model.current.buffer.set(&settings.current);
     model.parent.buffer.set(&settings.parent);
     model.preview.buffer.set(&settings.preview);
+
+    if settings.show_mark_signs {
+        remove_hidden_sign(&mut model.current.buffer, SignIdentifier::Mark);
+        remove_hidden_sign(&mut model.parent.buffer, SignIdentifier::Mark);
+        remove_hidden_sign(&mut model.preview.buffer, SignIdentifier::Mark);
+    } else {
+        add_hidden_sign(&mut model.current.buffer, SignIdentifier::Mark);
+        add_hidden_sign(&mut model.parent.buffer, SignIdentifier::Mark);
+        add_hidden_sign(&mut model.preview.buffer, SignIdentifier::Mark);
+    }
+}
+
+fn add_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
+    buffer.view_port.hidden_sign_ids.insert(id);
+}
+
+fn remove_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
+    buffer.view_port.hidden_sign_ids.remove(&id);
 }
 
 fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {

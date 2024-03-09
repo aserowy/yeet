@@ -1,8 +1,11 @@
-use super::BufferLine;
+use std::collections::HashSet;
+
+use super::{BufferLine, SignIdentifier};
 
 #[derive(Debug, Default)]
 pub struct ViewPort {
     pub height: usize,
+    pub hidden_sign_ids: HashSet<SignIdentifier>,
     pub horizontal_index: usize,
     pub line_number: LineNumber,
     pub line_number_width: usize,

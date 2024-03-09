@@ -33,14 +33,12 @@ pub fn add(model: &mut Model, char: char) {
     let selected = current::selection(model);
     if let Some(selected) = selected {
         let removed = model.marks.entries.insert(char, selected);
-        if model.settings.show_mark_signs {
-            if let Some(bl) = current::selected_bufferline(model) {
-                set_sign(bl);
-            }
+        if let Some(removed) = removed {
+            unset_sign(model, &removed);
+        }
 
-            if let Some(removed) = removed {
-                unset_sign(model, &removed);
-            }
+        if let Some(bl) = current::selected_bufferline(model) {
+            set_sign(bl);
         }
     }
 }

@@ -72,7 +72,7 @@ pub struct Sign {
     pub style: Vec<StylePartial>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SignIdentifier {
     Mark,
 }

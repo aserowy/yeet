@@ -104,10 +104,15 @@ pub fn get_line_number_style_partials(
 pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
     let max_sign_count = vp.sign_column_width;
 
-    let mut sorted = bl.signs.clone();
-    sorted.sort_unstable_by_key(|s| Reverse(s.priority));
+    let mut filtered: Vec<_> = bl
+        .signs
+        .iter()
+        .filter(|s| !vp.hidden_sign_ids.contains(&s.id))
+        .collect();
 
-    let signs = sorted
+    filtered.sort_unstable_by_key(|s| Reverse(s.priority));
+
+    let signs = filtered
         .iter()
         .take(max_sign_count)
         .map(|s| s.content)
@@ -119,10 +124,15 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
 pub fn get_sign_style_partials(vp: &ViewPort, bl: &BufferLine) -> Vec<StylePartialSpan> {
     let max_sign_count = vp.sign_column_width;
 
-    let mut sorted = bl.signs.clone();
-    sorted.sort_unstable_by_key(|s| Reverse(s.priority));
+    let mut filtered: Vec<_> = bl
+        .signs
+        .iter()
+        .filter(|s| !vp.hidden_sign_ids.contains(&s.id))
+        .collect();
 
-    sorted
+    filtered.sort_unstable_by_key(|s| Reverse(s.priority));
+
+    filtered
         .iter()
         .take(max_sign_count)
         .enumerate()

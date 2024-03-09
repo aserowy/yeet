@@ -51,7 +51,6 @@ impl Default for Model {
                     view_port: ViewPort {
                         line_number: LineNumber::Relative,
                         line_number_width: 3,
-                        sign_column_width: 2,
                         ..Default::default()
                     },
                     ..Default::default()
@@ -73,24 +72,11 @@ impl Default for Model {
                         ..Default::default()
                     }),
                     show_border: true,
-                    view_port: ViewPort {
-                        sign_column_width: 1,
-                        ..Default::default()
-                    },
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            preview: DirectoryBuffer {
-                buffer: Buffer {
-                    view_port: ViewPort {
-                        sign_column_width: 1,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            preview: DirectoryBuffer::default(),
             search: None,
             settings: Settings::default(),
         }
