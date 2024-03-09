@@ -30,19 +30,17 @@ pub fn print(marks: &Marks) -> Vec<String> {
 }
 
 pub fn add(model: &mut Model, char: char) {
-    if !model.settings.show_mark_signs {
-        return;
-    }
-
     let selected = current::selection(model);
     if let Some(selected) = selected {
-        if let Some(bl) = current::selected_bufferline(model) {
-            set_sign(bl);
-        }
-
         let removed = model.marks.entries.insert(char, selected);
-        if let Some(removed) = removed {
-            unset_sign(model, &removed);
+        if model.settings.show_mark_signs {
+            if let Some(bl) = current::selected_bufferline(model) {
+                set_sign(bl);
+            }
+
+            if let Some(removed) = removed {
+                unset_sign(model, &removed);
+            }
         }
     }
 }
