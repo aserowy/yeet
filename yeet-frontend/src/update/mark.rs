@@ -4,7 +4,7 @@ use ratatui::style::Color;
 
 use crate::{
     model::{
-        buffer::{BufferLine, Sign, StylePartial},
+        buffer::{BufferLine, Sign, SignIdentifier, StylePartial},
         mark::Marks,
         Model,
     },
@@ -60,12 +60,13 @@ pub fn set_sign_if_marked(settings: &Settings, marks: &Marks, bl: &mut BufferLin
 
 fn set_sign(bl: &mut BufferLine) {
     let sign = 'm';
-    let is_signed = bl.signs.iter().any(|s| s.content == sign);
+    let is_signed = bl.signs.iter().any(|s| s.id == SignIdentifier::Mark);
     if is_signed {
         return;
     }
 
     bl.signs.push(Sign {
+        id: SignIdentifier::Mark,
         content: sign,
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
@@ -98,7 +99,7 @@ fn unset_sign(model: &mut Model, removed: &Path) {
 
     for line in lines {
         if line.content == file_name {
-            let position = line.signs.iter().position(|s| s.content == 'm');
+            let position = line.signs.iter().position(|s| s.id == SignIdentifier::Mark);
             if let Some(position) = position {
                 line.signs.remove(position);
             }

@@ -57,7 +57,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                         if line.content.is_empty() {
                             actions.pop();
                             actions.push(Action::EmitMessages(vec![Message::Buffer(
-                                Buffer::ChangeMode(model.mode.clone(), Mode::default()),
+                                Buffer::ChangeMode(
+                                    model.mode.clone(),
+                                    get_mode_after_command(&model.mode_before),
+                                ),
                             )]));
                         }
                     }
@@ -94,7 +97,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                 } else {
                     buffer::set_content(&model.mode, buffer, vec![]);
 
-                    Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default()))
+                    Message::Buffer(Buffer::ChangeMode(
+                        model.mode.clone(),
+                        get_mode_after_command(&model.mode_before),
+                    ))
                 };
 
                 messages.push(Action::SkipRender);
@@ -121,7 +127,10 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
 
             let messages = if is_search {
                 vec![
-                    Message::Buffer(Buffer::ChangeMode(model.mode.clone(), Mode::default())),
+                    Message::Buffer(Buffer::ChangeMode(
+                        model.mode.clone(),
+                        get_mode_after_command(&model.mode_before),
+                    )),
                     Message::Buffer(Buffer::MoveCursor(1, CursorDirection::Search(true))),
                 ]
             } else if let Some(cmd) = buffer.lines.last() {
@@ -129,7 +138,7 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
             } else {
                 vec![Message::Buffer(Buffer::ChangeMode(
                     model.mode.clone(),
-                    Mode::default(),
+                    get_mode_after_command(&model.mode_before),
                 ))]
             };
 
@@ -142,7 +151,10 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
             buffer::set_content(&model.mode, buffer, vec![]);
 
             actions.push(Action::EmitMessages(vec![Message::Buffer(
-                Buffer::ChangeMode(model.mode.clone(), Mode::default()),
+                Buffer::ChangeMode(
+                    model.mode.clone(),
+                    get_mode_after_command(&model.mode_before),
+                ),
             )]));
         }
     }
@@ -226,4 +238,16 @@ pub fn height(model: &Model, messages: &Vec<Message>) -> u16 {
         }
     }
     height
+}
+
+fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
+    if let Some(mode) = mode_before {
+        match mode {
+            Mode::Command(_) => unreachable!(),
+            Mode::Insert | Mode::Normal => Mode::Normal,
+            Mode::Navigation => Mode::Navigation,
+        }
+    } else {
+        Mode::default()
+    }
 }

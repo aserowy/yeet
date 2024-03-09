@@ -64,11 +64,17 @@ impl BufferLine {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Sign {
+    pub id: SignIdentifier,
     pub content: char,
     pub priority: usize,
     pub style: Vec<StylePartial>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum SignIdentifier {
+    Mark,
 }
 
 #[derive(Clone, Debug, Default)]
