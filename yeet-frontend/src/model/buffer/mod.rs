@@ -1,5 +1,7 @@
 use ratatui::style::{Color, Modifier};
 
+use crate::settings::{self};
+
 use self::{
     undo::{BufferChanged, Undo},
     viewport::ViewPort,
@@ -15,6 +17,12 @@ pub struct Buffer {
     pub show_border: bool,
     pub undo: Undo,
     pub view_port: ViewPort,
+}
+
+impl Buffer {
+    pub fn set(&mut self, settings: &settings::Buffer) {
+        self.view_port.sign_column_width = settings.sign_column_width;
+    }
 }
 
 #[derive(Clone, Debug, Default)]

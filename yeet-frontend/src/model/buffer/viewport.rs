@@ -11,6 +11,8 @@ pub struct ViewPort {
     pub width: usize,
 }
 
+// TODO: enable with settings
+// TODO: refactor into functions
 impl ViewPort {
     pub fn get_border_width(&self) -> usize {
         if self.get_prefix_width() > 0 {

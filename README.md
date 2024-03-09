@@ -60,7 +60,7 @@ register holds all files which got yanked and the last nine trashes.
 | zt, zz, zb | move viewport to start, center, bottom of cursor position   |
 | C-u, C-d   | move viewport half screen up/down                           |
 
-\*trash: files are not deleted but moved to yeets cache folder to enable register
+\*trash: files are not deleted but moved to yeets cache folder to enable junk yard
 interactions. Trashes get executed when leaving normal to navigation or saving the
 current buffer. To delete the selected path completly, call command `:d!`.
 

@@ -20,6 +20,8 @@ mod register;
 mod search;
 
 pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
+    settings(model);
+
     match message {
         Message::Buffer(msg) => buffer(model, msg),
         Message::ClearSearchHighlight => {
@@ -85,6 +87,14 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
             .cmp(&b.content.to_ascii_uppercase())
     });
     buffer::cursor::validate(mode, model);
+}
+
+fn settings(model: &mut Model) {
+    let settings = &model.settings;
+
+    model.current.buffer.set(&settings.current);
+    model.parent.buffer.set(&settings.parent);
+    model.preview.buffer.set(&settings.preview);
 }
 
 fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
