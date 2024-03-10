@@ -22,7 +22,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     };
 
     let mut actions = match cmd {
-        ("clist", "") => {
+        ("cl", "") => {
             let content = qfix::print(&model.qfix)
                 .iter()
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
