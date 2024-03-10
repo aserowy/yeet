@@ -29,14 +29,16 @@ pub fn add(model: &mut Model, char: char) {
     }
 }
 
-pub fn delete(marks: &mut Marks, delete: &Vec<char>) -> Option<Vec<Action>> {
+pub fn delete(model: &mut Model, delete: &Vec<char>) -> Option<Vec<Action>> {
     let mut persisted = Vec::new();
     for mark in delete {
-        let deleted = marks.entries.remove_entry(mark);
-        if let Some((mark, _)) = deleted {
+        let deleted = model.marks.entries.remove_entry(mark);
+        if let Some((mark, path)) = deleted {
+            unset_sign(model, path.as_path());
             persisted.push(mark);
         }
     }
+
     if persisted.is_empty() {
         None
     } else {
