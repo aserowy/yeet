@@ -3,15 +3,46 @@ use std::path::Path;
 use ratatui::style::Color;
 
 use crate::{
+    action::Action,
     model::{
         buffer::{BufferLine, Sign, SignIdentifier, StylePartial},
         mark::Marks,
         Model,
     },
     settings::Settings,
+    task::Task,
 };
 
 use super::model::current;
+
+pub fn add(model: &mut Model, char: char) {
+    let selected = current::selection(model);
+    if let Some(selected) = selected {
+        let removed = model.marks.entries.insert(char, selected);
+        if let Some(removed) = removed {
+            unset_sign(model, &removed);
+        }
+
+        if let Some(bl) = current::selected_bufferline(model) {
+            set_sign(bl);
+        }
+    }
+}
+
+pub fn delete(marks: &mut Marks, delete: &Vec<char>) -> Option<Vec<Action>> {
+    let mut persisted = Vec::new();
+    for mark in delete {
+        let deleted = marks.entries.remove_entry(mark);
+        if let Some((mark, _)) = deleted {
+            persisted.push(mark);
+        }
+    }
+    if persisted.is_empty() {
+        None
+    } else {
+        Some(vec![Action::Task(Task::DeleteMarks(persisted))])
+    }
+}
 
 pub fn print(marks: &Marks) -> Vec<String> {
     let mut marks: Vec<_> = marks
@@ -27,20 +58,6 @@ pub fn print(marks: &Marks) -> Vec<String> {
     contents.extend(marks);
 
     contents
-}
-
-pub fn add(model: &mut Model, char: char) {
-    let selected = current::selection(model);
-    if let Some(selected) = selected {
-        let removed = model.marks.entries.insert(char, selected);
-        if let Some(removed) = removed {
-            unset_sign(model, &removed);
-        }
-
-        if let Some(bl) = current::selected_bufferline(model) {
-            set_sign(bl);
-        }
-    }
 }
 
 pub fn set_sign_if_marked(settings: &Settings, marks: &Marks, bl: &mut BufferLine, path: &Path) {

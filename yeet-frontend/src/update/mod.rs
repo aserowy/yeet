@@ -27,6 +27,7 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
 
     match message {
         Message::Buffer(msg) => buffer(model, msg),
+        Message::DeleteMarks(marks) => mark::delete(&mut model.marks, marks),
         Message::ClearSearchHighlight => {
             search::clear(model);
             None

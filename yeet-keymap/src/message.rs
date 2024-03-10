@@ -51,6 +51,7 @@ pub enum BindingKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(Buffer),
+    DeleteMarks(Vec<char>),
     ClearSearchHighlight,
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>),
     EnumerationFinished(PathBuf),

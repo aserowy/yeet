@@ -19,6 +19,7 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Task {
     AddPath(PathBuf),
+    DeleteMarks(Vec<char>),
     DeletePath(PathBuf),
     DeleteRegisterEntry(FileEntry),
     EmitMessages(Vec<Message>),
@@ -108,6 +109,28 @@ impl TaskManager {
 
                 Ok(())
             }),
+            Task::DeleteMarks(marks) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    tracing::trace!("saving marks");
+
+                    let mut current = Marks::default();
+                    if let Err(err) = mark::load(&mut current) {
+                        emit_error(&sender, err).await;
+                        return Ok(());
+                    }
+
+                    for mark in marks {
+                        current.entries.remove(&mark);
+                    }
+
+                    if let Err(error) = mark::save(&current) {
+                        emit_error(&sender, error).await;
+                    }
+
+                    Ok(())
+                })
+            }
             Task::DeletePath(path) => self.tasks.spawn(async move {
                 if !path.exists() {
                     return Err(AppError::InvalidTargetPath);
@@ -125,7 +148,7 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = register::file::delete(entry).await {
-                        emit_error(sender, error).await;
+                        emit_error(&sender, error).await;
                     }
                     Ok(())
                 })
@@ -134,7 +157,7 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = sender.send(messages).await {
-                        emit_error(sender, AppError::ActionSendFailed(error)).await;
+                        emit_error(&sender, AppError::ActionSendFailed(error)).await;
                     }
                     Ok(())
                 })
@@ -211,7 +234,7 @@ impl TaskManager {
                         .await;
 
                     if let Err(error) = result {
-                        emit_error(sender, AppError::ActionSendFailed(error)).await;
+                        emit_error(&sender, AppError::ActionSendFailed(error)).await;
                     }
 
                     Ok(())
@@ -239,7 +262,7 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = history::cache::save(&history) {
-                        emit_error(sender, error).await;
+                        emit_error(&sender, error).await;
                     }
                     history::cache::optimize()?;
 
@@ -252,7 +275,7 @@ impl TaskManager {
                     tracing::trace!("saving marks");
 
                     if let Err(error) = mark::save(&marks) {
-                        emit_error(sender, error).await;
+                        emit_error(&sender, error).await;
                     }
 
                     Ok(())
@@ -262,7 +285,7 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = register::file::cache_and_compress(entry).await {
-                        emit_error(sender, error).await;
+                        emit_error(&sender, error).await;
                     }
 
                     Ok(())
@@ -272,7 +295,7 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = register::file::compress(entry).await {
-                        emit_error(sender, error).await;
+                        emit_error(&sender, error).await;
                     }
 
                     Ok(())
@@ -289,7 +312,7 @@ impl TaskManager {
     }
 }
 
-async fn emit_error(sender: Sender<Vec<Message>>, error: AppError) {
+async fn emit_error(sender: &Sender<Vec<Message>>, error: AppError) {
     tracing::error!("task failed: {:?}", error);
 
     let error = format!("Error: {:?}", error);
@@ -298,18 +321,18 @@ async fn emit_error(sender: Sender<Vec<Message>>, error: AppError) {
 
 fn should_abort_on_finish(task: Task) -> bool {
     match task {
-        Task::AddPath(_) => false,
-        Task::DeletePath(_) => false,
-        Task::DeleteRegisterEntry(_) => false,
-        Task::EmitMessages(_) => true,
-        Task::EnumerateDirectory(_) => true,
-        Task::LoadPreview(_) => true,
-        Task::OptimizeHistory => false,
-        Task::RenamePath(_, _) => false,
-        Task::RestorePath(_, _) => false,
-        Task::SaveHistory(_) => false,
-        Task::SaveMarks(_) => false,
-        Task::TrashPath(_) => false,
-        Task::YankPath(_) => false,
+        Task::EmitMessages(_) | Task::EnumerateDirectory(_) | Task::LoadPreview(_) => true,
+
+        Task::AddPath(_)
+        | Task::DeleteMarks(_)
+        | Task::DeletePath(_)
+        | Task::DeleteRegisterEntry(_)
+        | Task::OptimizeHistory
+        | Task::RenamePath(_, _)
+        | Task::RestorePath(_, _)
+        | Task::SaveHistory(_)
+        | Task::SaveMarks(_)
+        | Task::TrashPath(_)
+        | Task::YankPath(_) => false,
     }
 }

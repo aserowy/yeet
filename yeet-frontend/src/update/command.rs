@@ -24,6 +24,17 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             }
             actions
         }
+        ("delm", args) if !args.is_empty() => {
+            let mut marks = Vec::new();
+            for mark in args.chars().filter(|c| c != &' ') {
+                marks.push(mark);
+            }
+
+            vec![
+                change_mode_action,
+                Action::EmitMessages(vec![Message::DeleteMarks(marks)]),
+            ]
+        }
         // TODO: :delm[arks] {marks} Delete the specified marks.  Marks that can be deleted
         //             include A-Z and 0-9.  You cannot delete the ' mark.
         //             They can be specified by giving the list of mark
