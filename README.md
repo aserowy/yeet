@@ -78,17 +78,18 @@ In normal mode, all register interactions target the default register (equal to
 
 ## commands
 
-| :       | action                              |
-| ------- | ----------------------------------- |
-| d!      | delete selected file/directory      |
-| e!      | reload current folder               |
-| jnk     | list junk yard contents             |
-| histopt | optimize history                    |
-| marks   | list all given marks                |
-| noh     | remove search highlights            |
-| q       | quit yeet                           |
-| w       | write changes without changing mode |
-| wq      | write changes and quit yeet         |
+| :            | action                                                                                                                                                         |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| d!           | delete selected file/directory                                                                                                                                 |
+| delm <chars> | delete current and cached marks. Every char represents one mark. ':delm AdfR', ':delm a d f R', and ':delm F' are all valid commands. Whitespaces are ignored. |
+| e!           | reload current folder                                                                                                                                          |
+| jnk          | list junk yard contents                                                                                                                                        |
+| histopt      | optimize history                                                                                                                                               |
+| marks        | list all given marks                                                                                                                                           |
+| noh          | remove search highlights                                                                                                                                       |
+| q            | quit yeet                                                                                                                                                      |
+| w            | write changes without changing mode                                                                                                                            |
+| wq           | write changes and quit yeet                                                                                                                                    |
 
 ## faq
 
