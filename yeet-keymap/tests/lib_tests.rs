@@ -1,5 +1,5 @@
 use yeet_keymap::{
-    key::{Key, KeyCode},
+    key::{Key, KeyCode, KeyModifier},
     message::{Buffer, CommandMode, CursorDirection, Message, Mode, TextModification},
     MessageResolver,
 };
@@ -205,7 +205,10 @@ fn add_and_resolve_key_navigation_q() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Navigation;
 
-    let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let messages = resolver.add_and_resolve(Key::new(
+        KeyCode::from_char('q'),
+        vec![KeyModifier::Ctrl, KeyModifier::Shift],
+    ));
 
     println!("{:?}", messages);
 
