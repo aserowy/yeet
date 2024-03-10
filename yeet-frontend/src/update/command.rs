@@ -11,8 +11,13 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     ));
     let change_mode_action = Action::EmitMessages(vec![change_mode_message.clone()]);
 
+    let cmd = match cmd.split_once(' ') {
+        Some(it) => it,
+        None => (cmd, ""),
+    };
+
     let mut actions = match cmd {
-        "d!" => {
+        ("d!", "") => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = current::selection(model) {
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
@@ -30,12 +35,12 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         //                :delmarks p-z      deletes marks in the range p to z
         //                :delmarks ^.[]     deletes marks ^ . [ ]
         //                :delmarks \"       deletes mark "
-        "e!" => vec![Action::EmitMessages(vec![
+        ("e!", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::NavigateToPath(model.current.path.clone()),
         ])],
-        "histopt" => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
-        "jnk" => {
+        ("histopt", "") => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
+        ("jnk", "") => {
             let content = model
                 .junk
                 .print()
@@ -45,7 +50,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
-        "marks" => {
+        ("marks", "") => {
             let content = mark::print(&model.marks)
                 .iter()
                 .map(|cntnt| PrintContent::Info(cntnt.to_string()))
@@ -53,21 +58,29 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
-        "noh" => vec![Action::EmitMessages(vec![
+        ("noh", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::ClearSearchHighlight,
         ])],
-        "q" => vec![Action::EmitMessages(vec![Message::Quit])],
-        "w" => vec![Action::EmitMessages(vec![
+        ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
+        ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(Buffer::SaveBuffer(None)),
         ])],
-        "wq" => vec![Action::EmitMessages(vec![
+        ("wq", "") => vec![Action::EmitMessages(vec![
             Message::Buffer(Buffer::SaveBuffer(None)),
             Message::Quit,
         ])],
-        _ => vec![change_mode_action],
+        (cmd, args) => {
+            let mut actions = vec![change_mode_action];
+            if !args.is_empty() {
+                let err = format!("command {} {} is not valid", cmd, args);
+                actions.push(Action::EmitMessages(vec![Message::Error(err)]));
+            }
+            actions
+        }
     };
+
     actions.push(Action::SkipRender);
 
     actions
