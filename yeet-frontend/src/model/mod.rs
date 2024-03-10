@@ -15,12 +15,14 @@ use self::{
     },
     history::History,
     mark::Marks,
+    qfix::QuickFix,
     register::JunkYard,
 };
 
 pub mod buffer;
 pub mod history;
 pub mod mark;
+pub mod qfix;
 pub mod register;
 
 #[derive(Debug)]
@@ -36,6 +38,7 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
     pub preview: DirectoryBuffer,
+    pub qfix: QuickFix,
     pub search: Option<SearchModel>,
     pub settings: Settings,
 }
@@ -77,6 +80,7 @@ impl Default for Model {
                 ..Default::default()
             },
             preview: DirectoryBuffer::default(),
+            qfix: QuickFix::default(),
             search: None,
             settings: Settings::default(),
         }

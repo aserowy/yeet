@@ -19,6 +19,7 @@ mod mark;
 pub mod model;
 mod navigation;
 mod path;
+mod qfix;
 mod register;
 mod search;
 
@@ -77,6 +78,10 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
         Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
         Message::SetMark(char) => {
             mark::add(model, *char);
+            None
+        }
+        Message::ToggleQuickFix => {
+            qfix::toggle(model);
             None
         }
         Message::Quit => Some(vec![Action::Quit(None)]),

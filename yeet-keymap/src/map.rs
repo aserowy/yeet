@@ -416,6 +416,14 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('q'), vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::ToggleQuickFix),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
                     Binding {
                         kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(

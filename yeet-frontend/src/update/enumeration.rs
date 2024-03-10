@@ -4,7 +4,7 @@ use yeet_keymap::message::{ContentKind, Mode};
 
 use crate::{action::Action, model::Model};
 
-use super::{buffer, bufferline, history, mark, preview};
+use super::{buffer, bufferline, history, mark, preview, qfix};
 
 pub fn changed(
     model: &mut Model,
@@ -27,12 +27,9 @@ pub fn changed(
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = bufferline::from_enumeration(cntnt, knd);
-                mark::set_sign_if_marked(
-                    &model.settings,
-                    &model.marks,
-                    &mut line,
-                    &path.join(cntnt),
-                );
+                mark::set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
+                qfix::set_sign_if_qfix(&model.qfix, &mut line, &path.join(cntnt));
+
                 line
             })
             .collect();

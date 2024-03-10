@@ -73,6 +73,7 @@ pub enum Message {
     Rerender,
     Resize(u16, u16),
     SetMark(char),
+    ToggleQuickFix,
     Quit,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),

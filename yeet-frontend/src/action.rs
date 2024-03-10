@@ -109,6 +109,7 @@ async fn execute(
                 }
                 emitter.run(Task::SaveHistory(model.history.clone()));
                 emitter.run(Task::SaveMarks(model.marks.clone()));
+                emitter.run(Task::SaveQuickFix(model.qfix.clone()));
 
                 result = ActionResult::Quit;
             }

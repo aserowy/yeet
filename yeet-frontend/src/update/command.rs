@@ -1,6 +1,11 @@
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
-use crate::{action::Action, model::Model, task::Task, update::mark};
+use crate::{
+    action::Action,
+    model::Model,
+    task::Task,
+    update::{mark, qfix},
+};
 
 use super::current;
 
@@ -17,6 +22,14 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     };
 
     let mut actions = match cmd {
+        ("clist", "") => {
+            let content = qfix::print(&model.qfix)
+                .iter()
+                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .collect();
+
+            vec![Action::EmitMessages(vec![Message::Print(content)])]
+        }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = current::selection(model) {
@@ -74,7 +87,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         (cmd, args) => {
             let mut actions = vec![change_mode_action];
             if !args.is_empty() {
-                let err = format!("command {} {} is not valid", cmd, args);
+                let err = format!("command '{} {}' is not valid", cmd, args);
                 actions.push(Action::EmitMessages(vec![Message::Error(err)]));
             }
             actions

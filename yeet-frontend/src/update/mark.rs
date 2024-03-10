@@ -9,7 +9,6 @@ use crate::{
         mark::Marks,
         Model,
     },
-    settings::Settings,
     task::Task,
 };
 
@@ -62,11 +61,7 @@ pub fn print(marks: &Marks) -> Vec<String> {
     contents
 }
 
-pub fn set_sign_if_marked(settings: &Settings, marks: &Marks, bl: &mut BufferLine, path: &Path) {
-    if !settings.show_mark_signs {
-        return;
-    }
-
+pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
     let is_marked = marks.entries.values().any(|p| p == path);
     if !is_marked {
         return;

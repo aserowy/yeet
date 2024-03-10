@@ -85,7 +85,7 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
     tracing::trace!("persisted marks loaded and merged");
 
     let mut writer = csv::Writer::from_writer(mark_writer);
-    for (char, path) in marks.entries.iter() {
+    for (char, path) in persisted.entries {
         if !path.exists() {
             continue;
         }

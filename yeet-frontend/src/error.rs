@@ -15,6 +15,8 @@ pub enum AppError {
     LoadHistoryFailed,
     #[error("Loading marks failed")]
     LoadMarkFailed,
+    #[error("Loading quickfix failed")]
+    LoadQuickFixFailed,
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
     #[error("Watch operation on path failed")]

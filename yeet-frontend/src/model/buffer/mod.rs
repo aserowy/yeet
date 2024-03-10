@@ -75,6 +75,7 @@ pub struct Sign {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SignIdentifier {
     Mark,
+    QuickFix,
 }
 
 #[derive(Clone, Debug, Default)]

@@ -12,6 +12,7 @@ use crate::{
     model::{
         history::{self, History},
         mark::{self, Marks},
+        qfix::{self, QuickFix},
         register::{self, FileEntry},
     },
 };
@@ -30,6 +31,7 @@ pub enum Task {
     RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
     SaveMarks(Marks),
+    SaveQuickFix(QuickFix),
     TrashPath(FileEntry),
     YankPath(FileEntry),
 }
@@ -281,6 +283,18 @@ impl TaskManager {
                     Ok(())
                 })
             }
+            Task::SaveQuickFix(qfix) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    tracing::trace!("saving qfix");
+
+                    if let Err(error) = qfix::save(&qfix) {
+                        emit_error(&sender, error).await;
+                    }
+
+                    Ok(())
+                })
+            }
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
@@ -332,6 +346,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         | Task::RestorePath(_, _)
         | Task::SaveHistory(_)
         | Task::SaveMarks(_)
+        | Task::SaveQuickFix(_)
         | Task::TrashPath(_)
         | Task::YankPath(_) => false,
     }

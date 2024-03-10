@@ -7,7 +7,7 @@ use yeet_keymap::message::Mode;
 
 use crate::{action::Action, model::Model};
 
-use super::{bufferline, mark, preview};
+use super::{bufferline, mark, preview, qfix};
 
 pub fn add(model: &mut Model, paths: &[PathBuf]) -> Option<Vec<Action>> {
     add_paths(model, paths);
@@ -64,7 +64,8 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let mut line = bufferline::from(path);
-                mark::set_sign_if_marked(&model.settings, &model.marks, &mut line, path);
+                mark::set_sign_if_marked(&model.marks, &mut line, path);
+                qfix::set_sign_if_qfix(&model.qfix, &mut line, path);
 
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;
