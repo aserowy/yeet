@@ -12,7 +12,7 @@ pub const CURSOR_INSERT_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Mod
 pub const CURSOR_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Modifier(Modifier::REVERSED);
 pub const CURSOR_NAV_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
 pub const CURSORLINE_NAV_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
-pub const CURSORLINE_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::Black);
+pub const CURSORLINE_NORMAL_STYLE_PARTIAL: StylePartial = StylePartial::Background(Color::DarkGray);
 pub const LINE_NUMBER_ABS_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::White);
 pub const LINE_NUMBER_REL_STYLE_PARTIAL: StylePartial = StylePartial::Foreground(Color::DarkGray);
 

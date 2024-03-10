@@ -43,22 +43,21 @@ register holds all files which got yanked and the last nine trashes.
 
 ### navigation and normal mode
 
-| keys       | action                                                      |
-| ---------- | ----------------------------------------------------------- |
-| j, k       | navigating the current directory down/up                    |
-| o, O       | add a new line and change to insert mode                    |
-| i, a       | change to insert mode                                       |
-| I, A       | jump to line start/end and change to insert mode            |
-| d\<motion> | delete according to motion (must be valid for current mode) |
-| dd         | go into normal and trash\* the current line                 |
-| :          | change to command mode                                      |
-| /          | change to search downward                                   |
-| ?          | change to search upward                                     |
-| n, N       | repeat last search in same/reverse direction                |
-| m\<char>   | set mark for current selection                              |
-| '\<char>   | jump to mark                                                |
-| zt, zz, zb | move viewport to start, center, bottom of cursor position   |
-| C-u, C-d   | move viewport half screen up/down                           |
+| keys       | action                                                    |
+| ---------- | --------------------------------------------------------- |
+| j, k       | navigating the current directory down/up                  |
+| o, O       | add a new line and change to insert mode                  |
+| i, a       | change to insert mode                                     |
+| I, A       | jump to line start/end and change to insert mode          |
+| dd         | go into normal and trash\* the current line               |
+| :          | change to command mode                                    |
+| /          | change to search downward                                 |
+| ?          | change to search upward                                   |
+| n, N       | repeat last search in same/reverse direction              |
+| m\<char>   | set mark for current selection                            |
+| '\<char>   | jump to mark                                              |
+| zt, zz, zb | move viewport to start, center, bottom of cursor position |
+| C-u, C-d   | move viewport half screen up/down                         |
 
 \*trash: files are not deleted but moved to yeets cache folder to enable junk yard
 interactions. Trashes get executed when leaving normal to navigation or saving the
@@ -69,12 +68,15 @@ current buffer. To delete the selected path completly, call command `:d!`.
 In normal mode, all register interactions target the default register (equal to
 `:reg` in nvim).
 
-| keys               | action                                        |
-| ------------------ | --------------------------------------------- |
-| h, l               | move cursor left/right                        |
-| 0, $               | move cursor to line start/end                 |
-| f\<char>, F\<char> | move cursor to next char forward/backward     |
-| t\<char>, T\<char> | move cursor before next char forward/backward |
+| keys               | action                                               |
+| ------------------ | ---------------------------------------------------- |
+| h, l               | move cursor left/right                               |
+| 0, $               | move cursor to line start/end                        |
+| f\<char>, F\<char> | move cursor to next char forward/backward            |
+| t\<char>, T\<char> | move cursor before next char forward/backward        |
+| c\<motion>         | delete according to motion and change to insert mode |
+| d\<motion>         | delete according to motion                           |
+| x                  | delete char on cursor                                |
 
 ## commands
 
