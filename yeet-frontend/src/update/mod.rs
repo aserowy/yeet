@@ -99,29 +99,41 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
 }
 
 fn settings(model: &mut Model) {
-    let settings = &model.settings;
+    model.current.buffer.set(&model.settings.current);
+    model.parent.buffer.set(&model.settings.parent);
+    model.preview.buffer.set(&model.settings.preview);
 
-    model.current.buffer.set(&settings.current);
-    model.parent.buffer.set(&settings.parent);
-    model.preview.buffer.set(&settings.preview);
-
-    if settings.show_mark_signs {
-        remove_hidden_sign(&mut model.current.buffer, SignIdentifier::Mark);
-        remove_hidden_sign(&mut model.parent.buffer, SignIdentifier::Mark);
-        remove_hidden_sign(&mut model.preview.buffer, SignIdentifier::Mark);
+    if model.settings.show_mark_signs {
+        remove_hidden_sign_on_all_buffer(model, &SignIdentifier::Mark);
     } else {
-        add_hidden_sign(&mut model.current.buffer, SignIdentifier::Mark);
-        add_hidden_sign(&mut model.parent.buffer, SignIdentifier::Mark);
-        add_hidden_sign(&mut model.preview.buffer, SignIdentifier::Mark);
+        add_hidden_sign_on_all_buffer(model, SignIdentifier::Mark);
     }
+
+    if model.settings.show_quickfix_signs {
+        remove_hidden_sign_on_all_buffer(model, &SignIdentifier::QuickFix);
+    } else {
+        add_hidden_sign_on_all_buffer(model, SignIdentifier::QuickFix);
+    }
+}
+
+fn add_hidden_sign_on_all_buffer(model: &mut Model, id: SignIdentifier) {
+    add_hidden_sign(&mut model.current.buffer, id.clone());
+    add_hidden_sign(&mut model.parent.buffer, id.clone());
+    add_hidden_sign(&mut model.preview.buffer, id);
 }
 
 fn add_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
     buffer.view_port.hidden_sign_ids.insert(id);
 }
 
-fn remove_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
-    buffer.view_port.hidden_sign_ids.remove(&id);
+fn remove_hidden_sign_on_all_buffer(model: &mut Model, id: &SignIdentifier) {
+    remove_hidden_sign(&mut model.current.buffer, id);
+    remove_hidden_sign(&mut model.parent.buffer, id);
+    remove_hidden_sign(&mut model.preview.buffer, id);
+}
+
+fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
+    buffer.view_port.hidden_sign_ids.remove(id);
 }
 
 fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {

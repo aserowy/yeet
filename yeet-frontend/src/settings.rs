@@ -5,7 +5,7 @@ pub struct Settings {
     pub current: Buffer,
     pub parent: Buffer,
     pub preview: Buffer,
-    pub show_clist_signs: bool,
+    pub show_quickfix_signs: bool,
     pub show_mark_signs: bool,
     pub stdout_on_open: bool,
     pub startup_path: Option<PathBuf>,
@@ -20,7 +20,7 @@ impl Default for Settings {
             parent: Buffer::default(),
             preview: Buffer::default(),
             show_mark_signs: false,
-            show_clist_signs: true,
+            show_quickfix_signs: true,
             stdout_on_open: false,
             startup_path: None,
         }
