@@ -35,17 +35,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Action::EmitMessages(vec![Message::DeleteMarks(marks)]),
             ]
         }
-        // TODO: :delm[arks] {marks} Delete the specified marks.  Marks that can be deleted
-        //             include A-Z and 0-9.  You cannot delete the ' mark.
-        //             They can be specified by giving the list of mark
-        //             names, or with a range, separated with a dash.  Spaces
-        //             are ignored.  Examples:
-        //                :delmarks a        deletes mark a
-        //                :delmarks a b 1    deletes marks a, b and 1
-        //                :delmarks Aa       deletes marks A and a
-        //                :delmarks p-z      deletes marks in the range p to z
-        //                :delmarks ^.[]     deletes marks ^ . [ ]
-        //                :delmarks \"       deletes mark "
         ("e!", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::NavigateToPath(model.current.path.clone()),
