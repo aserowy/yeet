@@ -7,6 +7,7 @@ use crate::error::AppError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct QuickFix {
+    pub current_index: usize,
     pub entries: Vec<PathBuf>,
 }
 

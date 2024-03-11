@@ -23,19 +23,17 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     let mut actions = match cmd {
         ("cfirst", "") => {
+            model.qfix.current_index = 0;
+
             let path = match model.qfix.entries.first() {
                 Some(it) => it,
                 None => return vec![change_mode_action],
             };
 
-            if path.exists() {
-                vec![
-                    change_mode_action,
-                    Action::EmitMessages(vec![Message::NavigateToPath(path.clone())]),
-                ]
-            } else {
-                vec![change_mode_action]
-            }
+            vec![
+                change_mode_action,
+                Action::EmitMessages(vec![Message::NavigateToPath(path.clone())]),
+            ]
         }
         ("cl", "") => {
             let content = qfix::print(&model.qfix)
@@ -44,6 +42,50 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 .collect();
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
+        }
+        ("cn", "") => {
+            let next_index = model.qfix.current_index + 1;
+            match model.qfix.entries.get(next_index) {
+                Some(it) => {
+                    model.qfix.current_index = next_index;
+                    vec![
+                        change_mode_action,
+                        Action::EmitMessages(vec![Message::NavigateToPath(it.clone())]),
+                    ]
+                }
+                None => {
+                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
+                        "cfirst".to_string(),
+                    )])]
+                }
+            }
+        }
+        ("cN", "") => {
+            if model.qfix.entries.is_empty() {
+                return vec![change_mode_action];
+            }
+
+            let next_index = if model.qfix.current_index > 0 {
+                model.qfix.current_index - 1
+            } else {
+                model.qfix.entries.len() - 1
+            };
+
+            model.qfix.current_index = next_index;
+
+            match model.qfix.entries.get(next_index) {
+                Some(it) => {
+                    vec![
+                        change_mode_action,
+                        Action::EmitMessages(vec![Message::NavigateToPath(it.clone())]),
+                    ]
+                }
+                None => {
+                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
+                        "cN".to_string(),
+                    )])]
+                }
+            }
         }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
