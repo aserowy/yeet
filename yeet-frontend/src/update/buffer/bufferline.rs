@@ -16,81 +16,6 @@ pub fn update(
     modification: &TextModification,
 ) -> Option<Vec<BufferChanged>> {
     match modification {
-        TextModification::DeleteCharBeforeCursor => {
-            let line = get_line_or_create_on_empty(model);
-            if let Some((cursor, line)) = line {
-                let index = get_cursor_index(cursor, line);
-                if index > 0 {
-                    let next_index = if count >= &index { 0 } else { index - count };
-                    cursor.horizontal_index = CursorPosition::Absolute {
-                        current: next_index,
-                        expanded: next_index,
-                    };
-
-                    let new: String = line
-                        .content
-                        .chars()
-                        .enumerate()
-                        .filter_map(|(i, c)| {
-                            if i >= next_index && i < index {
-                                None
-                            } else {
-                                Some(c)
-                            }
-                        })
-                        .collect();
-
-                    let changed = BufferChanged::Content(
-                        cursor.vertical_index,
-                        line.content.to_string(),
-                        new.to_string(),
-                    );
-
-                    line.content = new;
-
-                    Some(vec![changed])
-                } else {
-                    // TODO: char before cursor removes empty line and inserts rest to above
-                    None
-                }
-            } else {
-                None
-            }
-        }
-        TextModification::DeleteCharOnCursor => {
-            let line = get_line_or_create_on_empty(model);
-            if let Some((cursor, line)) = line {
-                let index = get_cursor_index(cursor, line);
-                if index < line.len() {
-                    let new: String = line
-                        .content
-                        .chars()
-                        .enumerate()
-                        .filter_map(|(i, c)| {
-                            if i >= index && i < index + count {
-                                None
-                            } else {
-                                Some(c)
-                            }
-                        })
-                        .collect();
-
-                    let changed = BufferChanged::Content(
-                        cursor.vertical_index,
-                        line.content.to_string(),
-                        new.to_string(),
-                    );
-
-                    line.content = new;
-
-                    Some(vec![changed])
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        }
         TextModification::DeleteLine => {
             if model.lines.is_empty() {
                 None
@@ -156,7 +81,7 @@ pub fn update(
                 }
             } else {
                 // TODO: multi line motion like search
-                let line = match model.lines.get(pre_motion_cursor.vertical_index) {
+                let line = match model.lines.get_mut(pre_motion_cursor.vertical_index) {
                     Some(it) => it,
                     None => return None,
                 };
@@ -164,16 +89,40 @@ pub fn update(
                 let pre_index = get_cursor_index(&pre_motion_cursor, line);
                 let post_index = get_cursor_index(post_motion_cursor, line);
 
-                let count = if pre_index > post_index {
-                    pre_index - post_index + 1
+                let (horizontal_index, mut count) = if pre_index > post_index {
+                    (post_index, pre_index - post_index)
                 } else {
                     model.cursor = Some(pre_motion_cursor.clone());
-                    post_index - pre_index + 1
+                    (pre_index, post_index - pre_index)
                 };
 
-                let action = &TextModification::DeleteCharOnCursor;
-                if let Some(cng) = update(mode, search, model, &count, action) {
-                    changes.extend(cng);
+                if is_inclusive(motion) {
+                    count += 1;
+                }
+
+                if horizontal_index < line.len() {
+                    let new: String = line
+                        .content
+                        .chars()
+                        .enumerate()
+                        .filter_map(|(i, c)| {
+                            if i >= horizontal_index && i < horizontal_index + count {
+                                None
+                            } else {
+                                Some(c)
+                            }
+                        })
+                        .collect();
+
+                    let changed = BufferChanged::Content(
+                        pre_motion_cursor.vertical_index,
+                        line.content.to_string(),
+                        new.to_string(),
+                    );
+
+                    line.content = new;
+
+                    changes.push(changed);
                 }
             }
 
@@ -242,6 +191,25 @@ pub fn update(
                 None
             }
         }
+    }
+}
+
+fn is_inclusive(motion: &CursorDirection) -> bool {
+    match motion {
+        CursorDirection::Left
+        | CursorDirection::Right
+        | CursorDirection::LineStart
+        | CursorDirection::Search(_)
+        | CursorDirection::Up
+        | CursorDirection::Down
+        | CursorDirection::Bottom
+        | CursorDirection::Top => false,
+
+        CursorDirection::FindBackward(_)
+        | CursorDirection::FindForward(_)
+        | CursorDirection::TillBackward(_)
+        | CursorDirection::TillForward(_)
+        | CursorDirection::LineEnd => true,
     }
 }
 

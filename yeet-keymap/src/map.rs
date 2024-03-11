@@ -44,7 +44,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteCharBeforeCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Left,
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -65,7 +68,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteCharOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Right,
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -561,7 +567,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('x'), vec![])],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteCharOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Right,
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -575,7 +584,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Backspace, vec![])],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteCharBeforeCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Left,
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -589,7 +601,10 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Delete, vec![])],
                     Binding {
-                        kind: BindingKind::Modification(TextModification::DeleteCharOnCursor),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Right,
+                        )),
                         ..Default::default()
                     },
                 ),

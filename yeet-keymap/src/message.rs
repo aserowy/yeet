@@ -91,8 +91,6 @@ pub enum Buffer {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TextModification {
-    DeleteCharBeforeCursor,
-    DeleteCharOnCursor,
     DeleteLine,
     DeleteMotion(usize, CursorDirection),
     Insert(String),

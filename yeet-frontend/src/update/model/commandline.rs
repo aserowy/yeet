@@ -51,7 +51,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                     }
                 }
 
-                if let &Buffer::Modification(_, TextModification::DeleteCharBeforeCursor) = message
+                if let &Buffer::Modification(
+                    _,
+                    TextModification::DeleteMotion(_, CursorDirection::Left),
+                ) = message
                 {
                     if let Some(line) = buffer.lines.last() {
                         if line.content.is_empty() {
