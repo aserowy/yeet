@@ -54,9 +54,12 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                     ]
                 }
                 None => {
-                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                        "cfirst".to_string(),
-                    )])]
+                    vec![
+                        Action::SkipRender,
+                        Action::EmitMessages(vec![Message::ExecuteCommandString(
+                            "cfirst".to_string(),
+                        )]),
+                    ]
                 }
             }
         }
@@ -81,9 +84,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                     ]
                 }
                 None => {
-                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                        "cN".to_string(),
-                    )])]
+                    vec![
+                        Action::SkipRender,
+                        Action::EmitMessages(vec![Message::ExecuteCommandString("cN".to_string())]),
+                    ]
                 }
             }
         }
