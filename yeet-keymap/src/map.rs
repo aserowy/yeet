@@ -293,15 +293,6 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    vec![Key::new(KeyCode::from_char('a'), vec![])],
-                    Binding {
-                        force: Some(Mode::Insert),
-                        kind: BindingKind::Motion(CursorDirection::Right),
-                        repeat: None,
-                        ..Default::default()
-                    },
-                ),
-                (
                     vec![Key::new(KeyCode::from_char('a'), vec![KeyModifier::Shift])],
                     Binding {
                         force: Some(Mode::Insert),
@@ -333,13 +324,6 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Top),
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('i'), vec![])],
-                    Binding {
-                        force: Some(Mode::Insert),
                         ..Default::default()
                     },
                 ),
@@ -486,6 +470,15 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('a'), vec![])],
+                    Binding {
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::Motion(CursorDirection::Right),
+                        repeat: None,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('c'), vec![])],
                     Binding {
                         expects: Some(NextBindingKind::Motion),
@@ -542,9 +535,27 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('i'), vec![])],
+                    Binding {
+                        force: Some(Mode::Insert),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Right),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('s'), vec![])],
+                    Binding {
+                        force: Some(Mode::Insert),
+                        kind: BindingKind::Modification(TextModification::DeleteMotion(
+                            1,
+                            CursorDirection::Right,
+                        )),
                         ..Default::default()
                     },
                 ),

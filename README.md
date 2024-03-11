@@ -47,7 +47,6 @@ register holds all files which got yanked and the last nine trashes.
 | ---------- | --------------------------------------------------------- |
 | j, k       | navigating the current directory down/up                  |
 | o, O       | add a new line and change to insert mode                  |
-| i, a       | change to insert mode                                     |
 | I, A       | jump to line start/end and change to insert mode          |
 | dd         | go into normal and trash\* the current line               |
 | :          | change to command mode                                    |
@@ -74,8 +73,10 @@ In normal mode, all register interactions target the default register (equal to
 | 0, $               | move cursor to line start/end                        |
 | f\<char>, F\<char> | move cursor to next char forward/backward            |
 | t\<char>, T\<char> | move cursor before next char forward/backward        |
+| i, a               | change to insert mode                                |
 | c\<motion>         | delete according to motion and change to insert mode |
 | d\<motion>         | delete according to motion                           |
+| s                  | delete char on cursor and change to insert mode      |
 | x                  | delete char on cursor                                |
 
 ## commands
