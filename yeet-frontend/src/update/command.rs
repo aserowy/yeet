@@ -38,7 +38,14 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("cl", "") => {
             let content = qfix::print(&model.qfix)
                 .iter()
-                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .enumerate()
+                .map(|(i, cntnt)| {
+                    if i == model.qfix.current_index + 1 {
+                        PrintContent::Information(cntnt.to_string())
+                    } else {
+                        PrintContent::Default(cntnt.to_string())
+                    }
+                })
                 .collect();
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
@@ -119,7 +126,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 .junk
                 .print()
                 .iter()
-                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
                 .collect();
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
@@ -127,7 +134,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("marks", "") => {
             let content = mark::print(&model.marks)
                 .iter()
-                .map(|cntnt| PrintContent::Info(cntnt.to_string()))
+                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
                 .collect();
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]

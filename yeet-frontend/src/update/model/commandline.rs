@@ -174,6 +174,10 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
     commandline.buffer.lines = content
         .iter()
         .map(|content| match content {
+            PrintContent::Default(cntnt) => BufferLine {
+                content: cntnt.to_string(),
+                ..Default::default()
+            },
             PrintContent::Error(cntnt) => {
                 let cntnt_len = cntnt.chars().count();
                 BufferLine {
@@ -186,10 +190,18 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
                     ..Default::default()
                 }
             }
-            PrintContent::Info(cntnt) => BufferLine {
-                content: cntnt.to_string(),
-                ..Default::default()
-            },
+            PrintContent::Information(cntnt) => {
+                let cntnt_len = cntnt.chars().count();
+                BufferLine {
+                    content: cntnt.to_string(),
+                    style: vec![StylePartialSpan {
+                        end: cntnt_len,
+                        style: StylePartial::Foreground(Color::LightGreen),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                }
+            }
         })
         .collect();
 

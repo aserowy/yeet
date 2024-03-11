@@ -176,5 +176,6 @@ pub enum ViewPortDirection {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PrintContent {
     Error(String),
-    Info(String),
+    Default(String),
+    Information(String),
 }

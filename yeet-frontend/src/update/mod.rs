@@ -163,7 +163,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
             });
 
             let content = format!("--{}--", to.to_string().to_uppercase());
-            commandline::print(model, &[PrintContent::Info(content)]);
+            commandline::print(model, &[PrintContent::Default(content)]);
 
             actions.extend(match to {
                 Mode::Command(_) => {
