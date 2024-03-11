@@ -14,12 +14,12 @@ pub fn toggle(model: &mut Model) {
     let selected = current::selection(model);
     if let Some(selected) = selected {
         if model.qfix.entries.contains(&selected) {
-            model.qfix.entries.remove(&selected);
+            model.qfix.entries.retain(|p| p != &selected);
             if let Some(bl) = current::selected_bufferline(model) {
                 unset_sign(bl);
             }
         } else {
-            model.qfix.entries.insert(selected);
+            model.qfix.entries.push(selected);
             if let Some(bl) = current::selected_bufferline(model) {
                 set_sign(bl);
             }

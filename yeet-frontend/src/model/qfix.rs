@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
 };
@@ -8,7 +7,7 @@ use crate::error::AppError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct QuickFix {
-    pub entries: HashSet<PathBuf>,
+    pub entries: Vec<PathBuf>,
 }
 
 #[tracing::instrument]
@@ -39,7 +38,7 @@ pub fn load(qfix: &mut QuickFix) -> Result<(), AppError> {
             None => continue,
         };
 
-        qfix.entries.insert(path);
+        qfix.entries.push(path);
     }
 
     tracing::trace!("qfix file read");

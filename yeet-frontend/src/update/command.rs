@@ -22,6 +22,21 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     };
 
     let mut actions = match cmd {
+        ("cfirst", "") => {
+            let path = match model.qfix.entries.first() {
+                Some(it) => it,
+                None => return vec![change_mode_action],
+            };
+
+            if path.exists() {
+                vec![
+                    change_mode_action,
+                    Action::EmitMessages(vec![Message::NavigateToPath(path.clone())]),
+                ]
+            } else {
+                vec![change_mode_action]
+            }
+        }
         ("cl", "") => {
             let content = qfix::print(&model.qfix)
                 .iter()

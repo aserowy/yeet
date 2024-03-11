@@ -83,6 +83,7 @@ In normal mode, all register interactions target the default register (equal to
 
 | :            | action                                                                                                                                                         |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cfirst       | navigates to first entry in quick fix list                                                                                                                     |
 | cl           | list all quick fix entries                                                                                                                                     |
 | d!           | delete selected file/directory                                                                                                                                 |
 | delm <chars> | delete current and cached marks. Every char represents one mark. ':delm AdfR', ':delm a d f R', and ':delm F' are all valid commands. Whitespaces are ignored. |
