@@ -28,16 +28,18 @@ pub fn toggle(model: &mut Model) {
 }
 
 pub fn print(qfix: &QuickFix) -> Vec<String> {
-    let mut marks: Vec<_> = qfix
+    let max_width = (qfix.entries.len() + 1).to_string().len();
+
+    let entries: Vec<_> = qfix
         .entries
         .iter()
-        .map(|path| path.to_string_lossy().to_string())
+        .enumerate()
+        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string()))
+        .map(|(i, path)| format!("{:>max_width$} {}", i, path))
         .collect();
 
-    marks.sort();
-
-    let mut contents = vec![":clist".to_string(), "Path".to_string()];
-    contents.extend(marks);
+    let mut contents = vec![":cl".to_string()];
+    contents.extend(entries);
 
     contents
 }

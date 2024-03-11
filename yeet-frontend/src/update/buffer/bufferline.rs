@@ -89,7 +89,7 @@ pub fn update(
                 let pre_index = get_cursor_index(&pre_motion_cursor, line);
                 let post_index = get_cursor_index(post_motion_cursor, line);
 
-                let (horizontal_index, mut count) = if pre_index > post_index {
+                let (index, mut count) = if pre_index > post_index {
                     (post_index, pre_index - post_index)
                 } else {
                     model.cursor = Some(pre_motion_cursor.clone());
@@ -100,30 +100,28 @@ pub fn update(
                     count += 1;
                 }
 
-                if horizontal_index < line.len() {
-                    let new: String = line
-                        .content
-                        .chars()
-                        .enumerate()
-                        .filter_map(|(i, c)| {
-                            if i >= horizontal_index && i < horizontal_index + count {
-                                None
-                            } else {
-                                Some(c)
-                            }
-                        })
-                        .collect();
+                let new: String = line
+                    .content
+                    .chars()
+                    .enumerate()
+                    .filter_map(|(i, c)| {
+                        if i >= index && i < index + count {
+                            None
+                        } else {
+                            Some(c)
+                        }
+                    })
+                    .collect();
 
-                    let changed = BufferChanged::Content(
-                        pre_motion_cursor.vertical_index,
-                        line.content.to_string(),
-                        new.to_string(),
-                    );
+                let changed = BufferChanged::Content(
+                    pre_motion_cursor.vertical_index,
+                    line.content.to_string(),
+                    new.to_string(),
+                );
 
-                    line.content = new;
+                line.content = new;
 
-                    changes.push(changed);
-                }
+                changes.push(changed);
             }
 
             cursor::validate(mode, model);
