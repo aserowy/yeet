@@ -67,7 +67,6 @@ pub enum Message {
     PasteFromJunkYard(String),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
-    PathsWriteFinished(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
     Print(Vec<PrintContent>),
     Rerender,

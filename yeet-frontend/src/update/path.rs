@@ -9,7 +9,7 @@ use crate::{action::Action, model::Model};
 
 use super::{bufferline, mark, preview, qfix};
 
-pub fn add(model: &mut Model, paths: &[PathBuf]) -> Option<Vec<Action>> {
+pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     add_paths(model, paths);
 
     let mut actions = Vec::new();
@@ -19,11 +19,7 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Option<Vec<Action>> {
         preview::viewport(model);
     }
 
-    if actions.is_empty() {
-        None
-    } else {
-        Some(actions)
-    }
+    actions
 }
 
 fn add_paths(model: &mut Model, paths: &[PathBuf]) {

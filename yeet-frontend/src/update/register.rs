@@ -2,19 +2,19 @@ use std::path::PathBuf;
 
 use crate::{action::Action, model::Model, task::Task};
 
-pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Option<Vec<Action>> {
-    let mut actions = vec![Action::SkipRender];
+pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
+    let mut actions = Vec::new();
     for path in paths {
         if path.starts_with(&model.junk.path) {
             if let Some(obsolete) = model.junk.add_or_update(path) {
                 for entry in obsolete.entries {
-                    actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
+                    actions.push(Action::Task(Task::DeleteJunkYardEntry(entry)));
                 }
             }
         }
     }
 
-    Some(actions)
+    actions
 }
 
 pub fn paste(model: &mut Model, register: &str) -> Option<Vec<Action>> {
@@ -54,7 +54,7 @@ pub fn yank(model: &mut Model, repeat: &usize) -> Option<Vec<Action>> {
 
         if let Some(obsolete) = obsolete {
             for entry in obsolete.entries {
-                actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
+                actions.push(Action::Task(Task::DeleteJunkYardEntry(entry)));
             }
         }
 

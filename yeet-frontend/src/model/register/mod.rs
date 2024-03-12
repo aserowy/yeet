@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use crate::error::AppError;
+
 pub mod file;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -37,4 +39,13 @@ pub enum RegisterStatus {
     #[default]
     Processing,
     Ready,
+}
+
+pub fn get_junkyard_path() -> Result<PathBuf, AppError> {
+    let register_path = match dirs::cache_dir() {
+        Some(cache_dir) => cache_dir.join("yeet/register/"),
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    Ok(register_path)
 }

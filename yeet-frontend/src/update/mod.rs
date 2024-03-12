@@ -70,8 +70,12 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
         Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => path::remove(model, path),
-        Message::PathsAdded(paths) => path::add(model, paths),
-        Message::PathsWriteFinished(paths) => register::add(model, paths),
+        Message::PathsAdded(paths) => {
+            let mut actions = path::add(model, paths);
+            actions.extend(register::add(model, paths));
+
+            Some(actions)
+        }
         Message::PreviewLoaded(path, content) => preview::update(model, path, content),
         Message::Print(content) => commandline::print(model, content),
         Message::Rerender => None,

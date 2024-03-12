@@ -78,7 +78,7 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
 
                 if let Some(obsolete) = obsolete {
                     for entry in obsolete.entries {
-                        actions.push(Action::Task(Task::DeleteRegisterEntry(entry)));
+                        actions.push(Action::Task(Task::DeleteJunkYardEntry(entry)));
                     }
                 }
             }

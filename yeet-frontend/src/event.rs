@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
-    event::{AccessKind, AccessMode, ModifyKind, RenameMode},
+    event::{ModifyKind, RenameMode},
     RecommendedWatcher, RecursiveMode, Watcher,
 };
 use tokio::{
@@ -20,6 +20,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
+    model::register,
     task::{Task, TaskManager},
 };
 
@@ -116,7 +117,11 @@ impl Emitter {
     }
 
     pub fn unwatch(&mut self, path: &Path) -> Result<(), AppError> {
-        Ok(self.watcher.unwatch(path)?)
+        if path != register::get_junkyard_path()? {
+            Ok(self.watcher.unwatch(path)?)
+        } else {
+            Ok(())
+        }
     }
 
     pub fn watch(&mut self, path: &Path) -> Result<(), AppError> {
@@ -187,13 +192,6 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
     }
 
     match event.kind {
-        notify::EventKind::Access(AccessKind::Close(AccessMode::Write)) => Some(
-            event
-                .paths
-                .iter()
-                .map(|p| Message::PathsWriteFinished(vec![p.clone()]))
-                .collect(),
-        ),
         notify::EventKind::Create(_) => Some(
             event
                 .paths
@@ -201,17 +199,31 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                 .map(|p| Message::PathsAdded(vec![p.clone()]))
                 .collect(),
         ),
-        notify::EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
-            if event.paths.len() == 2 {
-                Some(vec![
-                    Message::PathRemoved(event.paths[0].clone()),
-                    Message::PathsAdded(vec![event.paths[1].clone()]),
-                ])
-            } else {
-                tracing::warn!("event is invalid");
+        notify::EventKind::Modify(ModifyKind::Name(rename_mode)) => match rename_mode {
+            RenameMode::To => {
+                if event.paths.len() == 1 {
+                    Some(vec![Message::PathsAdded(vec![event.paths[0].clone()])])
+                } else {
+                    tracing::warn!("event is invalid: {:?}", event);
+                    None
+                }
+            }
+            RenameMode::Both => {
+                if event.paths.len() == 2 {
+                    Some(vec![
+                        Message::PathRemoved(event.paths[0].clone()),
+                        Message::PathsAdded(vec![event.paths[1].clone()]),
+                    ])
+                } else {
+                    tracing::warn!("event is invalid: {:?}", event);
+                    None
+                }
+            }
+            RenameMode::Any | RenameMode::From | RenameMode::Other => {
+                tracing::trace!("missed handle for notify event: {:?}", event);
                 None
             }
-        }
+        },
         notify::EventKind::Remove(_) => Some(
             event
                 .paths
@@ -222,6 +234,9 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         notify::EventKind::Any
         | notify::EventKind::Access(_)
         | notify::EventKind::Modify(_)
-        | notify::EventKind::Other => None,
+        | notify::EventKind::Other => {
+            tracing::trace!("missed handle for notify event: {:?}", event);
+            None
+        }
     }
 }

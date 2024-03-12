@@ -22,7 +22,7 @@ pub enum Task {
     AddPath(PathBuf),
     DeleteMarks(Vec<char>),
     DeletePath(PathBuf),
-    DeleteRegisterEntry(FileEntry),
+    DeleteJunkYardEntry(FileEntry),
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf),
     LoadPreview(PathBuf),
@@ -146,7 +146,7 @@ impl TaskManager {
 
                 Ok(())
             }),
-            Task::DeleteRegisterEntry(entry) => {
+            Task::DeleteJunkYardEntry(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if let Err(error) = register::file::delete(entry).await {
@@ -340,7 +340,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::AddPath(_)
         | Task::DeleteMarks(_)
         | Task::DeletePath(_)
-        | Task::DeleteRegisterEntry(_)
+        | Task::DeleteJunkYardEntry(_)
         | Task::OptimizeHistory
         | Task::RenamePath(_, _)
         | Task::RestorePath(_, _)

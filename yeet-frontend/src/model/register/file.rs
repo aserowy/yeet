@@ -72,8 +72,8 @@ impl JunkYard {
         }
     }
 
-    pub fn get(&self, register: &str) -> Option<Transaction> {
-        let transaction = match register {
+    pub fn get(&self, junk: &str) -> Option<Transaction> {
+        let transaction = match junk {
             "\"" => match self.current {
                 RegisterType::Trash => self.trashed.first().cloned(),
                 RegisterType::Yank => self.yanked.clone(),
@@ -89,7 +89,7 @@ impl JunkYard {
             "7" => self.trashed.get(6).cloned(),
             "8" => self.trashed.get(7).cloned(),
             "9" => self.trashed.get(8).cloned(),
-            // TODO: add custom register handling
+            // TODO: add custom junk handling
             _ => None,
         };
 
@@ -116,8 +116,8 @@ impl JunkYard {
             contents.push(print_content("\"0", yanked));
         }
         for (index, entry) in self.trashed.iter().enumerate() {
-            let register_name = format!("\"{}", index + 1);
-            contents.push(print_content(&register_name, entry));
+            let junk_name = format!("\"{}", index + 1);
+            contents.push(print_content(&junk_name, entry));
         }
 
         contents
@@ -156,7 +156,7 @@ impl JunkYard {
 }
 
 impl Transaction {
-    fn from(paths: Vec<PathBuf>, register: &JunkYard) -> Self {
+    fn from(paths: Vec<PathBuf>, junk: &JunkYard) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
             Ok(time) => time.as_millis(),
             Err(_) => 0,
@@ -164,7 +164,7 @@ impl Transaction {
 
         let entries = paths
             .into_iter()
-            .map(|path| FileEntry::from(added_at.to_string(), &path, &register.path))
+            .map(|path| FileEntry::from(added_at.to_string(), &path, &junk.path))
             .collect();
 
         Self {
@@ -188,7 +188,7 @@ impl FileEntry {
 }
 
 pub async fn cache_and_compress(entry: FileEntry) -> Result<(), AppError> {
-    let cache_path = get_register_cache_path().await?;
+    let cache_path = get_junk_cache_path().await?;
 
     let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
         Ok(time) => time.as_nanos(),
@@ -216,36 +216,24 @@ pub async fn compress(entry: FileEntry) -> Result<(), AppError> {
 }
 
 pub async fn delete(entry: FileEntry) -> Result<(), AppError> {
-    let path = get_register_path().await?.join(&entry.id);
+    let path = get_junk_path().await?.join(&entry.id);
     fs::remove_file(path).await?;
     Ok(())
 }
 
-pub async fn get_register_path() -> Result<PathBuf, AppError> {
-    let register_path = match dirs::cache_dir() {
-        Some(cache_dir) => cache_dir.join("yeet/register/"),
-        None => return Err(AppError::LoadHistoryFailed),
-    };
+pub async fn init(junk: &mut JunkYard, emitter: &mut Emitter) -> Result<(), AppError> {
+    junk.path = get_junk_path().await?;
 
-    if !register_path.exists() {
-        fs::create_dir_all(&register_path).await?;
-    }
-    Ok(register_path)
-}
-
-pub async fn init(register: &mut JunkYard, emitter: &mut Emitter) -> Result<(), AppError> {
-    register.path = get_register_path().await?;
-
-    let mut read_dir = fs::read_dir(&register.path).await?;
+    let mut read_dir = fs::read_dir(&junk.path).await?;
     while let Some(entry) = read_dir.next_entry().await? {
-        if let Some(obsolete) = register.add_or_update(&entry.path()) {
+        if let Some(obsolete) = junk.add_or_update(&entry.path()) {
             for entry in obsolete.entries {
-                emitter.run(Task::DeleteRegisterEntry(entry));
+                emitter.run(Task::DeleteJunkYardEntry(entry));
             }
         }
     }
 
-    emitter.watch(&register.path)?;
+    emitter.watch(&junk.path)?;
 
     Ok(())
 }
@@ -260,8 +248,9 @@ pub fn restore(entry: FileEntry, path: PathBuf) -> Result<(), AppError> {
 }
 
 async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(), AppError> {
-    let target_path = get_register_path().await?.join(archive_name);
-    let file = File::create(target_path)?;
+    let compress_path = get_junk_compress_path().await?.join(archive_name);
+
+    let file = File::create(&compress_path)?;
     let encoder = GzEncoder::new(file, Compression::default());
     let mut archive = tar::Builder::new(encoder);
 
@@ -276,10 +265,19 @@ async fn compress_with_archive_name(path: &Path, archive_name: &str) -> Result<(
             )?;
         }
     }
+    archive.finish()?;
+
+    let target_path = get_junk_path().await?.join(archive_name);
+    match fs::rename(compress_path, target_path).await {
+        Ok(it) => it,
+        Err(err) => {
+            tracing::error!("Failed to rename file: {:?}", err);
+        }
+    };
+
     Ok(())
 }
 
-// TODO: add register name
 fn compose_compression_name(id: String, path: &Path) -> String {
     let path = path
         .to_string_lossy()
@@ -291,7 +289,6 @@ fn compose_compression_name(id: String, path: &Path) -> String {
     file_name
 }
 
-// TODO: read register name
 fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> {
     if let Some(file_name) = path.file_name() {
         let file_name = file_name.to_string_lossy();
@@ -306,15 +303,31 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-async fn get_register_cache_path() -> Result<PathBuf, AppError> {
-    let cache_path = get_register_path().await?.join(".cache/");
-    if !cache_path.exists() {
-        fs::create_dir_all(&cache_path).await?;
+async fn get_junk_cache_path() -> Result<PathBuf, AppError> {
+    let path = get_junk_path().await?.join(".cache/");
+    if !path.exists() {
+        fs::create_dir_all(&path).await?;
     }
-    Ok(cache_path)
+    Ok(path)
 }
 
-fn print_content(register: &str, transaction: &Transaction) -> String {
+async fn get_junk_compress_path() -> Result<PathBuf, AppError> {
+    let path = get_junk_path().await?.join(".compress/");
+    if !path.exists() {
+        fs::create_dir_all(&path).await?;
+    }
+    Ok(path)
+}
+
+async fn get_junk_path() -> Result<PathBuf, AppError> {
+    let junk_path = super::get_junkyard_path()?;
+    if !junk_path.exists() {
+        fs::create_dir_all(&junk_path).await?;
+    }
+    Ok(junk_path)
+}
+
+fn print_content(junk: &str, transaction: &Transaction) -> String {
     let is_ready = transaction
         .entries
         .iter()
@@ -331,14 +344,14 @@ fn print_content(register: &str, transaction: &Transaction) -> String {
         "Processing".to_string()
     };
 
-    format!("{:<4} {}", register, content)
+    format!("{:<4} {}", junk, content)
 }
 
 mod test {
     #[test]
-    fn register_add_or_update() {
+    fn junk_add_or_update() {
         use std::path::PathBuf;
-        let mut register = super::JunkYard {
+        let mut junk = super::JunkYard {
             current: Default::default(),
             path: std::path::PathBuf::from("/some/path"),
             trashed: Vec::new(),
@@ -346,9 +359,9 @@ mod test {
         };
 
         let path = PathBuf::from("/other/path/.direnv");
-        let (transaction, _) = register.trash(vec![path]);
+        let (transaction, _) = junk.trash(vec![path]);
 
-        assert_eq!(1, register.trashed.len());
+        assert_eq!(1, junk.trashed.len());
         assert_eq!(
             super::RegisterStatus::Processing,
             transaction.entries[0].status
@@ -356,45 +369,45 @@ mod test {
 
         let id = transaction.id + "%%002F%other%002F%path%002F%.direnv";
         let path = PathBuf::from("/some/path").join(id);
-        register.add_or_update(&path);
+        junk.add_or_update(&path);
 
-        assert_eq!(1, register.trashed.len());
+        assert_eq!(1, junk.trashed.len());
         assert_eq!(
             super::RegisterStatus::Ready,
-            register.trashed[0].entries[0].status
+            junk.trashed[0].entries[0].status
         );
 
         let transaction = "1708576379595";
         let id = transaction.to_owned() + "%%002F%home%002F%user%002F%src%002F%yeet%002F%.direnv";
         let path = PathBuf::from("/some/path").join(id);
-        register.add_or_update(&path);
+        junk.add_or_update(&path);
 
-        assert_eq!(2, register.trashed.len());
-        assert_eq!(transaction, register.trashed[1].id);
+        assert_eq!(2, junk.trashed.len());
+        assert_eq!(transaction, junk.trashed[1].id);
         assert_eq!(
             super::RegisterStatus::Ready,
-            register.trashed[1].entries[0].status
+            junk.trashed[1].entries[0].status
         );
 
         let file = "%%002F%home%002F%user%002F%src%002F%yeet%002F%awesome".to_owned();
         let id = transaction.to_owned() + &file;
         let path = PathBuf::from("/some/path").join(&id);
-        register.add_or_update(&path);
+        junk.add_or_update(&path);
 
-        assert_eq!(2, register.trashed.len());
-        assert_eq!(transaction, register.trashed[1].id);
-        assert_eq!(id, register.trashed[1].entries[1].id);
+        assert_eq!(2, junk.trashed.len());
+        assert_eq!(transaction, junk.trashed[1].id);
+        assert_eq!(id, junk.trashed[1].entries[1].id);
         assert_eq!(
             super::RegisterStatus::Ready,
-            register.trashed[1].entries[1].status
+            junk.trashed[1].entries[1].status
         );
 
         let id_new = "2708576379595%%002F%home%002F%user%002F%src%002F%yeet%002F%.direnv";
         let path = PathBuf::from("/some/path").join(id_new);
-        register.add_or_update(&path);
+        junk.add_or_update(&path);
 
-        assert_eq!(3, register.trashed.len());
-        assert_eq!(transaction, register.trashed[2].id);
+        assert_eq!(3, junk.trashed.len());
+        assert_eq!(transaction, junk.trashed[2].id);
     }
 
     #[test]
@@ -405,7 +418,7 @@ mod test {
         let path = std::path::Path::new("/home/U0025/sr%/y%et/%direnv");
         let name = super::compose_compression_name(id.to_string(), path);
 
-        let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
+        let composed = std::path::Path::new("/some/cache/junk/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
 
         assert_eq!(id.to_string(), dec_id);
@@ -415,7 +428,7 @@ mod test {
         let path = std::path::Path::new("/home/user/sr%/y%et/%direnv");
         let name = super::compose_compression_name(id.to_string(), path);
 
-        let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
+        let composed = std::path::Path::new("/some/cache/junk/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
 
         assert_eq!(id.to_string(), dec_id);
@@ -425,7 +438,7 @@ mod test {
         let path = std::path::Path::new("/home/user/src/yeet/.direnv");
         let name = super::compose_compression_name(id.to_string(), path);
 
-        let composed = std::path::Path::new("/some/cache/register/").join(name.clone());
+        let composed = std::path::Path::new("/some/cache/junk/").join(name.clone());
         let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
 
         assert_eq!(id.to_string(), dec_id);
