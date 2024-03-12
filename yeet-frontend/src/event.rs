@@ -200,14 +200,6 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                 .collect(),
         ),
         notify::EventKind::Modify(ModifyKind::Name(rename_mode)) => match rename_mode {
-            RenameMode::To => {
-                if event.paths.len() == 1 {
-                    Some(vec![Message::PathsAdded(vec![event.paths[0].clone()])])
-                } else {
-                    tracing::warn!("event is invalid: {:?}", event);
-                    None
-                }
-            }
             RenameMode::Both => {
                 if event.paths.len() == 2 {
                     Some(vec![
@@ -219,7 +211,23 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                     None
                 }
             }
-            RenameMode::Any | RenameMode::From | RenameMode::Other => {
+            RenameMode::From => {
+                if event.paths.len() == 1 {
+                    Some(vec![Message::PathRemoved(event.paths[0].clone())])
+                } else {
+                    tracing::warn!("event is invalid: {:?}", event);
+                    None
+                }
+            }
+            RenameMode::To => {
+                if event.paths.len() == 1 {
+                    Some(vec![Message::PathsAdded(vec![event.paths[0].clone()])])
+                } else {
+                    tracing::warn!("event is invalid: {:?}", event);
+                    None
+                }
+            }
+            RenameMode::Any | RenameMode::Other => {
                 tracing::trace!("missed handle for notify event: {:?}", event);
                 None
             }
