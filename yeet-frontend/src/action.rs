@@ -29,6 +29,7 @@ pub enum ActionResult {
     Quit,
 }
 
+#[tracing::instrument(skip(model, emitter, terminal, actions))]
 pub async fn pre(
     model: &Model,
     emitter: &mut Emitter,
@@ -38,6 +39,7 @@ pub async fn pre(
     execute(true, model, emitter, terminal, actions).await
 }
 
+#[tracing::instrument(skip(model, emitter, terminal, actions))]
 pub async fn post(
     model: &Model,
     emitter: &mut Emitter,
@@ -74,6 +76,8 @@ async fn execute(
         if is_preview != is_preview_action(action) {
             continue;
         }
+
+        tracing::debug!("handling action: {:?}", action);
 
         match action {
             Action::EmitMessages(messages) => {

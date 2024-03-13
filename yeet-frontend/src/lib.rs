@@ -68,6 +68,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     let mut result = Vec::new();
     while let Some(messages) = emitter.receiver.recv().await {
+        tracing::debug!("received messages: {:?}", messages);
+
         let size = terminal.size().expect("Failed to get terminal size");
         model.layout = AppLayout::new(size, commandline::height(&model, &messages));
 

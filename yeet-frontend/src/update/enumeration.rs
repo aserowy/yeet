@@ -6,6 +6,7 @@ use crate::{action::Action, model::Model};
 
 use super::{buffer, bufferline, history, mark, preview, qfix};
 
+#[tracing::instrument(skip(model, contents))]
 pub fn changed(
     model: &mut Model,
     path: &PathBuf,
@@ -23,7 +24,9 @@ pub fn changed(
     }
 
     let mut actions = Vec::new();
-    if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
+    if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
+        tracing::trace!("enumeration changed for buffer: {:?}", path);
+
         let content = contents
             .iter()
             .map(|(knd, cntnt)| {
@@ -51,6 +54,7 @@ pub fn changed(
     }
 }
 
+#[tracing::instrument(skip(model))]
 pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
     if model.mode != Mode::Navigation {
         return None;

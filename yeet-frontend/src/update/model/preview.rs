@@ -8,19 +8,29 @@ use crate::{
 
 use super::current;
 
+#[tracing::instrument(skip(model))]
 pub fn path(
     model: &mut Model,
     unwatch_old_path: bool,
     watch_new_path: bool,
 ) -> Option<Vec<Action>> {
     let old_preview_path = model.preview.path.clone();
+    let new_preview_path = current::selection(model);
 
-    model.preview.path = current::selection(model);
+    if old_preview_path == new_preview_path {
+        return None;
+    }
+
+    model.preview.path = new_preview_path;
     model.preview.buffer.lines.clear();
 
-    if model.preview.path == old_preview_path {
-        None
-    } else if let Some(selected) = &model.preview.path {
+    tracing::trace!(
+        "switching preview path: {:?} -> {:?}",
+        old_preview_path,
+        model.preview.path
+    );
+
+    if let Some(selected) = &model.preview.path {
         let current = &model.current.path;
         if current == selected {
             return None;
@@ -43,8 +53,11 @@ pub fn path(
     }
 }
 
+#[tracing::instrument(skip(model, content))]
 pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) -> Option<Vec<Action>> {
     if Some(path) == model.preview.path.as_ref() {
+        tracing::trace!("updating preview buffer: {:?}", path);
+
         let content = content
             .iter()
             .map(|s| BufferLine {
