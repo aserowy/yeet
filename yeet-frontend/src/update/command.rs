@@ -32,7 +32,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![
                 change_mode_action,
-                Action::EmitMessages(vec![Message::NavigateToPath(path.clone())]),
+                Action::EmitMessages(vec![Message::NavigateToPathAsPreview(path.clone())]),
             ]
         }
         ("cl", "") => {
@@ -57,7 +57,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                     model.qfix.current_index = next_index;
                     vec![
                         change_mode_action,
-                        Action::EmitMessages(vec![Message::NavigateToPath(it.clone())]),
+                        Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
                     ]
                 }
                 None => {
@@ -87,7 +87,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Some(it) => {
                     vec![
                         change_mode_action,
-                        Action::EmitMessages(vec![Message::NavigateToPath(it.clone())]),
+                        Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
                     ]
                 }
                 None => {

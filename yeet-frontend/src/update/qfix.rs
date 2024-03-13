@@ -39,7 +39,11 @@ pub fn print(qfix: &QuickFix) -> Vec<String> {
         .collect();
 
     let mut contents = vec![":cl".to_string()];
-    contents.extend(entries);
+    if entries.is_empty() {
+        contents.push("no entries".to_string());
+    } else {
+        contents.extend(entries);
+    }
 
     contents
 }

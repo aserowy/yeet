@@ -62,6 +62,7 @@ pub enum Message {
     NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),
+    NavigateToPathAsPreview(PathBuf),
     NavigateToSelected,
     OpenSelected,
     PasteFromJunkYard(String),

@@ -65,7 +65,14 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
             navigation::path(model, &path)
         }
         Message::NavigateToParent => navigation::parent(model),
-        Message::NavigateToPath(path) => navigation::path(model, path),
+        Message::NavigateToPath(path) => {
+            // if path.is_dir() {
+                navigation::path(model, path)
+            // } else {
+            //     navigation::path_as_preview(model, path)
+            // }
+        }
+        Message::NavigateToPathAsPreview(path) => navigation::path_as_preview(model, path),
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
