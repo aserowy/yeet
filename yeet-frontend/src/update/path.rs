@@ -15,7 +15,6 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(preview_actions) = preview::path(model, true, true) {
         actions.extend(preview_actions);
-        model.preview.buffer.lines.clear();
         preview::viewport(model);
     }
 
@@ -87,7 +86,6 @@ pub fn remove(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
         let mut actions = Vec::new();
         if let Some(preview_actions) = preview::path(model, true, true) {
             actions.extend(preview_actions);
-            model.preview.buffer.lines.clear();
             preview::viewport(model);
         }
 

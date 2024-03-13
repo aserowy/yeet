@@ -74,7 +74,6 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
             None => {
                 if let Some(preview_actions) = preview::path(model, true, true) {
                     actions.extend(preview_actions);
-                    model.preview.buffer.lines.clear();
                     preview::viewport(model);
                 }
             }
@@ -183,7 +182,6 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
         if let Some(preview_actions) = preview::path(model, false, true) {
             actions.extend(preview_actions);
         }
-        model.preview.buffer.lines.clear();
         preview::viewport(model);
 
         buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);

@@ -23,7 +23,6 @@ pub fn changed(
         buffer.push((parent, &mut model.parent.buffer));
     }
 
-    let mut actions = Vec::new();
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
@@ -39,19 +38,9 @@ pub fn changed(
             .collect();
 
         buffer::set_content(&model.mode, buffer, content);
-
-        if let Some(preview_actions) = preview::path(model, true, true) {
-            actions.extend(preview_actions);
-            model.preview.buffer.lines.clear();
-            preview::viewport(model);
-        }
     }
 
-    if actions.is_empty() {
-        None
-    } else {
-        Some(actions)
-    }
+    None
 }
 
 #[tracing::instrument(skip(model))]
@@ -77,7 +66,6 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
 
         if let Some(preview_actions) = preview::path(model, true, true) {
             actions.extend(preview_actions);
-            model.preview.buffer.lines.clear();
             preview::viewport(model);
         }
     }

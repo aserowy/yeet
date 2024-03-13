@@ -216,7 +216,6 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
 
                 if let Some(preview_actions) = preview::path(model, true, true) {
                     actions.extend(preview_actions);
-                    model.preview.buffer.lines.clear();
                     preview::viewport(model);
                 }
 
@@ -236,7 +235,6 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
 
                 if let Some(preview_actions) = preview::path(model, true, true) {
                     actions.extend(preview_actions);
-                    model.preview.buffer.lines.clear();
                     preview::viewport(model);
                 }
 
@@ -251,7 +249,6 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
 
                 if let Some(preview_actions) = preview::path(model, true, true) {
                     actions.extend(preview_actions);
-                    model.preview.buffer.lines.clear();
                     preview::viewport(model);
                 }
 
