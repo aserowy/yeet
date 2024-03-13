@@ -37,7 +37,7 @@ pub struct Model {
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub parent: OptionalDirectoryBuffer,
-    pub preview: DirectoryBuffer,
+    pub preview: OptionalDirectoryBuffer,
     pub qfix: QuickFix,
     pub search: Option<SearchModel>,
     pub settings: Settings,
@@ -79,7 +79,7 @@ impl Default for Model {
                 },
                 ..Default::default()
             },
-            preview: DirectoryBuffer::default(),
+            preview: OptionalDirectoryBuffer::default(),
             qfix: QuickFix::default(),
             search: None,
             settings: Settings::default(),

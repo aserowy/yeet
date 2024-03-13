@@ -36,7 +36,7 @@ pub fn search(model: &mut Model) {
         set_styles(&mut model.parent.buffer, search);
     }
 
-    if model.preview.path.is_dir() {
+    if model.preview.path.as_ref().is_some_and(|p| p.is_dir()) {
         set_styles(&mut model.preview.buffer, search);
     }
 

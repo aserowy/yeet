@@ -13,6 +13,7 @@ mod line;
 mod prefix;
 mod style;
 
+// FIX: long lines break viewport content
 pub fn view(mode: &Mode, model: &Buffer, frame: &mut Frame, rect: Rect) {
     let rendered = get_rendered_lines(model);
     let styled = get_styled_lines(&model.view_port, mode, &model.cursor, rendered);

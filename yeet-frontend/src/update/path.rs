@@ -23,18 +23,15 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
 }
 
 fn add_paths(model: &mut Model, paths: &[PathBuf]) {
-    let mut buffer = vec![
-        (
-            model.current.path.as_path(),
-            &mut model.current.buffer,
-            model.mode == Mode::Navigation,
-        ),
-        (
-            model.preview.path.as_path(),
-            &mut model.preview.buffer,
-            model.preview.path.is_dir(),
-        ),
-    ];
+    let mut buffer = vec![(
+        model.current.path.as_path(),
+        &mut model.current.buffer,
+        model.mode == Mode::Navigation,
+    )];
+
+    if let Some(preview) = &model.preview.path {
+        buffer.push((preview, &mut model.preview.buffer, true));
+    }
 
     if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer, true));
@@ -103,10 +100,11 @@ pub fn remove(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
 }
 
 fn remove_path(model: &mut Model, path: &Path) {
-    let mut buffer = vec![
-        (model.current.path.as_path(), &mut model.current.buffer),
-        (model.preview.path.as_path(), &mut model.preview.buffer),
-    ];
+    let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
+
+    if let Some(preview) = &model.preview.path {
+        buffer.push((preview, &mut model.preview.buffer));
+    }
 
     if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer));

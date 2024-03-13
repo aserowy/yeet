@@ -12,10 +12,11 @@ pub fn changed(
     contents: &[(ContentKind, String)],
 ) -> Option<Vec<Action>> {
     // TODO: handle unsaved changes
-    let mut buffer = vec![
-        (model.current.path.as_path(), &mut model.current.buffer),
-        (model.preview.path.as_path(), &mut model.preview.buffer),
-    ];
+    let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
+
+    if let Some(preview) = &model.preview.path {
+        buffer.push((preview, &mut model.preview.buffer));
+    }
 
     if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer));
@@ -55,10 +56,11 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
         return None;
     }
 
-    let mut buffer = vec![
-        (model.current.path.as_path(), &mut model.current.buffer),
-        (model.preview.path.as_path(), &mut model.preview.buffer),
-    ];
+    let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
+
+    if let Some(preview) = &model.preview.path {
+        buffer.push((preview, &mut model.preview.buffer));
+    }
 
     if let Some(parent) = &model.parent.path {
         buffer.push((parent, &mut model.parent.buffer));

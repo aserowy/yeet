@@ -13,22 +13,29 @@ pub fn path(
     unwatch_old_path: bool,
     watch_new_path: bool,
 ) -> Option<Vec<Action>> {
-    if let Some(selected) = current::selection(model) {
+    let old_preview_path = model.preview.path.clone();
+
+    model.preview.path = current::selection(model);
+    model.preview.buffer.lines.clear();
+
+    if model.preview.path == old_preview_path {
+        None
+    } else if let Some(selected) = &model.preview.path {
         let current = &model.current.path;
-        if current == &selected || model.preview.path == selected {
+        if current == selected {
             return None;
         }
 
         let mut actions = Vec::new();
         if unwatch_old_path {
-            actions.push(Action::UnwatchPath(model.preview.path.clone()));
+            if let Some(old) = &old_preview_path {
+                actions.push(Action::UnwatchPath(old.clone()));
+            }
         }
 
         if watch_new_path {
             actions.push(Action::WatchPath(selected.clone()));
         }
-
-        model.preview.path = selected.to_path_buf();
 
         Some(actions)
     } else {
@@ -37,7 +44,7 @@ pub fn path(
 }
 
 pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) -> Option<Vec<Action>> {
-    if path == &model.preview.path {
+    if Some(path) == model.preview.path.as_ref() {
         let content = content
             .iter()
             .map(|s| BufferLine {
@@ -54,7 +61,11 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) -> Option<V
 }
 
 pub fn viewport(model: &mut Model) {
-    let target = &model.preview.path;
+    let target = match &model.preview.path {
+        Some(it) => it,
+        None => return,
+    };
+
     let buffer = &mut model.preview.buffer;
     let layout = &model.layout.preview;
 

@@ -15,16 +15,14 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     }
 
     // TODO: invert to reduce clone
-    let mut current: HashMap<_, _> = HashMap::from([
-        (
-            model.current.path.clone(),
-            model.current.buffer.lines.clone(),
-        ),
-        (
-            model.preview.path.clone(),
-            model.preview.buffer.lines.clone(),
-        ),
-    ]);
+    let mut current: HashMap<_, _> = HashMap::from([(
+        model.current.path.clone(),
+        model.current.buffer.lines.clone(),
+    )]);
+
+    if let Some(path) = &model.preview.path {
+        current.insert(path.to_path_buf(), model.preview.buffer.lines.clone());
+    }
 
     if let Some(path) = &model.parent.path {
         current.insert(path.to_path_buf(), model.parent.buffer.lines.clone());
@@ -71,7 +69,7 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
                 preview::viewport(model);
-                model.preview.path = preview.to_path_buf();
+                model.preview.path = Some(preview.to_path_buf());
             }
             None => {
                 if let Some(preview_actions) = preview::path(model, true, true) {

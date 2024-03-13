@@ -86,16 +86,16 @@ fn set_sign(bl: &mut BufferLine) {
 }
 
 fn unset_sign(model: &mut Model, removed: &Path) {
-    let parent = match removed.parent() {
+    let preview = match removed.parent() {
         Some(it) => it,
         None => return,
     };
 
-    let lines = if parent == model.current.path {
+    let lines = if preview == model.current.path {
         &mut model.current.buffer.lines
-    } else if parent == model.preview.path {
+    } else if Some(preview) == model.preview.path.as_deref() {
         &mut model.preview.buffer.lines
-    } else if Some(parent) == model.parent.path.as_deref() {
+    } else if Some(preview) == model.parent.path.as_deref() {
         &mut model.parent.buffer.lines
     } else {
         return;
