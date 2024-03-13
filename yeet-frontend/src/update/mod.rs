@@ -67,7 +67,7 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
         Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => {
             // if path.is_dir() {
-                navigation::path(model, path)
+            navigation::path(model, path)
             // } else {
             //     navigation::path_as_preview(model, path)
             // }
