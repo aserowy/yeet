@@ -89,7 +89,7 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                     None => path,
                 };
 
-                navigation::path(model, &path, &selection)
+                navigation::path(model, path, &selection)
             }
         }
         Message::NavigateToPathAsPreview(path) => {
@@ -102,7 +102,7 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                 None => path,
             };
 
-            navigation::path(model, &path, &selection)
+            navigation::path(model, path, &selection)
         }
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),

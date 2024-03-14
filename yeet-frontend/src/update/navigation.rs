@@ -20,13 +20,10 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
 
     let selection = match selection {
         Some(it) => Some(it.to_owned()),
-        None => {
-            if let Some(history) = model.history.get_selection(path) {
-                Some(history.to_owned())
-            } else {
-                None
-            }
-        }
+        None => model
+            .history
+            .get_selection(path)
+            .map(|history| history.to_owned()),
     };
 
     // TODO: invert to reduce clone
@@ -97,12 +94,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         preview::viewport(model);
     }
 
-    for path in current_contents.keys() {
-        if path != path
-            && Some(path.to_path_buf()) != path_preview
-            && Some(path.as_path()) != path_parent
+    for cached_path in current_contents.keys() {
+        if cached_path != path
+            && Some(cached_path.to_path_buf()) != path_preview
+            && Some(cached_path.as_path()) != path_parent
         {
-            actions.push(Action::UnwatchPath(path.clone()));
+            actions.push(Action::UnwatchPath(cached_path.clone()));
         }
     }
 

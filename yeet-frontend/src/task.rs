@@ -209,7 +209,7 @@ impl TaskManager {
                                     None => "".to_string(),
                                 };
 
-                                if !is_selection || is_selection && entry.path() != selection_path {
+                                if !is_selection || entry.path() != selection_path {
                                     cache.push((kind, content));
                                 }
 
