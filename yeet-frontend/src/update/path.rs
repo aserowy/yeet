@@ -72,6 +72,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         }
 
         super::buffer::cursor::validate(&model.mode, buffer);
+
         // TODO: correct cursor to stay on selection
     }
 }

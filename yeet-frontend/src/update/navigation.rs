@@ -67,8 +67,11 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
             None => {
                 model.parent.buffer.lines.clear();
                 parent::update(model, None);
-                // TODO: resolve history selection and pass with watch
-                actions.push(Action::WatchPath(parent.to_path_buf(), None));
+
+                actions.push(Action::WatchPath(
+                    parent.to_path_buf(),
+                    path.file_name().map(|nm| nm.to_string_lossy().to_string()),
+                ));
             }
         }
     }
@@ -119,9 +122,13 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
         let parent_parent = parent.parent();
 
         let mut actions = Vec::new();
-        if let Some(parent) = parent_parent {
-            // TODO: resolve history selection and pass with watch
-            actions.push(Action::WatchPath(parent.to_path_buf(), None));
+        if let Some(parent_parent) = parent_parent {
+            actions.push(Action::WatchPath(
+                parent_parent.to_path_buf(),
+                parent
+                    .file_name()
+                    .map(|nm| nm.to_string_lossy().to_string()),
+            ));
         }
 
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
