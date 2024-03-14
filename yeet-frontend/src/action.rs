@@ -19,7 +19,7 @@ pub enum Action {
     SkipRender,
     Task(Task),
     UnwatchPath(PathBuf),
-    WatchPath(PathBuf),
+    WatchPath(PathBuf, Option<String>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -59,7 +59,7 @@ fn is_preview_action(action: &Action) -> bool {
         Action::SkipRender => true,
         Action::Task(_) => true,
         Action::UnwatchPath(_) => true,
-        Action::WatchPath(_) => true,
+        Action::WatchPath(_, _) => true,
     }
 }
 
@@ -127,19 +127,20 @@ async fn execute(
                     continue;
                 }
 
-                emitter.abort(&Task::EnumerateDirectory(path.clone()));
+                // TODO: abort enumeration without checking selection
+                emitter.abort(&Task::EnumerateDirectory(path.clone(), None));
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {
                     tracing::error!("emitting unwatch path failed: {:?}", error);
                 }
             }
-            Action::WatchPath(path) => {
+            Action::WatchPath(path, selection) => {
                 if path == &PathBuf::default() {
                     continue;
                 }
 
                 if path.is_dir() {
-                    emitter.run(Task::EnumerateDirectory(path.clone()));
+                    emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                 } else {
                     emitter.run(Task::LoadPreview(path.clone()));
                 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{
     action::Action,
     model::{buffer::BufferLine, Model},
-    update::{buffer, history},
+    update::{buffer, cursor},
 };
 
 use super::current;
@@ -44,7 +44,8 @@ pub fn selected_path(
         }
 
         if watch_new_path {
-            actions.push(Action::WatchPath(selected.clone()));
+            // TODO: resolve history selection and pass with watch
+            actions.push(Action::WatchPath(selected.clone(), None));
         }
 
         Some(actions)
@@ -85,7 +86,7 @@ pub fn viewport(model: &mut Model) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
     buffer::reset_view(buffer);
 
-    if !history::set_cursor_index(target, &model.history, buffer) {
+    if !cursor::set_cursor_index_with_history(target, &model.history, buffer) {
         buffer.cursor = None;
     };
 }

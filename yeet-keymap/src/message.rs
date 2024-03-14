@@ -53,7 +53,7 @@ pub enum Message {
     Buffer(Buffer),
     DeleteMarks(Vec<char>),
     ClearSearchHighlight,
-    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>),
+    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
     EnumerationFinished(PathBuf),
     Error(String),
     ExecuteCommand,

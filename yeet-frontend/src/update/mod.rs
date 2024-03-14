@@ -13,8 +13,8 @@ use self::model::{commandline, current, preview};
 mod buffer;
 mod bufferline;
 mod command;
+mod cursor;
 mod enumeration;
-mod history;
 mod mark;
 pub mod model;
 mod navigation;
@@ -33,7 +33,9 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
             search::clear(model);
             None
         }
-        Message::EnumerationChanged(path, contents) => enumeration::changed(model, path, contents),
+        Message::EnumerationChanged(path, contents, selection) => {
+            enumeration::changed(model, path, contents, selection)
+        }
         Message::EnumerationFinished(path) => enumeration::finished(model, path),
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
@@ -62,27 +64,59 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                 None => return None,
             };
 
-            navigation::path(model, &path)
+            let selection = path
+                .file_name()
+                .map(|oss| oss.to_string_lossy().to_string());
+
+            let path = match path.parent() {
+                Some(parent) => parent,
+                None => &path,
+            };
+
+            navigation::path(model, path, &selection)
         }
         Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => {
             if path.is_dir() {
-                navigation::path(model, path)
+                navigation::path(model, path, &None)
             } else {
-                navigation::path_as_preview(model, path)
+                let selection = path
+                    .file_name()
+                    .map(|oss| oss.to_string_lossy().to_string());
+
+                let path = match path.parent() {
+                    Some(parent) => parent,
+                    None => path,
+                };
+
+                navigation::path(model, &path, &selection)
             }
         }
-        Message::NavigateToPathAsPreview(path) => navigation::path_as_preview(model, path),
+        Message::NavigateToPathAsPreview(path) => {
+            let selection = path
+                .file_name()
+                .map(|oss| oss.to_string_lossy().to_string());
+
+            let path = match path.parent() {
+                Some(parent) => parent,
+                None => path,
+            };
+
+            navigation::path(model, &path, &selection)
+        }
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => {
+            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);
             }
             path::remove(model, path)
         }
         Message::PathsAdded(paths) => {
+            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
+            // TODO: set state to finished
             let mut actions = path::add(model, paths);
             actions.extend(register::add(model, paths));
 

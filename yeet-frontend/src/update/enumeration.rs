@@ -4,13 +4,14 @@ use yeet_keymap::message::{ContentKind, Mode};
 
 use crate::{action::Action, model::Model};
 
-use super::{buffer, bufferline, history, mark, preview, qfix};
+use super::{buffer, bufferline, cursor, mark, preview, qfix};
 
 #[tracing::instrument(skip(model, contents))]
 pub fn changed(
     model: &mut Model,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
+    selection: &Option<String>,
 ) -> Option<Vec<Action>> {
     // TODO: handle unsaved changes
     let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
@@ -26,6 +27,7 @@ pub fn changed(
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
+        let is_first_changed_event = buffer.lines.is_empty();
         let content = contents
             .iter()
             .map(|(knd, cntnt)| {
@@ -38,6 +40,12 @@ pub fn changed(
             .collect();
 
         buffer::set_content(&model.mode, buffer, content);
+
+        if is_first_changed_event {
+            if let Some(selection) = selection {
+                cursor::set_cursor_index(selection, buffer);
+            }
+        }
     }
 
     None
@@ -63,7 +71,7 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         super::sort_content(&model.mode, buffer);
         // TODO: add opt selection to finished for current, set if some, history if none
-        history::set_cursor_index(path, &model.history, buffer);
+        cursor::set_cursor_index_with_history(path, &model.history, buffer);
 
         if let Some(preview_actions) = preview::selected_path(model, true, true) {
             actions.extend(preview_actions);

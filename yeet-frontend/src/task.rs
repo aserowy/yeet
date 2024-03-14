@@ -24,7 +24,7 @@ pub enum Task {
     DeletePath(PathBuf),
     DeleteJunkYardEntry(FileEntry),
     EmitMessages(Vec<Message>),
-    EnumerateDirectory(PathBuf),
+    EnumerateDirectory(PathBuf, Option<String>),
     LoadPreview(PathBuf),
     OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
@@ -59,7 +59,7 @@ impl TaskManager {
         }
     }
 
-    // TODO: remove Result and just log errors on exit
+    // TODO: result should handle shell code on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
         for (task, abort_handle) in self.abort_handles.drain(..) {
@@ -164,7 +164,7 @@ impl TaskManager {
                     Ok(())
                 })
             }
-            Task::EnumerateDirectory(path) => {
+            Task::EnumerateDirectory(path, selection) => {
                 let internal_sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     if !path.exists() {
@@ -176,6 +176,26 @@ impl TaskManager {
                     match read_dir {
                         Ok(mut rd) => {
                             let mut cache_size = 100;
+
+                            let (is_selection, selection_path) = match &selection {
+                                Some(selection) => {
+                                    let path = path.join(selection);
+                                    if path.exists() {
+                                        let kind = if path.is_dir() {
+                                            ContentKind::Directory
+                                        } else {
+                                            ContentKind::File
+                                        };
+
+                                        cache.push((kind, selection.clone()));
+
+                                        (true, path)
+                                    } else {
+                                        (false, PathBuf::new())
+                                    }
+                                }
+                                None => (false, PathBuf::new()),
+                            };
 
                             while let Some(entry) = rd.next_entry().await? {
                                 let kind = if entry.path().is_dir() {
@@ -189,13 +209,16 @@ impl TaskManager {
                                     None => "".to_string(),
                                 };
 
-                                cache.push((kind, content));
+                                if !is_selection || is_selection && entry.path() != selection_path {
+                                    cache.push((kind, content));
+                                }
 
                                 if cache.len() >= cache_size {
                                     let _ = internal_sender
                                         .send(vec![Message::EnumerationChanged(
                                             path.clone(),
                                             cache.clone(),
+                                            selection.clone(),
                                         )])
                                         .await;
 
@@ -205,7 +228,11 @@ impl TaskManager {
 
                             let _ = internal_sender
                                 .send(vec![
-                                    Message::EnumerationChanged(path.clone(), cache.clone()),
+                                    Message::EnumerationChanged(
+                                        path.clone(),
+                                        cache.clone(),
+                                        selection.clone(),
+                                    ),
                                     Message::EnumerationFinished(path),
                                 ])
                                 .await;
@@ -335,7 +362,7 @@ async fn emit_error(sender: &Sender<Vec<Message>>, error: AppError) {
 
 fn should_abort_on_finish(task: Task) -> bool {
     match task {
-        Task::EmitMessages(_) | Task::EnumerateDirectory(_) | Task::LoadPreview(_) => true,
+        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_) => true,
 
         Task::AddPath(_)
         | Task::DeleteMarks(_)

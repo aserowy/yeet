@@ -7,8 +7,6 @@ use crate::{
     update::{mark, qfix},
 };
 
-use super::current;
-
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let change_mode_message = Message::Buffer(Buffer::ChangeMode(
         model.mode.clone(),
@@ -21,6 +19,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         None => (cmd, ""),
     };
 
+    // NOTE: all file commands like e.g. d! should use preview as target to enable cdo
     let mut actions = match cmd {
         ("cfirst", "") => {
             model.qfix.current_index = 0;
@@ -100,7 +99,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = current::selection(model) {
+            if let Some(path) = &model.preview.path {
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
             actions

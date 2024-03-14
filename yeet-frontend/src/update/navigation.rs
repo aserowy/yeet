@@ -4,52 +4,65 @@ use yeet_keymap::message::Mode;
 
 use crate::{action::Action, model::Model};
 
-use super::{buffer, current, history, model::parent, preview};
+use super::{buffer, current, cursor, model::parent, preview};
 
-pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
-    let path_current = if path.is_file() { path.parent()? } else { path };
-
-    let mut actions = Vec::new();
-    if !path_current.exists() {
+#[tracing::instrument(skip(model))]
+pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Option<Vec<Action>> {
+    if path.is_file() {
+        tracing::warn!("path is a file, not a directory: {:?}", path);
         return None;
     }
 
+    let mut actions = Vec::new();
+    if !path.exists() {
+        return None;
+    }
+
+    let selection = match selection {
+        Some(it) => Some(it.to_owned()),
+        None => {
+            if let Some(history) = model.history.get_selection(path) {
+                Some(history.to_owned())
+            } else {
+                None
+            }
+        }
+    };
+
     // TODO: invert to reduce clone
-    let mut current: HashMap<_, _> = HashMap::from([(
+    let mut current_contents: HashMap<_, _> = HashMap::from([(
         model.current.path.clone(),
         model.current.buffer.lines.clone(),
     )]);
 
     if let Some(path) = &model.preview.path {
-        current.insert(path.to_path_buf(), model.preview.buffer.lines.clone());
+        current_contents.insert(path.to_path_buf(), model.preview.buffer.lines.clone());
     }
 
     if let Some(path) = &model.parent.path {
-        current.insert(path.to_path_buf(), model.parent.buffer.lines.clone());
+        current_contents.insert(path.to_path_buf(), model.parent.buffer.lines.clone());
     }
 
-    match current.get(path_current) {
+    match current_contents.get(path) {
         Some(it) => {
             buffer::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
             current::update(model, None);
 
-            history::set_cursor_index(
-                &model.current.path,
-                &model.history,
-                &mut model.current.buffer,
-            );
+            if let Some(selection) = &selection {
+                cursor::set_cursor_index(selection, &mut model.current.buffer);
+            }
         }
         None => {
             model.current.buffer.lines.clear();
             current::update(model, None);
-            actions.push(Action::WatchPath(path_current.to_path_buf()));
+            actions.push(Action::WatchPath(path.to_path_buf(), selection));
         }
     }
-    model.current.path = path_current.to_path_buf();
+    model.current.path = path.to_path_buf();
 
-    let path_parent = path_current.parent();
+    let path_parent = path.parent();
     if let Some(parent) = path_parent {
-        match current.get(parent) {
+        match current_contents.get(parent) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
                 parent::update(model, None);
@@ -57,7 +70,8 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
             None => {
                 model.parent.buffer.lines.clear();
                 parent::update(model, None);
-                actions.push(Action::WatchPath(parent.to_path_buf()));
+                // TODO: resolve history selection and pass with watch
+                actions.push(Action::WatchPath(parent.to_path_buf(), None));
             }
         }
     }
@@ -65,7 +79,7 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
 
     let path_preview = current::selection(model);
     if let Some(preview) = path_preview.clone() {
-        match current.get(&preview) {
+        match current_contents.get(&preview) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
                 preview::viewport(model);
@@ -83,8 +97,8 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
         preview::viewport(model);
     }
 
-    for path in current.keys() {
-        if path != path_current
+    for path in current_contents.keys() {
+        if path != path
             && Some(path.to_path_buf()) != path_preview
             && Some(path.as_path()) != path_parent
         {
@@ -95,10 +109,6 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
     model.history.add(&model.current.path);
 
     Some(actions)
-}
-
-pub fn path_as_preview(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
-    todo!()
 }
 
 pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
@@ -113,7 +123,8 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
 
         let mut actions = Vec::new();
         if let Some(parent) = parent_parent {
-            actions.push(Action::WatchPath(parent.to_path_buf()));
+            // TODO: resolve history selection and pass with watch
+            actions.push(Action::WatchPath(parent.to_path_buf(), None));
         }
 
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
@@ -128,7 +139,7 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
         );
         current::update(model, None);
 
-        history::set_cursor_index(
+        cursor::set_cursor_index_with_history(
             &model.current.path,
             &model.history,
             &mut model.current.buffer,
@@ -173,7 +184,7 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
         );
         current::update(model, None);
 
-        history::set_cursor_index(
+        cursor::set_cursor_index_with_history(
             &model.current.path,
             &model.history,
             &mut model.current.buffer,
