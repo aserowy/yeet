@@ -233,7 +233,7 @@ impl TaskManager {
                                         cache.clone(),
                                         selection.clone(),
                                     ),
-                                    Message::EnumerationFinished(path),
+                                    Message::EnumerationFinished(path, selection),
                                 ])
                                 .await;
 

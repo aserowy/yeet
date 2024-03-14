@@ -52,7 +52,11 @@ pub fn changed(
 }
 
 #[tracing::instrument(skip(model))]
-pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
+pub fn finished(
+    model: &mut Model,
+    path: &PathBuf,
+    selection: &Option<String>,
+) -> Option<Vec<Action>> {
     if model.mode != Mode::Navigation {
         return None;
     }
@@ -70,8 +74,14 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
     let mut actions = Vec::new();
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         super::sort_content(&model.mode, buffer);
-        // TODO: add opt selection to finished for current, set if some, history if none
-        cursor::set_cursor_index_with_history(path, &model.history, buffer);
+
+        if let Some(selection) = selection {
+            if !cursor::set_cursor_index(selection, buffer) {
+                cursor::set_cursor_index_with_history(path, &model.history, buffer);
+            }
+        } else {
+            cursor::set_cursor_index_with_history(path, &model.history, buffer);
+        }
 
         if let Some(preview_actions) = preview::selected_path(model, true, true) {
             actions.extend(preview_actions);

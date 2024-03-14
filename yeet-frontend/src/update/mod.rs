@@ -36,7 +36,9 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
         Message::EnumerationChanged(path, contents, selection) => {
             enumeration::changed(model, path, contents, selection)
         }
-        Message::EnumerationFinished(path) => enumeration::finished(model, path),
+        Message::EnumerationFinished(path, selection) => {
+            enumeration::finished(model, path, selection)
+        }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
             if !model.mode.is_command() {
