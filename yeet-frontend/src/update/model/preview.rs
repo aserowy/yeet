@@ -9,7 +9,7 @@ use crate::{
 use super::current;
 
 #[tracing::instrument(skip(model))]
-pub fn path(
+pub fn selected_path(
     model: &mut Model,
     unwatch_old_path: bool,
     watch_new_path: bool,

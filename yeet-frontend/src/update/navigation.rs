@@ -72,7 +72,7 @@ pub fn path(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
                 model.preview.path = Some(preview.to_path_buf());
             }
             None => {
-                if let Some(preview_actions) = preview::path(model, true, true) {
+                if let Some(preview_actions) = preview::selected_path(model, true, true) {
                     actions.extend(preview_actions);
                     preview::viewport(model);
                 }
@@ -134,7 +134,7 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        if let Some(preview_actions) = preview::path(model, true, false) {
+        if let Some(preview_actions) = preview::selected_path(model, true, false) {
             actions.extend(preview_actions);
         }
         buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
@@ -179,7 +179,7 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        if let Some(preview_actions) = preview::path(model, false, true) {
+        if let Some(preview_actions) = preview::selected_path(model, false, true) {
             actions.extend(preview_actions);
         }
         preview::viewport(model);

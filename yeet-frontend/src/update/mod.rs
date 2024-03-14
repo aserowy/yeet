@@ -76,7 +76,12 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
-        Message::PathRemoved(path) => path::remove(model, path),
+        Message::PathRemoved(path) => {
+            if path.starts_with(&model.junk.path) {
+                model.junk.remove(path);
+            }
+            path::remove(model, path)
+        }
         Message::PathsAdded(paths) => {
             let mut actions = path::add(model, paths);
             actions.extend(register::add(model, paths));
@@ -214,7 +219,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                 let mut actions = Vec::new();
                 current::update(model, Some(msg));
 
-                if let Some(preview_actions) = preview::path(model, true, true) {
+                if let Some(preview_actions) = preview::selected_path(model, true, true) {
                     actions.extend(preview_actions);
                     preview::viewport(model);
                 }
@@ -233,7 +238,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                 let mut actions = Vec::new();
                 current::update(model, Some(msg));
 
-                if let Some(preview_actions) = preview::path(model, true, true) {
+                if let Some(preview_actions) = preview::selected_path(model, true, true) {
                     actions.extend(preview_actions);
                     preview::viewport(model);
                 }
@@ -247,7 +252,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                 let mut actions = Vec::new();
                 current::update(model, Some(msg));
 
-                if let Some(preview_actions) = preview::path(model, true, true) {
+                if let Some(preview_actions) = preview::selected_path(model, true, true) {
                     actions.extend(preview_actions);
                     preview::viewport(model);
                 }

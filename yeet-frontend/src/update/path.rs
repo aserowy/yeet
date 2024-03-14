@@ -13,7 +13,7 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     add_paths(model, paths);
 
     let mut actions = Vec::new();
-    if let Some(preview_actions) = preview::path(model, true, true) {
+    if let Some(preview_actions) = preview::selected_path(model, true, true) {
         actions.extend(preview_actions);
         preview::viewport(model);
     }
@@ -77,23 +77,18 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
 }
 
 pub fn remove(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
-    if path.starts_with(&model.junk.path) {
-        model.junk.remove(path);
+    remove_path(model, path);
+
+    let mut actions = Vec::new();
+    if let Some(preview_actions) = preview::selected_path(model, true, true) {
+        actions.extend(preview_actions);
+        preview::viewport(model);
+    }
+
+    if actions.is_empty() {
         None
     } else {
-        remove_path(model, path);
-
-        let mut actions = Vec::new();
-        if let Some(preview_actions) = preview::path(model, true, true) {
-            actions.extend(preview_actions);
-            preview::viewport(model);
-        }
-
-        if actions.is_empty() {
-            None
-        } else {
-            Some(actions)
-        }
+        Some(actions)
     }
 }
 

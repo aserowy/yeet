@@ -62,9 +62,10 @@ pub fn finished(model: &mut Model, path: &PathBuf) -> Option<Vec<Action>> {
     let mut actions = Vec::new();
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         super::sort_content(&model.mode, buffer);
+        // TODO: add opt selection to finished for current, set if some, history if none
         history::set_cursor_index(path, &model.history, buffer);
 
-        if let Some(preview_actions) = preview::path(model, true, true) {
+        if let Some(preview_actions) = preview::selected_path(model, true, true) {
             actions.extend(preview_actions);
             preview::viewport(model);
         }
