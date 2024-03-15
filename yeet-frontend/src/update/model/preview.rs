@@ -44,6 +44,7 @@ pub fn selected_path(
         }
 
         if watch_new_path {
+            // TODO: handle watches centrally! and split watch and enumeration?
             // TODO: resolve history selection and pass with watch
             actions.push(Action::WatchPath(selected.clone(), None));
         }

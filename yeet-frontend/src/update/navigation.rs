@@ -15,6 +15,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
 
     let mut actions = Vec::new();
     if !path.exists() {
+        tracing::warn!("path does not exist: {:?}", path);
         return None;
     }
 
@@ -52,7 +53,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         None => {
             model.current.buffer.lines.clear();
             current::update(model, None);
-            actions.push(Action::WatchPath(path.to_path_buf(), selection));
+            actions.push(Action::WatchPath(path.to_path_buf(), selection.clone()));
         }
     }
     model.current.path = path.to_path_buf();
@@ -77,7 +78,18 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
     }
     model.parent.path = path_parent.map(|path| path.to_path_buf());
 
-    let path_preview = current::selection(model);
+    let path_preview = match selection {
+        Some(it) => {
+            let selection = path.join(it);
+            if selection.exists() {
+                Some(selection)
+            } else {
+                None
+            }
+        }
+        None => current::selection(model),
+    };
+
     if let Some(preview) = path_preview.clone() {
         match current_contents.get(&preview) {
             Some(it) => {
