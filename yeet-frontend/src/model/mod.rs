@@ -41,6 +41,7 @@ pub struct Model {
     pub qfix: QuickFix,
     pub search: Option<SearchModel>,
     pub settings: Settings,
+    pub watches: Vec<PathBuf>,
 }
 
 impl Default for Model {
@@ -83,6 +84,7 @@ impl Default for Model {
             qfix: QuickFix::default(),
             search: None,
             settings: Settings::default(),
+            watches: Vec::new(),
         }
     }
 }

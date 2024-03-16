@@ -25,7 +25,7 @@ pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
         model.preview.path
     );
 
-    Some(new?)
+    new
 }
 
 #[tracing::instrument(skip(model, content))]

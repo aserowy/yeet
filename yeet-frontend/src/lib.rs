@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf};
 
-use action::ActionResult;
+use action::{Action, ActionResult};
 use layout::CommandLineLayout;
 use model::{mark, qfix, register};
 use task::Task;
@@ -76,7 +76,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         let sequence_len = model.key_sequence.chars().count() as u16;
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-        let actions: Vec<_> = messages
+        let mut actions: Vec<_> = messages
             .iter()
             .flat_map(|message| update::update(&mut model, message))
             .flatten()
@@ -87,7 +87,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             view::view(&mut terminal, &mut model)?;
         }
 
-        // TODO: resolve watch/unwatch actions
+        if let Some(watches) = get_watcher_changes(&mut model) {
+            actions.extend(watches);
+        }
 
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
@@ -116,4 +118,39 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
     }
 
     env::current_dir().expect("Failed to get current directory")
+}
+
+#[tracing::instrument(skip(model))]
+fn get_watcher_changes(model: &mut Model) -> Option<Vec<Action>> {
+    let current = vec![
+        Some(model.current.path.clone()),
+        model.preview.path.clone(),
+        model.parent.path.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
+
+    let mut actions = Vec::new();
+    for path in &model.watches {
+        if !current.contains(path) {
+            actions.push(Action::UnwatchPath(path.clone()));
+        }
+    }
+
+    for path in &current {
+        if !model.watches.contains(path) {
+            actions.push(Action::WatchPath(path.clone()));
+        }
+    }
+
+    model.watches = current;
+
+    if actions.is_empty() {
+        None
+    } else {
+        tracing::trace!("watcher changes: {:?}", actions);
+
+        Some(actions)
+    }
 }

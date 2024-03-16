@@ -1,7 +1,5 @@
 use std::{collections::HashMap, path::Path};
 
-use yeet_keymap::message::Mode;
-
 use crate::{action::Action, model::Model};
 
 use super::{buffer, current, cursor, model::parent, preview};
