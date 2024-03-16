@@ -4,7 +4,7 @@ use crate::model::Model;
 
 use super::buffer;
 
-pub fn view(model: &mut Model, frame: &mut Frame) {
+pub fn view(model: &Model, frame: &mut Frame) {
     let commandline = &model.commandline;
 
     buffer::view(

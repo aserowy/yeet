@@ -4,7 +4,7 @@ mod buffer;
 mod commandline;
 mod statusline;
 
-pub fn view(terminal: &mut TerminalWrapper, model: &mut Model) -> Result<(), AppError> {
+pub fn view(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     // NOTE: If perf matters, call view only on relevant changed model parts
     terminal.draw(|frame| {
         let layout = model.layout.clone();

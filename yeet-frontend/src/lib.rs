@@ -83,7 +83,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
-            view::view(&mut terminal, &mut model)?;
+            view::view(&mut terminal, &model)?;
         }
 
         actions.extend(get_watcher_changes(&mut model));

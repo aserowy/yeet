@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::model::{buffer::undo::BufferChanged, Model};
 
-pub fn view(model: &mut Model, frame: &mut Frame, rect: Rect) {
+pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(model);
     let position = get_position_content(model);
 
