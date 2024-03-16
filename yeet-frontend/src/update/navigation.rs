@@ -13,7 +13,6 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         return None;
     }
 
-    let mut actions = Vec::new();
     if !path.exists() {
         tracing::warn!("path does not exist: {:?}", path);
         return None;
@@ -53,7 +52,6 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         None => {
             model.current.buffer.lines.clear();
             current::update(model, None);
-            actions.push(Action::WatchPath(path.to_path_buf(), selection.clone()));
         }
     }
     model.current.path = path.to_path_buf();
@@ -68,11 +66,6 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
             None => {
                 model.parent.buffer.lines.clear();
                 parent::update(model, None);
-
-                actions.push(Action::WatchPath(
-                    parent.to_path_buf(),
-                    path.file_name().map(|nm| nm.to_string_lossy().to_string()),
-                ));
             }
         }
     }
@@ -98,10 +91,8 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
                 model.preview.path = Some(preview.to_path_buf());
             }
             None => {
-                if let Some(preview_actions) = preview::selected_path(model, true, true) {
-                    actions.extend(preview_actions);
-                    preview::viewport(model);
-                }
+                preview::selected_path(model);
+                preview::viewport(model);
             }
         }
     } else {
@@ -109,18 +100,9 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         preview::viewport(model);
     }
 
-    for cached_path in current_contents.keys() {
-        if cached_path != path
-            && Some(cached_path.to_path_buf()) != path_preview
-            && Some(cached_path.as_path()) != path_parent
-        {
-            actions.push(Action::UnwatchPath(cached_path.clone()));
-        }
-    }
-
     model.history.add(&model.current.path);
 
-    Some(actions)
+    None
 }
 
 pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
@@ -132,16 +114,6 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
         }
 
         let parent_parent = parent.parent();
-
-        let mut actions = Vec::new();
-        if let Some(parent_parent) = parent_parent {
-            actions.push(Action::WatchPath(
-                parent_parent.to_path_buf(),
-                parent
-                    .file_name()
-                    .map(|nm| nm.to_string_lossy().to_string()),
-            ));
-        }
 
         model.parent.path = parent_parent.map(|path| path.to_path_buf());
         model.current.path = parent.to_path_buf();
@@ -161,16 +133,14 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        if let Some(preview_actions) = preview::selected_path(model, true, false) {
-            actions.extend(preview_actions);
-        }
+        preview::selected_path(model);
         buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
         preview::viewport(model);
 
         model.parent.buffer.lines.clear();
         parent::update(model, None);
 
-        Some(actions)
+        None
     } else {
         None
     }
@@ -184,10 +154,6 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
             return None;
         }
 
-        let mut actions = Vec::new();
-        if let Some(parent) = &model.parent.path {
-            actions.push(Action::UnwatchPath(parent.clone()));
-        }
         model.parent.path = Some(model.current.path.clone());
         model.current.path = selected.to_path_buf();
 
@@ -206,9 +172,7 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        if let Some(preview_actions) = preview::selected_path(model, false, true) {
-            actions.extend(preview_actions);
-        }
+        preview::selected_path(model);
         preview::viewport(model);
 
         buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
@@ -216,7 +180,7 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
 
         model.history.add(&model.current.path);
 
-        Some(actions)
+        None
     } else {
         None
     }

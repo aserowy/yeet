@@ -87,6 +87,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             view::view(&mut terminal, &mut model)?;
         }
 
+        // TODO: resolve watch/unwatch actions
+
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
             break;

@@ -9,50 +9,21 @@ use crate::{
 use super::current;
 
 #[tracing::instrument(skip(model))]
-pub fn selected_path(
-    model: &mut Model,
-    unwatch_old_path: bool,
-    watch_new_path: bool,
-) -> Option<Vec<Action>> {
-    let old_preview_path = model.preview.path.clone();
-    let new_preview_path = current::selection(model);
-
-    if old_preview_path == new_preview_path {
-        return None;
+pub fn selected_path(model: &mut Model) {
+    let new = current::selection(model);
+    if model.preview.path == new {
+        return;
     }
 
-    model.preview.path = new_preview_path;
+    let old = model.preview.path.clone();
+    model.preview.path = new;
     model.preview.buffer.lines.clear();
 
     tracing::trace!(
         "switching preview path: {:?} -> {:?}",
-        old_preview_path,
+        old,
         model.preview.path
     );
-
-    if let Some(selected) = &model.preview.path {
-        let current = &model.current.path;
-        if current == selected {
-            return None;
-        }
-
-        let mut actions = Vec::new();
-        if unwatch_old_path {
-            if let Some(old) = &old_preview_path {
-                actions.push(Action::UnwatchPath(old.clone()));
-            }
-        }
-
-        if watch_new_path {
-            // TODO: handle watches centrally! and split watch and enumeration?
-            // TODO: resolve history selection and pass with watch
-            actions.push(Action::WatchPath(selected.clone(), None));
-        }
-
-        Some(actions)
-    } else {
-        None
-    }
 }
 
 #[tracing::instrument(skip(model, content))]

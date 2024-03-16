@@ -5,20 +5,15 @@ use std::{
 
 use yeet_keymap::message::Mode;
 
-use crate::{action::Action, model::Model};
+use crate::model::Model;
 
 use super::{bufferline, mark, preview, qfix};
 
-pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
+pub fn add(model: &mut Model, paths: &[PathBuf]) {
     add_paths(model, paths);
 
-    let mut actions = Vec::new();
-    if let Some(preview_actions) = preview::selected_path(model, true, true) {
-        actions.extend(preview_actions);
-        preview::viewport(model);
-    }
-
-    actions
+    preview::selected_path(model);
+    preview::viewport(model);
 }
 
 fn add_paths(model: &mut Model, paths: &[PathBuf]) {
@@ -77,20 +72,11 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
     }
 }
 
-pub fn remove(model: &mut Model, path: &Path) -> Option<Vec<Action>> {
+pub fn remove(model: &mut Model, path: &Path) {
     remove_path(model, path);
 
-    let mut actions = Vec::new();
-    if let Some(preview_actions) = preview::selected_path(model, true, true) {
-        actions.extend(preview_actions);
-        preview::viewport(model);
-    }
-
-    if actions.is_empty() {
-        None
-    } else {
-        Some(actions)
-    }
+    preview::selected_path(model);
+    preview::viewport(model);
 }
 
 fn remove_path(model: &mut Model, path: &Path) {

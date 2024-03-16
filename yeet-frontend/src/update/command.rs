@@ -21,7 +21,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     // NOTE: all file commands like e.g. d! should use preview as target to enable cdo
     let mut actions = match cmd {
-        ("cdo", command) => {
+        ("cdo", _command) => {
             todo!()
         }
         ("cfirst", "") => {

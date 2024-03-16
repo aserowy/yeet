@@ -52,13 +52,9 @@ pub fn changed(
 }
 
 #[tracing::instrument(skip(model))]
-pub fn finished(
-    model: &mut Model,
-    path: &PathBuf,
-    selection: &Option<String>,
-) -> Option<Vec<Action>> {
+pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
     if model.mode != Mode::Navigation {
-        return None;
+        return;
     }
 
     let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
@@ -71,7 +67,6 @@ pub fn finished(
         buffer.push((parent, &mut model.parent.buffer));
     }
 
-    let mut actions = Vec::new();
     if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
         super::sort_content(&model.mode, buffer);
 
@@ -83,15 +78,7 @@ pub fn finished(
             cursor::set_cursor_index_with_history(path, &model.history, buffer);
         }
 
-        if let Some(preview_actions) = preview::selected_path(model, true, true) {
-            actions.extend(preview_actions);
-            preview::viewport(model);
-        }
-    }
-
-    if actions.is_empty() {
-        None
-    } else {
-        Some(actions)
+        preview::selected_path(model);
+        preview::viewport(model);
     }
 }
