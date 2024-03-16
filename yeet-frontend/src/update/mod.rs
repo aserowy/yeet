@@ -28,7 +28,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
 
     match message {
         Message::Buffer(msg) => buffer(model, msg),
-        Message::DeleteMarks(marks) => mark::delete(model, marks).unwrap_or_default(),
+        Message::DeleteMarks(marks) => mark::delete(model, marks),
         Message::ClearSearchHighlight => {
             search::clear(model);
             Vec::new()
@@ -38,7 +38,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             Vec::new()
         }
         Message::EnumerationFinished(path, selection) => {
-            enumeration::finished(model, path, selection).unwrap_or_default()
+            enumeration::finished(model, path, selection)
         }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
@@ -48,7 +48,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             Vec::new()
         }
         Message::ExecuteCommand => match &model.mode {
-            Mode::Command(_) => commandline::update_on_execute(model).unwrap_or_default(),
+            Mode::Command(_) => commandline::update_on_execute(model),
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
@@ -76,12 +76,12 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                 None => &path,
             };
 
-            navigation::path(model, path, &selection).unwrap_or_default()
+            navigation::path(model, path, &selection)
         }
-        Message::NavigateToParent => navigation::parent(model).unwrap_or_default(),
+        Message::NavigateToParent => navigation::parent(model),
         Message::NavigateToPath(path) => {
             if path.is_dir() {
-                navigation::path(model, path, &None).unwrap_or_default()
+                navigation::path(model, path, &None)
             } else {
                 let selection = path
                     .file_name()
@@ -92,7 +92,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                     None => path,
                 };
 
-                navigation::path(model, path, &selection).unwrap_or_default()
+                navigation::path(model, path, &selection)
             }
         }
         Message::NavigateToPathAsPreview(path) => {
@@ -105,13 +105,11 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                 None => path,
             };
 
-            navigation::path(model, path, &selection).unwrap_or_default()
+            navigation::path(model, path, &selection)
         }
-        Message::NavigateToSelected => navigation::selected(model).unwrap_or_default(),
-        Message::OpenSelected => current::open(model).unwrap_or_default(),
-        Message::PasteFromJunkYard(register) => {
-            register::paste(model, register).unwrap_or_default()
-        }
+        Message::NavigateToSelected => navigation::selected(model),
+        Message::OpenSelected => current::open(model),
+        Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => {
             // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
             if path.starts_with(&model.junk.path) {
@@ -129,9 +127,10 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             actions
         }
         Message::PreviewLoaded(path, content) => {
-            preview::update(model, path, content).unwrap_or_default()
+            preview::update(model, path, content);
+            Vec::new()
         }
-        Message::Print(content) => commandline::print(model, content).unwrap_or_default(),
+        Message::Print(content) => commandline::print(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
         Message::SetMark(char) => {
@@ -143,7 +142,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             Vec::new()
         }
         Message::Quit => vec![Action::Quit(None)],
-        Message::YankToJunkYard(repeat) => register::yank(model, repeat).unwrap_or_default(),
+        Message::YankToJunkYard(repeat) => register::yank(model, repeat),
     }
 }
 

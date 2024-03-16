@@ -67,13 +67,9 @@ pub fn changed(
 }
 
 #[tracing::instrument(skip(model))]
-pub fn finished(
-    model: &mut Model,
-    path: &PathBuf,
-    selection: &Option<String>,
-) -> Option<Vec<Action>> {
+pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) -> Vec<Action> {
     if model.mode != Mode::Navigation {
-        return None;
+        return Vec::new();
     }
 
     let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
@@ -99,11 +95,11 @@ pub fn finished(
 
         if let Some(path) = preview::selected_path(model) {
             preview::viewport(model);
-            Some(vec![Action::Load(path, None)])
+            vec![Action::Load(path, None)]
         } else {
-            None
+            Vec::new()
         }
     } else {
-        None
+        Vec::new()
     }
 }

@@ -5,15 +5,15 @@ use crate::{action::Action, model::Model};
 use super::{buffer, current, cursor, model::parent, preview};
 
 #[tracing::instrument(skip(model))]
-pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Option<Vec<Action>> {
+pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {
     if path.is_file() {
         tracing::warn!("path is a file, not a directory: {:?}", path);
-        return None;
+        return Vec::new();
     }
 
     if !path.exists() {
         tracing::warn!("path does not exist: {:?}", path);
-        return None;
+        return Vec::new();
     }
 
     let selection = match selection {
@@ -109,13 +109,13 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
 
     model.history.add(&model.current.path);
 
-    Some(actions)
+    actions
 }
 
-pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
+pub fn parent(model: &mut Model) -> Vec<Action> {
     if let Some(path) = model.current.path.parent() {
         if model.current.path == path {
-            return None;
+            return Vec::new();
         }
 
         let parent = path.parent();
@@ -153,16 +153,16 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
         model.parent.buffer.lines.clear();
         parent::update(model, None);
 
-        Some(actions)
+        actions
     } else {
-        None
+        Vec::new()
     }
 }
 
-pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
+pub fn selected(model: &mut Model) -> Vec<Action> {
     if let Some(selected) = current::selection(model) {
         if model.current.path == selected || !selected.is_dir() {
-            return None;
+            return Vec::new();
         }
 
         model.parent.path = Some(model.current.path.clone());
@@ -194,8 +194,8 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
 
         model.history.add(&model.current.path);
 
-        Some(actions)
+        actions
     } else {
-        None
+        Vec::new()
     }
 }

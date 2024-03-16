@@ -115,7 +115,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
     }
 }
 
-pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
+pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
     let mut actions = vec![Action::SkipRender];
 
     let commandline = &mut model.commandline;
@@ -162,10 +162,10 @@ pub fn update_on_execute(model: &mut Model) -> Option<Vec<Action>> {
         }
     }
 
-    Some(actions)
+    actions
 }
 
-pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>> {
+pub fn print(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
@@ -219,11 +219,11 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Option<Vec<Action>>
             ..Default::default()
         });
 
-        Some(vec![Action::EmitMessages(vec![Message::Buffer(
+        vec![Action::EmitMessages(vec![Message::Buffer(
             Buffer::ChangeMode(model.mode.clone(), Mode::Command(CommandMode::Command)),
-        )])])
+        )])]
     } else {
-        None
+        Vec::new()
     };
 
     buffer::update(

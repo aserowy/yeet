@@ -28,7 +28,7 @@ pub fn add(model: &mut Model, char: char) {
     }
 }
 
-pub fn delete(model: &mut Model, delete: &Vec<char>) -> Option<Vec<Action>> {
+pub fn delete(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
     let mut persisted = Vec::new();
     for mark in delete {
         let deleted = model.marks.entries.remove_entry(mark);
@@ -39,9 +39,9 @@ pub fn delete(model: &mut Model, delete: &Vec<char>) -> Option<Vec<Action>> {
     }
 
     if persisted.is_empty() {
-        None
+        Vec::new()
     } else {
-        Some(vec![Action::Task(Task::DeleteMarks(persisted))])
+        vec![Action::Task(Task::DeleteMarks(persisted))]
     }
 }
 

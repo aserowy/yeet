@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use crate::{
-    action::Action,
     model::{buffer::BufferLine, Model},
     update::{buffer, cursor},
 };
@@ -29,7 +28,7 @@ pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
 }
 
 #[tracing::instrument(skip(model, content))]
-pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) -> Option<Vec<Action>> {
+pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
     if Some(path) == model.preview.path.as_ref() {
         tracing::trace!("updating preview buffer: {:?}", path);
 
@@ -44,8 +43,6 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) -> Option<V
         buffer::set_content(&model.mode, &mut model.preview.buffer, content);
         viewport(model);
     }
-
-    None
 }
 
 pub fn viewport(model: &mut Model) {

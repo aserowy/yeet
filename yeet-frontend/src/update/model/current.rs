@@ -25,21 +25,19 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     }
 }
 
-pub fn open(model: &Model) -> Option<Vec<Action>> {
+pub fn open(model: &Model) -> Vec<Action> {
     if model.mode != Mode::Navigation {
-        return None;
+        return Vec::new();
     }
 
     if let Some(selected) = selection(model) {
         if model.settings.stdout_on_open {
-            Some(vec![Action::Quit(Some(
-                selected.to_string_lossy().to_string(),
-            ))])
+            vec![Action::Quit(Some(selected.to_string_lossy().to_string()))]
         } else {
-            Some(vec![Action::Open(selected)])
+            vec![Action::Open(selected)]
         }
     } else {
-        None
+        Vec::new()
     }
 }
 

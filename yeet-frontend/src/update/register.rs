@@ -17,7 +17,7 @@ pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
     actions
 }
 
-pub fn paste(model: &mut Model, register: &str) -> Option<Vec<Action>> {
+pub fn paste(model: &mut Model, register: &str) -> Vec<Action> {
     if let Some(transaction) = model.junk.get(register) {
         let mut actions = Vec::new();
         for entry in transaction.entries {
@@ -26,16 +26,16 @@ pub fn paste(model: &mut Model, register: &str) -> Option<Vec<Action>> {
                 model.current.path.clone(),
             )));
         }
-        Some(actions)
+        actions
     } else {
-        None
+        Vec::new()
     }
 }
 
-pub fn yank(model: &mut Model, repeat: &usize) -> Option<Vec<Action>> {
+pub fn yank(model: &mut Model, repeat: &usize) -> Vec<Action> {
     let current_buffer = &model.current.buffer;
     if current_buffer.lines.is_empty() {
-        None
+        Vec::new()
     } else if let Some(cursor) = &current_buffer.cursor {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
@@ -58,8 +58,8 @@ pub fn yank(model: &mut Model, repeat: &usize) -> Option<Vec<Action>> {
             }
         }
 
-        Some(actions)
+        actions
     } else {
-        None
+        Vec::new()
     }
 }
