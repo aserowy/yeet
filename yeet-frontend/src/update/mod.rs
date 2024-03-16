@@ -23,48 +23,48 @@ mod qfix;
 mod register;
 mod search;
 
-pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
+pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
     settings(model);
 
     match message {
         Message::Buffer(msg) => buffer(model, msg),
-        Message::DeleteMarks(marks) => mark::delete(model, marks),
+        Message::DeleteMarks(marks) => mark::delete(model, marks).unwrap_or_default(),
         Message::ClearSearchHighlight => {
             search::clear(model);
-            None
+            Vec::new()
         }
         Message::EnumerationChanged(path, contents, selection) => {
             enumeration::changed(model, path, contents, selection);
-            None
+            Vec::new()
         }
         Message::EnumerationFinished(path, selection) => {
-            enumeration::finished(model, path, selection)
+            enumeration::finished(model, path, selection).unwrap_or_default()
         }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
             if !model.mode.is_command() {
                 commandline::print(model, &[PrintContent::Error(error.to_string())]);
             }
-            None
+            Vec::new()
         }
         Message::ExecuteCommand => match &model.mode {
-            Mode::Command(_) => commandline::update_on_execute(model),
-            _ => None,
+            Mode::Command(_) => commandline::update_on_execute(model).unwrap_or_default(),
+            _ => Vec::new(),
         },
-        Message::ExecuteCommandString(command) => Some(command::execute(command, model)),
+        Message::ExecuteCommandString(command) => command::execute(command, model),
         Message::KeySequenceChanged(sequence) => {
             model.key_sequence = sequence.clone();
             commandline::update(model, None);
 
-            Some(vec![
+            vec![
                 Action::SkipRender,
                 Action::EmitMessages(vec![Message::Rerender]),
-            ])
+            ]
         }
         Message::NavigateToMark(char) => {
             let path = match model.marks.entries.get(char) {
                 Some(it) => it.clone(),
-                None => return None,
+                None => return Vec::new(),
             };
 
             let selection = path
@@ -76,12 +76,12 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                 None => &path,
             };
 
-            navigation::path(model, path, &selection)
+            navigation::path(model, path, &selection).unwrap_or_default()
         }
-        Message::NavigateToParent => navigation::parent(model),
+        Message::NavigateToParent => navigation::parent(model).unwrap_or_default(),
         Message::NavigateToPath(path) => {
             if path.is_dir() {
-                navigation::path(model, path, &None)
+                navigation::path(model, path, &None).unwrap_or_default()
             } else {
                 let selection = path
                     .file_name()
@@ -92,7 +92,7 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                     None => path,
                 };
 
-                navigation::path(model, path, &selection)
+                navigation::path(model, path, &selection).unwrap_or_default()
             }
         }
         Message::NavigateToPathAsPreview(path) => {
@@ -105,23 +105,20 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
                 None => path,
             };
 
-            navigation::path(model, path, &selection)
+            navigation::path(model, path, &selection).unwrap_or_default()
         }
-        Message::NavigateToSelected => navigation::selected(model),
-        Message::OpenSelected => current::open(model),
-        Message::PasteFromJunkYard(register) => register::paste(model, register),
+        Message::NavigateToSelected => navigation::selected(model).unwrap_or_default(),
+        Message::OpenSelected => current::open(model).unwrap_or_default(),
+        Message::PasteFromJunkYard(register) => {
+            register::paste(model, register).unwrap_or_default()
+        }
         Message::PathRemoved(path) => {
             // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);
             }
 
-            let actions = path::remove(model, path);
-            if actions.is_empty() {
-                None
-            } else {
-                Some(actions)
-            }
+            path::remove(model, path)
         }
         Message::PathsAdded(paths) => {
             // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
@@ -129,26 +126,24 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
             let mut actions = path::add(model, paths);
             actions.extend(register::add(model, paths));
 
-            if actions.is_empty() {
-                None
-            } else {
-                Some(actions)
-            }
+            actions
         }
-        Message::PreviewLoaded(path, content) => preview::update(model, path, content),
-        Message::Print(content) => commandline::print(model, content),
-        Message::Rerender => None,
-        Message::Resize(x, y) => Some(vec![Action::Resize(*x, *y)]),
+        Message::PreviewLoaded(path, content) => {
+            preview::update(model, path, content).unwrap_or_default()
+        }
+        Message::Print(content) => commandline::print(model, content).unwrap_or_default(),
+        Message::Rerender => Vec::new(),
+        Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
         Message::SetMark(char) => {
             mark::add(model, *char);
-            None
+            Vec::new()
         }
         Message::ToggleQuickFix => {
             qfix::toggle(model);
-            None
+            Vec::new()
         }
-        Message::Quit => Some(vec![Action::Quit(None)]),
-        Message::YankToJunkYard(repeat) => register::yank(model, repeat),
+        Message::Quit => vec![Action::Quit(None)],
+        Message::YankToJunkYard(repeat) => register::yank(model, repeat).unwrap_or_default(),
     }
 }
 
@@ -199,14 +194,14 @@ fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
     buffer.view_port.hidden_sign_ids.remove(id);
 }
 
-fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
+fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
     match msg {
         message::Buffer::ChangeMode(from, to) => {
             match (from, to) {
                 (Mode::Command(_), Mode::Command(_))
                 | (Mode::Insert, Mode::Insert)
                 | (Mode::Navigation, Mode::Navigation)
-                | (Mode::Normal, Mode::Normal) => return None,
+                | (Mode::Normal, Mode::Normal) => return Vec::new(),
                 _ => {}
             }
 
@@ -252,55 +247,61 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                 }
             });
 
-            Some(actions)
+            actions
         }
         message::Buffer::Modification(_, _) => match model.mode {
-            Mode::Command(CommandMode::Command) => Some(commandline::update(model, Some(msg))),
+            Mode::Command(CommandMode::Command) => commandline::update(model, Some(msg)),
             Mode::Command(_) => {
                 let actions = commandline::update(model, Some(msg));
                 search::update(model);
 
-                Some(actions)
+                actions
             }
             Mode::Insert | Mode::Normal => {
                 current::update(model, Some(msg));
+
+                let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    Some(vec![Action::Load(path, None)])
-                } else {
-                    None
+                    actions.push(Action::Load(path, None));
                 }
+
+                actions
             }
-            Mode::Navigation => None,
+            Mode::Navigation => Vec::new(),
         },
         message::Buffer::MoveCursor(_, mtn) => match model.mode {
-            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
+            Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if matches!(mtn, &CursorDirection::Search(_)) {
                     search::search(model);
                 }
 
                 current::update(model, Some(msg));
+
+                let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    Some(vec![Action::Load(path, None)])
-                } else {
-                    None
+                    actions.push(Action::Load(path, None));
                 }
+
+                actions
             }
         },
         message::Buffer::MoveViewPort(_) => match model.mode {
-            Mode::Command(_) => Some(commandline::update(model, Some(msg))),
+            Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 current::update(model, Some(msg));
+
+                let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    Some(vec![Action::Load(path, None)])
-                } else {
-                    None
+                    actions.push(Action::Load(path, None));
                 }
+
+                actions
             }
         },
-        message::Buffer::SaveBuffer(_) => Some(current::save_changes(model)),
+        message::Buffer::SaveBuffer(_) => current::save_changes(model),
     }
 }

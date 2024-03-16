@@ -79,7 +79,6 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         let mut actions: Vec<_> = messages
             .iter()
             .flat_map(|message| update::update(&mut model, message))
-            .flatten()
             .collect();
 
         let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
