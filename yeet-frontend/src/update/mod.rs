@@ -1,4 +1,6 @@
-use yeet_keymap::message::{self, CommandMode, CursorDirection, Message, Mode, PrintContent};
+use yeet_keymap::message::{
+    self, CommandMode, CursorDirection, Message, Mode, PrintContent, ViewPortDirection,
+};
 
 use crate::{
     action::Action,
@@ -38,7 +40,18 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             Vec::new()
         }
         Message::EnumerationFinished(path, selection) => {
-            enumeration::finished(model, path, selection)
+            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
+            // TODO: set state to finished
+            let actions = enumeration::finished(model, path, selection);
+
+            self::buffer::update(
+                &model.mode,
+                &model.search,
+                &mut model.parent.buffer,
+                &message::Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
+            );
+
+            actions
         }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
@@ -111,7 +124,6 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::OpenSelected => current::open(model),
         Message::PasteFromJunkYard(register) => register::paste(model, register),
         Message::PathRemoved(path) => {
-            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);
             }
@@ -119,14 +131,14 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             path::remove(model, path)
         }
         Message::PathsAdded(paths) => {
-            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
-            // TODO: set state to finished
             let mut actions = path::add(model, paths);
             actions.extend(register::add(model, paths));
 
             actions
         }
         Message::PreviewLoaded(path, content) => {
+            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
+            // TODO: set state to finished
             preview::update(model, path, content);
             Vec::new()
         }
