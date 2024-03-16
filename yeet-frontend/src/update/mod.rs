@@ -115,14 +115,25 @@ pub fn update(model: &mut Model, message: &Message) -> Option<Vec<Action>> {
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);
             }
-            path::remove(model, path);
-            None
+
+            let actions = path::remove(model, path);
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
         }
         Message::PathsAdded(paths) => {
             // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
             // TODO: set state to finished
-            path::add(model, paths);
-            Some(register::add(model, paths))
+            let mut actions = path::add(model, paths);
+            actions.extend(register::add(model, paths));
+
+            if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            }
         }
         Message::PreviewLoaded(path, content) => preview::update(model, path, content),
         Message::Print(content) => commandline::print(model, content),
@@ -253,10 +264,12 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
             }
             Mode::Insert | Mode::Normal => {
                 current::update(model, Some(msg));
-                preview::selected_path(model);
-                preview::viewport(model);
-
-                None
+                if let Some(path) = preview::selected_path(model) {
+                    preview::viewport(model);
+                    Some(vec![Action::Load(path, None)])
+                } else {
+                    None
+                }
             }
             Mode::Navigation => None,
         },
@@ -268,20 +281,24 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Option<Vec<Action>> {
                 }
 
                 current::update(model, Some(msg));
-                preview::selected_path(model);
-                preview::viewport(model);
-
-                None
+                if let Some(path) = preview::selected_path(model) {
+                    preview::viewport(model);
+                    Some(vec![Action::Load(path, None)])
+                } else {
+                    None
+                }
             }
         },
         message::Buffer::MoveViewPort(_) => match model.mode {
             Mode::Command(_) => Some(commandline::update(model, Some(msg))),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 current::update(model, Some(msg));
-                preview::selected_path(model);
-                preview::viewport(model);
-
-                None
+                if let Some(path) = preview::selected_path(model) {
+                    preview::viewport(model);
+                    Some(vec![Action::Load(path, None)])
+                } else {
+                    None
+                }
             }
         },
         message::Buffer::SaveBuffer(_) => Some(current::save_changes(model)),

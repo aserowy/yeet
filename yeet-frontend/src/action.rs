@@ -12,6 +12,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq)]
 pub enum Action {
     EmitMessages(Vec<Message>),
+    Load(PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(Option<String>),
@@ -19,7 +20,7 @@ pub enum Action {
     SkipRender,
     Task(Task),
     UnwatchPath(PathBuf),
-    WatchPath(PathBuf, Option<String>),
+    WatchPath(PathBuf),
 }
 
 #[derive(Debug, PartialEq)]
@@ -52,6 +53,7 @@ pub async fn post(
 fn is_preview_action(action: &Action) -> bool {
     match action {
         Action::EmitMessages(_) => false,
+        Action::Load(_, _) => true,
         Action::ModeChanged => false,
         Action::Open(_) => true,
         Action::Quit(_) => false,
@@ -59,7 +61,7 @@ fn is_preview_action(action: &Action) -> bool {
         Action::SkipRender => true,
         Action::Task(_) => true,
         Action::UnwatchPath(_) => true,
-        Action::WatchPath(_, _) => true,
+        Action::WatchPath(_) => true,
     }
 }
 
@@ -82,6 +84,13 @@ async fn execute(
         match action {
             Action::EmitMessages(messages) => {
                 emitter.run(Task::EmitMessages(messages.clone()));
+            }
+            Action::Load(path, selection) => {
+                if path.is_dir() {
+                    emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
+                } else {
+                    emitter.run(Task::LoadPreview(path.clone()));
+                }
             }
             Action::ModeChanged => {
                 emitter.set_current_mode(model.mode.clone()).await;
@@ -134,15 +143,9 @@ async fn execute(
                     tracing::error!("emitting unwatch path failed: {:?}", error);
                 }
             }
-            Action::WatchPath(path, selection) => {
+            Action::WatchPath(path) => {
                 if path == &PathBuf::default() {
                     continue;
-                }
-
-                if path.is_dir() {
-                    emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                } else {
-                    emitter.run(Task::LoadPreview(path.clone()));
                 }
 
                 if let Err(error) = emitter.watch(path.as_path()) {

@@ -83,6 +83,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         None => current::selection(model),
     };
 
+    let mut actions = Vec::new();
     if let Some(preview) = path_preview.clone() {
         match current_contents.get(&preview) {
             Some(it) => {
@@ -91,8 +92,10 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
                 model.preview.path = Some(preview.to_path_buf());
             }
             None => {
-                preview::selected_path(model);
-                preview::viewport(model);
+                if let Some(path) = preview::selected_path(model) {
+                    preview::viewport(model);
+                    actions.push(Action::Load(path, None));
+                }
             }
         }
     } else {
@@ -102,7 +105,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
 
     model.history.add(&model.current.path);
 
-    None
+    Some(actions)
 }
 
 pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
@@ -133,14 +136,17 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        preview::selected_path(model);
-        buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
-        preview::viewport(model);
+        let mut actions = Vec::new();
+        if let Some(path) = preview::selected_path(model) {
+            buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
+            preview::viewport(model);
+            actions.push(Action::Load(path, None));
+        }
 
         model.parent.buffer.lines.clear();
         parent::update(model, None);
 
-        None
+        Some(actions)
     } else {
         None
     }
@@ -172,15 +178,18 @@ pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        preview::selected_path(model);
-        preview::viewport(model);
+        let mut actions = Vec::new();
+        if let Some(path) = preview::selected_path(model) {
+            preview::viewport(model);
+            actions.push(Action::Load(path, None));
+        }
 
         buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
         parent::update(model, None);
 
         model.history.add(&model.current.path);
 
-        None
+        Some(actions)
     } else {
         None
     }

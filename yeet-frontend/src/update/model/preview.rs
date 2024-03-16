@@ -9,14 +9,14 @@ use crate::{
 use super::current;
 
 #[tracing::instrument(skip(model))]
-pub fn selected_path(model: &mut Model) {
+pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
     let new = current::selection(model);
     if model.preview.path == new {
-        return;
+        return None;
     }
 
     let old = model.preview.path.clone();
-    model.preview.path = new;
+    model.preview.path = new.clone();
     model.preview.buffer.lines.clear();
 
     tracing::trace!(
@@ -24,6 +24,8 @@ pub fn selected_path(model: &mut Model) {
         old,
         model.preview.path
     );
+
+    Some(new?)
 }
 
 #[tracing::instrument(skip(model, content))]
