@@ -87,9 +87,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             view::view(&mut terminal, &mut model)?;
         }
 
-        if let Some(watches) = get_watcher_changes(&mut model) {
-            actions.extend(watches);
-        }
+        actions.extend(get_watcher_changes(&mut model));
 
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
@@ -121,7 +119,7 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
 }
 
 #[tracing::instrument(skip(model))]
-fn get_watcher_changes(model: &mut Model) -> Option<Vec<Action>> {
+fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     let current = vec![
         Some(model.current.path.clone()),
         model.preview.path.clone(),
@@ -146,11 +144,9 @@ fn get_watcher_changes(model: &mut Model) -> Option<Vec<Action>> {
 
     model.watches = current;
 
-    if actions.is_empty() {
-        None
-    } else {
+    if !actions.is_empty() {
         tracing::trace!("watcher changes: {:?}", actions);
-
-        Some(actions)
     }
+
+    actions
 }
