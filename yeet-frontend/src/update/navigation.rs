@@ -40,6 +40,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         current_contents.insert(path.to_path_buf(), model.parent.buffer.lines.clone());
     }
 
+    let mut actions = Vec::new();
     match current_contents.get(path) {
         Some(it) => {
             buffer::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
@@ -52,12 +53,13 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         None => {
             model.current.buffer.lines.clear();
             current::update(model, None);
+            actions.push(Action::Load(path.to_path_buf(), selection.clone()));
         }
     }
     model.current.path = path.to_path_buf();
 
-    let path_parent = path.parent();
-    if let Some(parent) = path_parent {
+    let parent = path.parent();
+    if let Some(parent) = parent {
         match current_contents.get(parent) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
@@ -66,12 +68,17 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
             None => {
                 model.parent.buffer.lines.clear();
                 parent::update(model, None);
+
+                actions.push(Action::Load(
+                    parent.to_path_buf(),
+                    path.file_name().map(|it| it.to_string_lossy().to_string()),
+                ));
             }
         }
     }
-    model.parent.path = path_parent.map(|path| path.to_path_buf());
+    model.parent.path = parent.map(|path| path.to_path_buf());
 
-    let path_preview = match selection {
+    let preview = match selection {
         Some(it) => {
             let selection = path.join(it);
             if selection.exists() {
@@ -83,8 +90,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
         None => current::selection(model),
     };
 
-    let mut actions = Vec::new();
-    if let Some(preview) = path_preview.clone() {
+    if let Some(preview) = preview.clone() {
         match current_contents.get(&preview) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
@@ -109,20 +115,24 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Optio
 }
 
 pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
-    if model.mode != Mode::Navigation {
-        None
-    } else if let Some(parent) = model.current.path.parent() {
-        if model.current.path == parent {
+    if let Some(path) = model.current.path.parent() {
+        if model.current.path == path {
             return None;
         }
 
-        let parent_parent = parent.parent();
+        let parent = path.parent();
 
-        model.parent.path = parent_parent.map(|path| path.to_path_buf());
-        model.current.path = parent.to_path_buf();
+        let mut actions = Vec::new();
+        model.parent.path = parent.map(|path| path.to_path_buf());
+        if let Some(parent) = parent {
+            actions.push(Action::Load(
+                parent.to_path_buf(),
+                path.file_name().map(|it| it.to_string_lossy().to_string()),
+            ));
+        }
 
+        model.current.path = path.to_path_buf();
         let current_content = model.current.buffer.lines.clone();
-
         buffer::set_content(
             &model.mode,
             &mut model.current.buffer,
@@ -136,7 +146,6 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
             &mut model.current.buffer,
         );
 
-        let mut actions = Vec::new();
         if let Some(path) = preview::selected_path(model) {
             buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
             preview::viewport(model);
@@ -153,9 +162,7 @@ pub fn parent(model: &mut Model) -> Option<Vec<Action>> {
 }
 
 pub fn selected(model: &mut Model) -> Option<Vec<Action>> {
-    if model.mode != Mode::Navigation {
-        None
-    } else if let Some(selected) = current::selection(model) {
+    if let Some(selected) = current::selection(model) {
         if model.current.path == selected || !selected.is_dir() {
             return None;
         }

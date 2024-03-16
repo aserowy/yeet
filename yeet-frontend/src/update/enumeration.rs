@@ -14,17 +14,21 @@ pub fn changed(
     selection: &Option<String>,
 ) -> Option<Vec<Action>> {
     // TODO: handle unsaved changes
-    let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
+    let mut current_buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
+    let mut current_paths = vec![model.current.path.clone()];
 
     if let Some(preview) = &model.preview.path {
-        buffer.push((preview, &mut model.preview.buffer));
+        current_buffer.push((preview, &mut model.preview.buffer));
+        current_paths.push(preview.clone());
     }
 
     if let Some(parent) = &model.parent.path {
-        buffer.push((parent, &mut model.parent.buffer));
+        current_buffer.push((parent, &mut model.parent.buffer));
+        current_paths.push(parent.clone());
     }
 
-    if let Some((path, buffer)) = buffer.into_iter().find(|(p, _)| p == path) {
+    let mut actions = Vec::new();
+    if let Some((path, buffer)) = current_buffer.into_iter().find(|(p, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
         let is_first_changed_event = buffer.lines.is_empty();
@@ -43,18 +47,33 @@ pub fn changed(
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                cursor::set_cursor_index(selection, buffer);
+                if cursor::set_cursor_index(selection, buffer) {
+                    let path = path.join(selection);
+                    let contains = current_paths.iter().any(|p| p == &path);
+
+                    if !contains {
+                        actions.push(Action::Load(path, None));
+                    }
+                }
             }
         }
     }
 
-    None
+    if actions.is_empty() {
+        None
+    } else {
+        Some(actions)
+    }
 }
 
 #[tracing::instrument(skip(model))]
-pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
+pub fn finished(
+    model: &mut Model,
+    path: &PathBuf,
+    selection: &Option<String>,
+) -> Option<Vec<Action>> {
     if model.mode != Mode::Navigation {
-        return;
+        return None;
     }
 
     let mut buffer = vec![(model.current.path.as_path(), &mut model.current.buffer)];
@@ -78,7 +97,13 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
             cursor::set_cursor_index_with_history(path, &model.history, buffer);
         }
 
-        preview::selected_path(model);
-        preview::viewport(model);
+        if let Some(path) = preview::selected_path(model) {
+            preview::viewport(model);
+            Some(vec![Action::Load(path, None)])
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
