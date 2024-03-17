@@ -1,6 +1,9 @@
 use std::{collections::HashMap, path::Path};
 
-use crate::{action::Action, model::Model};
+use crate::{
+    action::Action,
+    model::{DirectoryBufferState, Model},
+};
 
 use super::{buffer, current, cursor, model::parent, preview};
 
@@ -24,7 +27,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             .map(|history| history.to_owned()),
     };
 
-    // TODO: invert to reduce clone
+    // TODO: refactor with model method
     let mut current_contents: HashMap<_, _> = HashMap::from([(
         model.current.path.clone(),
         model.current.buffer.lines.clone(),
@@ -39,6 +42,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     }
 
     let mut actions = Vec::new();
+    model.current.path = path.to_path_buf();
     match current_contents.get(path) {
         Some(it) => {
             buffer::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
@@ -49,24 +53,28 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             }
         }
         None => {
+            tracing::trace!("loading current: {:?}", path);
+
+            model.current.state = DirectoryBufferState::Loading;
             model.current.buffer.lines.clear();
             current::update(model, None);
             actions.push(Action::Load(path.to_path_buf(), selection.clone()));
         }
     }
-    model.current.path = path.to_path_buf();
 
-    let parent = path.parent();
-    if let Some(parent) = parent {
+    model.parent.path = path.parent().map(|path| path.to_path_buf());
+    if let Some(parent) = &model.parent.path.clone() {
         match current_contents.get(parent) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
                 parent::update(model, None);
             }
             None => {
+                tracing::trace!("loading parent: {:?}", parent);
+
+                model.parent.state = DirectoryBufferState::Loading;
                 model.parent.buffer.lines.clear();
                 parent::update(model, None);
-
                 actions.push(Action::Load(
                     parent.to_path_buf(),
                     path.file_name().map(|it| it.to_string_lossy().to_string()),
@@ -74,7 +82,6 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             }
         }
     }
-    model.parent.path = parent.map(|path| path.to_path_buf());
 
     let preview = match selection {
         Some(it) => {
@@ -97,6 +104,9 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             }
             None => {
                 if let Some(path) = preview::selected_path(model) {
+                    tracing::trace!("loading preview: {:?}", path);
+
+                    model.preview.state = DirectoryBufferState::Loading;
                     preview::viewport(model);
                     actions.push(Action::Load(path, None));
                 }
@@ -112,8 +122,9 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     actions
 }
 
+#[tracing::instrument(skip(model))]
 pub fn parent(model: &mut Model) -> Vec<Action> {
-    if let Some(path) = model.current.path.parent() {
+    if let Some(path) = model.current.path.clone().parent() {
         if model.current.path == path {
             return Vec::new();
         }
@@ -123,14 +134,24 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         let mut actions = Vec::new();
         model.parent.path = parent.map(|path| path.to_path_buf());
         if let Some(parent) = parent {
+            tracing::trace!("loading parent: {:?}", parent);
+
+            model.parent.state = DirectoryBufferState::Loading;
             actions.push(Action::Load(
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
         }
 
+        model.preview.path = Some(model.current.path.clone());
+        buffer::set_content(
+            &model.mode,
+            &mut model.preview.buffer,
+            model.current.buffer.lines.clone(),
+        );
+        preview::viewport(model);
+
         model.current.path = path.to_path_buf();
-        let current_content = model.current.buffer.lines.clone();
         buffer::set_content(
             &model.mode,
             &mut model.current.buffer,
@@ -144,12 +165,6 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
             &mut model.current.buffer,
         );
 
-        if let Some(path) = preview::selected_path(model) {
-            buffer::set_content(&model.mode, &mut model.preview.buffer, current_content);
-            preview::viewport(model);
-            actions.push(Action::Load(path, None));
-        }
-
         model.parent.buffer.lines.clear();
         parent::update(model, None);
 
@@ -159,6 +174,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
     }
 }
 
+#[tracing::instrument(skip(model))]
 pub fn selected(model: &mut Model) -> Vec<Action> {
     if let Some(selected) = current::selection(model) {
         if model.current.path == selected || !selected.is_dir() {
@@ -166,10 +182,14 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         }
 
         model.parent.path = Some(model.current.path.clone());
+        buffer::set_content(
+            &model.mode,
+            &mut model.parent.buffer,
+            model.current.buffer.lines.clone(),
+        );
+        parent::update(model, None);
+
         model.current.path = selected.to_path_buf();
-
-        let current_content = model.current.buffer.lines.clone();
-
         buffer::set_content(
             &model.mode,
             &mut model.current.buffer,
@@ -185,12 +205,12 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
 
         let mut actions = Vec::new();
         if let Some(path) = preview::selected_path(model) {
+            tracing::trace!("loading preview: {:?}", path);
+
+            model.preview.state = DirectoryBufferState::Loading;
             preview::viewport(model);
             actions.push(Action::Load(path, None));
         }
-
-        buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
-        parent::update(model, None);
 
         model.history.add(&model.current.path);
 

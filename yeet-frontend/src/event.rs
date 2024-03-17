@@ -188,7 +188,7 @@ async fn handle_crossterm_event(
 #[tracing::instrument]
 fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
     if event.need_rescan() {
-        // TODO: Refresh directory states
+        // TODO: Refresh directory
     }
 
     match event.kind {

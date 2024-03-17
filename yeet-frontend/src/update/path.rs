@@ -9,6 +9,7 @@ use crate::{action::Action, model::Model};
 
 use super::{bufferline, mark, preview, qfix};
 
+#[tracing::instrument(skip(model))]
 pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     add_paths(model, paths);
 
@@ -77,6 +78,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
     }
 }
 
+#[tracing::instrument(skip(model))]
 pub fn remove(model: &mut Model, path: &Path) -> Vec<Action> {
     remove_path(model, path);
 

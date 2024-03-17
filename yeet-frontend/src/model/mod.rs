@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ratatui::layout::Rect;
 use yeet_keymap::message::{Mode, SearchDirection};
@@ -28,7 +28,7 @@ pub mod register;
 #[derive(Debug)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub current: DirectoryBuffer,
+    pub current: DirectoryBuffer<PathBuf>,
     pub history: History,
     pub junk: JunkYard,
     pub key_sequence: String,
@@ -36,12 +36,25 @@ pub struct Model {
     pub marks: Marks,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
-    pub parent: OptionalDirectoryBuffer,
-    pub preview: OptionalDirectoryBuffer,
+    pub parent: DirectoryBuffer<Option<PathBuf>>,
+    pub preview: DirectoryBuffer<Option<PathBuf>>,
     pub qfix: QuickFix,
     pub search: Option<SearchModel>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
+}
+
+impl Model {
+    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut DirectoryBufferState, &mut Buffer)> {
+        vec![
+            self.current.as_content_ref(),
+            self.parent.as_content_ref(),
+            self.preview.as_content_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+    }
 }
 
 impl Default for Model {
@@ -68,7 +81,7 @@ impl Default for Model {
             marks: Marks::default(),
             mode: Mode::default(),
             mode_before: None,
-            parent: OptionalDirectoryBuffer {
+            parent: DirectoryBuffer::<Option<PathBuf>> {
                 buffer: Buffer {
                     cursor: Some(Cursor {
                         horizontal_index: CursorPosition::None,
@@ -80,7 +93,7 @@ impl Default for Model {
                 },
                 ..Default::default()
             },
-            preview: OptionalDirectoryBuffer::default(),
+            preview: DirectoryBuffer::<Option<PathBuf>>::default(),
             qfix: QuickFix::default(),
             search: None,
             settings: Settings::default(),
@@ -122,19 +135,40 @@ pub enum CommandLineState {
 }
 
 #[derive(Debug, Default)]
+pub struct DirectoryBuffer<T> {
+    pub buffer: Buffer,
+    pub path: T,
+    pub state: DirectoryBufferState,
+}
+
+pub type DirectoryContentRef<'a> = (&'a Path, &'a mut DirectoryBufferState, &'a mut Buffer);
+
+impl DirectoryBuffer<PathBuf> {
+    pub fn as_content_ref(&mut self) -> Option<DirectoryContentRef> {
+        Some((&self.path, &mut self.state, &mut self.buffer))
+    }
+}
+
+impl DirectoryBuffer<Option<PathBuf>> {
+    pub fn as_content_ref(&mut self) -> Option<DirectoryContentRef> {
+        match &self.path {
+            Some(path) => Some((path, &mut self.state, &mut self.buffer)),
+            None => None,
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq)]
+pub enum DirectoryBufferState {
+    Loading,
+    PartiallyLoaded,
+    Ready,
+    #[default]
+    Uninitialized,
+}
+
+#[derive(Debug, Default)]
 pub struct SearchModel {
     pub last: String,
     pub direction: SearchDirection,
-}
-
-#[derive(Debug, Default)]
-pub struct OptionalDirectoryBuffer {
-    pub buffer: Buffer,
-    pub path: Option<PathBuf>,
-}
-
-#[derive(Debug, Default)]
-pub struct DirectoryBuffer {
-    pub buffer: Buffer,
-    pub path: PathBuf,
 }

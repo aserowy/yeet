@@ -6,7 +6,7 @@ use crate::{
     action::Action,
     model::{
         buffer::{Buffer, SignIdentifier},
-        Model,
+        DirectoryBufferState, Model,
     },
 };
 
@@ -25,6 +25,7 @@ mod qfix;
 mod register;
 mod search;
 
+#[tracing::instrument(skip(model))]
 pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
     settings(model);
 
@@ -37,12 +38,20 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::EnumerationChanged(path, contents, selection) => {
             enumeration::changed(model, path, contents, selection);
-            Vec::new()
+
+            let mut actions = Vec::new();
+            if model.current.state != DirectoryBufferState::Loading {
+                if let Some(path) = preview::selected_path(model) {
+                    model.preview.state = DirectoryBufferState::Loading;
+                    preview::viewport(model);
+                    actions.push(Action::Load(path, None));
+                }
+            }
+
+            actions
         }
         Message::EnumerationFinished(path, selection) => {
-            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
-            // TODO: set state to finished
-            let actions = enumeration::finished(model, path, selection);
+            enumeration::finished(model, path, selection);
 
             self::buffer::update(
                 &model.mode,
@@ -51,7 +60,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                 &message::Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
             );
 
-            actions
+            Vec::new()
         }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
@@ -137,8 +146,6 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             actions
         }
         Message::PreviewLoaded(path, content) => {
-            // TODO: add state to model and buffer changes on load to enable refresh on EnumerationFinished
-            // TODO: set state to finished
             preview::update(model, path, content);
             Vec::new()
         }
@@ -205,6 +212,7 @@ fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
     buffer.view_port.hidden_sign_ids.remove(id);
 }
 
+#[tracing::instrument(skip(model, msg))]
 fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
     match msg {
         message::Buffer::ChangeMode(from, to) => {

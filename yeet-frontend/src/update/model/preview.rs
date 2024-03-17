@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    model::{buffer::BufferLine, Model},
+    model::{buffer::BufferLine, DirectoryBufferState, Model},
     update::{buffer, cursor},
 };
 
@@ -40,6 +40,7 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             })
             .collect();
 
+        model.preview.state = DirectoryBufferState::Ready;
         buffer::set_content(&model.mode, &mut model.preview.buffer, content);
         viewport(model);
     }
