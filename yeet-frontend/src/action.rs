@@ -52,16 +52,15 @@ pub async fn post(
 
 fn is_preview_action(action: &Action) -> bool {
     match action {
-        Action::EmitMessages(_) => false,
-        Action::Load(_, _) => true,
-        Action::ModeChanged => false,
-        Action::Open(_) => true,
-        Action::Quit(_) => false,
-        Action::Resize(_, _) => true,
-        Action::SkipRender => true,
-        Action::Task(_) => true,
-        Action::UnwatchPath(_) => true,
-        Action::WatchPath(_) => true,
+        Action::Load(_, _)
+        | Action::Open(_)
+        | Action::Resize(_, _)
+        | Action::SkipRender
+        | Action::Task(_)
+        | Action::UnwatchPath(_)
+        | Action::WatchPath(_) => true,
+
+        Action::EmitMessages(_) | Action::ModeChanged | Action::Quit(_) => false,
     }
 }
 

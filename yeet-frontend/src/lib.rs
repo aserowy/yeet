@@ -82,12 +82,13 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             .flat_map(|message| update::update(&mut model, message))
             .collect();
 
+        actions.extend(get_watcher_changes(&mut model));
+
         let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
             view::view(&mut terminal, &model)?;
         }
 
-        actions.extend(get_watcher_changes(&mut model));
         actions.extend(get_cdo_commands(&mut model, &actions));
 
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
