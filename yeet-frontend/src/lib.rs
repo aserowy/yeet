@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use action::{Action, ActionResult};
 use layout::CommandLineLayout;
-use model::{mark, qfix, register};
+use model::{mark, qfix, register, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
@@ -87,6 +87,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         }
 
         actions.extend(get_watcher_changes(&mut model));
+        actions.extend(get_cdo_commands(&mut model, &actions));
 
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
@@ -148,4 +149,39 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     }
 
     actions
+}
+
+#[tracing::instrument(skip(model, actions))]
+fn get_cdo_commands(model: &mut Model, actions: &Vec<Action>) -> Vec<Action> {
+    let buffer_loading = model
+        .get_mut_directories()
+        .iter()
+        .any(|(_, state, _)| state == &&DirectoryBufferState::Loading);
+
+    let contains_emit_messages = actions
+        .iter()
+        .any(|msg| matches!(msg, Action::EmitMessages(_)));
+
+    if buffer_loading || contains_emit_messages {
+        tracing::trace!("cdo commands skipped");
+        return Vec::new();
+    }
+
+    if let Some(commands) = &mut model.qfix.do_command_stack {
+        let mut actions = Vec::new();
+        if let Some(command) = commands.pop() {
+            // TODO: if path does not exist, pop but dont emit
+            tracing::trace!("emitting cdo command: {}", command);
+            actions.push(Action::EmitMessages(vec![Message::ExecuteCommandString(
+                command,
+            )]));
+        }
+        if commands.is_empty() {
+            tracing::trace!("cdo commands finished");
+            model.qfix.do_command_stack = None;
+        }
+        actions
+    } else {
+        Vec::new()
+    }
 }

@@ -7,6 +7,7 @@ use crate::{
     update::{mark, qfix},
 };
 
+#[tracing::instrument(skip(model))]
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let change_mode_message = Message::Buffer(Buffer::ChangeMode(
         model.mode.clone(),
@@ -21,8 +22,26 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     // NOTE: all file commands like e.g. d! should use preview as target to enable cdo
     let mut actions = match cmd {
-        ("cdo", _command) => {
-            todo!()
+        ("cdo", command) => {
+            let mut is_initial = true;
+            let mut commands = Vec::new();
+            for _ in &model.qfix.entries {
+                if is_initial {
+                    commands.push("cfirst".to_owned());
+                    is_initial = false;
+                } else {
+                    commands.push("cn".to_owned());
+                }
+                commands.push(command.to_owned());
+            }
+
+            commands.reverse();
+
+            tracing::debug!("cdo commands set: {:?}", commands);
+
+            model.qfix.do_command_stack = Some(commands);
+
+            vec![change_mode_action]
         }
         ("cfirst", "") => {
             model.qfix.current_index = 0;
