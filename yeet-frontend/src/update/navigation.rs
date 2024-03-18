@@ -181,13 +181,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
             return Vec::new();
         }
 
-        model.parent.path = Some(model.current.path.clone());
-        buffer::set_content(
-            &model.mode,
-            &mut model.parent.buffer,
-            model.current.buffer.lines.clone(),
-        );
-        parent::update(model, None);
+        let current_content = model.current.buffer.lines.clone();
 
         model.current.path = selected.to_path_buf();
         buffer::set_content(
@@ -202,6 +196,10 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
             &model.history,
             &mut model.current.buffer,
         );
+
+        model.parent.path = model.current.path.parent().map(|p| p.to_path_buf());
+        buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
+        parent::update(model, None);
 
         let mut actions = Vec::new();
         if let Some(path) = preview::selected_path(model) {
