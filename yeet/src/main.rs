@@ -28,6 +28,13 @@ async fn main() {
 
     tracing::info!("starting application");
 
+    let default_panic = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        tracing::error!("yeet paniced: {:?}", info);
+        default_panic(info);
+        std::process::exit(1);
+    }));
+
     match yeet_frontend::run(get_settings(&cli)).await {
         Ok(()) => {
             tracing::info!("closing application");
