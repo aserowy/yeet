@@ -162,7 +162,7 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
 }
 
 #[tracing::instrument(skip(model, actions))]
-fn get_cdo_commands(model: &mut Model, actions: &Vec<Action>) -> Vec<Action> {
+fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
     let buffer_loading = model
         .get_mut_directories()
         .iter()
@@ -185,12 +185,31 @@ fn get_cdo_commands(model: &mut Model, actions: &Vec<Action>) -> Vec<Action> {
 
         let mut actions = Vec::new();
         if let Some(command) = commands.pop() {
-            // TODO: if path does not exist, pop but dont emit
-            tracing::trace!("emitting cdo command: {}", command);
-            actions.push(Action::EmitMessages(vec![Message::ExecuteCommandString(
-                command,
-            )]));
+            let command = if let Message::NavigateToPathAsPreview(path) = &command {
+                if !path.exists() {
+                    tracing::warn!("cdo path does not exist: {:?}", path);
+                    while let Some(last) = commands.last() {
+                        if matches!(last, Message::NavigateToPathAsPreview(_)) {
+                            break;
+                        } else {
+                            commands.pop();
+                        }
+                    }
+
+                    commands.pop()
+                } else {
+                    Some(command)
+                }
+            } else {
+                Some(command)
+            };
+
+            if let Some(command) = command {
+                tracing::trace!("emitting cdo command: {:?}", command);
+                actions.push(Action::EmitMessages(vec![command]));
+            }
         }
+
         if commands.is_empty() {
             tracing::trace!("cdo commands finished");
             model.qfix.do_command_stack = None;

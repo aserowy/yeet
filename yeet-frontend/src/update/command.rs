@@ -22,25 +22,17 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     tracing::debug!("executing command: {:?}", cmd);
 
-    // NOTE: all file commands like e.g. d! should use preview as target to enable cdo
+    // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     let mut actions = match cmd {
         ("cdo", command) => {
-            let mut is_initial = true;
             let mut commands = Vec::new();
-            for _ in &model.qfix.entries {
-                if is_initial {
-                    commands.push("cfirst".to_owned());
-                    is_initial = false;
-                } else {
-                    commands.push("cn".to_owned());
-                }
-                commands.push(command.to_owned());
+            for path in &model.qfix.entries {
+                commands.push(Message::NavigateToPathAsPreview(path.clone()));
+                commands.push(Message::ExecuteCommandString(command.to_owned()));
             }
-
             commands.reverse();
 
             tracing::debug!("cdo commands set: {:?}", commands);
-
             model.qfix.do_command_stack = Some(commands);
 
             vec![change_mode_action]
