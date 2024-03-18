@@ -67,6 +67,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 
     let mut result = Vec::new();
+    // TODO: prevent user input while cdo is running
     while let Some(messages) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", messages);
 

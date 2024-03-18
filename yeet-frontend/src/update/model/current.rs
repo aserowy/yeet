@@ -96,8 +96,11 @@ pub fn selection(model: &Model) -> Option<PathBuf> {
 
     let cursor = &buffer.cursor.as_ref()?;
     let current = &buffer.lines.get(cursor.vertical_index)?;
-    let target = model.current.path.join(&current.content);
+    if current.content.is_empty() {
+        return None;
+    }
 
+    let target = model.current.path.join(&current.content);
     if target.exists() {
         Some(target)
     } else {
