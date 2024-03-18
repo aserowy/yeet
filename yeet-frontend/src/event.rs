@@ -27,10 +27,17 @@ use crate::{
 pub struct Emitter {
     cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
     tasks: TaskManager,
-    pub receiver: Receiver<Vec<Message>>,
+    pub receiver: Receiver<(MessageSource, Vec<Message>)>,
     resolver: Arc<Mutex<MessageResolver>>,
-    sender: mpsc::Sender<Vec<Message>>,
+    sender: mpsc::Sender<(MessageSource, Vec<Message>)>,
     watcher: RecommendedWatcher,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum MessageSource {
+    Filesystem,
+    Task,
+    User,
 }
 
 impl Emitter {
@@ -56,12 +63,12 @@ impl Emitter {
                 tokio::select! {
                     Some(Ok(event)) = notify_event => {
                         if let Some(messages) = handle_notify_event(event) {
-                            let _ = internal_sender.send(messages).await;
+                            let _ = internal_sender.send((MessageSource::Filesystem, messages)).await;
                         }
                     }
                     event = task_event => {
-                        if let Some(event) = event{
-                            let _ = internal_sender.send(event).await;
+                        if let Some(messages) = event{
+                            let _ = internal_sender.send((MessageSource::Task, messages)).await;
                         }
                     },
                 }
@@ -140,7 +147,7 @@ impl Emitter {
 fn start_crossterm_listener(
     mut cancellation_receiver: oneshot::Receiver<oneshot::Sender<bool>>,
     resolver_mutex: Arc<Mutex<MessageResolver>>,
-    sender: mpsc::Sender<Vec<Message>>,
+    sender: mpsc::Sender<(MessageSource, Vec<Message>)>,
 ) {
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
@@ -154,8 +161,8 @@ fn start_crossterm_listener(
                     break
                 }
                 Some(Ok(event)) = crossterm_event => {
-                    if let Some(message) = handle_crossterm_event(&resolver_mutex, event).await {
-                        let _ = sender.send(message).await;
+                    if let Some(messages) = handle_crossterm_event(&resolver_mutex, event).await {
+                        let _ = sender.send((MessageSource::User, messages)).await;
                     }
                 }
             }

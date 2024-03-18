@@ -9,7 +9,7 @@ use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
     error::AppError,
-    event::Emitter,
+    event::{Emitter, MessageSource},
     layout::AppLayout,
     model::{
         history::{self},
@@ -67,9 +67,17 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 
     let mut result = Vec::new();
-    // TODO: prevent user input while cdo is running
-    while let Some(messages) = emitter.receiver.recv().await {
+    while let Some((source, messages)) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", messages);
+
+        if model.qfix.do_command_stack.is_some() && source == MessageSource::User {
+            tracing::warn!(
+                "skipping user input while cdo commands are running: {:?}",
+                messages
+            );
+
+            continue;
+        }
 
         let size = terminal.size().expect("Failed to get terminal size");
         model.layout = AppLayout::new(size, commandline::height(&model, &messages));
@@ -166,7 +174,12 @@ fn get_cdo_commands(model: &mut Model, actions: &Vec<Action>) -> Vec<Action> {
             .any(|msg| matches!(msg, Action::EmitMessages(_)));
 
         if buffer_loading || contains_emit_messages {
-            tracing::trace!("cdo commands skipped");
+            tracing::trace!(
+                "cdo commands skipped: buffer loading {:?}, emitting messages {:?}",
+                buffer_loading,
+                contains_emit_messages
+            );
+
             return Vec::new();
         }
 
