@@ -246,15 +246,20 @@ impl TaskManager {
             Task::LoadPreview(path) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Some(kind) = infer::get_from_path(path.clone())? {
+                    let content = if let Some(kind) = infer::get_from_path(path.clone())? {
+                        tracing::trace!("preview kind: {:?}", kind);
                         // TODO: add preview for images here
                         // TODO: add preview for archives here
-                        if !kind.mime_type().starts_with("text") {
-                            return Ok(());
+                        if kind.mime_type().starts_with("text") {
+                            fs::read_to_string(path.clone()).await?
+                        } else {
+                            "".to_string()
                         }
-                    }
+                    } else {
+                        tracing::warn!("unable to resolve kind for: {:?}", path);
+                        fs::read_to_string(path.clone()).await?
+                    };
 
-                    let content = fs::read_to_string(path.clone()).await?;
                     let result = sender
                         .send(vec![Message::PreviewLoaded(
                             path.clone(),
@@ -271,7 +276,6 @@ impl TaskManager {
             }
             Task::OptimizeHistory => self.tasks.spawn(async move {
                 history::cache::optimize()?;
-
                 Ok(())
             }),
             Task::RenamePath(old, new) => self.tasks.spawn(async move {

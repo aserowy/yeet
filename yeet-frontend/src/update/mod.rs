@@ -44,7 +44,9 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                 if let Some(path) = preview::selected_path(model) {
                     model.preview.state = DirectoryBufferState::Loading;
                     preview::viewport(model);
-                    actions.push(Action::Load(path, None));
+
+                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    actions.push(Action::Load(path, selection));
                 }
             }
 
@@ -282,7 +284,9 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
                 let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    actions.push(Action::Load(path, None));
+
+                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    actions.push(Action::Load(path, selection));
                 }
 
                 actions
@@ -301,7 +305,9 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
                 let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    actions.push(Action::Load(path, None));
+
+                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    actions.push(Action::Load(path, selection));
                 }
 
                 actions
@@ -315,7 +321,9 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
                 let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {
                     preview::viewport(model);
-                    actions.push(Action::Load(path, None));
+
+                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    actions.push(Action::Load(path, selection));
                 }
 
                 actions

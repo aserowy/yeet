@@ -96,20 +96,21 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     };
 
     if let Some(preview) = preview.clone() {
+        model.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
                 buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
                 preview::viewport(model);
-                model.preview.path = Some(preview.to_path_buf());
             }
             None => {
-                if let Some(path) = preview::selected_path(model) {
-                    tracing::trace!("loading preview: {:?}", path);
+                tracing::trace!("loading preview: {:?}", path);
 
-                    model.preview.state = DirectoryBufferState::Loading;
-                    preview::viewport(model);
-                    actions.push(Action::Load(path, None));
-                }
+                model.preview.buffer.lines.clear();
+                model.preview.state = DirectoryBufferState::Loading;
+                preview::viewport(model);
+
+                let selection = model.history.get_selection(&preview).map(|s| s.to_owned());
+                actions.push(Action::Load(preview, selection));
             }
         }
     } else {
@@ -207,7 +208,9 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
 
             model.preview.state = DirectoryBufferState::Loading;
             preview::viewport(model);
-            actions.push(Action::Load(path, None));
+
+            let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+            actions.push(Action::Load(path, selection));
         }
 
         model.history.add(&model.current.path);

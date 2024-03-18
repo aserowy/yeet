@@ -16,7 +16,9 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = preview::selected_path(model) {
         preview::viewport(model);
-        actions.push(Action::Load(path, None));
+
+        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        actions.push(Action::Load(path, selection));
     }
 
     actions
@@ -85,7 +87,9 @@ pub fn remove(model: &mut Model, path: &Path) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = preview::selected_path(model) {
         preview::viewport(model);
-        actions.push(Action::Load(path, None));
+
+        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        actions.push(Action::Load(path, selection));
     }
 
     actions
