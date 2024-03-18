@@ -158,16 +158,16 @@ fn get_cdo_commands(model: &mut Model, actions: &Vec<Action>) -> Vec<Action> {
         .iter()
         .any(|(_, state, _)| state == &&DirectoryBufferState::Loading);
 
-    let contains_emit_messages = actions
-        .iter()
-        .any(|msg| matches!(msg, Action::EmitMessages(_)));
-
-    if buffer_loading || contains_emit_messages {
-        tracing::trace!("cdo commands skipped");
-        return Vec::new();
-    }
-
     if let Some(commands) = &mut model.qfix.do_command_stack {
+        let contains_emit_messages = actions
+            .iter()
+            .any(|msg| matches!(msg, Action::EmitMessages(_)));
+
+        if buffer_loading || contains_emit_messages {
+            tracing::trace!("cdo commands skipped");
+            return Vec::new();
+        }
+
         let mut actions = Vec::new();
         if let Some(command) = commands.pop() {
             // TODO: if path does not exist, pop but dont emit

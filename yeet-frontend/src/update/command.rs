@@ -191,7 +191,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     if let Some(mode) = mode_before {
         match mode {
-            Mode::Command(_) => unreachable!(),
+            Mode::Command(_) => Mode::default(),
             Mode::Insert | Mode::Normal => Mode::Normal,
             Mode::Navigation => Mode::Navigation,
         }
