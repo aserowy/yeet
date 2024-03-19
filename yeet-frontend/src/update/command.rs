@@ -37,6 +37,8 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![change_mode_action]
         }
+        // TODO: mv/cp commands to expand cdo usability
+        // TODO: multiple cl to enable better workflow
         ("cfirst", "") => {
             model.qfix.current_index = 0;
 
@@ -142,7 +144,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
         }
-        ("histopt", "") => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
         ("jnk", "") => {
             let content = model
                 .junk
