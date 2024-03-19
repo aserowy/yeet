@@ -119,6 +119,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 tracing::info!("deleting path: {:?}", path);
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
+
             actions
         }
         ("delm", args) if !args.is_empty() => {
@@ -132,10 +133,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Action::EmitMessages(vec![Message::DeleteMarks(marks)]),
             ]
         }
-        ("e!", "") => vec![Action::EmitMessages(vec![
-            change_mode_message,
-            Message::NavigateToPath(model.current.path.clone()),
-        ])],
+        ("e!", "") => {
+            let navigation = if let Some(path) = &model.preview.path {
+                Message::NavigateToPathAsPreview(path.to_path_buf())
+            } else {
+                Message::NavigateToPath(model.current.path.clone())
+            };
+
+            vec![Action::EmitMessages(vec![change_mode_message, navigation])]
+        }
         ("histopt", "") => vec![change_mode_action, Action::Task(Task::OptimizeHistory)],
         ("jnk", "") => {
             let content = model

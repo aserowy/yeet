@@ -70,6 +70,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     while let Some((source, messages)) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", messages);
 
+        // TODO: C-c should interrupt (clear) cdo commands
         if model.qfix.do_command_stack.is_some() && source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
@@ -91,13 +92,12 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             .collect();
 
         actions.extend(get_watcher_changes(&mut model));
+        actions.extend(get_cdo_commands(&mut model, &actions));
 
         let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
             view::view(&mut terminal, &model)?;
         }
-
-        actions.extend(get_cdo_commands(&mut model, &actions));
 
         let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
