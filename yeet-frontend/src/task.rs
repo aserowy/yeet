@@ -26,7 +26,6 @@ pub enum Task {
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf, Option<String>),
     LoadPreview(PathBuf),
-    OptimizeHistory,
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
@@ -275,10 +274,6 @@ impl TaskManager {
                     Ok(())
                 })
             }
-            Task::OptimizeHistory => self.tasks.spawn(async move {
-                history::cache::optimize()?;
-                Ok(())
-            }),
             Task::RenamePath(old, new) => self.tasks.spawn(async move {
                 if !old.exists() {
                     return Err(AppError::InvalidTargetPath);
@@ -373,7 +368,6 @@ fn should_abort_on_finish(task: Task) -> bool {
         | Task::DeleteMarks(_)
         | Task::DeletePath(_)
         | Task::DeleteJunkYardEntry(_)
-        | Task::OptimizeHistory
         | Task::RenamePath(_, _)
         | Task::RestorePath(_, _)
         | Task::SaveHistory(_)

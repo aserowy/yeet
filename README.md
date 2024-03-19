@@ -53,6 +53,7 @@ register holds all files which got yanked and the last nine trashes.
 | /          | change to search downward                                 |
 | ?          | change to search upward                                   |
 | n, N       | repeat last search in same/reverse direction              |
+| \<space>   | add or remove (toggle) current file to quick fix list     |
 | m\<char>   | set mark for current selection                            |
 | '\<char>   | jump to mark                                              |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position |

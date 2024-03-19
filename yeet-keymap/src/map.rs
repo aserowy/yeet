@@ -394,7 +394,7 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    vec![Key::new(KeyCode::from_char('q'), vec![])],
+                    vec![Key::new(KeyCode::Space, vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::ToggleQuickFix),
                         repeatable: false,
