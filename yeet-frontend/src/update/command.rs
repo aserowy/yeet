@@ -116,7 +116,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = &model.preview.path {
-                tracing::debug!("deleting path: {:?}", path);
+                tracing::info!("deleting path: {:?}", path);
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
             actions

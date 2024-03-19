@@ -184,30 +184,30 @@ fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
         }
 
         let mut actions = Vec::new();
-        if let Some(command) = commands.pop() {
-            let command = if let Message::NavigateToPathAsPreview(path) = &command {
-                if !path.exists() {
-                    tracing::warn!("cdo path does not exist: {:?}", path);
-                    while let Some(last) = commands.last() {
-                        if matches!(last, Message::NavigateToPathAsPreview(_)) {
-                            break;
-                        } else {
-                            commands.pop();
-                        }
+        let command = if let Some(Message::NavigateToPathAsPreview(_)) = commands.last() {
+            while let Some(last) = commands.last() {
+                if let Message::NavigateToPathAsPreview(path) = last {
+                    if path.exists() {
+                        break;
+                    } else {
+                        tracing::warn!("removing non existing cdo path: {:?}", commands.pop());
                     }
-
-                    commands.pop()
                 } else {
-                    Some(command)
+                    tracing::info!(
+                        "removing command for non existing path: {:?}",
+                        commands.pop()
+                    );
                 }
-            } else {
-                Some(command)
-            };
-
-            if let Some(command) = command {
-                tracing::trace!("emitting cdo command: {:?}", command);
-                actions.push(Action::EmitMessages(vec![command]));
             }
+
+            commands.pop()
+        } else {
+            commands.pop()
+        };
+
+        if let Some(command) = command {
+            tracing::trace!("emitting cdo command: {:?}", command);
+            actions.push(Action::EmitMessages(vec![command]));
         }
 
         if commands.is_empty() {
