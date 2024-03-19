@@ -82,21 +82,21 @@ In normal mode, all register interactions target the default register (equal to
 
 ## commands
 
-| :             | action                                                                                                                                                         |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cfirst        | navigates to first entry in quick fix list                                                                                                                     |
-| cl            | list all quick fix entries and highlights the current path                                                                                                     |
-| cn, cN        | navigates to next/previous path in quick fix list                                                                                                              |
-| cdo <command> | navigates to each entry in the quick fix list and executes the given command. The list order is important! Non existing paths get ignored.                     |
-| d!            | delete selected file/directory                                                                                                                                 |
-| delm <chars>  | delete current and cached marks. Every char represents one mark. ':delm AdfR', ':delm a d f R', and ':delm F' are all valid commands. Whitespaces are ignored. |
-| e!            | reload current folder                                                                                                                                          |
-| jnk           | list junk yard contents                                                                                                                                        |
-| marks         | list all given marks                                                                                                                                           |
-| noh           | remove search highlights                                                                                                                                       |
-| q             | quit yeet                                                                                                                                                      |
-| w             | write changes without changing mode                                                                                                                            |
-| wq            | write changes and quit yeet                                                                                                                                    |
+| :              | action                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cfirst         | navigates to first entry in quick fix list                                                                                                                     |
+| cl             | list all quick fix entries and highlights the current path                                                                                                     |
+| cn, cN         | navigates to next/previous path in quick fix list                                                                                                              |
+| cdo \<command> | navigates to each entry in the quick fix list and executes the given command. The list order is important! Non existing paths get ignored.                     |
+| d!             | delete selected file/directory                                                                                                                                 |
+| delm \<chars>  | delete current and cached marks. Every char represents one mark. ':delm AdfR', ':delm a d f R', and ':delm F' are all valid commands. Whitespaces are ignored. |
+| e!             | reload current folder                                                                                                                                          |
+| jnk            | list junk yard contents                                                                                                                                        |
+| marks          | list all given marks                                                                                                                                           |
+| noh            | remove search highlights                                                                                                                                       |
+| q              | quit yeet                                                                                                                                                      |
+| w              | write changes without changing mode                                                                                                                            |
+| wq             | write changes and quit yeet                                                                                                                                    |
 
 ## faq
 
