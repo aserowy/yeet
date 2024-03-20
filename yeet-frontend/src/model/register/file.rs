@@ -72,23 +72,23 @@ impl JunkYard {
         }
     }
 
-    pub fn get(&self, junk: &str) -> Option<Transaction> {
+    pub fn get(&self, junk: &char) -> Option<Transaction> {
         let transaction = match junk {
-            "\"" => match self.current {
+            '"' => match self.current {
                 RegisterType::Trash => self.trashed.first().cloned(),
                 RegisterType::Yank => self.yanked.clone(),
                 RegisterType::_Custom(_) => None,
             },
-            "0" => self.yanked.clone(),
-            "1" => self.trashed.first().cloned(),
-            "2" => self.trashed.get(1).cloned(),
-            "3" => self.trashed.get(2).cloned(),
-            "4" => self.trashed.get(3).cloned(),
-            "5" => self.trashed.get(4).cloned(),
-            "6" => self.trashed.get(5).cloned(),
-            "7" => self.trashed.get(6).cloned(),
-            "8" => self.trashed.get(7).cloned(),
-            "9" => self.trashed.get(8).cloned(),
+            '0' => self.yanked.clone(),
+            '1' => self.trashed.first().cloned(),
+            '2' => self.trashed.get(1).cloned(),
+            '3' => self.trashed.get(2).cloned(),
+            '4' => self.trashed.get(3).cloned(),
+            '5' => self.trashed.get(4).cloned(),
+            '6' => self.trashed.get(5).cloned(),
+            '7' => self.trashed.get(6).cloned(),
+            '8' => self.trashed.get(7).cloned(),
+            '9' => self.trashed.get(8).cloned(),
             // TODO: add custom junk handling
             _ => None,
         };
@@ -109,7 +109,7 @@ impl JunkYard {
 
     pub fn print(&self) -> Vec<String> {
         let mut contents = vec![":jnk".to_string(), "Name Content".to_string()];
-        if let Some(current) = &self.get("\"") {
+        if let Some(current) = &self.get(&'"') {
             contents.push(print_content("\"\"", current));
         }
         if let Some(yanked) = &self.yanked {

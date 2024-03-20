@@ -29,7 +29,6 @@ impl KeyMap {
 }
 
 impl Default for KeyMap {
-    #[allow(clippy::needless_update)]
     fn default() -> Self {
         let mut mappings = HashMap::new();
 
@@ -97,6 +96,17 @@ impl Default for KeyMap {
             vec![Mode::Navigation],
             vec![
                 (
+                    vec![
+                        Key::new(KeyCode::from_char('"'), vec![]),
+                        Key::new(KeyCode::from_char('p'), vec![]),
+                    ],
+                    Binding {
+                        expects: Some(NextBindingKind::Raw),
+                        kind: BindingKind::Message(Message::PasteFromJunkYard(' ')),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding {
                         kind: BindingKind::Message(Message::OpenSelected),
@@ -159,7 +169,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('p'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::PasteFromJunkYard("\"".to_string())),
+                        kind: BindingKind::Message(Message::PasteFromJunkYard('"')),
                         ..Default::default()
                     },
                 ),

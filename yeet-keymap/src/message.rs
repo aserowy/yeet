@@ -65,7 +65,7 @@ pub enum Message {
     NavigateToPathAsPreview(PathBuf),
     NavigateToSelected,
     OpenSelected,
-    PasteFromJunkYard(String),
+    PasteFromJunkYard(char),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
     PreviewLoaded(PathBuf, Vec<String>),
