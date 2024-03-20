@@ -20,6 +20,7 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Task {
     AddPath(PathBuf),
+    CopyPath(PathBuf, PathBuf),
     DeleteMarks(Vec<char>),
     DeletePath(PathBuf),
     DeleteJunkYardEntry(FileEntry),
@@ -107,6 +108,15 @@ impl TaskManager {
                         fs::write(path, "").await?;
                     }
                 }
+
+                Ok(())
+            }),
+            Task::CopyPath(source, target) => self.tasks.spawn(async move {
+                if !source.exists() || target.exists() {
+                    return Err(AppError::InvalidTargetPath);
+                }
+
+                fs::copy(source, target).await?;
 
                 Ok(())
             }),
@@ -275,7 +285,7 @@ impl TaskManager {
                 })
             }
             Task::RenamePath(old, new) => self.tasks.spawn(async move {
-                if !old.exists() {
+                if !old.exists() || new.exists() {
                     return Err(AppError::InvalidTargetPath);
                 }
 
@@ -365,6 +375,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_) => true,
 
         Task::AddPath(_)
+        | Task::CopyPath(_, _)
         | Task::DeleteMarks(_)
         | Task::DeletePath(_)
         | Task::DeleteJunkYardEntry(_)

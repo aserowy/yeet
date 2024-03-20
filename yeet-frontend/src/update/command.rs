@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
@@ -37,7 +39,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![change_mode_action]
         }
-        // TODO: mv/cp commands to expand cdo usability
         // TODO: multiple cl to enable better workflow
         ("cfirst", "") => {
             model.qfix.current_index = 0;
@@ -115,13 +116,36 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 }
             }
         }
+        ("cp", target) => {
+            let mut actions = vec![change_mode_action];
+            if let Some(path) = &model.preview.path {
+                tracing::info!("copying path: {:?}", path);
+                let target = PathBuf::from(target);
+                if target.is_dir() && target.exists() {
+                    if let Some(file_name) = path.file_name() {
+                        actions.push(Action::Task(Task::CopyPath(
+                            path.clone(),
+                            target.join(file_name),
+                        )));
+                    } else {
+                        actions.push(Action::EmitMessages(vec![Message::Error(
+                            "cp: could not get file name".to_string(),
+                        )]));
+                    }
+                } else {
+                    actions.push(Action::EmitMessages(vec![Message::Error(
+                        "cp: target path is not valid".to_string(),
+                    )]));
+                }
+            }
+            actions
+        }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = &model.preview.path {
                 tracing::info!("deleting path: {:?}", path);
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
-
             actions
         }
         ("delm", args) if !args.is_empty() => {
@@ -161,6 +185,30 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 .collect();
 
             vec![Action::EmitMessages(vec![Message::Print(content)])]
+        }
+        ("mv", target) => {
+            let mut actions = vec![change_mode_action];
+            if let Some(path) = &model.preview.path {
+                tracing::info!("renaming path: {:?}", path);
+                let target = PathBuf::from(target);
+                if target.is_dir() && target.exists() {
+                    if let Some(file_name) = path.file_name() {
+                        actions.push(Action::Task(Task::RenamePath(
+                            path.clone(),
+                            target.join(file_name),
+                        )));
+                    } else {
+                        actions.push(Action::EmitMessages(vec![Message::Error(
+                            "mv: could not get file name".to_string(),
+                        )]));
+                    }
+                } else {
+                    actions.push(Action::EmitMessages(vec![Message::Error(
+                        "mv: target path is not valid".to_string(),
+                    )]));
+                }
+            }
+            actions
         }
         ("noh", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
