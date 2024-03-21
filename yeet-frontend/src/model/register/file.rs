@@ -108,7 +108,7 @@ impl JunkYard {
     }
 
     pub fn print(&self) -> Vec<String> {
-        let mut contents = vec![":jnk".to_string(), "Name Content".to_string()];
+        let mut contents = vec![":junk".to_string(), "Name Content".to_string()];
         if let Some(current) = &self.get(&'"') {
             contents.push(print_content("\"\"", current));
         }

@@ -231,7 +231,20 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
                     None
                 }
             }
-            RenameMode::Any | RenameMode::Other => {
+            RenameMode::Any => {
+                if event.paths.len() == 1 {
+                    let path = event.paths[0].clone();
+                    if path.exists() {
+                        Some(vec![Message::PathsAdded(vec![path])])
+                    } else {
+                        Some(vec![Message::PathRemoved(path)])
+                    }
+                } else {
+                    tracing::warn!("event is invalid: {:?}", event);
+                    None
+                }
+            }
+            RenameMode::Other => {
                 tracing::trace!("missed handle for notify event: {:?}", event);
                 None
             }
