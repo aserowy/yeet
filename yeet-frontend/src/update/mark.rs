@@ -1,14 +1,11 @@
 use std::path::Path;
 
 use ratatui::style::Color;
+use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
 
 use crate::{
     action::Action,
-    model::{
-        buffer::{BufferLine, Sign, SignIdentifier, StylePartial},
-        mark::Marks,
-        Model,
-    },
+    model::{mark::Marks, Model},
     task::Task,
 };
 

@@ -1,6 +1,7 @@
-use yeet_keymap::message::ViewPortDirection;
-
-use crate::model::buffer::{Buffer, CursorPosition};
+use crate::{
+    message::ViewPortDirection,
+    model::{Buffer, CursorPosition},
+};
 
 pub fn update_by_cursor(model: &mut Buffer) {
     if model.lines.is_empty() {

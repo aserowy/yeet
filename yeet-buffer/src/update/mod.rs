@@ -1,8 +1,6 @@
-use yeet_keymap::message::{self, CursorDirection, Mode};
-
-use crate::model::{
-    buffer::{Buffer, BufferLine, BufferResult, CursorPosition},
-    SearchModel,
+use crate::{
+    message::{self, CursorDirection},
+    model::{Buffer, BufferLine, BufferResult, CursorPosition, Mode, SearchModel},
 };
 
 mod bufferline;

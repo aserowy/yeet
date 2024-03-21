@@ -1,12 +1,9 @@
-use yeet_keymap::message::{CursorDirection, LineDirection, Mode, TextModification};
-
 use crate::{
-    model::{
-        buffer::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition},
-        SearchModel,
-    },
-    update::buffer::cursor,
+    message::{CursorDirection, LineDirection, TextModification},
+    model::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode, SearchModel},
 };
+
+use super::cursor;
 
 pub fn update(
     mode: &Mode,
@@ -263,7 +260,7 @@ fn get_cursor_index(cursor: &Cursor, line: &BufferLine) -> usize {
             expanded: _,
         } => current,
         CursorPosition::End => {
-            if line.len() == 0 {
+            if line.is_empty() {
                 0
             } else {
                 line.len() - 1

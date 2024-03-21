@@ -1,12 +1,10 @@
-use yeet_keymap::message::{Buffer, ViewPortDirection};
-
-use crate::{
-    model::{
-        buffer::{Cursor, CursorPosition},
-        Model,
-    },
-    update::buffer,
+use yeet_buffer::{
+    message::{Buffer, ViewPortDirection},
+    model::{Cursor, CursorPosition},
+    update,
 };
+
+use crate::model::Model;
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.parent.buffer;
@@ -17,7 +15,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     match &model.parent.path {
         Some(_) => {
             if let Some(message) = message {
-                buffer::update(&model.mode, &model.search, buffer, message);
+                update::update(&model.mode, &model.search, buffer, message);
             }
 
             let current_filename = match model.current.path.file_name() {
@@ -41,7 +39,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
                     });
                 }
 
-                buffer::update(
+                update::update(
                     &model.mode,
                     &model.search,
                     buffer,
@@ -52,10 +50,10 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
         None => {
             buffer.cursor = None;
 
-            buffer::set_content(&model.mode, buffer, vec![]);
+            update::set_content(&model.mode, buffer, vec![]);
 
             if let Some(message) = message {
-                buffer::update(&model.mode, &model.search, buffer, message);
+                update::update(&model.mode, &model.search, buffer, message);
             }
         }
     }

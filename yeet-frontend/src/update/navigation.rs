@@ -1,11 +1,13 @@
 use std::{collections::HashMap, path::Path};
 
+use yeet_buffer::update;
+
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
 };
 
-use super::{buffer, current, cursor, model::parent, preview};
+use super::{current, cursor, model::parent, preview};
 
 #[tracing::instrument(skip(model))]
 pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {
@@ -45,7 +47,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     model.current.path = path.to_path_buf();
     match current_contents.get(path) {
         Some(it) => {
-            buffer::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
+            update::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
             current::update(model, None);
 
             if let Some(selection) = &selection {
@@ -66,7 +68,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     if let Some(parent) = &model.parent.path.clone() {
         match current_contents.get(parent) {
             Some(it) => {
-                buffer::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
+                update::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
                 parent::update(model, None);
             }
             None => {
@@ -99,7 +101,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
         model.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
-                buffer::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
+                update::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
                 preview::viewport(model);
             }
             None => {
@@ -145,7 +147,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         }
 
         model.preview.path = Some(model.current.path.clone());
-        buffer::set_content(
+        update::set_content(
             &model.mode,
             &mut model.preview.buffer,
             model.current.buffer.lines.clone(),
@@ -153,7 +155,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         preview::viewport(model);
 
         model.current.path = path.to_path_buf();
-        buffer::set_content(
+        update::set_content(
             &model.mode,
             &mut model.current.buffer,
             model.parent.buffer.lines.clone(),
@@ -185,7 +187,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         let current_content = model.current.buffer.lines.clone();
 
         model.current.path = selected.to_path_buf();
-        buffer::set_content(
+        update::set_content(
             &model.mode,
             &mut model.current.buffer,
             model.preview.buffer.lines.clone(),
@@ -199,7 +201,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         );
 
         model.parent.path = model.current.path.parent().map(|p| p.to_path_buf());
-        buffer::set_content(&model.mode, &mut model.parent.buffer, current_content);
+        update::set_content(&model.mode, &mut model.parent.buffer, current_content);
         parent::update(model, None);
 
         let mut actions = Vec::new();

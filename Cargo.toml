@@ -2,5 +2,5 @@
 resolver = "2"
 
 members = [
-    "yeet", "yeet-frontend", "yeet-keymap",
+    "yeet", "yeet-buffer", "yeet-frontend", "yeet-keymap",
 ]

@@ -12,11 +12,8 @@ use tokio::{
         oneshot, Mutex,
     },
 };
-use yeet_keymap::{
-    conversion,
-    message::{Message, Mode},
-    MessageResolver,
-};
+use yeet_buffer::model::Mode;
+use yeet_keymap::{conversion, message::Message, MessageResolver};
 
 use crate::{
     error::AppError,
@@ -255,3 +252,8 @@ fn handle_notify_event(event: notify::Event) -> Option<Vec<Message>> {
         }
     }
 }
+
+// macos: fsevent on rename from unwatched into watched directory
+//
+// Event { kind: Modify(Name(Any)), paths: ["/Users/alexander.serowy/Library/Caches/yeet/register/1710924984425%%002F%Users%002F%alexander.serowy%002F%src%002F%yeet%002F%rustfmt.toml"], attr:tracker: None, attr:flag: None, attr:info: None, attr:source: None }
+// Event { kind: Modify(Data(Content)), paths: ["/Users/alexander.serowy/Library/Caches/yeet/register/1710924984425%%002F%Users%002F%alexander.serowy%002F%src%002F%yeet%002F%rustfmt.toml"], attr:tracker: None, attr:flag: None, attr:info: None, attr:source: None }

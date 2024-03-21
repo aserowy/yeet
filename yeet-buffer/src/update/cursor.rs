@@ -1,10 +1,8 @@
 use std::cmp::Ordering;
 
-use yeet_keymap::message::{CursorDirection, Mode, SearchDirection};
-
-use crate::model::{
-    buffer::{Buffer, BufferLine, Cursor, CursorPosition},
-    SearchModel,
+use crate::{
+    message::{CursorDirection, SearchDirection},
+    model::{Buffer, BufferLine, Cursor, CursorPosition, Mode, SearchModel},
 };
 
 // TODO: refactor
@@ -250,7 +248,7 @@ fn get_horizontal_index(horizontial_index: &CursorPosition, line: &BufferLine) -
             expanded: _,
         } => Some(*current),
         CursorPosition::End => {
-            let index = if line.len() == 0 { 0 } else { line.len() - 1 };
+            let index = if line.is_empty() { 0 } else { line.len() - 1 };
             Some(index)
         }
         CursorPosition::None => None,
@@ -424,7 +422,7 @@ fn sort_by_index(
 mod test {
     #[test]
     fn sort_by_index_downward() {
-        use yeet_keymap::message::SearchDirection;
+        use crate::message::SearchDirection;
 
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -435,7 +433,7 @@ mod test {
 
     #[test]
     fn sort_by_index_upward() {
-        use yeet_keymap::message::SearchDirection;
+        use crate::message::SearchDirection;
 
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];

@@ -1,18 +1,17 @@
-use yeet_keymap::message::{
-    self, CommandMode, CursorDirection, Message, Mode, PrintContent, ViewPortDirection,
+use yeet_buffer::{
+    message::{self, CursorDirection, ViewPortDirection},
+    model::{Buffer, CommandMode, Mode, SignIdentifier},
+    update,
 };
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{
-        buffer::{Buffer, SignIdentifier},
-        DirectoryBufferState, Model,
-    },
+    model::{DirectoryBufferState, Model},
 };
 
 use self::model::{commandline, current, preview};
 
-mod buffer;
 mod bufferline;
 mod command;
 mod cursor;
@@ -55,7 +54,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::EnumerationFinished(path, selection) => {
             enumeration::finished(model, path, selection);
 
-            self::buffer::update(
+            update::update(
                 &model.mode,
                 &model.search,
                 &mut model.parent.buffer,
@@ -173,7 +172,7 @@ fn sort_content(mode: &Mode, model: &mut Buffer) {
             .to_ascii_uppercase()
             .cmp(&b.content.to_ascii_uppercase())
     });
-    buffer::cursor::validate(mode, model);
+    update::cursor::validate(mode, model);
 }
 
 fn settings(model: &mut Model) {
@@ -232,11 +231,11 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
             let mut actions = vec![Action::ModeChanged];
             actions.extend(match from {
                 Mode::Command(_) => {
-                    buffer::unfocus_buffer(&mut model.commandline.buffer);
+                    update::unfocus_buffer(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    buffer::unfocus_buffer(&mut model.current.buffer);
+                    update::unfocus_buffer(&mut model.current.buffer);
                     vec![]
                 }
             });
@@ -246,23 +245,23 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
 
             actions.extend(match to {
                 Mode::Command(_) => {
-                    buffer::focus_buffer(&mut model.commandline.buffer);
+                    update::focus_buffer(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert => {
-                    buffer::focus_buffer(&mut model.current.buffer);
+                    update::focus_buffer(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    buffer::focus_buffer(&mut model.current.buffer);
+                    update::focus_buffer(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     current::save_changes(model)
                 }
                 Mode::Normal => {
-                    buffer::focus_buffer(&mut model.current.buffer);
+                    update::focus_buffer(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }

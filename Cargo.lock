@@ -1431,6 +1431,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "yeet-buffer"
+version = "0.0.1"
+dependencies = [
+ "ratatui",
+]
+
+[[package]]
 name = "yeet-frontend"
 version = "0.0.1"
 dependencies = [
@@ -1447,6 +1454,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "yeet-buffer",
  "yeet-keymap",
 ]
 
@@ -1458,6 +1466,7 @@ dependencies = [
  "dirs",
  "thiserror",
  "tracing",
+ "yeet-buffer",
 ]
 
 [[package]]

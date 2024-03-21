@@ -5,9 +5,8 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
-use yeet_keymap::message::Mode;
 
-use crate::model::buffer::{viewport::ViewPort, Buffer, BufferLine, Cursor, StylePartialSpan};
+use crate::model::{viewport::ViewPort, Buffer, BufferLine, Cursor, Mode, StylePartialSpan};
 
 mod line;
 mod prefix;

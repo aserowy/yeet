@@ -1,10 +1,12 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, CursorDirection, Message, Mode, TextModification};
+use message::{Binding, BindingKind, Message};
 use tree::KeyTree;
-
-use crate::message::Buffer;
+use yeet_buffer::{
+    message::{Buffer, CursorDirection, TextModification},
+    model::Mode,
+};
 
 mod buffer;
 pub mod conversion;

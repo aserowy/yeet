@@ -5,8 +5,9 @@ use ratatui::{
     widgets::{Block, Paragraph},
     Frame,
 };
+use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::{buffer::undo::BufferChanged, Model};
+use crate::model::Model;
 
 pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(model);
@@ -68,7 +69,7 @@ fn get_position_content(model: &Model) -> Line {
 
 fn get_changes_content(model: &Model) -> Line {
     let modifications = model.current.buffer.undo.get_uncommited_changes();
-    let changes = crate::model::buffer::undo::consolidate(&modifications);
+    let changes = undo::consolidate(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);
     for change in changes {

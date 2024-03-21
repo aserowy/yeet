@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
+use yeet_buffer::{model::BufferLine, update};
+
 use crate::{
-    model::{buffer::BufferLine, DirectoryBufferState, Model},
-    update::{buffer, cursor},
+    model::{DirectoryBufferState, Model},
+    update::cursor,
 };
 
 use super::current;
@@ -41,7 +43,7 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             .collect();
 
         model.preview.state = DirectoryBufferState::Ready;
-        buffer::set_content(&model.mode, &mut model.preview.buffer, content);
+        update::set_content(&model.mode, &mut model.preview.buffer, content);
         viewport(model);
     }
 }
@@ -56,7 +58,7 @@ pub fn viewport(model: &mut Model) {
     let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
-    buffer::reset_view(buffer);
+    update::reset_view(buffer);
 
     if !cursor::set_cursor_index_with_history(target, &model.history, buffer) {
         buffer.cursor = None;

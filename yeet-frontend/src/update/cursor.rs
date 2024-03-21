@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use crate::model::{
-    buffer::{Buffer, Cursor, CursorPosition},
-    history::History,
+use yeet_buffer::{
+    model::{Buffer, Cursor, CursorPosition},
+    update::viewport,
 };
 
-use super::buffer::viewport;
+use crate::model::history::History;
 
 pub fn set_cursor_index(selection: &str, buffer: &mut Buffer) -> bool {
     let line = buffer

@@ -1,6 +1,6 @@
 use std::time;
 
-use yeet_keymap::message::Mode;
+use super::Mode;
 
 #[derive(Debug)]
 struct Transaction {
@@ -260,7 +260,7 @@ pub fn consolidate(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
 mod test {
     #[test]
     fn test_get_uncommited_changes() {
-        use crate::model::buffer::undo::BufferChanged;
+        use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
         let changes = undo.save();
@@ -268,7 +268,7 @@ mod test {
 
         let mut undo = super::Undo::default();
         undo.add(
-            &yeet_keymap::message::Mode::Insert,
+            &crate::model::Mode::Insert,
             vec![
                 BufferChanged::LineAdded(0, "a".to_string()),
                 BufferChanged::LineRemoved(4, "m".to_string()),
@@ -289,7 +289,7 @@ mod test {
         );
 
         undo.add(
-            &yeet_keymap::message::Mode::Normal,
+            &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(2, "h".to_string())],
         );
         let changes = undo.get_uncommited_changes();
@@ -303,7 +303,7 @@ mod test {
         );
 
         undo.add(
-            &yeet_keymap::message::Mode::Insert,
+            &crate::model::Mode::Insert,
             vec![BufferChanged::LineRemoved(5, "m".to_string())],
         );
         let changes = undo.save();
@@ -318,7 +318,7 @@ mod test {
         );
 
         undo.add(
-            &yeet_keymap::message::Mode::Normal,
+            &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(2, "s".to_string())],
         );
         let changes = undo.get_uncommited_changes();
@@ -333,7 +333,7 @@ mod test {
 
     #[test]
     fn test_consolidate() {
-        use crate::model::buffer::undo::BufferChanged;
+        use crate::model::undo::BufferChanged;
 
         let changes = vec![
             BufferChanged::LineAdded(0, "a".to_string()),

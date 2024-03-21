@@ -1,16 +1,14 @@
 use ratatui::style::Color;
-use yeet_keymap::message::{
-    Buffer, CommandMode, CursorDirection, Message, Mode, PrintContent, SearchDirection,
-    TextModification,
+use yeet_buffer::{
+    message::{Buffer, CursorDirection, SearchDirection, TextModification},
+    model::{BufferLine, CommandMode, Mode, StylePartial, StylePartialSpan},
+    update,
 };
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{
-        buffer::{BufferLine, StylePartial, StylePartialSpan},
-        CommandLineState, Model,
-    },
-    update::buffer,
+    model::{CommandLineState, Model},
 };
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
@@ -29,7 +27,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
             if let Some(message) = message {
                 if let Buffer::ChangeMode(from, to) = message {
                     if !from.is_command() && to.is_command() {
-                        buffer::reset_view(buffer);
+                        update::reset_view(buffer);
 
                         let prefix = match to {
                             Mode::Command(cmd) => match cmd {
@@ -45,9 +43,9 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                             ..Default::default()
                         };
 
-                        buffer::set_content(to, buffer, vec![bufferline]);
+                        update::set_content(to, buffer, vec![bufferline]);
                     } else if from.is_command() && !to.is_command() {
-                        buffer::set_content(&model.mode, buffer, vec![]);
+                        update::set_content(&model.mode, buffer, vec![]);
                     }
                 }
 
@@ -69,7 +67,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
                     }
                 }
 
-                buffer::update(&model.mode, &model.search, buffer, message);
+                update::update(&model.mode, &model.search, buffer, message);
             }
 
             actions
@@ -98,7 +96,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) -> Vec<Action> {
 
                     Message::Rerender
                 } else {
-                    buffer::set_content(&model.mode, buffer, vec![]);
+                    update::set_content(&model.mode, buffer, vec![]);
 
                     Message::Buffer(Buffer::ChangeMode(
                         model.mode.clone(),
@@ -145,13 +143,13 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 ))]
             };
 
-            buffer::set_content(&model.mode, buffer, vec![]);
+            update::set_content(&model.mode, buffer, vec![]);
 
             actions.push(Action::EmitMessages(messages));
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
-            buffer::set_content(&model.mode, buffer, vec![]);
+            update::set_content(&model.mode, buffer, vec![]);
 
             actions.push(Action::EmitMessages(vec![Message::Buffer(
                 Buffer::ChangeMode(
@@ -226,13 +224,13 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
         Vec::new()
     };
 
-    buffer::update(
+    update::update(
         &model.mode,
         &model.search,
         &mut commandline.buffer,
         &Buffer::MoveCursor(1, CursorDirection::Bottom),
     );
-    buffer::update(
+    update::update(
         &model.mode,
         &model.search,
         &mut commandline.buffer,

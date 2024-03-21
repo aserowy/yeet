@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use ratatui::style::Color;
+use yeet_buffer::model::{BufferLine, StylePartial, StylePartialSpan};
 use yeet_keymap::message::ContentKind;
-
-use crate::model::buffer::{BufferLine, StylePartial, StylePartialSpan};
 
 pub fn from(path: &Path) -> BufferLine {
     let content = match path.file_name() {

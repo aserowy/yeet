@@ -1,6 +1,7 @@
+use yeet_buffer::view;
+
 use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 
-mod buffer;
 mod commandline;
 mod statusline;
 
@@ -11,9 +12,9 @@ pub fn view(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErro
 
         commandline::view(model, frame);
 
-        buffer::view(&model.mode, &model.current.buffer, frame, layout.current);
-        buffer::view(&model.mode, &model.parent.buffer, frame, layout.parent);
-        buffer::view(&model.mode, &model.preview.buffer, frame, layout.preview);
+        view::view(&model.mode, &model.current.buffer, frame, layout.current);
+        view::view(&model.mode, &model.parent.buffer, frame, layout.parent);
+        view::view(&model.mode, &model.preview.buffer, frame, layout.preview);
 
         statusline::view(model, frame, layout.statusline);
     })

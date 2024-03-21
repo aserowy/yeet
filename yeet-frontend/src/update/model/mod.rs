@@ -1,6 +1,5 @@
 use ratatui::layout::Rect;
-
-use crate::model::buffer::viewport::ViewPort;
+use yeet_buffer::model::viewport::ViewPort;
 
 pub mod commandline;
 pub mod current;

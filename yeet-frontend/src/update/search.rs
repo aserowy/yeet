@@ -1,10 +1,7 @@
 use ratatui::style::Color;
-use yeet_keymap::message::{CommandMode, Mode};
+use yeet_buffer::model::{Buffer, CommandMode, Mode, SearchModel, StylePartial, StylePartialSpan};
 
-use crate::model::{
-    buffer::{Buffer, StylePartial, StylePartialSpan},
-    Model, SearchModel,
-};
+use crate::model::Model;
 
 pub fn update(model: &mut Model) {
     let search = match model.commandline.buffer.lines.last() {

@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
-use yeet_keymap::message::{ContentKind, Mode};
+use yeet_buffer::{model::Mode, update};
+use yeet_keymap::message::ContentKind;
 
 use crate::model::{DirectoryBufferState, Model};
 
-use super::{buffer, bufferline, cursor, mark, qfix};
+use super::{bufferline, cursor, mark, qfix};
 
 #[tracing::instrument(skip(model, contents))]
 pub fn changed(
@@ -34,7 +35,7 @@ pub fn changed(
             })
             .collect();
 
-        buffer::set_content(&mode, buffer, content);
+        update::set_content(&mode, buffer, content);
 
         if is_first_changed_event {
             if let Some(selection) = selection {

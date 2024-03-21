@@ -1,7 +1,5 @@
-use yeet_keymap::message::Mode;
-
-use crate::model::buffer::{
-    viewport::ViewPort, BufferLine, Cursor, CursorPosition, StylePartial, StylePartialSpan,
+use crate::model::{
+    viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan,
 };
 
 use super::style::{

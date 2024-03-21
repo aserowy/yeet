@@ -1,16 +1,15 @@
 use std::path::PathBuf;
 
-use yeet_keymap::message::{Buffer, Mode};
-
-use crate::{
-    action::Action,
+use yeet_buffer::{
+    message::Buffer,
     model::{
-        buffer::{undo::BufferChanged, BufferLine, BufferResult},
-        Model,
+        undo::{self, BufferChanged},
+        BufferLine, BufferResult, Mode,
     },
-    task::Task,
-    update::buffer,
+    update,
 };
+
+use crate::{action::Action, model::Model, task::Task};
 
 pub fn update(model: &mut Model, message: Option<&Buffer>) {
     let buffer = &mut model.current.buffer;
@@ -19,9 +18,9 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
-        buffer::update(&model.mode, &model.search, buffer, message);
+        update::update(&model.mode, &model.search, buffer, message);
     } else {
-        buffer::reset_view(buffer);
+        update::reset_view(buffer);
     }
 }
 
@@ -42,7 +41,7 @@ pub fn open(model: &Model) -> Vec<Action> {
 }
 
 pub fn save_changes(model: &mut Model) -> Vec<Action> {
-    if let Some(result) = buffer::update(
+    if let Some(result) = update::update(
         &model.mode,
         &model.search,
         &mut model.current.buffer,
@@ -53,7 +52,7 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         let mut actions = Vec::new();
         if let BufferResult::Changes(modifications) = result {
             let mut trashes = Vec::new();
-            for modification in crate::model::buffer::undo::consolidate(&modifications) {
+            for modification in undo::consolidate(&modifications) {
                 match modification {
                     BufferChanged::LineAdded(_, name) => {
                         actions.push(Action::Task(Task::AddPath(path.join(name))))

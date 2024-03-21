@@ -1,25 +1,18 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::layout::Rect;
-use yeet_keymap::message::{Mode, SearchDirection};
+use yeet_buffer::model::{
+    viewport::{LineNumber, ViewPort},
+    Buffer, Cursor, CursorPosition, Mode, SearchModel,
+};
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
     settings::Settings,
 };
 
-use self::{
-    buffer::{
-        viewport::{LineNumber, ViewPort},
-        Buffer, Cursor, CursorPosition,
-    },
-    history::History,
-    mark::Marks,
-    qfix::QuickFix,
-    register::JunkYard,
-};
+use self::{history::History, mark::Marks, qfix::QuickFix, register::JunkYard};
 
-pub mod buffer;
 pub mod history;
 pub mod mark;
 pub mod qfix;
@@ -165,10 +158,4 @@ pub enum DirectoryBufferState {
     Ready,
     #[default]
     Uninitialized,
-}
-
-#[derive(Debug, Default)]
-pub struct SearchModel {
-    pub last: String,
-    pub direction: SearchDirection,
 }

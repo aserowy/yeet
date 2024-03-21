@@ -5,7 +5,8 @@ use layout::CommandLineLayout;
 use model::{mark, qfix, register, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
-use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
+use yeet_buffer::{message::Buffer, model::Mode};
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     error::AppError,

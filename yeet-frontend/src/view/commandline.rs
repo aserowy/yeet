@@ -1,13 +1,12 @@
 use ratatui::{widgets::Paragraph, Frame};
+use yeet_buffer::view;
 
 use crate::model::Model;
-
-use super::buffer;
 
 pub fn view(model: &Model, frame: &mut Frame) {
     let commandline = &model.commandline;
 
-    buffer::view(
+    view::view(
         &model.mode,
         &commandline.buffer,
         frame,

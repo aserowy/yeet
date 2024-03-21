@@ -1,13 +1,17 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use yeet_buffer::{
+    message::{
+        Buffer, CursorDirection, LineDirection, SearchDirection, TextModification,
+        ViewPortDirection,
+    },
+    model::{CommandMode, Mode},
+};
+
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{
-        Binding, BindingKind, Buffer, CommandMode, CursorDirection, LineDirection, NextBindingKind,
-        SearchDirection, TextModification, ViewPortDirection,
-    },
+    message::{Binding, BindingKind, Message, NextBindingKind},
     tree::KeyTree,
-    Message, Mode,
 };
 
 #[derive(Debug)]

@@ -1,6 +1,10 @@
+use yeet_buffer::{
+    message::{Buffer, CursorDirection, TextModification},
+    model::{CommandMode, Mode},
+};
 use yeet_keymap::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Buffer, CommandMode, CursorDirection, Message, Mode, TextModification},
+    message::Message,
     MessageResolver,
 };
 

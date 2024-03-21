@@ -1,11 +1,11 @@
 use std::cmp::Reverse;
 
 use crate::{
-    model::buffer::{
+    model::{
         viewport::{LineNumber, ViewPort},
         BufferLine, Cursor, StylePartialSpan,
     },
-    view::buffer::style::{LINE_NUMBER_ABS_STYLE_PARTIAL, LINE_NUMBER_REL_STYLE_PARTIAL},
+    view::style::{LINE_NUMBER_ABS_STYLE_PARTIAL, LINE_NUMBER_REL_STYLE_PARTIAL},
 };
 
 pub fn get_border(vp: &ViewPort) -> String {

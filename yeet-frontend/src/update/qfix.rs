@@ -1,12 +1,9 @@
 use std::path::Path;
 
 use ratatui::style::Color;
+use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
 
-use crate::model::{
-    buffer::{BufferLine, Sign, SignIdentifier, StylePartial},
-    qfix::QuickFix,
-    Model,
-};
+use crate::model::{qfix::QuickFix, Model};
 
 use super::model::current;
 

@@ -1,10 +1,8 @@
 use std::{collections::HashMap, iter::Enumerate, slice::Iter};
 
-use crate::{
-    key::Key,
-    message::{Binding, Mode},
-    KeyMapError,
-};
+use yeet_buffer::model::Mode;
+
+use crate::{key::Key, message::Binding, KeyMapError};
 
 #[derive(Debug, Default)]
 pub struct KeyTree {

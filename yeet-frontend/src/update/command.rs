@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
+use yeet_buffer::{message::Buffer, model::Mode};
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
@@ -266,7 +267,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 mod test {
     #[test]
     fn get_mode_after_command() {
-        use yeet_keymap::message::Mode;
+        use yeet_buffer::model::Mode;
 
         let mode_before = Some(Mode::Normal);
         let result = super::get_mode_after_command(&mode_before);
