@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use yeet_keymap::message::{Buffer, Message, Mode, PrintContent};
 
 use crate::{
     action::Action,
-    model::Model,
+    model::{mark::Marks, Model},
     task::Task,
     update::{mark, qfix},
 };
@@ -120,23 +120,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             let mut actions = vec![change_mode_action];
             if let Some(path) = &model.preview.path {
                 tracing::info!("copying path: {:?}", path);
-                let target = PathBuf::from(target);
-                if target.is_dir() && target.exists() {
-                    if let Some(file_name) = path.file_name() {
-                        actions.push(Action::Task(Task::CopyPath(
-                            path.clone(),
-                            target.join(file_name),
-                        )));
-                    } else {
-                        actions.push(Action::EmitMessages(vec![Message::Error(
-                            "cp: could not get file name".to_string(),
-                        )]));
+                let target = match get_target_file_path(&model.marks, target, path) {
+                    Ok(it) => it,
+                    Err(err) => {
+                        actions.push(Action::EmitMessages(vec![Message::Error(err)]));
+                        return actions;
                     }
-                } else {
-                    actions.push(Action::EmitMessages(vec![Message::Error(
-                        "cp: target path is not valid".to_string(),
-                    )]));
-                }
+                };
+
+                actions.push(Action::Task(Task::CopyPath(path.clone(), target)));
             }
             actions
         }
@@ -190,23 +182,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             let mut actions = vec![change_mode_action];
             if let Some(path) = &model.preview.path {
                 tracing::info!("renaming path: {:?}", path);
-                let target = PathBuf::from(target);
-                if target.is_dir() && target.exists() {
-                    if let Some(file_name) = path.file_name() {
-                        actions.push(Action::Task(Task::RenamePath(
-                            path.clone(),
-                            target.join(file_name),
-                        )));
-                    } else {
-                        actions.push(Action::EmitMessages(vec![Message::Error(
-                            "mv: could not get file name".to_string(),
-                        )]));
+                let target = match get_target_file_path(&model.marks, target, path) {
+                    Ok(it) => it,
+                    Err(err) => {
+                        actions.push(Action::EmitMessages(vec![Message::Error(err)]));
+                        return actions;
                     }
-                } else {
-                    actions.push(Action::EmitMessages(vec![Message::Error(
-                        "mv: target path is not valid".to_string(),
-                    )]));
-                }
+                };
+
+                actions.push(Action::Task(Task::RenamePath(path.clone(), target)));
             }
             actions
         }
@@ -236,6 +220,35 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     actions.push(Action::SkipRender);
 
     actions
+}
+
+fn get_target_file_path(marks: &Marks, target: &str, path: &Path) -> Result<PathBuf, String> {
+    let file_name = match path.file_name() {
+        Some(it) => it,
+        None => return Err(format!("could not resolve file name from path {:?}", path)),
+    };
+
+    let target = if target.starts_with('\'') {
+        let mark = match target.chars().nth(1) {
+            Some(it) => it,
+            None => return Err("invalid mark format".to_string()),
+        };
+
+        if let Some(path) = marks.entries.get(&mark) {
+            path.to_path_buf()
+        } else {
+            return Err(format!("mark '{}' not found", mark));
+        }
+    } else {
+        PathBuf::from(target)
+    };
+
+    let target_file = target.join(file_name);
+    if target.is_dir() && target.exists() && !target_file.exists() {
+        Ok(target.join(file_name))
+    } else {
+        Err("target path is not valid".to_string())
+    }
 }
 
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
