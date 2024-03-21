@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use yeet_buffer::{
-    message::{Buffer, CursorDirection, TextModification},
+    message::{BufferMessage, CursorDirection, TextModification},
     model::Mode,
 };
 
@@ -55,7 +55,7 @@ pub enum BindingKind {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
-    Buffer(Buffer),
+    Buffer(BufferMessage),
     DeleteMarks(Vec<char>),
     ClearSearchHighlight,
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),

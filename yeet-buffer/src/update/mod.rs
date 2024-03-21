@@ -1,5 +1,5 @@
 use crate::{
-    message::{self, CursorDirection},
+    message::{BufferMessage, CursorDirection},
     model::{Buffer, BufferLine, BufferResult, CursorPosition, Mode, SearchModel},
 };
 
@@ -11,34 +11,34 @@ pub fn update(
     mode: &Mode,
     search: &Option<SearchModel>,
     model: &mut Buffer,
-    message: &message::Buffer,
+    message: &BufferMessage,
 ) -> Option<BufferResult> {
     let result = match message {
         // TODO: repeat actions by count when switching from insert to normal
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
-        message::Buffer::ChangeMode(from, to) => {
+        BufferMessage::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
                 cursor::update_by_direction(mode, search, model, &1, &CursorDirection::Left);
             }
             None
         }
-        message::Buffer::Modification(count, modification) => {
+        BufferMessage::Modification(count, modification) => {
             let buffer_changes = bufferline::update(mode, search, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
             None
         }
-        message::Buffer::MoveCursor(count, direction) => {
+        BufferMessage::MoveCursor(count, direction) => {
             cursor::update_by_direction(mode, search, model, count, direction);
             None
         }
-        message::Buffer::MoveViewPort(direction) => {
+        BufferMessage::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);
             None
         }
-        message::Buffer::SaveBuffer(_) => {
+        BufferMessage::SaveBuffer(_) => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
         }

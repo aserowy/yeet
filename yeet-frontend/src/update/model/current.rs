@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use yeet_buffer::{
-    message::Buffer,
+    message::BufferMessage,
     model::{
         undo::{self, BufferChanged},
         BufferLine, BufferResult, Mode,
@@ -11,7 +11,7 @@ use yeet_buffer::{
 
 use crate::{action::Action, model::Model, task::Task};
 
-pub fn update(model: &mut Model, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
     let buffer = &mut model.current.buffer;
     let layout = &model.layout.current;
 
@@ -45,7 +45,7 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         &model.mode,
         &model.search,
         &mut model.current.buffer,
-        &Buffer::SaveBuffer(None),
+        &BufferMessage::SaveBuffer(None),
     ) {
         let path = &model.current.path;
 

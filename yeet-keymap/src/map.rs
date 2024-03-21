@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use yeet_buffer::{
     message::{
-        Buffer, CursorDirection, LineDirection, SearchDirection, TextModification,
+        BufferMessage, CursorDirection, LineDirection, SearchDirection, TextModification,
         ViewPortDirection,
     },
     model::{CommandMode, Mode},
@@ -318,7 +318,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('d'), vec![KeyModifier::Ctrl])],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
+                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
                             ViewPortDirection::HalfPageDown,
                         ))),
                         ..Default::default()
@@ -418,7 +418,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
+                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
                             ViewPortDirection::HalfPageUp,
                         ))),
                         ..Default::default()
@@ -430,7 +430,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('b'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
+                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
                             ViewPortDirection::BottomOnCursor,
                         ))),
                         ..Default::default()
@@ -442,7 +442,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('t'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
+                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
                             ViewPortDirection::TopOnCursor,
                         ))),
                         ..Default::default()
@@ -454,7 +454,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('z'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(Buffer::MoveViewPort(
+                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
                             ViewPortDirection::CenterOnCursor,
                         ))),
                         ..Default::default()

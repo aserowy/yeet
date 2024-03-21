@@ -1,5 +1,5 @@
 use yeet_buffer::{
-    message::{Buffer, CursorDirection, TextModification},
+    message::{BufferMessage, CursorDirection, TextModification},
     model::{CommandMode, Mode},
 };
 use yeet_keymap::{
@@ -16,7 +16,7 @@ fn add_and_resolve_key_navigation_colon() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::ChangeMode(
+        Some(&Message::Buffer(BufferMessage::ChangeMode(
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),
@@ -69,7 +69,7 @@ fn add_and_resolve_key_normal_dd() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteLine
         ))),
@@ -93,7 +93,7 @@ fn add_and_resolve_key_normal_fq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::MoveCursor(
+        Some(&Message::Buffer(BufferMessage::MoveCursor(
             1,
             CursorDirection::FindForward('q')
         ))),
@@ -118,7 +118,7 @@ fn add_and_resolve_key_normal_dfq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(1, CursorDirection::FindForward('q'))
         ))),
@@ -144,7 +144,7 @@ fn add_and_resolve_key_normal_10fq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::MoveCursor(
+        Some(&Message::Buffer(BufferMessage::MoveCursor(
             10,
             CursorDirection::FindForward('q')
         ))),
@@ -168,7 +168,7 @@ fn add_and_resolve_key_normal_d0() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(1, CursorDirection::LineStart)
         ))),
@@ -191,7 +191,7 @@ fn add_and_resolve_key_command_q() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             1,
             TextModification::Insert("q".to_string())
         ))),
@@ -296,7 +296,7 @@ fn add_and_resolve_key_normal_0() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::MoveCursor(
+        Some(&Message::Buffer(BufferMessage::MoveCursor(
             1,
             CursorDirection::LineStart
         ))),
@@ -323,7 +323,7 @@ fn add_and_resolve_key_normal_d10fq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
@@ -352,7 +352,7 @@ fn add_and_resolve_key_normal_10d10fq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::Modification(
+        Some(&Message::Buffer(BufferMessage::Modification(
             10,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
@@ -376,7 +376,7 @@ fn add_and_resolve_key_normal_10colon() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::Buffer(Buffer::ChangeMode(
+        Some(&Message::Buffer(BufferMessage::ChangeMode(
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),

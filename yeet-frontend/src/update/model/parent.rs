@@ -1,12 +1,12 @@
 use yeet_buffer::{
-    message::{Buffer, ViewPortDirection},
+    message::{BufferMessage, ViewPortDirection},
     model::{Cursor, CursorPosition},
     update,
 };
 
 use crate::model::Model;
 
-pub fn update(model: &mut Model, message: Option<&Buffer>) {
+pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
     let buffer = &mut model.parent.buffer;
     let layout = &model.layout.parent;
 
@@ -43,7 +43,7 @@ pub fn update(model: &mut Model, message: Option<&Buffer>) {
                     &model.mode,
                     &model.search,
                     buffer,
-                    &Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                    &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
                 );
             }
         }

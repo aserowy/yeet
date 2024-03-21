@@ -1,5 +1,5 @@
 use yeet_buffer::{
-    message::{self, CursorDirection, ViewPortDirection},
+    message::{BufferMessage, CursorDirection, ViewPortDirection},
     model::{Buffer, CommandMode, Mode, SignIdentifier},
     update,
 };
@@ -58,7 +58,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
                 &model.mode,
                 &model.search,
                 &mut model.parent.buffer,
-                &message::Buffer::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
             );
 
             Vec::new()
@@ -214,9 +214,9 @@ fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
 }
 
 #[tracing::instrument(skip(model, msg))]
-fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
+fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     match msg {
-        message::Buffer::ChangeMode(from, to) => {
+        BufferMessage::ChangeMode(from, to) => {
             match (from, to) {
                 (Mode::Command(_), Mode::Command(_))
                 | (Mode::Insert, Mode::Insert)
@@ -269,7 +269,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
 
             actions
         }
-        message::Buffer::Modification(_, _) => match model.mode {
+        BufferMessage::Modification(_, _) => match model.mode {
             Mode::Command(CommandMode::Command) => commandline::update(model, Some(msg)),
             Mode::Command(_) => {
                 let actions = commandline::update(model, Some(msg));
@@ -292,7 +292,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
             }
             Mode::Navigation => Vec::new(),
         },
-        message::Buffer::MoveCursor(_, mtn) => match model.mode {
+        BufferMessage::MoveCursor(_, mtn) => match model.mode {
             Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if matches!(mtn, &CursorDirection::Search(_)) {
@@ -312,7 +312,7 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
                 actions
             }
         },
-        message::Buffer::MoveViewPort(_) => match model.mode {
+        BufferMessage::MoveViewPort(_) => match model.mode {
             Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 current::update(model, Some(msg));
@@ -328,6 +328,6 @@ fn buffer(model: &mut Model, msg: &message::Buffer) -> Vec<Action> {
                 actions
             }
         },
-        message::Buffer::SaveBuffer(_) => current::save_changes(model),
+        BufferMessage::SaveBuffer(_) => current::save_changes(model),
     }
 }

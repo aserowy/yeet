@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use yeet_buffer::{message::Buffer, model::Mode};
+use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
 
 #[tracing::instrument(skip(model))]
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
-    let change_mode_message = Message::Buffer(Buffer::ChangeMode(
+    let change_mode_message = Message::Buffer(BufferMessage::ChangeMode(
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
     ));
@@ -202,10 +202,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
-            Message::Buffer(Buffer::SaveBuffer(None)),
+            Message::Buffer(BufferMessage::SaveBuffer(None)),
         ])],
         ("wq", "") => vec![Action::EmitMessages(vec![
-            Message::Buffer(Buffer::SaveBuffer(None)),
+            Message::Buffer(BufferMessage::SaveBuffer(None)),
             Message::Quit,
         ])],
         (cmd, args) => {

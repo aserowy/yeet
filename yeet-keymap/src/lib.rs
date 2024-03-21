@@ -4,7 +4,7 @@ use map::KeyMap;
 use message::{Binding, BindingKind, Message};
 use tree::KeyTree;
 use yeet_buffer::{
-    message::{Buffer, CursorDirection, TextModification},
+    message::{BufferMessage, CursorDirection, TextModification},
     model::Mode,
 };
 
@@ -65,7 +65,7 @@ impl MessageResolver {
             Err(_) => {
                 let messages = if get_passthrough_by_mode(&self.mode) {
                     let message = TextModification::Insert(self.buffer.to_string());
-                    vec![Message::Buffer(Buffer::Modification(1, message))]
+                    vec![Message::Buffer(BufferMessage::Modification(1, message))]
                 } else {
                     Vec::new()
                 };
@@ -249,7 +249,7 @@ fn get_repeat(current: &Binding, next: &Binding) -> Option<usize> {
 fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
     let mut messages = Vec::new();
     if let Some(md) = &binding.force {
-        messages.push(Message::Buffer(Buffer::ChangeMode(
+        messages.push(Message::Buffer(BufferMessage::ChangeMode(
             mode.clone(),
             md.clone(),
         )));
@@ -258,12 +258,13 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
     let repeat = binding.repeat.unwrap_or(1);
     match &binding.kind {
         BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
-        BindingKind::Modification(mdf) => {
-            messages.push(Message::Buffer(Buffer::Modification(repeat, mdf.clone())))
-        }
-        BindingKind::Motion(mtn) => {
-            messages.push(Message::Buffer(Buffer::MoveCursor(repeat, mtn.clone())))
-        }
+        BindingKind::Modification(mdf) => messages.push(Message::Buffer(
+            BufferMessage::Modification(repeat, mdf.clone()),
+        )),
+        BindingKind::Motion(mtn) => messages.push(Message::Buffer(BufferMessage::MoveCursor(
+            repeat,
+            mtn.clone(),
+        ))),
         BindingKind::None => {}
         BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
             unreachable!()

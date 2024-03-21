@@ -1,7 +1,7 @@
 use crate::model::Mode;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Buffer {
+pub enum BufferMessage {
     // TODO: Yank & Paste in normal mode into reg
     ChangeMode(Mode, Mode),
     Modification(usize, TextModification),

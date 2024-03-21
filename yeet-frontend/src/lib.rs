@@ -5,7 +5,7 @@ use layout::CommandLineLayout;
 use model::{mark, qfix, register, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
-use yeet_buffer::{message::Buffer, model::Mode};
+use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
@@ -38,7 +38,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
-        Message::Buffer(Buffer::ChangeMode(Mode::Normal, Mode::default())),
+        Message::Buffer(BufferMessage::ChangeMode(Mode::Normal, Mode::default())),
         Message::NavigateToPath(initial_path),
     ]));
 
