@@ -39,7 +39,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![change_mode_action]
         }
-        // TODO: multiple cl to enable better workflow
         ("cfirst", "") => {
             model.qfix.current_index = 0;
 
@@ -53,6 +52,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Action::EmitMessages(vec![Message::NavigateToPathAsPreview(path.clone())]),
             ]
         }
+        // TODO: multiple cl to enable better workflow
         ("cl", "") => {
             let content = qfix::print(&model.qfix)
                 .iter()
