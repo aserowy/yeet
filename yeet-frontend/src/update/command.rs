@@ -160,7 +160,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
         }
-        ("jnk", "") => {
+        ("junk", "") => {
             let content = model
                 .junk
                 .print()
