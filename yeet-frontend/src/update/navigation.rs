@@ -156,7 +156,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         update::set_content(
             &model.mode,
             &mut model.preview.buffer,
-            model.current.buffer.lines.clone(),
+            model.current.buffer.lines.drain(..).collect(),
         );
         preview::viewport(model);
 
@@ -164,7 +164,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         update::set_content(
             &model.mode,
             &mut model.current.buffer,
-            model.parent.buffer.lines.clone(),
+            model.parent.buffer.lines.drain(..).collect(),
         );
         current::update(model, None);
 
@@ -190,13 +190,13 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
             return Vec::new();
         }
 
-        let current_content = model.current.buffer.lines.clone();
+        let current_content = model.current.buffer.lines.drain(..).collect();
 
         model.current.path = selected.to_path_buf();
         update::set_content(
             &model.mode,
             &mut model.current.buffer,
-            model.preview.buffer.lines.clone(),
+            model.preview.buffer.lines.drain(..).collect(),
         );
         current::update(model, None);
 
