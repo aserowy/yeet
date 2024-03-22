@@ -32,7 +32,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
     )];
 
     if let Some(preview) = &model.preview.path {
-        buffer.push((preview, &mut model.preview.buffer, true));
+        buffer.push((preview, &mut model.preview.buffer, preview.is_dir()));
     }
 
     if let Some(parent) = &model.parent.path {
