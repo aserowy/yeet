@@ -29,24 +29,30 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             .map(|history| history.to_owned()),
     };
 
-    // TODO: refactor with model method
     let mut current_contents: HashMap<_, _> = HashMap::from([(
         model.current.path.clone(),
-        model.current.buffer.lines.clone(),
+        model.current.buffer.lines.drain(..).collect::<Vec<_>>(),
     )]);
 
     if let Some(path) = &model.preview.path {
-        current_contents.insert(path.to_path_buf(), model.preview.buffer.lines.clone());
+        current_contents.insert(
+            path.to_path_buf(),
+            model.preview.buffer.lines.drain(..).collect(),
+        );
     }
 
     if let Some(path) = &model.parent.path {
-        current_contents.insert(path.to_path_buf(), model.parent.buffer.lines.clone());
+        current_contents.insert(
+            path.to_path_buf(),
+            model.parent.buffer.lines.drain(..).collect(),
+        );
     }
 
     let mut actions = Vec::new();
     model.current.path = path.to_path_buf();
     match current_contents.get(path) {
         Some(it) => {
+            // TODO: check if set content and update methods can be combined for current, parent and preview
             update::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
             current::update(model, None);
 

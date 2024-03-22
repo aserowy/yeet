@@ -41,6 +41,10 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
 
     for (path, buffer, sort) in buffer {
         let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
+        if paths_for_buffer.is_empty() {
+            continue;
+        }
+
         let indexes = buffer
             .lines
             .iter()
