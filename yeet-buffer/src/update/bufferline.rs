@@ -19,6 +19,10 @@ pub fn update(
             } else if let Some(cursor) = &mut model.cursor {
                 let mut changes = Vec::new();
                 for _ in 0..*count {
+                    if model.lines.is_empty() {
+                        break;
+                    }
+
                     let line_index = cursor.vertical_index;
                     let line = model.lines.remove(line_index);
                     let content = line.content.to_string();
