@@ -27,7 +27,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
             if let Some(message) = message {
                 if let BufferMessage::ChangeMode(from, to) = message {
                     if !from.is_command() && to.is_command() {
-                        update::reset_view(buffer);
+                        update::update(to, &model.search, buffer, &BufferMessage::ResetCursor);
 
                         let prefix = match to {
                             Mode::Command(cmd) => match cmd {

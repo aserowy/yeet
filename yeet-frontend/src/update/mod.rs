@@ -231,11 +231,11 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             let mut actions = vec![Action::ModeChanged];
             actions.extend(match from {
                 Mode::Command(_) => {
-                    update::unfocus_buffer(&mut model.commandline.buffer);
+                    update::unfocus(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    update::unfocus_buffer(&mut model.current.buffer);
+                    update::unfocus(&mut model.current.buffer);
                     vec![]
                 }
             });
@@ -245,23 +245,23 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
 
             actions.extend(match to {
                 Mode::Command(_) => {
-                    update::focus_buffer(&mut model.commandline.buffer);
+                    update::focus(&mut model.commandline.buffer);
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert => {
-                    update::focus_buffer(&mut model.current.buffer);
+                    update::focus(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    update::focus_buffer(&mut model.current.buffer);
+                    update::focus(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     current::save_changes(model)
                 }
                 Mode::Normal => {
-                    update::focus_buffer(&mut model.current.buffer);
+                    update::focus(&mut model.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }
@@ -328,6 +328,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 actions
             }
         },
+        BufferMessage::ResetCursor => unreachable!(),
         BufferMessage::SaveBuffer(_) => current::save_changes(model),
         BufferMessage::SetContent(_) => unreachable!(),
     }

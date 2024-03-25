@@ -20,7 +20,12 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
     if let Some(message) = message {
         update::update(&model.mode, &model.search, buffer, message);
     } else {
-        update::reset_view(buffer);
+        update::update(
+            &model.mode,
+            &model.search,
+            buffer,
+            &BufferMessage::ResetCursor,
+        );
     }
 }
 

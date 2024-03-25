@@ -38,6 +38,29 @@ pub fn update(
             viewport::update_by_direction(model, direction);
             None
         }
+        BufferMessage::ResetCursor => {
+            let view_port = &mut model.view_port;
+            view_port.horizontal_index = 0;
+            view_port.vertical_index = 0;
+
+            if let Some(cursor) = &mut model.cursor {
+                cursor.vertical_index = 0;
+
+                cursor.horizontal_index = match &cursor.horizontal_index {
+                    CursorPosition::Absolute {
+                        current: _,
+                        expanded: _,
+                    } => CursorPosition::Absolute {
+                        current: 0,
+                        expanded: 0,
+                    },
+                    CursorPosition::End => CursorPosition::End,
+                    CursorPosition::None => CursorPosition::None,
+                }
+            }
+
+            None
+        }
         BufferMessage::SaveBuffer(_) => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
@@ -54,35 +77,13 @@ pub fn update(
     result
 }
 
-pub fn focus_buffer(buffer: &mut Buffer) {
+pub fn focus(buffer: &mut Buffer) {
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor = false;
     }
 }
 
-pub fn reset_view(model: &mut Buffer) {
-    let view_port = &mut model.view_port;
-    view_port.horizontal_index = 0;
-    view_port.vertical_index = 0;
-
-    if let Some(cursor) = &mut model.cursor {
-        cursor.vertical_index = 0;
-
-        cursor.horizontal_index = match &cursor.horizontal_index {
-            CursorPosition::Absolute {
-                current: _,
-                expanded: _,
-            } => CursorPosition::Absolute {
-                current: 0,
-                expanded: 0,
-            },
-            CursorPosition::End => CursorPosition::End,
-            CursorPosition::None => CursorPosition::None,
-        }
-    }
-}
-
-pub fn unfocus_buffer(buffer: &mut Buffer) {
+pub fn unfocus(buffer: &mut Buffer) {
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor = true;
     }

@@ -63,7 +63,12 @@ pub fn viewport(model: &mut Model) {
     let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
-    update::reset_view(buffer);
+    update::update(
+        &model.mode,
+        &model.search,
+        buffer,
+        &BufferMessage::ResetCursor,
+    );
 
     if !cursor::set_cursor_index_with_history(target, &model.history, buffer) {
         buffer.cursor = None;

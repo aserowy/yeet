@@ -7,6 +7,7 @@ pub enum BufferMessage {
     Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
+    ResetCursor,
     SaveBuffer(Option<usize>),
     SetContent(Vec<BufferLine>),
 }
