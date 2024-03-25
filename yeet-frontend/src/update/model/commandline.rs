@@ -43,9 +43,19 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
                             ..Default::default()
                         };
 
-                        update::set_content(to, buffer, vec![bufferline]);
+                        update::update(
+                            to,
+                            &model.search,
+                            buffer,
+                            &BufferMessage::SetContent(vec![bufferline]),
+                        );
                     } else if from.is_command() && !to.is_command() {
-                        update::set_content(&model.mode, buffer, vec![]);
+                        update::update(
+                            &model.mode,
+                            &model.search,
+                            buffer,
+                            &BufferMessage::SetContent(vec![]),
+                        );
                     }
                 }
 
@@ -97,7 +107,12 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
 
                     Message::Rerender
                 } else {
-                    update::set_content(&model.mode, buffer, vec![]);
+                    update::update(
+                        &model.mode,
+                        &model.search,
+                        buffer,
+                        &BufferMessage::SetContent(vec![]),
+                    );
 
                     Message::Buffer(BufferMessage::ChangeMode(
                         model.mode.clone(),
@@ -144,13 +159,23 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 ))]
             };
 
-            update::set_content(&model.mode, buffer, vec![]);
+            update::update(
+                &model.mode,
+                &model.search,
+                buffer,
+                &BufferMessage::SetContent(vec![]),
+            );
 
             actions.push(Action::EmitMessages(messages));
         }
         CommandLineState::WaitingForInput => {
             commandline.state = CommandLineState::Default;
-            update::set_content(&model.mode, buffer, vec![]);
+            update::update(
+                &model.mode,
+                &model.search,
+                buffer,
+                &BufferMessage::SetContent(vec![]),
+            );
 
             actions.push(Action::EmitMessages(vec![Message::Buffer(
                 BufferMessage::ChangeMode(

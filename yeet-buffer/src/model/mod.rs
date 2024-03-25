@@ -86,7 +86,7 @@ impl Default for CursorPosition {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: String,
@@ -105,7 +105,7 @@ impl BufferLine {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sign {
     pub id: SignIdentifier,
     pub content: char,
@@ -120,14 +120,14 @@ pub enum SignIdentifier {
     QuickFix,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct StylePartialSpan {
     pub start: usize,
     pub end: usize,
     pub style: StylePartial,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StylePartial {
     Background(Color),
     Foreground(Color),

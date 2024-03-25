@@ -1,4 +1,4 @@
-use crate::model::Mode;
+use crate::model::{BufferLine, Mode};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BufferMessage {
@@ -8,6 +8,7 @@ pub enum BufferMessage {
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
     SaveBuffer(Option<usize>),
+    SetContent(Vec<BufferLine>),
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

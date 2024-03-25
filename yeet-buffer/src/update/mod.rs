@@ -1,10 +1,10 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
-    model::{Buffer, BufferLine, BufferResult, CursorPosition, Mode, SearchModel},
+    model::{Buffer, BufferResult, CursorPosition, Mode, SearchModel},
 };
 
-mod bufferline;
 pub mod cursor;
+mod modification;
 pub mod viewport;
 
 pub fn update(
@@ -24,7 +24,7 @@ pub fn update(
             None
         }
         BufferMessage::Modification(count, modification) => {
-            let buffer_changes = bufferline::update(mode, search, model, count, modification);
+            let buffer_changes = modification::update(mode, search, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
@@ -41,6 +41,11 @@ pub fn update(
         BufferMessage::SaveBuffer(_) => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
+        }
+        BufferMessage::SetContent(content) => {
+            model.lines = content.to_vec();
+            cursor::validate(mode, model);
+            None
         }
     };
 
@@ -75,11 +80,6 @@ pub fn reset_view(model: &mut Buffer) {
             CursorPosition::None => CursorPosition::None,
         }
     }
-}
-
-pub fn set_content(mode: &Mode, model: &mut Buffer, content: Vec<BufferLine>) {
-    model.lines = content;
-    cursor::validate(mode, model);
 }
 
 pub fn unfocus_buffer(buffer: &mut Buffer) {

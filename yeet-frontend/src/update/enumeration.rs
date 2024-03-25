@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{model::Mode, update};
+use yeet_buffer::{message::BufferMessage, model::Mode, update};
 use yeet_keymap::message::ContentKind;
 
 use crate::model::{DirectoryBufferState, Model};
@@ -35,7 +35,7 @@ pub fn changed(
             })
             .collect();
 
-        update::set_content(&mode, buffer, content);
+        update::update(&mode, &None, buffer, &BufferMessage::SetContent(content));
 
         if is_first_changed_event {
             if let Some(selection) = selection {

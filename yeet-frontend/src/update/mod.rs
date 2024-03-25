@@ -329,5 +329,6 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             }
         },
         BufferMessage::SaveBuffer(_) => current::save_changes(model),
+        BufferMessage::SetContent(_) => unreachable!(),
     }
 }

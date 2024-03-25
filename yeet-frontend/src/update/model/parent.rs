@@ -50,7 +50,12 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
         None => {
             buffer.cursor = None;
 
-            update::set_content(&model.mode, buffer, vec![]);
+            update::update(
+                &model.mode,
+                &model.search,
+                buffer,
+                &BufferMessage::SetContent(vec![]),
+            );
 
             if let Some(message) = message {
                 update::update(&model.mode, &model.search, buffer, message);

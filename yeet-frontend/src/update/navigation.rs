@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use yeet_buffer::update;
+use yeet_buffer::{message::BufferMessage, update};
 
 use crate::{
     action::Action,
@@ -53,7 +53,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     match current_contents.get(path) {
         Some(it) => {
             // TODO: check if set content and update methods can be combined for current, parent and preview
-            update::set_content(&model.mode, &mut model.current.buffer, it.to_vec());
+            update::update(
+                &model.mode,
+                &model.search,
+                &mut model.current.buffer,
+                &BufferMessage::SetContent(it.to_vec()),
+            );
             current::update(model, None);
 
             if let Some(selection) = &selection {
@@ -74,7 +79,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     if let Some(parent) = &model.parent.path.clone() {
         match current_contents.get(parent) {
             Some(it) => {
-                update::set_content(&model.mode, &mut model.parent.buffer, it.to_vec());
+                update::update(
+                    &model.mode,
+                    &model.search,
+                    &mut model.parent.buffer,
+                    &BufferMessage::SetContent(it.to_vec()),
+                );
                 parent::update(model, None);
             }
             None => {
@@ -107,7 +117,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
         model.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
-                update::set_content(&model.mode, &mut model.preview.buffer, it.to_vec());
+                update::update(
+                    &model.mode,
+                    &model.search,
+                    &mut model.preview.buffer,
+                    &BufferMessage::SetContent(it.to_vec()),
+                );
                 preview::viewport(model);
             }
             None => {
@@ -153,18 +168,20 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         }
 
         model.preview.path = Some(model.current.path.clone());
-        update::set_content(
+        update::update(
             &model.mode,
+            &model.search,
             &mut model.preview.buffer,
-            model.current.buffer.lines.drain(..).collect(),
+            &BufferMessage::SetContent(model.current.buffer.lines.drain(..).collect()),
         );
         preview::viewport(model);
 
         model.current.path = path.to_path_buf();
-        update::set_content(
+        update::update(
             &model.mode,
+            &model.search,
             &mut model.current.buffer,
-            model.parent.buffer.lines.drain(..).collect(),
+            &BufferMessage::SetContent(model.parent.buffer.lines.drain(..).collect()),
         );
         current::update(model, None);
 
@@ -193,10 +210,11 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         let current_content = model.current.buffer.lines.drain(..).collect();
 
         model.current.path = selected.to_path_buf();
-        update::set_content(
+        update::update(
             &model.mode,
+            &model.search,
             &mut model.current.buffer,
-            model.preview.buffer.lines.drain(..).collect(),
+            &BufferMessage::SetContent(model.preview.buffer.lines.drain(..).collect()),
         );
         current::update(model, None);
 
@@ -207,7 +225,12 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         );
 
         model.parent.path = model.current.path.parent().map(|p| p.to_path_buf());
-        update::set_content(&model.mode, &mut model.parent.buffer, current_content);
+        update::update(
+            &model.mode,
+            &model.search,
+            &mut model.parent.buffer,
+            &BufferMessage::SetContent(current_content),
+        );
         parent::update(model, None);
 
         let mut actions = Vec::new();

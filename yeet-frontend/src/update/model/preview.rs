@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{model::BufferLine, update};
+use yeet_buffer::{message::BufferMessage, model::BufferLine, update};
 
 use crate::{
     model::{DirectoryBufferState, Model},
@@ -43,7 +43,12 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             .collect();
 
         model.preview.state = DirectoryBufferState::Ready;
-        update::set_content(&model.mode, &mut model.preview.buffer, content);
+        update::update(
+            &model.mode,
+            &model.search,
+            &mut model.preview.buffer,
+            &BufferMessage::SetContent(content),
+        );
         viewport(model);
     }
 }
