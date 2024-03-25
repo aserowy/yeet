@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::model::{BufferLine, Mode};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -7,9 +9,11 @@ pub enum BufferMessage {
     Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
     MoveViewPort(ViewPortDirection),
+    RemoveLine(usize),
     ResetCursor,
     SaveBuffer(Option<usize>),
     SetContent(Vec<BufferLine>),
+    SortContent(fn(&BufferLine, &BufferLine) -> Ordering),
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

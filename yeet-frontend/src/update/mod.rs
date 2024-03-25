@@ -1,6 +1,8 @@
+use std::cmp::Ordering;
+
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, ViewPortDirection},
-    model::{Buffer, CommandMode, Mode, SignIdentifier},
+    model::{Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
     update,
 };
 use yeet_keymap::message::{Message, PrintContent};
@@ -23,6 +25,12 @@ mod path;
 mod qfix;
 mod register;
 mod search;
+
+const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
+    a.content
+        .to_ascii_uppercase()
+        .cmp(&b.content.to_ascii_uppercase())
+};
 
 #[tracing::instrument(skip(model))]
 pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
@@ -164,15 +172,6 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Quit => vec![Action::Quit(None)],
         Message::YankToJunkYard(repeat) => register::yank(model, repeat),
     }
-}
-
-fn sort_content(mode: &Mode, model: &mut Buffer) {
-    model.lines.sort_unstable_by(|a, b| {
-        a.content
-            .to_ascii_uppercase()
-            .cmp(&b.content.to_ascii_uppercase())
-    });
-    update::cursor::validate(mode, model);
 }
 
 fn settings(model: &mut Model) {
@@ -328,8 +327,11 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 actions
             }
         },
-        BufferMessage::ResetCursor => unreachable!(),
         BufferMessage::SaveBuffer(_) => current::save_changes(model),
-        BufferMessage::SetContent(_) => unreachable!(),
+
+        BufferMessage::RemoveLine(_)
+        | BufferMessage::ResetCursor
+        | BufferMessage::SetContent(_)
+        | BufferMessage::SortContent(_) => unreachable!(),
     }
 }

@@ -146,7 +146,7 @@ pub enum BufferResult {
     _Unused,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SearchModel {
     pub last: String,
     pub direction: SearchDirection,

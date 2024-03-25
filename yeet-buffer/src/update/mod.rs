@@ -3,7 +3,7 @@ use crate::{
     model::{Buffer, BufferResult, CursorPosition, Mode, SearchModel},
 };
 
-pub mod cursor;
+mod cursor;
 mod modification;
 pub mod viewport;
 
@@ -38,6 +38,11 @@ pub fn update(
             viewport::update_by_direction(model, direction);
             None
         }
+        BufferMessage::RemoveLine(index) => {
+            model.lines.remove(*index);
+            cursor::validate(mode, model);
+            None
+        }
         BufferMessage::ResetCursor => {
             let view_port = &mut model.view_port;
             view_port.horizontal_index = 0;
@@ -67,6 +72,11 @@ pub fn update(
         }
         BufferMessage::SetContent(content) => {
             model.lines = content.to_vec();
+            cursor::validate(mode, model);
+            None
+        }
+        BufferMessage::SortContent(sort) => {
+            model.lines.sort_unstable_by(sort);
             cursor::validate(mode, model);
             None
         }

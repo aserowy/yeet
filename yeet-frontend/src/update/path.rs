@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use yeet_buffer::{model::Mode, update::cursor};
+use yeet_buffer::{message::BufferMessage, model::Mode, update};
 
 use crate::{action::Action, model::Model};
 
@@ -75,10 +75,13 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         }
 
         if sort {
-            super::sort_content(&model.mode, buffer);
+            update::update(
+                &model.mode,
+                &model.search,
+                buffer,
+                &BufferMessage::SortContent(super::SORT),
+            );
         }
-
-        cursor::validate(&model.mode, buffer);
 
         // TODO: correct cursor to stay on selection
     }
@@ -121,8 +124,12 @@ fn remove_path(model: &mut Model, path: &Path) {
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {
-                    buffer.lines.remove(index);
-                    cursor::validate(&model.mode, buffer);
+                    update::update(
+                        &model.mode,
+                        &model.search,
+                        buffer,
+                        &BufferMessage::RemoveLine(index),
+                    );
                 }
             }
         }

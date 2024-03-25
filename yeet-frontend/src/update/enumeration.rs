@@ -62,12 +62,19 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
         return;
     }
 
+    // FIX: anti pattern...
     let mode = model.mode.clone();
     let history = model.history.clone();
+    let search = model.search.clone();
 
     let directories = model.get_mut_directories();
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
-        super::sort_content(&mode, buffer);
+        update::update(
+            &mode,
+            &search,
+            buffer,
+            &BufferMessage::SortContent(super::SORT),
+        );
 
         if let Some(selection) = selection {
             if !cursor::set_cursor_index(selection, buffer) {
