@@ -332,6 +332,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
         BufferMessage::RemoveLine(_)
         | BufferMessage::ResetCursor
         | BufferMessage::SetContent(_)
+        | BufferMessage::SetCursorToLineContent(_)
         | BufferMessage::SortContent(_) => unreachable!(),
     }
 }

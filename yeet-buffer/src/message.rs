@@ -13,6 +13,7 @@ pub enum BufferMessage {
     ResetCursor,
     SaveBuffer(Option<usize>),
     SetContent(Vec<BufferLine>),
+    SetCursorToLineContent(String),
     SortContent(fn(&BufferLine, &BufferLine) -> Ordering),
 }
 

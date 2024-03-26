@@ -143,7 +143,7 @@ impl Default for StylePartial {
 #[derive(Clone, Debug, PartialEq)]
 pub enum BufferResult {
     Changes(Vec<BufferChanged>),
-    _Unused,
+    CursorPositionChanged,
 }
 
 #[derive(Clone, Debug, Default)]

@@ -62,7 +62,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             current::update(model, None);
 
             if let Some(selection) = &selection {
-                cursor::set_cursor_index(selection, &mut model.current.buffer);
+                cursor::set_cursor_index(
+                    &model.mode,
+                    &model.search,
+                    &mut model.current.buffer,
+                    selection,
+                );
             }
         }
         None => {
@@ -186,9 +191,11 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         current::update(model, None);
 
         cursor::set_cursor_index_with_history(
-            &model.current.path,
+            &model.mode,
             &model.history,
+            &model.search,
             &mut model.current.buffer,
+            &model.current.path,
         );
 
         model.parent.buffer.lines.clear();
@@ -219,9 +226,11 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         current::update(model, None);
 
         cursor::set_cursor_index_with_history(
-            &model.current.path,
+            &model.mode,
             &model.history,
+            &model.search,
             &mut model.current.buffer,
+            &model.current.path,
         );
 
         model.parent.path = model.current.path.parent().map(|p| p.to_path_buf());

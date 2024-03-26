@@ -15,9 +15,11 @@ pub fn changed(
     selection: &Option<String>,
 ) {
     // TODO: handle unsaved changes
+    // FIX: anti pattern...
     let marks = model.marks.clone();
     let mode = model.mode.clone();
     let qfix = model.qfix.clone();
+    let search = model.search.clone();
 
     let directories = model.get_mut_directories();
     if let Some((path, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
@@ -39,7 +41,7 @@ pub fn changed(
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if cursor::set_cursor_index(selection, buffer) {
+                if cursor::set_cursor_index(&mode, &search, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                     *state = DirectoryBufferState::PartiallyLoaded;
                 }
@@ -77,8 +79,8 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
         );
 
         if let Some(selection) = selection {
-            if !cursor::set_cursor_index(selection, buffer) {
-                cursor::set_cursor_index_with_history(path, &history, buffer);
+            if !cursor::set_cursor_index(&mode, &search, buffer, selection) {
+                cursor::set_cursor_index_with_history(&mode, &history, &search, buffer, path);
             }
         }
 

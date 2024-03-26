@@ -5,7 +5,7 @@ use crate::{
 
 mod cursor;
 mod modification;
-pub mod viewport;
+mod viewport;
 
 pub fn update(
     mode: &Mode,
@@ -75,7 +75,31 @@ pub fn update(
             cursor::validate(mode, model);
             None
         }
+        BufferMessage::SetCursorToLineContent(content) => {
+            let cursor = match &mut model.cursor {
+                Some(it) => it,
+                None => return None,
+            };
+
+            let line = model
+                .lines
+                .iter()
+                .enumerate()
+                .find(|(_, line)| &line.content == content);
+
+            if let Some((index, _)) = line {
+                cursor.vertical_index = index;
+
+                cursor::validate(mode, model);
+                viewport::update_by_cursor(model);
+
+                Some(BufferResult::CursorPositionChanged)
+            } else {
+                None
+            }
+        }
         BufferMessage::SortContent(sort) => {
+            // TODO: cursor should stay on current selection
             model.lines.sort_unstable_by(sort);
             cursor::validate(mode, model);
             None

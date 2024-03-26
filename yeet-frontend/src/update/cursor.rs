@@ -1,41 +1,47 @@
 use std::path::Path;
 
 use yeet_buffer::{
-    model::{Buffer, Cursor, CursorPosition},
-    update::viewport,
+    message::BufferMessage,
+    model::{Buffer, BufferResult, Mode, SearchModel},
+    update::{self},
 };
 
 use crate::model::history::History;
 
-pub fn set_cursor_index(selection: &str, buffer: &mut Buffer) -> bool {
-    let line = buffer
-        .lines
-        .iter()
-        .enumerate()
-        .find(|(_, line)| line.content == selection);
+pub fn get_selection(model: &Buffer) -> Option<String> {
+    let index = match &model.cursor {
+        Some(it) => it.vertical_index,
+        None => return None,
+    };
 
-    if let Some((index, _)) = line {
-        if let Some(cursor) = &mut buffer.cursor {
-            cursor.vertical_index = index;
-        } else {
-            buffer.cursor = Some(Cursor {
-                horizontal_index: CursorPosition::None,
-                vertical_index: index,
-                ..Default::default()
-            });
-        }
-
-        viewport::update_by_cursor(buffer);
-
-        true
-    } else {
-        false
-    }
+    model.lines.get(index).map(|line| line.content.clone())
 }
 
-pub fn set_cursor_index_with_history(path: &Path, history: &History, buffer: &mut Buffer) -> bool {
+pub fn set_cursor_index(
+    mode: &Mode,
+    search: &Option<SearchModel>,
+    model: &mut Buffer,
+    selection: &str,
+) -> bool {
+    let result = update::update(
+        mode,
+        search,
+        model,
+        &BufferMessage::SetCursorToLineContent(selection.to_string()),
+    );
+
+    matches!(result, Some(BufferResult::CursorPositionChanged))
+}
+
+pub fn set_cursor_index_with_history(
+    mode: &Mode,
+    history: &History,
+    search: &Option<SearchModel>,
+    model: &mut Buffer,
+    path: &Path,
+) -> bool {
     if let Some(history) = history.get_selection(path) {
-        set_cursor_index(history, buffer)
+        set_cursor_index(mode, search, model, history)
     } else {
         false
     }

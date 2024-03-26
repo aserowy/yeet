@@ -7,7 +7,7 @@ use yeet_buffer::{message::BufferMessage, model::Mode, update};
 
 use crate::{action::Action, model::Model};
 
-use super::{bufferline, mark, preview, qfix};
+use super::{bufferline, cursor, mark, preview, qfix};
 
 #[tracing::instrument(skip(model))]
 pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
@@ -44,6 +44,8 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         if paths_for_buffer.is_empty() {
             continue;
         }
+
+        let selection = cursor::get_selection(buffer);
 
         let indexes = buffer
             .lines
@@ -83,7 +85,14 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
             );
         }
 
-        // TODO: correct cursor to stay on selection
+        if let Some(selection) = selection {
+            update::update(
+                &model.mode,
+                &model.search,
+                buffer,
+                &BufferMessage::SetCursorToLineContent(selection),
+            );
+        }
     }
 }
 

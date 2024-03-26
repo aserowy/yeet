@@ -70,7 +70,13 @@ pub fn viewport(model: &mut Model) {
         &BufferMessage::ResetCursor,
     );
 
-    if !cursor::set_cursor_index_with_history(target, &model.history, buffer) {
+    if !cursor::set_cursor_index_with_history(
+        &model.mode,
+        &model.history,
+        &model.search,
+        buffer,
+        target,
+    ) {
         buffer.cursor = None;
     };
 }
