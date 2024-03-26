@@ -4,7 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use yeet_buffer::model::SignIdentifier;
+
 use crate::error::AppError;
+
+pub const MARK_SIGN_ID: SignIdentifier = "mark";
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Marks {

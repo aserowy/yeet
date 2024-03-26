@@ -9,7 +9,7 @@ use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{DirectoryBufferState, Model},
+    model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, DirectoryBufferState, Model},
 };
 
 use self::model::{commandline, current, preview};
@@ -180,21 +180,21 @@ fn settings(model: &mut Model) {
     model.preview.buffer.set(&model.settings.preview);
 
     if model.settings.show_mark_signs {
-        remove_hidden_sign_on_all_buffer(model, &SignIdentifier::Mark);
+        remove_hidden_sign_on_all_buffer(model, &MARK_SIGN_ID);
     } else {
-        add_hidden_sign_on_all_buffer(model, SignIdentifier::Mark);
+        add_hidden_sign_on_all_buffer(model, MARK_SIGN_ID);
     }
 
     if model.settings.show_quickfix_signs {
-        remove_hidden_sign_on_all_buffer(model, &SignIdentifier::QuickFix);
+        remove_hidden_sign_on_all_buffer(model, &QFIX_SIGN_ID);
     } else {
-        add_hidden_sign_on_all_buffer(model, SignIdentifier::QuickFix);
+        add_hidden_sign_on_all_buffer(model, QFIX_SIGN_ID);
     }
 }
 
 fn add_hidden_sign_on_all_buffer(model: &mut Model, id: SignIdentifier) {
-    add_hidden_sign(&mut model.current.buffer, id.clone());
-    add_hidden_sign(&mut model.parent.buffer, id.clone());
+    add_hidden_sign(&mut model.current.buffer, id);
+    add_hidden_sign(&mut model.parent.buffer, id);
     add_hidden_sign(&mut model.preview.buffer, id);
 }
 

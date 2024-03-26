@@ -1,11 +1,14 @@
 use std::path::Path;
 
 use ratatui::style::Color;
-use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
+use yeet_buffer::model::{BufferLine, Sign, StylePartial};
 
 use crate::{
     action::Action,
-    model::{mark::Marks, Model},
+    model::{
+        mark::{Marks, MARK_SIGN_ID},
+        Model,
+    },
     task::Task,
 };
 
@@ -69,13 +72,13 @@ pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
 
 fn set_sign(bl: &mut BufferLine) {
     let sign = 'm';
-    let is_signed = bl.signs.iter().any(|s| s.id == SignIdentifier::Mark);
+    let is_signed = bl.signs.iter().any(|s| s.id == MARK_SIGN_ID);
     if is_signed {
         return;
     }
 
     bl.signs.push(Sign {
-        id: SignIdentifier::Mark,
+        id: MARK_SIGN_ID,
         content: sign,
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
@@ -108,7 +111,7 @@ fn unset_sign(model: &mut Model, removed: &Path) {
 
     for line in lines {
         if line.content == file_name {
-            let position = line.signs.iter().position(|s| s.id == SignIdentifier::Mark);
+            let position = line.signs.iter().position(|s| s.id == MARK_SIGN_ID);
             if let Some(position) = position {
                 line.signs.remove(position);
             }

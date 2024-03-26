@@ -3,9 +3,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use yeet_buffer::model::SignIdentifier;
 use yeet_keymap::message::Message;
 
 use crate::error::AppError;
+
+pub const QFIX_SIGN_ID: SignIdentifier = "qfix";
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct QuickFix {

@@ -105,19 +105,14 @@ impl BufferLine {
     }
 }
 
+pub type SignIdentifier = &'static str;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sign {
     pub id: SignIdentifier,
     pub content: char,
     pub priority: usize,
     pub style: Vec<StylePartial>,
-}
-
-// TODO: replace with String to clear knowledge from frontend crate
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum SignIdentifier {
-    Mark,
-    QuickFix,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

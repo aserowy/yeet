@@ -1,9 +1,12 @@
 use std::path::Path;
 
 use ratatui::style::Color;
-use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
+use yeet_buffer::model::{BufferLine, Sign, StylePartial};
 
-use crate::model::{qfix::QuickFix, Model};
+use crate::model::{
+    qfix::{QuickFix, QFIX_SIGN_ID},
+    Model,
+};
 
 use super::model::current;
 
@@ -57,13 +60,13 @@ pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
 // TODO: refactor with marks impl
 fn set_sign(bl: &mut BufferLine) {
     let sign = 'c';
-    let is_signed = bl.signs.iter().any(|s| s.id == SignIdentifier::QuickFix);
+    let is_signed = bl.signs.iter().any(|s| s.id == QFIX_SIGN_ID);
     if is_signed {
         return;
     }
 
     bl.signs.push(Sign {
-        id: SignIdentifier::QuickFix,
+        id: QFIX_SIGN_ID,
         content: sign,
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
@@ -72,10 +75,7 @@ fn set_sign(bl: &mut BufferLine) {
 
 // TODO: refactor with marks impl
 fn unset_sign(bl: &mut BufferLine) {
-    let position = bl
-        .signs
-        .iter()
-        .position(|s| s.id == SignIdentifier::QuickFix);
+    let position = bl.signs.iter().position(|s| s.id == QFIX_SIGN_ID);
 
     if let Some(position) = position {
         bl.signs.remove(position);
