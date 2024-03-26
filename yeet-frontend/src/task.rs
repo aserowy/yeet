@@ -88,7 +88,10 @@ impl TaskManager {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn run(&mut self, task: Task) {
+        tracing::trace!("running task: {:?}", task);
+
         let abort_handle = match task.clone() {
             Task::AddPath(path) => self.tasks.spawn(async move {
                 if path.exists() {
@@ -155,15 +158,12 @@ impl TaskManager {
 
                 Ok(())
             }),
-            Task::DeleteJunkYardEntry(entry) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    if let Err(error) = register::file::delete(entry).await {
-                        emit_error(&sender, error).await;
-                    }
-                    Ok(())
-                })
-            }
+            Task::DeleteJunkYardEntry(entry) => self.tasks.spawn(async move {
+                if let Err(error) = register::file::delete(entry).await {
+                    tracing::error!("deleting junk yard entry failed: {:?}", error);
+                }
+                Ok(())
+            }),
             Task::EmitMessages(messages) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
