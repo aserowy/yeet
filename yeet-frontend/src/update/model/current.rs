@@ -12,7 +12,7 @@ use yeet_buffer::{
 use crate::{action::Action, model::Model, task::Task};
 
 pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
-    let buffer = &mut model.current.buffer;
+    let buffer = &mut model.file_buffer.current.buffer;
     let layout = &model.layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
@@ -49,10 +49,10 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
     if let Some(result) = update::update(
         &model.mode,
         &model.search,
-        &mut model.current.buffer,
+        &mut model.file_buffer.current.buffer,
         &BufferMessage::SaveBuffer(None),
     ) {
-        let path = &model.current.path;
+        let path = &model.file_buffer.current.path;
 
         let mut actions = Vec::new();
         if let BufferResult::Changes(modifications) = result {
@@ -93,7 +93,7 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
 }
 
 pub fn selection(model: &Model) -> Option<PathBuf> {
-    let buffer = &model.current.buffer;
+    let buffer = &model.file_buffer.current.buffer;
     if buffer.lines.is_empty() {
         return None;
     }
@@ -104,7 +104,7 @@ pub fn selection(model: &Model) -> Option<PathBuf> {
         return None;
     }
 
-    let target = model.current.path.join(&current.content);
+    let target = model.file_buffer.current.path.join(&current.content);
     if target.exists() {
         Some(target)
     } else {
@@ -113,7 +113,7 @@ pub fn selection(model: &Model) -> Option<PathBuf> {
 }
 
 pub fn selected_bufferline(model: &mut Model) -> Option<&mut BufferLine> {
-    let buffer = &mut model.current.buffer;
+    let buffer = &mut model.file_buffer.current.buffer;
     if buffer.lines.is_empty() {
         return None;
     }

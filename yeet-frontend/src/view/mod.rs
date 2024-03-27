@@ -12,9 +12,24 @@ pub fn view(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErro
 
         commandline::view(model, frame);
 
-        view::view(&model.mode, &model.current.buffer, frame, layout.current);
-        view::view(&model.mode, &model.parent.buffer, frame, layout.parent);
-        view::view(&model.mode, &model.preview.buffer, frame, layout.preview);
+        view::view(
+            &model.mode,
+            &model.file_buffer.current.buffer,
+            frame,
+            layout.current,
+        );
+        view::view(
+            &model.mode,
+            &model.file_buffer.parent.buffer,
+            frame,
+            layout.parent,
+        );
+        view::view(
+            &model.mode,
+            &model.file_buffer.preview.buffer,
+            frame,
+            layout.preview,
+        );
 
         statusline::view(model, frame, layout.statusline);
     })

@@ -13,7 +13,7 @@ pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(model);
     let position = get_position_content(model);
 
-    let content = model.current.path.to_str().unwrap_or("");
+    let content = model.file_buffer.current.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
     let span = Span::styled(content, style);
     let path = Line::from(span);
@@ -39,8 +39,9 @@ pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
 }
 
 fn get_position_content(model: &Model) -> Line {
-    let count = model.current.buffer.lines.len();
+    let count = model.file_buffer.current.buffer.lines.len();
     let current_position = model
+        .file_buffer
         .current
         .buffer
         .cursor
@@ -68,7 +69,12 @@ fn get_position_content(model: &Model) -> Line {
 }
 
 fn get_changes_content(model: &Model) -> Line {
-    let modifications = model.current.buffer.undo.get_uncommited_changes();
+    let modifications = model
+        .file_buffer
+        .current
+        .buffer
+        .undo
+        .get_uncommited_changes();
     let changes = undo::consolidate(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

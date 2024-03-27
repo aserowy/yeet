@@ -91,12 +91,12 @@ fn unset_sign(model: &mut Model, removed: &Path) {
         None => return,
     };
 
-    let lines = if preview == model.current.path {
-        &mut model.current.buffer.lines
-    } else if Some(preview) == model.preview.path.as_deref() {
-        &mut model.preview.buffer.lines
-    } else if Some(preview) == model.parent.path.as_deref() {
-        &mut model.parent.buffer.lines
+    let lines = if preview == model.file_buffer.current.path {
+        &mut model.file_buffer.current.buffer.lines
+    } else if Some(preview) == model.file_buffer.preview.path.as_deref() {
+        &mut model.file_buffer.preview.buffer.lines
+    } else if Some(preview) == model.file_buffer.parent.path.as_deref() {
+        &mut model.file_buffer.parent.buffer.lines
     } else {
         return;
     };

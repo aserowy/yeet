@@ -29,25 +29,31 @@ pub fn search(model: &mut Model) {
         None => return,
     };
 
-    if model.parent.path.is_some() {
-        set_styles(&mut model.parent.buffer, search);
+    if model.file_buffer.parent.path.is_some() {
+        set_styles(&mut model.file_buffer.parent.buffer, search);
     }
 
-    if model.preview.path.as_ref().is_some_and(|p| p.is_dir()) {
-        set_styles(&mut model.preview.buffer, search);
+    if model
+        .file_buffer
+        .preview
+        .path
+        .as_ref()
+        .is_some_and(|p| p.is_dir())
+    {
+        set_styles(&mut model.file_buffer.preview.buffer, search);
     }
 
-    set_styles(&mut model.current.buffer, search);
+    set_styles(&mut model.file_buffer.current.buffer, search);
 }
 
 pub fn clear(model: &mut Model) {
-    for line in &mut model.parent.buffer.lines {
+    for line in &mut model.file_buffer.parent.buffer.lines {
         line.search = None;
     }
-    for line in &mut model.preview.buffer.lines {
+    for line in &mut model.file_buffer.preview.buffer.lines {
         line.search = None;
     }
-    for line in &mut model.current.buffer.lines {
+    for line in &mut model.file_buffer.current.buffer.lines {
         line.search = None;
     }
 }

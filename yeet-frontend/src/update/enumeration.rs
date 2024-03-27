@@ -21,7 +21,7 @@ pub fn changed(
     let qfix = model.qfix.clone();
     let search = model.search.clone();
 
-    let directories = model.get_mut_directories();
+    let directories = model.file_buffer.get_mut_directories();
     if let Some((path, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
@@ -52,9 +52,9 @@ pub fn changed(
     tracing::trace!(
         "changed enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}, preview is {:?}",
         path,
-        model.current.state,
-        model.parent.state,
-        model.preview.state
+        model.file_buffer.current.state,
+        model.file_buffer.parent.state,
+        model.file_buffer.preview.state
     );
 }
 
@@ -69,7 +69,7 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
     let history = model.history.clone();
     let search = model.search.clone();
 
-    let directories = model.get_mut_directories();
+    let directories = model.file_buffer.get_mut_directories();
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         update::update(
             &mode,
@@ -90,8 +90,8 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
     tracing::trace!(
         "finished enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}, preview is {:?}",
         path,
-        model.current.state,
-        model.parent.state,
-        model.preview.state
+        model.file_buffer.current.state,
+        model.file_buffer.parent.state,
+        model.file_buffer.preview.state
     );
 }

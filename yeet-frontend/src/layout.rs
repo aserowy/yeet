@@ -2,6 +2,7 @@ use ratatui::prelude::{Constraint, Direction, Layout, Rect};
 
 #[derive(Clone, Debug)]
 pub struct AppLayout {
+    // TODO: split layout to enable file buffer related layout
     pub parent: Rect,
     pub current: Rect,
     pub preview: Rect,
@@ -32,6 +33,12 @@ impl AppLayout {
             statusline: main[1],
             commandline: main[2],
         }
+    }
+}
+
+impl Default for AppLayout {
+    fn default() -> Self {
+        AppLayout::new(Rect::default(), 0)
     }
 }
 

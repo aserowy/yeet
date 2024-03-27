@@ -132,9 +132,9 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
 #[tracing::instrument(skip(model))]
 fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     let current = vec![
-        Some(model.current.path.clone()),
-        model.preview.path.clone(),
-        model.parent.path.clone(),
+        Some(model.file_buffer.current.path.clone()),
+        model.file_buffer.preview.path.clone(),
+        model.file_buffer.parent.path.clone(),
     ]
     .into_iter()
     .flatten()
@@ -165,6 +165,7 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
 #[tracing::instrument(skip(model, actions))]
 fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
     let buffer_loading = model
+        .file_buffer
         .get_mut_directories()
         .iter()
         .any(|(_, state, _)| state == &&DirectoryBufferState::Loading);

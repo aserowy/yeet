@@ -18,10 +18,10 @@ pub mod mark;
 pub mod qfix;
 pub mod register;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub current: DirectoryBuffer<PathBuf>,
+    pub file_buffer: FileBuffer,
     pub history: History,
     pub junk: JunkYard,
     pub key_sequence: String,
@@ -29,15 +29,20 @@ pub struct Model {
     pub marks: Marks,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
-    pub parent: DirectoryBuffer<Option<PathBuf>>,
-    pub preview: DirectoryBuffer<Option<PathBuf>>,
     pub qfix: QuickFix,
     pub search: Option<SearchModel>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
 }
 
-impl Model {
+#[derive(Debug)]
+pub struct FileBuffer {
+    pub current: DirectoryBuffer<PathBuf>,
+    pub parent: DirectoryBuffer<Option<PathBuf>>,
+    pub preview: DirectoryBuffer<Option<PathBuf>>,
+}
+
+impl FileBuffer {
     pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut DirectoryBufferState, &mut Buffer)> {
         vec![
             self.current.as_content_ref(),
@@ -50,10 +55,9 @@ impl Model {
     }
 }
 
-impl Default for Model {
+impl Default for FileBuffer {
     fn default() -> Self {
         Self {
-            commandline: CommandLine::default(),
             current: DirectoryBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
@@ -67,13 +71,6 @@ impl Default for Model {
                 },
                 ..Default::default()
             },
-            history: History::default(),
-            junk: JunkYard::default(),
-            key_sequence: String::new(),
-            layout: AppLayout::new(Rect::default(), 0),
-            marks: Marks::default(),
-            mode: Mode::default(),
-            mode_before: None,
             parent: DirectoryBuffer::<Option<PathBuf>> {
                 buffer: Buffer {
                     cursor: Some(Cursor {
@@ -87,10 +84,6 @@ impl Default for Model {
                 ..Default::default()
             },
             preview: DirectoryBuffer::<Option<PathBuf>>::default(),
-            qfix: QuickFix::default(),
-            search: None,
-            settings: Settings::default(),
-            watches: Vec::new(),
         }
     }
 }

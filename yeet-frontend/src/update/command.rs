@@ -119,7 +119,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("cp", target) => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.preview.path {
+            if let Some(path) = &model.file_buffer.preview.path {
                 tracing::info!("copying path: {:?}", path);
                 let target = match get_target_file_path(&model.marks, target, path) {
                     Ok(it) => it,
@@ -135,7 +135,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.preview.path {
+            if let Some(path) = &model.file_buffer.preview.path {
                 tracing::info!("deleting path: {:?}", path);
                 actions.push(Action::Task(Task::DeletePath(path.clone())));
             }
@@ -153,10 +153,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             ]
         }
         ("e!", "") => {
-            let navigation = if let Some(path) = &model.preview.path {
+            let navigation = if let Some(path) = &model.file_buffer.preview.path {
                 Message::NavigateToPathAsPreview(path.to_path_buf())
             } else {
-                Message::NavigateToPath(model.current.path.clone())
+                Message::NavigateToPath(model.file_buffer.current.path.clone())
             };
 
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
@@ -181,7 +181,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("mv", target) => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.preview.path {
+            if let Some(path) = &model.file_buffer.preview.path {
                 tracing::info!("renaming path: {:?}", path);
                 let target = match get_target_file_path(&model.marks, target, path) {
                     Ok(it) => it,
