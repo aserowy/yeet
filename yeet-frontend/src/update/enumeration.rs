@@ -15,11 +15,6 @@ pub fn changed(
     selection: &Option<String>,
 ) {
     // TODO: handle unsaved changes
-    // FIX: anti pattern...
-    let marks = model.marks.clone();
-    let mode = model.mode.clone();
-    let qfix = model.qfix.clone();
-    let search = model.search.clone();
 
     let directories = model.file_buffer.get_mut_directories();
     if let Some((path, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
@@ -30,18 +25,23 @@ pub fn changed(
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = bufferline::from_enumeration(cntnt, knd);
-                mark::set_sign_if_marked(&marks, &mut line, &path.join(cntnt));
-                qfix::set_sign_if_qfix(&qfix, &mut line, &path.join(cntnt));
+                mark::set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
+                qfix::set_sign_if_qfix(&model.qfix, &mut line, &path.join(cntnt));
 
                 line
             })
             .collect();
 
-        update::update(&mode, &None, buffer, &BufferMessage::SetContent(content));
+        update::update(
+            &model.mode,
+            &None,
+            buffer,
+            &BufferMessage::SetContent(content),
+        );
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if cursor::set_cursor_index(&mode, &search, buffer, selection) {
+                if cursor::set_cursor_index(&model.mode, &model.search, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                     *state = DirectoryBufferState::PartiallyLoaded;
                 }
@@ -64,23 +64,24 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
         return;
     }
 
-    // FIX: anti pattern...
-    let mode = model.mode.clone();
-    let history = model.history.clone();
-    let search = model.search.clone();
-
     let directories = model.file_buffer.get_mut_directories();
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         update::update(
-            &mode,
-            &search,
+            &model.mode,
+            &model.search,
             buffer,
             &BufferMessage::SortContent(super::SORT),
         );
 
         if let Some(selection) = selection {
-            if !cursor::set_cursor_index(&mode, &search, buffer, selection) {
-                cursor::set_cursor_index_with_history(&mode, &history, &search, buffer, path);
+            if !cursor::set_cursor_index(&model.mode, &model.search, buffer, selection) {
+                cursor::set_cursor_index_with_history(
+                    &model.mode,
+                    &model.history,
+                    &model.search,
+                    buffer,
+                    path,
+                );
             }
         }
 

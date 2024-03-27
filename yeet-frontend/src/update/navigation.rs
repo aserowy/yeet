@@ -124,7 +124,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
         None => current::selection(model),
     };
 
-    if let Some(preview) = preview.clone() {
+    if let Some(preview) = preview {
         model.file_buffer.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
