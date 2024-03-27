@@ -54,6 +54,8 @@
             );
             nativeBuildInputs = [
               rust-stable
+              pkgs.asciinema
+              pkgs.asciinema-agg
               pkgs.gh
               pkgs.nil
               pkgs.nixpkgs-fmt
