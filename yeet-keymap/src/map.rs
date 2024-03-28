@@ -634,6 +634,27 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::Enter, vec![])],
+                    Binding {
+                        kind: BindingKind::Modification(TextModification::InsertLineBreak),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::Up, vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::Up),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::Down, vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::Down),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::Left, vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::Left),

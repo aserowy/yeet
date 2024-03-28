@@ -190,6 +190,48 @@ pub fn update(
                 None
             }
         }
+        TextModification::InsertLineBreak => {
+            let line = get_line_or_create_on_empty(model);
+
+            if let Some((cursor, line)) = line {
+                let horizontal = get_cursor_index(cursor, line);
+
+                let renamed = (line.content[..horizontal]).to_string();
+                let new = (line.content[horizontal..]).to_string();
+
+                let mut changed = Vec::new();
+                if line.content != renamed {
+                    changed.push(BufferChanged::Content(
+                        cursor.vertical_index,
+                        line.content.to_string(),
+                        renamed.to_string(),
+                    ));
+                    line.content = renamed;
+                }
+
+                cursor.horizontal_index = CursorPosition::Absolute {
+                    current: 0,
+                    expanded: 0,
+                };
+
+                let vertical = cursor.vertical_index + 1;
+                cursor.vertical_index = vertical;
+
+                model.lines.insert(
+                    vertical,
+                    BufferLine {
+                        content: new.clone(),
+                        ..Default::default()
+                    },
+                );
+
+                changed.push(BufferChanged::LineAdded(vertical, new));
+
+                Some(changed)
+            } else {
+                None
+            }
+        }
     }
 }
 

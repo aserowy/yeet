@@ -22,6 +22,7 @@ pub enum TextModification {
     DeleteLine,
     DeleteMotion(usize, CursorDirection),
     Insert(String),
+    InsertLineBreak,
     InsertNewLine(LineDirection),
 }
 
