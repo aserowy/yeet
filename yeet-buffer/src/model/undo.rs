@@ -259,7 +259,7 @@ pub fn consolidate(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
 
 mod test {
     #[test]
-    fn test_get_uncommited_changes() {
+    fn get_uncommited_changes() {
         use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
@@ -332,7 +332,7 @@ mod test {
     }
 
     #[test]
-    fn test_consolidate() {
+    fn consolidate() {
         use crate::model::undo::BufferChanged;
 
         let changes = vec![

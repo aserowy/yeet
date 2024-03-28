@@ -66,7 +66,7 @@ pub fn update(
 
             None
         }
-        BufferMessage::SaveBuffer(_) => {
+        BufferMessage::SaveBuffer => {
             let changes = model.undo.save();
             Some(BufferResult::Changes(changes))
         }

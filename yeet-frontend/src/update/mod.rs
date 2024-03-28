@@ -335,7 +335,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 actions
             }
         },
-        BufferMessage::SaveBuffer(_) => current::save_changes(model),
+        BufferMessage::SaveBuffer => current::save_changes(model),
 
         BufferMessage::RemoveLine(_)
         | BufferMessage::ResetCursor

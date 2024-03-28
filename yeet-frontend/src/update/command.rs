@@ -202,10 +202,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
-            Message::Buffer(BufferMessage::SaveBuffer(None)),
+            Message::Buffer(BufferMessage::SaveBuffer),
         ])],
         ("wq", "") => vec![Action::EmitMessages(vec![
-            Message::Buffer(BufferMessage::SaveBuffer(None)),
+            Message::Buffer(BufferMessage::SaveBuffer),
             Message::Quit,
         ])],
         (cmd, args) => {

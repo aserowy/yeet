@@ -46,11 +46,21 @@ pub fn open(model: &Model) -> Vec<Action> {
 }
 
 pub fn save_changes(model: &mut Model) -> Vec<Action> {
+    let mut content: Vec<_> = model.file_buffer.current.buffer.lines.drain(..).collect();
+    content.retain(|line| !line.content.is_empty());
+
+    update::update(
+        &model.mode,
+        &model.search,
+        &mut model.file_buffer.current.buffer,
+        &BufferMessage::SetContent(content),
+    );
+
     if let Some(result) = update::update(
         &model.mode,
         &model.search,
         &mut model.file_buffer.current.buffer,
-        &BufferMessage::SaveBuffer(None),
+        &BufferMessage::SaveBuffer,
     ) {
         let path = &model.file_buffer.current.path;
 
@@ -60,7 +70,9 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
             for modification in undo::consolidate(&modifications) {
                 match modification {
                     BufferChanged::LineAdded(_, name) => {
-                        actions.push(Action::Task(Task::AddPath(path.join(name))))
+                        if !name.is_empty() {
+                            actions.push(Action::Task(Task::AddPath(path.join(name))))
+                        }
                     }
                     BufferChanged::LineRemoved(_, name) => {
                         trashes.push(path.join(name));

@@ -11,7 +11,7 @@ pub enum BufferMessage {
     MoveViewPort(ViewPortDirection),
     RemoveLine(usize),
     ResetCursor,
-    SaveBuffer(Option<usize>),
+    SaveBuffer,
     SetContent(Vec<BufferLine>),
     SetCursorToLineContent(String),
     SortContent(fn(&BufferLine, &BufferLine) -> Ordering),
