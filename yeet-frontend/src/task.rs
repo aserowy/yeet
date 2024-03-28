@@ -53,9 +53,20 @@ impl TaskManager {
     }
 
     pub fn abort(&mut self, task: &Task) {
-        if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == task) {
+        if let Some(index) = self.get_abort_position(task) {
             let (_, abort_handle) = self.abort_handles.remove(index);
             abort_handle.abort();
+        }
+    }
+
+    fn get_abort_position(&self, task: &Task) -> Option<usize> {
+        match task {
+            Task::EnumerateDirectory(path, _) => self
+                .abort_handles
+                .iter()
+                .position(|(t, _)| matches!(t, Task::EnumerateDirectory(p, _) if p == path)),
+
+            task => self.abort_handles.iter().position(|(t, _)| t == task),
         }
     }
 

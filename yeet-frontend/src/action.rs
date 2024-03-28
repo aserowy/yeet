@@ -135,7 +135,6 @@ async fn execute(
                     continue;
                 }
 
-                // TODO: abort enumeration without checking selection
                 emitter.abort(&Task::EnumerateDirectory(path.clone(), None));
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {
