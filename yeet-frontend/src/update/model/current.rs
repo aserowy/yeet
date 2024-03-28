@@ -46,6 +46,8 @@ pub fn open(model: &Model) -> Vec<Action> {
 }
 
 pub fn save_changes(model: &mut Model) -> Vec<Action> {
+    let selection = selected_bufferline(model).map(|line| line.content.clone());
+
     let mut content: Vec<_> = model.file_buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
@@ -55,6 +57,15 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         &mut model.file_buffer.current.buffer,
         &BufferMessage::SetContent(content),
     );
+
+    if let Some(selection) = selection {
+        update::update(
+            &model.mode,
+            &model.search,
+            &mut model.file_buffer.current.buffer,
+            &BufferMessage::SetCursorToLineContent(selection),
+        );
+    }
 
     if let Some(result) = update::update(
         &model.mode,
@@ -77,10 +88,14 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
                     BufferChanged::LineRemoved(_, name) => {
                         trashes.push(path.join(name));
                     }
-                    // TODO: new_name is empty, add to consolidated Trash operation
-                    BufferChanged::Content(_, old_name, new_name) => actions.push(Action::Task(
-                        Task::RenamePath(path.join(old_name), path.join(new_name)),
-                    )),
+                    BufferChanged::Content(_, old_name, new_name) => {
+                        let task = if new_name.is_empty() {
+                            Task::DeletePath(path.join(old_name))
+                        } else {
+                            Task::RenamePath(path.join(old_name), path.join(new_name))
+                        };
+                        actions.push(Action::Task(task));
+                    }
                 }
             }
 
