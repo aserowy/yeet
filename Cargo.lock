@@ -1445,6 +1445,7 @@ name = "yeet-buffer"
 version = "0.0.1"
 dependencies = [
  "ratatui",
+ "tracing",
 ]
 
 [[package]]

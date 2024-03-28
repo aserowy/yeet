@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 ratatui = "0.26.1"
+tracing = "0.1.40"

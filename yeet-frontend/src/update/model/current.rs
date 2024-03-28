@@ -45,6 +45,7 @@ pub fn open(model: &Model) -> Vec<Action> {
     }
 }
 
+#[tracing::instrument(skip(model))]
 pub fn save_changes(model: &mut Model) -> Vec<Action> {
     let selection = selected_bufferline(model).map(|line| line.content.clone());
 

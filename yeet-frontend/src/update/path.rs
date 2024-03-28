@@ -49,7 +49,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
             continue;
         }
 
-        let selection = cursor::get_selection(buffer);
+        let mut selection = cursor::get_selection(buffer);
 
         let indexes = buffer
             .lines
@@ -77,6 +77,14 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
                 } else {
                     buffer.lines.push(line);
                 }
+
+                selection = selection.map(|sl| {
+                    if sl.starts_with(&[basename, "/"].concat()) {
+                        basename.to_owned()
+                    } else {
+                        sl
+                    }
+                });
             }
         }
 

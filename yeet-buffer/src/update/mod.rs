@@ -13,6 +13,8 @@ pub fn update(
     model: &mut Buffer,
     message: &BufferMessage,
 ) -> Option<BufferResult> {
+    tracing::debug!("handling buffer message: {:?}", message);
+
     let result = match message {
         // TODO: repeat actions by count when switching from insert to normal
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
@@ -71,6 +73,7 @@ pub fn update(
             Some(BufferResult::Changes(changes))
         }
         BufferMessage::SetContent(content) => {
+            // TODO: optional selection?
             model.lines = content.to_vec();
             cursor::validate(mode, model);
             None
