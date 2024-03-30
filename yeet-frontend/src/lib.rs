@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use action::{Action, ActionResult};
 use layout::CommandLineLayout;
-use model::{mark, qfix, register, DirectoryBufferState};
+use model::{junkyard, mark, qfix, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
 use yeet_buffer::{message::BufferMessage, model::Mode};
@@ -47,7 +47,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         ..Default::default()
     };
 
-    register::file::init(&mut model.junk, &mut emitter).await?;
+    junkyard::init(&mut model.junk, &mut emitter).await?;
 
     if history::cache::load(&mut model.history).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![

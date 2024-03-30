@@ -239,12 +239,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
             &model.files.current.path,
         );
 
-        model.files.parent.path = model
-            .files
-            .current
-            .path
-            .parent()
-            .map(|p| p.to_path_buf());
+        model.files.parent.path = model.files.current.path.parent().map(|p| p.to_path_buf());
         update::update(
             &model.mode,
             &model.search,

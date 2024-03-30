@@ -69,12 +69,7 @@ fn get_position_content(model: &Model) -> Line {
 }
 
 fn get_changes_content(model: &Model) -> Line {
-    let modifications = model
-        .files
-        .current
-        .buffer
-        .undo
-        .get_uncommited_changes();
+    let modifications = model.files.current.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

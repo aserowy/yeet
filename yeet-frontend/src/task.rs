@@ -11,9 +11,9 @@ use crate::{
     error::AppError,
     model::{
         history::{self, History},
+        junkyard::{self, FileEntry},
         mark::{self, Marks},
         qfix::{self, QuickFix},
-        register::{self, FileEntry},
     },
 };
 
@@ -170,7 +170,7 @@ impl TaskManager {
                 Ok(())
             }),
             Task::DeleteJunkYardEntry(entry) => self.tasks.spawn(async move {
-                if let Err(error) = register::file::delete(entry).await {
+                if let Err(error) = junkyard::delete(entry).await {
                     tracing::error!("deleting junk yard entry failed: {:?}", error);
                 }
                 Ok(())
@@ -305,7 +305,7 @@ impl TaskManager {
                 Ok(())
             }),
             Task::RestorePath(entry, path) => self.tasks.spawn(async move {
-                register::file::restore(entry, path)?;
+                junkyard::restore(entry, path)?;
                 Ok(())
             }),
             Task::SaveHistory(history) => {
@@ -346,7 +346,7 @@ impl TaskManager {
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = register::file::cache_and_compress(entry).await {
+                    if let Err(error) = junkyard::cache_and_compress(entry).await {
                         emit_error(&sender, error).await;
                     }
 
@@ -356,7 +356,7 @@ impl TaskManager {
             Task::YankPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = register::file::compress(entry).await {
+                    if let Err(error) = junkyard::compress(entry).await {
                         emit_error(&sender, error).await;
                     }
 

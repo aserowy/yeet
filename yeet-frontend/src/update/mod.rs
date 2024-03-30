@@ -175,17 +175,9 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
 }
 
 fn settings(model: &mut Model) {
-    model
-        .files
-        .current
-        .buffer
-        .set(&model.settings.current);
+    model.files.current.buffer.set(&model.settings.current);
     model.files.parent.buffer.set(&model.settings.parent);
-    model
-        .files
-        .preview
-        .buffer
-        .set(&model.settings.preview);
+    model.files.preview.buffer.set(&model.settings.preview);
 
     if model.settings.show_mark_signs {
         remove_hidden_sign_on_all_buffer(model, &MARK_SIGN_ID);

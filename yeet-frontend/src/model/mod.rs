@@ -11,9 +11,10 @@ use crate::{
     settings::Settings,
 };
 
-use self::{history::History, mark::Marks, qfix::QuickFix, register::JunkYard};
+use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix};
 
 pub mod history;
+pub mod junkyard;
 pub mod mark;
 pub mod qfix;
 pub mod register;

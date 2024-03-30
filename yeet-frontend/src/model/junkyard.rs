@@ -11,7 +11,51 @@ use tokio::fs;
 
 use crate::{error::AppError, event::Emitter, task::Task};
 
-use super::{FileEntry, JunkYard, RegisterStatus, RegisterType, Transaction};
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct JunkYard {
+    current: RegisterType,
+    pub path: PathBuf,
+    trashed: Vec<Transaction>,
+    yanked: Option<Transaction>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum RegisterType {
+    _Custom(String),
+    Trash,
+    #[default]
+    Yank,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Transaction {
+    pub id: String,
+    pub entries: Vec<FileEntry>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FileEntry {
+    pub id: String,
+    pub cache: PathBuf,
+    pub status: RegisterStatus,
+    pub target: PathBuf,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum RegisterStatus {
+    #[default]
+    Processing,
+    Ready,
+}
+
+pub fn get_junkyard_path() -> Result<PathBuf, AppError> {
+    let register_path = match dirs::cache_dir() {
+        Some(cache_dir) => cache_dir.join("yeet/register/"),
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    Ok(register_path)
+}
 
 impl JunkYard {
     pub fn add_or_update(&mut self, path: &Path) -> Option<Transaction> {
@@ -320,7 +364,7 @@ async fn get_junk_compress_path() -> Result<PathBuf, AppError> {
 }
 
 async fn get_junk_path() -> Result<PathBuf, AppError> {
-    let junk_path = super::get_junkyard_path()?;
+    let junk_path = get_junkyard_path()?;
     if !junk_path.exists() {
         fs::create_dir_all(&junk_path).await?;
     }
