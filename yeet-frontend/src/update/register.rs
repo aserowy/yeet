@@ -23,7 +23,7 @@ pub fn paste(model: &mut Model, register: &char) -> Vec<Action> {
         for entry in transaction.entries {
             actions.push(Action::Task(Task::RestorePath(
                 entry,
-                model.file_buffer.current.path.clone(),
+                model.files.current.path.clone(),
             )));
         }
         actions
@@ -33,7 +33,7 @@ pub fn paste(model: &mut Model, register: &char) -> Vec<Action> {
 }
 
 pub fn yank(model: &mut Model, repeat: &usize) -> Vec<Action> {
-    let current_buffer = &model.file_buffer.current.buffer;
+    let current_buffer = &model.files.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
     } else if let Some(cursor) = &current_buffer.cursor {
@@ -41,7 +41,7 @@ pub fn yank(model: &mut Model, repeat: &usize) -> Vec<Action> {
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
             if let Some(line) = current_buffer.lines.get(line_index) {
-                let target = model.file_buffer.current.path.join(&line.content);
+                let target = model.files.current.path.join(&line.content);
                 paths.push(target);
             }
         }

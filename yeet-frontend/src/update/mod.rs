@@ -47,9 +47,9 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             enumeration::changed(model, path, contents, selection);
 
             let mut actions = Vec::new();
-            if model.file_buffer.current.state != DirectoryBufferState::Loading {
+            if model.files.current.state != DirectoryBufferState::Loading {
                 if let Some(path) = preview::selected_path(model) {
-                    model.file_buffer.preview.state = DirectoryBufferState::Loading;
+                    model.files.preview.state = DirectoryBufferState::Loading;
                     preview::viewport(model);
 
                     let selection = model.history.get_selection(&path).map(|s| s.to_owned());
@@ -65,7 +65,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             update::update(
                 &model.mode,
                 &model.search,
-                &mut model.file_buffer.parent.buffer,
+                &mut model.files.parent.buffer,
                 &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
             );
 
@@ -176,13 +176,13 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
 
 fn settings(model: &mut Model) {
     model
-        .file_buffer
+        .files
         .current
         .buffer
         .set(&model.settings.current);
-    model.file_buffer.parent.buffer.set(&model.settings.parent);
+    model.files.parent.buffer.set(&model.settings.parent);
     model
-        .file_buffer
+        .files
         .preview
         .buffer
         .set(&model.settings.preview);
@@ -201,9 +201,9 @@ fn settings(model: &mut Model) {
 }
 
 fn add_hidden_sign_on_all_buffer(model: &mut Model, id: SignIdentifier) {
-    add_hidden_sign(&mut model.file_buffer.current.buffer, id);
-    add_hidden_sign(&mut model.file_buffer.parent.buffer, id);
-    add_hidden_sign(&mut model.file_buffer.preview.buffer, id);
+    add_hidden_sign(&mut model.files.current.buffer, id);
+    add_hidden_sign(&mut model.files.parent.buffer, id);
+    add_hidden_sign(&mut model.files.preview.buffer, id);
 }
 
 fn add_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
@@ -211,9 +211,9 @@ fn add_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
 }
 
 fn remove_hidden_sign_on_all_buffer(model: &mut Model, id: &SignIdentifier) {
-    remove_hidden_sign(&mut model.file_buffer.current.buffer, id);
-    remove_hidden_sign(&mut model.file_buffer.parent.buffer, id);
-    remove_hidden_sign(&mut model.file_buffer.preview.buffer, id);
+    remove_hidden_sign(&mut model.files.current.buffer, id);
+    remove_hidden_sign(&mut model.files.parent.buffer, id);
+    remove_hidden_sign(&mut model.files.preview.buffer, id);
 }
 
 fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
@@ -242,7 +242,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    update::unfocus(&mut model.file_buffer.current.buffer);
+                    update::unfocus(&mut model.files.current.buffer);
                     vec![]
                 }
             });
@@ -256,19 +256,19 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                     commandline::update(model, Some(msg))
                 }
                 Mode::Insert => {
-                    update::focus(&mut model.file_buffer.current.buffer);
+                    update::focus(&mut model.files.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    update::focus(&mut model.file_buffer.current.buffer);
+                    update::focus(&mut model.files.current.buffer);
                     current::update(model, Some(msg));
                     current::save_changes(model)
                 }
                 Mode::Normal => {
-                    update::focus(&mut model.file_buffer.current.buffer);
+                    update::focus(&mut model.files.current.buffer);
                     current::update(model, Some(msg));
                     vec![]
                 }

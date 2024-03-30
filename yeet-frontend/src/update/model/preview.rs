@@ -12,18 +12,18 @@ use super::current;
 #[tracing::instrument(skip(model))]
 pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
     let new = current::selection(model);
-    if model.file_buffer.preview.path == new {
+    if model.files.preview.path == new {
         return None;
     }
 
-    let old = model.file_buffer.preview.path.take();
-    model.file_buffer.preview.path = new.clone();
-    model.file_buffer.preview.buffer.lines.clear();
+    let old = model.files.preview.path.take();
+    model.files.preview.path = new.clone();
+    model.files.preview.buffer.lines.clear();
 
     tracing::trace!(
         "switching preview path: {:?} -> {:?}",
         old,
-        model.file_buffer.preview.path
+        model.files.preview.path
     );
 
     new
@@ -31,7 +31,7 @@ pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
 
 #[tracing::instrument(skip(model, content))]
 pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
-    if Some(path) == model.file_buffer.preview.path.as_ref() {
+    if Some(path) == model.files.preview.path.as_ref() {
         tracing::trace!("updating preview buffer: {:?}", path);
 
         let content = content
@@ -42,11 +42,11 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             })
             .collect();
 
-        model.file_buffer.preview.state = DirectoryBufferState::Ready;
+        model.files.preview.state = DirectoryBufferState::Ready;
         update::update(
             &model.mode,
             &model.search,
-            &mut model.file_buffer.preview.buffer,
+            &mut model.files.preview.buffer,
             &BufferMessage::SetContent(content),
         );
         viewport(model);
@@ -54,12 +54,12 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
 }
 
 pub fn viewport(model: &mut Model) {
-    let target = match &model.file_buffer.preview.path {
+    let target = match &model.files.preview.path {
         Some(it) => it,
         None => return,
     };
 
-    let buffer = &mut model.file_buffer.preview.buffer;
+    let buffer = &mut model.files.preview.buffer;
     let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);

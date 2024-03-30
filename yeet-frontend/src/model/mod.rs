@@ -21,7 +21,7 @@ pub mod register;
 #[derive(Debug, Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub file_buffer: FileBuffer,
+    pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
     pub key_sequence: String,
@@ -36,13 +36,13 @@ pub struct Model {
 }
 
 #[derive(Debug)]
-pub struct FileBuffer {
+pub struct FileWindow {
     pub current: DirectoryBuffer<PathBuf>,
     pub parent: DirectoryBuffer<Option<PathBuf>>,
     pub preview: DirectoryBuffer<Option<PathBuf>>,
 }
 
-impl FileBuffer {
+impl FileWindow {
     pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut DirectoryBufferState, &mut Buffer)> {
         vec![
             self.current.as_content_ref(),
@@ -55,7 +55,7 @@ impl FileBuffer {
     }
 }
 
-impl Default for FileBuffer {
+impl Default for FileWindow {
     fn default() -> Self {
         Self {
             current: DirectoryBuffer {

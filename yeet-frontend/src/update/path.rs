@@ -26,21 +26,21 @@ pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
 
 fn add_paths(model: &mut Model, paths: &[PathBuf]) {
     let mut buffer = vec![(
-        model.file_buffer.current.path.as_path(),
-        &mut model.file_buffer.current.buffer,
+        model.files.current.path.as_path(),
+        &mut model.files.current.buffer,
         model.mode == Mode::Navigation,
     )];
 
-    if let Some(preview) = &model.file_buffer.preview.path {
+    if let Some(preview) = &model.files.preview.path {
         buffer.push((
             preview,
-            &mut model.file_buffer.preview.buffer,
+            &mut model.files.preview.buffer,
             preview.is_dir(),
         ));
     }
 
-    if let Some(parent) = &model.file_buffer.parent.path {
-        buffer.push((parent, &mut model.file_buffer.parent.buffer, true));
+    if let Some(parent) = &model.files.parent.path {
+        buffer.push((parent, &mut model.files.parent.buffer, true));
     }
 
     for (path, buffer, sort) in buffer {
@@ -125,16 +125,16 @@ pub fn remove(model: &mut Model, path: &Path) -> Vec<Action> {
 
 fn remove_path(model: &mut Model, path: &Path) {
     let mut buffer = vec![(
-        model.file_buffer.current.path.as_path(),
-        &mut model.file_buffer.current.buffer,
+        model.files.current.path.as_path(),
+        &mut model.files.current.buffer,
     )];
 
-    if let Some(preview) = &model.file_buffer.preview.path {
-        buffer.push((preview, &mut model.file_buffer.preview.buffer));
+    if let Some(preview) = &model.files.preview.path {
+        buffer.push((preview, &mut model.files.preview.buffer));
     }
 
-    if let Some(parent) = &model.file_buffer.parent.path {
-        buffer.push((parent, &mut model.file_buffer.parent.buffer));
+    if let Some(parent) = &model.files.parent.path {
+        buffer.push((parent, &mut model.files.parent.buffer));
     }
 
     if let Some(parent) = path.parent() {

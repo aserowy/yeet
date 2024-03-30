@@ -14,19 +14,19 @@ pub fn view(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErro
 
         view::view(
             &model.mode,
-            &model.file_buffer.current.buffer,
+            &model.files.current.buffer,
             frame,
             layout.current,
         );
         view::view(
             &model.mode,
-            &model.file_buffer.parent.buffer,
+            &model.files.parent.buffer,
             frame,
             layout.parent,
         );
         view::view(
             &model.mode,
-            &model.file_buffer.preview.buffer,
+            &model.files.preview.buffer,
             frame,
             layout.preview,
         );

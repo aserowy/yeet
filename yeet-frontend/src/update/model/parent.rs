@@ -7,18 +7,18 @@ use yeet_buffer::{
 use crate::model::Model;
 
 pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
-    let buffer = &mut model.file_buffer.parent.buffer;
+    let buffer = &mut model.files.parent.buffer;
     let layout = &model.layout.parent;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
-    match &model.file_buffer.parent.path {
+    match &model.files.parent.path {
         Some(_) => {
             if let Some(message) = message {
                 update::update(&model.mode, &model.search, buffer, message);
             }
 
-            let current_filename = match model.file_buffer.current.path.file_name() {
+            let current_filename = match model.files.current.path.file_name() {
                 Some(content) => content.to_str(),
                 None => None,
             };
