@@ -291,10 +291,13 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             }
             Mode::Navigation => Vec::new(),
         },
-        BufferMessage::MoveCursor(_, mtn) => match model.mode {
+        BufferMessage::MoveCursor(_, mtn) => match &model.mode {
             Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if matches!(mtn, &CursorDirection::Search(_)) {
+                    let search = model.search.as_ref().map(|srch| srch.last.to_string());
+                    model.register.searched = search;
+
                     search::search(model);
                 }
 

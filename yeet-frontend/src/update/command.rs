@@ -18,15 +18,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     ));
     let change_mode_action = Action::EmitMessages(vec![change_mode_message.clone()]);
 
-    let cmd = match cmd.split_once(' ') {
+    let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),
     };
 
-    tracing::debug!("executing command: {:?}", cmd);
+    tracing::debug!("executing command: {:?}", cmd_with_args);
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
-    let mut actions = match cmd {
+    let mut actions = match cmd_with_args {
         ("cdo", command) => {
             let mut commands = Vec::new();
             for path in &model.qfix.entries {
@@ -229,6 +229,9 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     };
 
     actions.push(Action::SkipRender);
+
+    // TODO: add command history and show previous command not current (this enables g: as well)
+    model.register.command = Some(cmd.to_string());
 
     actions
 }

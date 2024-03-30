@@ -143,10 +143,6 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
             );
 
             let messages = if is_search {
-                if let Some(cmd) = buffer.lines.last() {
-                    model.register.searched = Some(cmd.content.clone());
-                }
-
                 vec![
                     Message::Buffer(BufferMessage::ChangeMode(
                         model.mode.clone(),
@@ -155,9 +151,6 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                     Message::Buffer(BufferMessage::MoveCursor(1, CursorDirection::Search(true))),
                 ]
             } else if let Some(cmd) = buffer.lines.last() {
-                // TODO: add command history and show previous command not current (this enables g: as well)
-                model.register.command = Some(cmd.content.clone());
-
                 vec![Message::ExecuteCommandString(cmd.content.clone())]
             } else {
                 vec![Message::Buffer(BufferMessage::ChangeMode(
