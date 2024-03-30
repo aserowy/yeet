@@ -18,12 +18,12 @@ mod bufferline;
 mod command;
 mod cursor;
 mod enumeration;
+mod junkyard;
 mod mark;
 pub mod model;
 mod navigation;
 mod path;
 mod qfix;
-mod register;
 mod search;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
@@ -140,7 +140,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),
-        Message::PasteFromJunkYard(register) => register::paste(model, register),
+        Message::PasteFromJunkYard(register) => junkyard::paste(model, register),
         Message::PathRemoved(path) => {
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);
@@ -150,7 +150,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::PathsAdded(paths) => {
             let mut actions = path::add(model, paths);
-            actions.extend(register::add(model, paths));
+            actions.extend(junkyard::add(model, paths));
 
             actions
         }
@@ -170,7 +170,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             Vec::new()
         }
         Message::Quit => vec![Action::Quit(None)],
-        Message::YankToJunkYard(repeat) => register::yank(model, repeat),
+        Message::YankToJunkYard(repeat) => junkyard::yank(model, repeat),
     }
 }
 

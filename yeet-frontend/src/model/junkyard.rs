@@ -13,14 +13,14 @@ use crate::{error::AppError, event::Emitter, task::Task};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct JunkYard {
-    current: RegisterType,
+    current: FileEntryType,
     pub path: PathBuf,
-    trashed: Vec<Transaction>,
-    yanked: Option<Transaction>,
+    trashed: Vec<FileTransaction>,
+    yanked: Option<FileTransaction>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum RegisterType {
+pub enum FileEntryType {
     _Custom(String),
     Trash,
     #[default]
@@ -28,7 +28,7 @@ pub enum RegisterType {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Transaction {
+pub struct FileTransaction {
     pub id: String,
     pub entries: Vec<FileEntry>,
 }
@@ -37,28 +37,28 @@ pub struct Transaction {
 pub struct FileEntry {
     pub id: String,
     pub cache: PathBuf,
-    pub status: RegisterStatus,
+    pub status: FileEntryStatus,
     pub target: PathBuf,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum RegisterStatus {
+pub enum FileEntryStatus {
     #[default]
     Processing,
     Ready,
 }
 
 pub fn get_junkyard_path() -> Result<PathBuf, AppError> {
-    let register_path = match dirs::cache_dir() {
-        Some(cache_dir) => cache_dir.join("yeet/register/"),
+    let yard_dir = match dirs::cache_dir() {
+        Some(cache_dir) => cache_dir.join("yeet/junkyard/"),
         None => return Err(AppError::LoadHistoryFailed),
     };
 
-    Ok(register_path)
+    Ok(yard_dir)
 }
 
 impl JunkYard {
-    pub fn add_or_update(&mut self, path: &Path) -> Option<Transaction> {
+    pub fn add_or_update(&mut self, path: &Path) -> Option<FileTransaction> {
         if let Some((id, file, target)) = decompose_compression_path(path) {
             if self.yanked.as_ref().is_some_and(|entry| entry.id == id) {
                 if let Some(transaction) = self.yanked.as_mut() {
@@ -68,10 +68,10 @@ impl JunkYard {
                         .find(|entry| entry.id == file);
 
                     if let Some(entry) = entry {
-                        entry.status = RegisterStatus::Ready;
+                        entry.status = FileEntryStatus::Ready;
                     } else {
                         let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
-                        entry.status = RegisterStatus::Ready;
+                        entry.status = FileEntryStatus::Ready;
                         transaction.entries.push(entry);
                     }
                 }
@@ -85,19 +85,19 @@ impl JunkYard {
                     .find(|entry| entry.id == file);
 
                 if let Some(entry) = entry {
-                    entry.status = RegisterStatus::Ready;
+                    entry.status = FileEntryStatus::Ready;
                 } else {
                     let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
-                    entry.status = RegisterStatus::Ready;
+                    entry.status = FileEntryStatus::Ready;
                     transaction.entries.push(entry);
                 }
 
                 None
             } else {
                 let mut entry = FileEntry::from(id.to_string(), &target, &self.path);
-                entry.status = RegisterStatus::Ready;
+                entry.status = FileEntryStatus::Ready;
 
-                self.trashed.push(Transaction {
+                self.trashed.push(FileTransaction {
                     id: id.to_owned(),
                     entries: vec![entry],
                 });
@@ -116,12 +116,12 @@ impl JunkYard {
         }
     }
 
-    pub fn get(&self, junk: &char) -> Option<Transaction> {
+    pub fn get(&self, junk: &char) -> Option<FileTransaction> {
         let transaction = match junk {
             '"' => match self.current {
-                RegisterType::Trash => self.trashed.first().cloned(),
-                RegisterType::Yank => self.yanked.clone(),
-                RegisterType::_Custom(_) => None,
+                FileEntryType::Trash => self.trashed.first().cloned(),
+                FileEntryType::Yank => self.yanked.clone(),
+                FileEntryType::_Custom(_) => None,
             },
             '0' => self.yanked.clone(),
             '1' => self.trashed.first().cloned(),
@@ -141,7 +141,7 @@ impl JunkYard {
             trnsctn
                 .entries
                 .iter()
-                .all(|entry| entry.status == RegisterStatus::Ready)
+                .all(|entry| entry.status == FileEntryStatus::Ready)
         });
 
         if is_ready {
@@ -176,10 +176,10 @@ impl JunkYard {
         }
     }
 
-    pub fn trash(&mut self, paths: Vec<PathBuf>) -> (Transaction, Option<Transaction>) {
-        self.current = RegisterType::Trash;
+    pub fn trash(&mut self, paths: Vec<PathBuf>) -> (FileTransaction, Option<FileTransaction>) {
+        self.current = FileEntryType::Trash;
 
-        let transaction = Transaction::from(paths, self);
+        let transaction = FileTransaction::from(paths, self);
         self.trashed.insert(0, transaction.clone());
 
         let obsolete = if self.trashed.len() > 9 {
@@ -191,15 +191,15 @@ impl JunkYard {
         (transaction, obsolete)
     }
 
-    pub fn yank(&mut self, paths: Vec<PathBuf>) -> (Transaction, Option<Transaction>) {
-        self.current = RegisterType::Yank;
+    pub fn yank(&mut self, paths: Vec<PathBuf>) -> (FileTransaction, Option<FileTransaction>) {
+        self.current = FileEntryType::Yank;
 
-        let transaction = Transaction::from(paths, self);
+        let transaction = FileTransaction::from(paths, self);
         (transaction.clone(), self.yanked.replace(transaction))
     }
 }
 
-impl Transaction {
+impl FileTransaction {
     fn from(paths: Vec<PathBuf>, junk: &JunkYard) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
             Ok(time) => time.as_millis(),
@@ -225,7 +225,7 @@ impl FileEntry {
         Self {
             cache: cache.join(&id),
             id,
-            status: RegisterStatus::default(),
+            status: FileEntryStatus::default(),
             target: path.to_path_buf(),
         }
     }
@@ -371,11 +371,11 @@ async fn get_junk_path() -> Result<PathBuf, AppError> {
     Ok(junk_path)
 }
 
-fn print_content(junk: &str, transaction: &Transaction) -> String {
+fn print_content(junk: &str, transaction: &FileTransaction) -> String {
     let is_ready = transaction
         .entries
         .iter()
-        .all(|entry| entry.status == RegisterStatus::Ready);
+        .all(|entry| entry.status == FileEntryStatus::Ready);
 
     let content = if is_ready {
         transaction
@@ -407,7 +407,7 @@ mod test {
 
         assert_eq!(1, junk.trashed.len());
         assert_eq!(
-            super::RegisterStatus::Processing,
+            super::FileEntryStatus::Processing,
             transaction.entries[0].status
         );
 
@@ -417,7 +417,7 @@ mod test {
 
         assert_eq!(1, junk.trashed.len());
         assert_eq!(
-            super::RegisterStatus::Ready,
+            super::FileEntryStatus::Ready,
             junk.trashed[0].entries[0].status
         );
 
@@ -429,7 +429,7 @@ mod test {
         assert_eq!(2, junk.trashed.len());
         assert_eq!(transaction, junk.trashed[1].id);
         assert_eq!(
-            super::RegisterStatus::Ready,
+            super::FileEntryStatus::Ready,
             junk.trashed[1].entries[0].status
         );
 
@@ -442,7 +442,7 @@ mod test {
         assert_eq!(transaction, junk.trashed[1].id);
         assert_eq!(id, junk.trashed[1].entries[1].id);
         assert_eq!(
-            super::RegisterStatus::Ready,
+            super::FileEntryStatus::Ready,
             junk.trashed[1].entries[1].status
         );
 
