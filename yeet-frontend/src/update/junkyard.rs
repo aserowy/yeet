@@ -17,8 +17,8 @@ pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
     actions
 }
 
-pub fn paste(model: &mut Model, register: &char) -> Vec<Action> {
-    if let Some(transaction) = model.junk.get(register) {
+pub fn paste(model: &mut Model, entry_id: &char) -> Vec<Action> {
+    if let Some(transaction) = model.junk.get(entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries {
             actions.push(Action::Task(Task::RestorePath(

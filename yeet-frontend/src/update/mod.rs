@@ -140,7 +140,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::NavigateToSelected => navigation::selected(model),
         Message::OpenSelected => current::open(model),
-        Message::PasteFromJunkYard(register) => junkyard::paste(model, register),
+        Message::PasteFromJunkYard(entry_id) => junkyard::paste(model, entry_id),
         Message::PathRemoved(path) => {
             if path.starts_with(&model.junk.path) {
                 model.junk.remove(path);

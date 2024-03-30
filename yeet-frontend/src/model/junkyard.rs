@@ -19,44 +19,6 @@ pub struct JunkYard {
     yanked: Option<FileTransaction>,
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum FileEntryType {
-    _Custom(String),
-    Trash,
-    #[default]
-    Yank,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FileTransaction {
-    pub id: String,
-    pub entries: Vec<FileEntry>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FileEntry {
-    pub id: String,
-    pub cache: PathBuf,
-    pub status: FileEntryStatus,
-    pub target: PathBuf,
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum FileEntryStatus {
-    #[default]
-    Processing,
-    Ready,
-}
-
-pub fn get_junkyard_path() -> Result<PathBuf, AppError> {
-    let yard_dir = match dirs::cache_dir() {
-        Some(cache_dir) => cache_dir.join("yeet/junkyard/"),
-        None => return Err(AppError::LoadHistoryFailed),
-    };
-
-    Ok(yard_dir)
-}
-
 impl JunkYard {
     pub fn add_or_update(&mut self, path: &Path) -> Option<FileTransaction> {
         if let Some((id, file, target)) = decompose_compression_path(path) {
@@ -199,6 +161,20 @@ impl JunkYard {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum FileEntryType {
+    _Custom(String),
+    Trash,
+    #[default]
+    Yank,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FileTransaction {
+    pub id: String,
+    pub entries: Vec<FileEntry>,
+}
+
 impl FileTransaction {
     fn from(paths: Vec<PathBuf>, junk: &JunkYard) -> Self {
         let added_at = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
@@ -218,6 +194,21 @@ impl FileTransaction {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FileEntry {
+    pub id: String,
+    pub cache: PathBuf,
+    pub status: FileEntryStatus,
+    pub target: PathBuf,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum FileEntryStatus {
+    #[default]
+    Processing,
+    Ready,
+}
+
 impl FileEntry {
     fn from(id: String, path: &Path, cache: &Path) -> Self {
         let id = compose_compression_name(id, path);
@@ -229,6 +220,15 @@ impl FileEntry {
             target: path.to_path_buf(),
         }
     }
+}
+
+pub fn get_junkyard_path() -> Result<PathBuf, AppError> {
+    let yard_dir = match dirs::cache_dir() {
+        Some(cache_dir) => cache_dir.join("yeet/junkyard/"),
+        None => return Err(AppError::LoadHistoryFailed),
+    };
+
+    Ok(yard_dir)
 }
 
 pub async fn cache_and_compress(entry: FileEntry) -> Result<(), AppError> {
