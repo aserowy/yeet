@@ -164,8 +164,8 @@ impl JunkYard {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum FileEntryType {
     _Custom(String),
-    Trash,
     #[default]
+    Trash,
     Yank,
 }
 

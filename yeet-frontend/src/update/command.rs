@@ -200,6 +200,16 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             Message::ClearSearchHighlight,
         ])],
         ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
+        ("reg", "") => {
+            let content = model
+                .register
+                .print()
+                .iter()
+                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
+                .collect();
+
+            vec![Action::EmitMessages(vec![Message::Print(content)])]
+        }
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(BufferMessage::SaveBuffer),

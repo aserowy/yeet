@@ -11,7 +11,7 @@ use crate::{
     settings::Settings,
 };
 
-use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix};
+use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
 pub mod history;
 pub mod junkyard;
@@ -31,6 +31,7 @@ pub struct Model {
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub qfix: QuickFix,
+    pub register: Register,
     pub search: Option<SearchModel>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
