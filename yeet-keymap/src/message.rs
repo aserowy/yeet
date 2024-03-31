@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use regex::Regex;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, TextModification},
     model::Mode,
@@ -35,10 +36,24 @@ impl Binding {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum NextBindingKind {
     Motion,
-    Raw,
+    Raw(Option<Regex>),
+}
+
+impl PartialEq for NextBindingKind {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Motion, Self::Motion) => true,
+            (Self::Raw(self_reg), Self::Raw(reg)) => match (self_reg, reg) {
+                (Some(self_reg), Some(reg)) => self_reg.as_str() == reg.as_str(),
+                (None, None) => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

@@ -15,10 +15,6 @@ use crate::{
 use super::model::current;
 
 pub fn add(model: &mut Model, char: char) {
-    if !char.is_ascii_alphabetic() {
-        return;
-    }
-
     let selected = current::selection(model);
     if let Some(selected) = selected {
         let removed = model.marks.entries.insert(char, selected);

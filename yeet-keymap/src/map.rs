@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use regex::Regex;
 use yeet_buffer::{
     message::{
         BufferMessage, CursorDirection, LineDirection, SearchDirection, TextModification,
@@ -105,7 +106,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('p'), vec![]),
                     ],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Message(Message::PasteFromJunkYard(' ')),
                         ..Default::default()
                     },
@@ -276,7 +277,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('\''), vec![])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Message(Message::NavigateToMark(' ')),
                         repeatable: false,
                         ..Default::default()
@@ -367,7 +368,9 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('m'), vec![])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(Some(
+                            Regex::new("[[:alpha:]]").expect("Invalid regex"),
+                        ))),
                         kind: BindingKind::Message(Message::SetMark(' ')),
                         repeatable: false,
                         ..Default::default()
@@ -528,7 +531,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('f'), vec![])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Motion(CursorDirection::FindForward('_')),
                         ..Default::default()
                     },
@@ -536,7 +539,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('f'), vec![KeyModifier::Shift])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Motion(CursorDirection::FindBackward('_')),
                         ..Default::default()
                     },
@@ -576,7 +579,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('t'), vec![])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Motion(CursorDirection::TillForward('_')),
                         ..Default::default()
                     },
@@ -584,7 +587,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('t'), vec![KeyModifier::Shift])],
                     Binding {
-                        expects: Some(NextBindingKind::Raw),
+                        expects: Some(NextBindingKind::Raw(None)),
                         kind: BindingKind::Motion(CursorDirection::TillBackward('_')),
                         ..Default::default()
                     },

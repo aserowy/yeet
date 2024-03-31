@@ -130,7 +130,7 @@ fn return_raw_if_expected(
     keys: &[Key],
 ) -> Result<Option<Binding>, KeyMapError> {
     if let Some(before) = before {
-        if let Some(message::NextBindingKind::Raw) = before.expects {
+        if let Some(message::NextBindingKind::Raw(regex)) = &before.expects {
             let key = match keys.first() {
                 Some(it) => it,
                 None => {
@@ -142,6 +142,12 @@ fn return_raw_if_expected(
             let chars: Vec<_> = string.chars().collect();
             if chars.len() != 1 {
                 return Err(KeyMapError::NoValidBindingFound);
+            }
+
+            if let Some(regex) = regex {
+                if !regex.is_match(&string) {
+                    return Err(KeyMapError::NoValidBindingFound);
+                }
             }
 
             return Ok(Some(Binding {
