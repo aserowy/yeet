@@ -27,6 +27,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     let mut actions = match cmd_with_args {
+        ("cclear", "") => {
+            super::qfix::remove_all(model);
+            vec![change_mode_action]
+        }
         ("cdo", command) => {
             let mut commands = Vec::new();
             for path in &model.qfix.entries {

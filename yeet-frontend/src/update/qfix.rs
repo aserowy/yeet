@@ -48,6 +48,18 @@ pub fn print(qfix: &QuickFix) -> Vec<String> {
     contents
 }
 
+pub fn remove_all(model: &mut Model) {
+    model.qfix.entries.clear();
+    model.qfix.current_index = 0;
+
+    let all_buffer = model.files.get_mut_directories();
+    for (_, _, buffer) in all_buffer {
+        for line in &mut buffer.lines {
+            unset_sign(line);
+        }
+    }
+}
+
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
     let is_marked = qfix.entries.iter().any(|p| p == path);
     if !is_marked {

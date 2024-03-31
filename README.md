@@ -85,6 +85,7 @@ In normal mode, all register interactions target the default register (equal to
 
 | :                      | action                                                                                                                                                                                                                 |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cclear                 | clears the current quick fix list wihtout creating a new one                                                                                                                                                           |
 | cl                     | list all quick fix entries and highlights the current path                                                                                                                                                             |
 | cfirst                 | navigates to first entry in quick fix list                                                                                                                                                                             |
 | cn, cN                 | navigates to next/previous path in quick fix list                                                                                                                                                                      |
