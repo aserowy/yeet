@@ -78,7 +78,7 @@ pub enum Message {
     Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
-    KeySequenceChanged(String),
+    KeySequenceChanged(String, bool),
     NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),

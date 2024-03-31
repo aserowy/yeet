@@ -34,7 +34,7 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 
 #[tracing::instrument(skip(model))]
 pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
-    settings(model);
+    update_settings(model);
 
     match message {
         Message::Buffer(msg) => buffer(model, msg),
@@ -83,8 +83,13 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
-        Message::KeySequenceChanged(sequence) => {
-            model.key_sequence = sequence.clone();
+        Message::KeySequenceChanged(sequence, completed) => {
+            model.key_sequence = if *completed {
+                "".to_owned()
+            } else {
+                sequence.clone()
+            };
+
             commandline::update(model, None);
 
             vec![
@@ -174,7 +179,7 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
     }
 }
 
-fn settings(model: &mut Model) {
+fn update_settings(model: &mut Model) {
     model.files.current.buffer.set(&model.settings.current);
     model.files.parent.buffer.set(&model.settings.parent);
     model.files.preview.buffer.set(&model.settings.preview);

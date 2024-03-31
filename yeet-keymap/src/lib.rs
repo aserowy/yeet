@@ -47,21 +47,23 @@ impl MessageResolver {
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
-            return vec![Message::KeySequenceChanged(self.buffer.to_string())];
+            return vec![Message::KeySequenceChanged(key.code.to_string(), true)];
         }
 
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
         let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
+        let sequence = self.buffer.to_string();
 
-        let mut messages = match binding {
+        let (mut messages, completed) = match binding {
             Ok(Some(binding)) => {
                 self.buffer.clear();
-                get_messages_from_binding(&self.mode, binding)
+                let messages = get_messages_from_binding(&self.mode, binding);
+                (messages, true)
             }
-            Ok(None) => Vec::new(),
-            Err(KeyMapError::KeySequenceIncomplete) => Vec::new(),
+            Ok(None) => (Vec::new(), false),
+            Err(KeyMapError::KeySequenceIncomplete) => (Vec::new(), false),
             Err(_) => {
                 let messages = if get_passthrough_by_mode(&self.mode) {
                     let message = TextModification::Insert(self.buffer.to_string());
@@ -71,11 +73,12 @@ impl MessageResolver {
                 };
 
                 self.buffer.clear();
-                messages
+                (messages, true)
             }
         };
 
-        messages.push(Message::KeySequenceChanged(self.buffer.to_string()));
+        messages.push(Message::KeySequenceChanged(sequence, completed));
+
         messages
     }
 }

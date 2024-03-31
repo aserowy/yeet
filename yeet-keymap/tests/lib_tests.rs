@@ -23,7 +23,7 @@ fn add_and_resolve_key_navigation_colon() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged(":".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -37,7 +37,7 @@ fn add_and_resolve_key_navigation_d() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::KeySequenceChanged("d".to_string())),
+        Some(&Message::KeySequenceChanged("d".to_string(), false)),
         messages.first()
     );
     assert_eq!(1, messages.len());
@@ -52,7 +52,7 @@ fn add_and_resolve_key_navigation_dq() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("dq".to_string(), true)),
         messages.first()
     );
     assert_eq!(1, messages.len());
@@ -76,7 +76,7 @@ fn add_and_resolve_key_normal_dd() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("dd".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -100,7 +100,7 @@ fn add_and_resolve_key_normal_fq() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("fq".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -125,7 +125,7 @@ fn add_and_resolve_key_normal_dfq() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("dfq".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -151,7 +151,7 @@ fn add_and_resolve_key_normal_10fq() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("10fq".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -175,7 +175,7 @@ fn add_and_resolve_key_normal_d0() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("d0".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -198,7 +198,7 @@ fn add_and_resolve_key_command_q() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("q".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -217,7 +217,7 @@ fn add_and_resolve_key_navigation_q() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("<C-Q>".to_string(), true)),
         messages.first()
     );
     assert_eq!(1, messages.len());
@@ -244,7 +244,7 @@ fn add_and_resolve_key_navigation_10h() {
     assert_eq!(Some(&Message::NavigateToParent), messages.get(8));
     assert_eq!(Some(&Message::NavigateToParent), messages.get(9));
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("10h".to_string(), true)),
         messages.last()
     );
     assert_eq!(11, messages.len());
@@ -261,7 +261,7 @@ fn add_and_resolve_key_navigation_yy() {
 
     assert_eq!(Some(&Message::YankToJunkYard(1)), messages.first());
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("yy".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -280,7 +280,7 @@ fn add_and_resolve_key_navigation_10yy() {
 
     assert_eq!(Some(&Message::YankToJunkYard(10)), messages.first());
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("10yy".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -303,7 +303,7 @@ fn add_and_resolve_key_normal_0() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("0".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -330,7 +330,7 @@ fn add_and_resolve_key_normal_d10fq() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("d10fq".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -359,7 +359,7 @@ fn add_and_resolve_key_normal_10d10fq() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("10d10fq".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
@@ -383,7 +383,7 @@ fn add_and_resolve_key_normal_10colon() {
         messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("".to_string())),
+        Some(&Message::KeySequenceChanged("10:".to_string(), true)),
         messages.last()
     );
     assert_eq!(2, messages.len());
