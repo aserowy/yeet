@@ -87,12 +87,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         let sequence_len = model.key_sequence.chars().count() as u16;
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-        let mut actions: Vec<_> = envelope
-            .messages
-            .iter()
-            .flat_map(|message| update::update(&mut model, message))
-            .collect();
-
+        let mut actions = update::update(&mut model, &envelope);
         actions.extend(get_watcher_changes(&mut model));
         actions.extend(get_cdo_commands(&mut model, &actions));
 

@@ -5,7 +5,7 @@ use yeet_buffer::{
     model::{Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
     update,
 };
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{
     action::Action,
@@ -33,23 +33,25 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 };
 
 #[tracing::instrument(skip(model))]
-pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
+pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
+    match &envelope.sequence {
+        KeySequence::Completed(_) => model.key_sequence.clear(),
+        KeySequence::Changed(sequence) => model.key_sequence = sequence.to_owned(),
+        KeySequence::None => {}
+    };
+    commandline::update(model, None);
+
+    envelope
+        .messages
+        .iter()
+        .flat_map(|message| update_with_message(model, message))
+        .collect()
+}
+
+#[tracing::instrument(skip(model))]
+fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
     update_settings(model);
 
-    // Message::KeySequenceChanged(sequence, completed) => {
-    //     model.key_sequence = if *completed {
-    //         "".to_owned()
-    //     } else {
-    //         sequence.clone()
-    //     };
-    //
-    //     commandline::update(model, None);
-    //
-    //     vec![
-    //         Action::SkipRender,
-    //         Action::EmitMessages(vec![Message::Rerender]),
-    //     ]
-    // }
     match message {
         Message::Buffer(msg) => buffer(model, msg),
         Message::DeleteMarks(marks) => mark::delete(model, marks),
