@@ -70,6 +70,10 @@ pub fn viewport(model: &mut Model) {
         &BufferMessage::ResetCursor,
     );
 
+    if !target.is_dir() {
+        return;
+    }
+
     if !cursor::set_cursor_index_with_history(
         &model.mode,
         &model.history,

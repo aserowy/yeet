@@ -1,6 +1,10 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{message::BufferMessage, model::Mode, update};
+use yeet_buffer::{
+    message::BufferMessage,
+    model::{Cursor, CursorPosition, Mode},
+    update,
+};
 use yeet_keymap::message::ContentKind;
 
 use crate::model::{DirectoryBufferState, Model};
@@ -74,6 +78,14 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
         );
 
         if let Some(selection) = selection {
+            if buffer.cursor.is_none() {
+                buffer.cursor = Some(Cursor {
+                    horizontal_index: CursorPosition::None,
+                    vertical_index: 0,
+                    ..Default::default()
+                });
+            }
+
             if !cursor::set_cursor_index(&model.mode, &model.search, buffer, selection) {
                 cursor::set_cursor_index_with_history(
                     &model.mode,
