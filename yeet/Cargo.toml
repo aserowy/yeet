@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 yeet-frontend = { path = "../yeet-frontend" }
-tokio = { version = "1.35.1", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 thiserror = "1.0.58"
 clap = "4.5.3"
 tracing = "0.1.40"
