@@ -6,7 +6,7 @@ use model::{junkyard, mark, qfix, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::{KeySequence, Message, PrintContent};
 
 use crate::{
     error::AppError,
@@ -84,7 +84,11 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         let size = terminal.size().expect("Failed to get terminal size");
         model.layout = AppLayout::new(size, commandline::height(&model, &envelope.messages));
 
-        let sequence_len = model.key_sequence.chars().count() as u16;
+        let sequence_len = match &envelope.sequence {
+            KeySequence::Completed(_) => 0,
+            KeySequence::Changed(sequence) => sequence.chars().count() as u16,
+            KeySequence::None => model.key_sequence.chars().count() as u16,
+        };
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
         let mut actions = update::update(&mut model, &envelope);
