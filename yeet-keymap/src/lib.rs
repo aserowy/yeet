@@ -1,7 +1,7 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, Message};
+use message::{Binding, BindingKind, Envelope, KeySequence, Message};
 use tree::KeyTree;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, TextModification},
@@ -43,11 +43,18 @@ impl Default for MessageResolver {
 }
 
 impl MessageResolver {
-    pub fn add_and_resolve(&mut self, key: Key) -> Vec<Message> {
+    pub fn add_and_resolve(&mut self, key: Key) -> Envelope {
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
-            return vec![Message::KeySequenceChanged(key.code.to_string(), true)];
+            return Envelope {
+                messages: Vec::new(),
+                sequence: KeySequence::Completed(format!(
+                    "{}{}",
+                    self.buffer.to_string(),
+                    key.code.to_string()
+                )),
+            };
         }
 
         self.buffer.add_key(key);
@@ -56,14 +63,14 @@ impl MessageResolver {
         let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
         let sequence = self.buffer.to_string();
 
-        let (mut messages, completed) = match binding {
+        let (messages, sequence) = match binding {
             Ok(Some(binding)) => {
                 self.buffer.clear();
                 let messages = get_messages_from_binding(&self.mode, binding);
-                (messages, true)
+                (messages, KeySequence::Completed(sequence))
             }
-            Ok(None) => (Vec::new(), false),
-            Err(KeyMapError::KeySequenceIncomplete) => (Vec::new(), false),
+            Ok(None) => (Vec::new(), KeySequence::Changed(sequence)),
+            Err(KeyMapError::KeySequenceIncomplete) => (Vec::new(), KeySequence::Changed(sequence)),
             Err(_) => {
                 let messages = if get_passthrough_by_mode(&self.mode) {
                     let message = TextModification::Insert(self.buffer.to_string());
@@ -73,13 +80,11 @@ impl MessageResolver {
                 };
 
                 self.buffer.clear();
-                (messages, true)
+                (messages, KeySequence::Completed(sequence))
             }
         };
 
-        messages.push(Message::KeySequenceChanged(sequence, completed));
-
-        messages
+        Envelope { messages, sequence }
     }
 }
 

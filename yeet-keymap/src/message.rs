@@ -69,6 +69,19 @@ pub enum BindingKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Envelope {
+    pub messages: Vec<Message>,
+    pub sequence: KeySequence,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum KeySequence {
+    Completed(String),
+    Changed(String),
+    None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(BufferMessage),
     DeleteMarks(Vec<char>),
@@ -78,7 +91,6 @@ pub enum Message {
     Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
-    KeySequenceChanged(String, bool),
     NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),

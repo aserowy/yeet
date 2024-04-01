@@ -4,29 +4,26 @@ use yeet_buffer::{
 };
 use yeet_keymap::{
     key::{Key, KeyCode, KeyModifier},
-    message::Message,
+    message::{KeySequence, Message},
     MessageResolver,
 };
 
 #[test]
 fn add_and_resolve_key_navigation_colon() {
     let mut resolver = MessageResolver::default();
-    let messages = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
+    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
 
-    println!("{:?}", messages);
+    println!("{:?}", envelope);
 
     assert_eq!(
         Some(&Message::Buffer(BufferMessage::ChangeMode(
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),
-        messages.first()
+        envelope.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged(":".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed(":".to_string()), envelope.sequence);
+    assert_eq!(1, envelope.messages.len());
 }
 
 #[test]
@@ -36,11 +33,8 @@ fn add_and_resolve_key_navigation_d() {
 
     println!("{:?}", messages);
 
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("d".to_string(), false)),
-        messages.first()
-    );
-    assert_eq!(1, messages.len());
+    assert_eq!(KeySequence::Changed("d".to_string()), messages.sequence);
+    assert!(messages.messages.is_empty());
 }
 
 #[test]
@@ -51,11 +45,8 @@ fn add_and_resolve_key_navigation_dq() {
 
     println!("{:?}", messages);
 
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("dq".to_string(), true)),
-        messages.first()
-    );
-    assert_eq!(1, messages.len());
+    assert_eq!(KeySequence::Completed("dq".to_string()), messages.sequence);
+    assert!(messages.messages.is_empty());
 }
 
 #[test]
@@ -73,13 +64,10 @@ fn add_and_resolve_key_normal_dd() {
             1,
             TextModification::DeleteLine
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("dd".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("dd".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -97,13 +85,10 @@ fn add_and_resolve_key_normal_fq() {
             1,
             CursorDirection::FindForward('q')
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("fq".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("fq".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -122,13 +107,10 @@ fn add_and_resolve_key_normal_dfq() {
             1,
             TextModification::DeleteMotion(1, CursorDirection::FindForward('q'))
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("dfq".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("dfq".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -148,13 +130,13 @@ fn add_and_resolve_key_normal_10fq() {
             10,
             CursorDirection::FindForward('q')
         ))),
-        messages.first()
+        messages.messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("10fq".to_string(), true)),
-        messages.last()
+        KeySequence::Completed("10fq".to_string()),
+        messages.sequence
     );
-    assert_eq!(2, messages.len());
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -172,13 +154,10 @@ fn add_and_resolve_key_normal_d0() {
             1,
             TextModification::DeleteMotion(1, CursorDirection::LineStart)
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("d0".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("d0".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -195,13 +174,10 @@ fn add_and_resolve_key_command_q() {
             1,
             TextModification::Insert("q".to_string())
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("q".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("q".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -217,10 +193,10 @@ fn add_and_resolve_key_navigation_q() {
     println!("{:?}", messages);
 
     assert_eq!(
-        Some(&Message::KeySequenceChanged("<C-Q>".to_string(), true)),
-        messages.first()
+        KeySequence::Completed("<C-Q>".to_string()),
+        messages.sequence
     );
-    assert_eq!(1, messages.len());
+    assert!(messages.messages.is_empty());
 }
 
 #[test]
@@ -233,21 +209,18 @@ fn add_and_resolve_key_navigation_10h() {
 
     println!("{:?}", messages);
 
-    assert_eq!(Some(&Message::NavigateToParent), messages.first());
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(1));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(2));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(3));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(4));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(5));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(6));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(7));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(8));
-    assert_eq!(Some(&Message::NavigateToParent), messages.get(9));
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("10h".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(11, messages.len());
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.first());
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(1));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(2));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(3));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(4));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(5));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(6));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(7));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(8));
+    assert_eq!(Some(&Message::NavigateToParent), messages.messages.get(9));
+    assert_eq!(KeySequence::Completed("10h".to_string()), messages.sequence);
+    assert_eq!(10, messages.messages.len());
 }
 
 #[test]
@@ -259,12 +232,9 @@ fn add_and_resolve_key_navigation_yy() {
 
     println!("{:?}", messages);
 
-    assert_eq!(Some(&Message::YankToJunkYard(1)), messages.first());
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("yy".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(Some(&Message::YankToJunkYard(1)), messages.messages.first());
+    assert_eq!(KeySequence::Completed("yy".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -278,12 +248,15 @@ fn add_and_resolve_key_navigation_10yy() {
 
     println!("{:?}", messages);
 
-    assert_eq!(Some(&Message::YankToJunkYard(10)), messages.first());
     assert_eq!(
-        Some(&Message::KeySequenceChanged("10yy".to_string(), true)),
-        messages.last()
+        Some(&Message::YankToJunkYard(10)),
+        messages.messages.first()
     );
-    assert_eq!(2, messages.len());
+    assert_eq!(
+        KeySequence::Completed("10yy".to_string()),
+        messages.sequence
+    );
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -300,13 +273,10 @@ fn add_and_resolve_key_normal_0() {
             1,
             CursorDirection::LineStart
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("0".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("0".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -327,13 +297,13 @@ fn add_and_resolve_key_normal_d10fq() {
             1,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
-        messages.first()
+        messages.messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("d10fq".to_string(), true)),
-        messages.last()
+        KeySequence::Completed("d10fq".to_string()),
+        messages.sequence
     );
-    assert_eq!(2, messages.len());
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -356,13 +326,13 @@ fn add_and_resolve_key_normal_10d10fq() {
             10,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
-        messages.first()
+        messages.messages.first()
     );
     assert_eq!(
-        Some(&Message::KeySequenceChanged("10d10fq".to_string(), true)),
-        messages.last()
+        KeySequence::Completed("10d10fq".to_string()),
+        messages.sequence
     );
-    assert_eq!(2, messages.len());
+    assert_eq!(1, messages.messages.len());
 }
 
 #[test]
@@ -380,11 +350,8 @@ fn add_and_resolve_key_normal_10colon() {
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),
-        messages.first()
+        messages.messages.first()
     );
-    assert_eq!(
-        Some(&Message::KeySequenceChanged("10:".to_string(), true)),
-        messages.last()
-    );
-    assert_eq!(2, messages.len());
+    assert_eq!(KeySequence::Completed("10:".to_string()), messages.sequence);
+    assert_eq!(1, messages.messages.len());
 }

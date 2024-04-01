@@ -36,6 +36,20 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
     update_settings(model);
 
+    // Message::KeySequenceChanged(sequence, completed) => {
+    //     model.key_sequence = if *completed {
+    //         "".to_owned()
+    //     } else {
+    //         sequence.clone()
+    //     };
+    //
+    //     commandline::update(model, None);
+    //
+    //     vec![
+    //         Action::SkipRender,
+    //         Action::EmitMessages(vec![Message::Rerender]),
+    //     ]
+    // }
     match message {
         Message::Buffer(msg) => buffer(model, msg),
         Message::DeleteMarks(marks) => mark::delete(model, marks),
@@ -83,20 +97,6 @@ pub fn update(model: &mut Model, message: &Message) -> Vec<Action> {
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
-        Message::KeySequenceChanged(sequence, completed) => {
-            model.key_sequence = if *completed {
-                "".to_owned()
-            } else {
-                sequence.clone()
-            };
-
-            commandline::update(model, None);
-
-            vec![
-                Action::SkipRender,
-                Action::EmitMessages(vec![Message::Rerender]),
-            ]
-        }
         Message::NavigateToMark(char) => {
             let path = match model.marks.entries.get(char) {
                 Some(it) => it.clone(),

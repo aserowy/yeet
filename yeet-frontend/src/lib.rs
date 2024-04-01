@@ -68,26 +68,27 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 
     let mut result = Vec::new();
-    while let Some((source, messages)) = emitter.receiver.recv().await {
-        tracing::debug!("received messages: {:?}", messages);
+    while let Some((source, envelope)) = emitter.receiver.recv().await {
+        tracing::debug!("received messages: {:?}", envelope.messages);
 
         // TODO: C-c should interrupt (clear) cdo commands
         if model.qfix.do_command_stack.is_some() && source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
-                messages
+                envelope.messages
             );
 
             continue;
         }
 
         let size = terminal.size().expect("Failed to get terminal size");
-        model.layout = AppLayout::new(size, commandline::height(&model, &messages));
+        model.layout = AppLayout::new(size, commandline::height(&model, &envelope.messages));
 
         let sequence_len = model.key_sequence.chars().count() as u16;
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-        let mut actions: Vec<_> = messages
+        let mut actions: Vec<_> = envelope
+            .messages
             .iter()
             .flat_map(|message| update::update(&mut model, message))
             .collect();
