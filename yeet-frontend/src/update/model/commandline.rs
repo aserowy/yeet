@@ -25,57 +25,62 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
             ];
 
             if let Some(message) = message {
-                if let BufferMessage::ChangeMode(from, to) = message {
-                    if !from.is_command() && to.is_command() {
-                        update::update(to, &model.search, buffer, &BufferMessage::ResetCursor);
+                match message {
+                    BufferMessage::ChangeMode(from, to) => {
+                        if !from.is_command() && to.is_command() {
+                            update::update(to, &model.search, buffer, &BufferMessage::ResetCursor);
 
-                        let prefix = match to {
-                            Mode::Command(cmd) => match cmd {
-                                CommandMode::Command => Some(":".to_string()),
-                                CommandMode::Search(SearchDirection::Up) => Some("?".to_string()),
-                                CommandMode::Search(SearchDirection::Down) => Some("/".to_string()),
-                            },
-                            _ => None,
-                        };
+                            let prefix = match to {
+                                Mode::Command(cmd) => match cmd {
+                                    CommandMode::Command => Some(":".to_string()),
+                                    CommandMode::Search(SearchDirection::Up) => {
+                                        Some("?".to_string())
+                                    }
+                                    CommandMode::Search(SearchDirection::Down) => {
+                                        Some("/".to_string())
+                                    }
+                                },
+                                _ => None,
+                            };
 
-                        let bufferline = BufferLine {
-                            prefix,
-                            ..Default::default()
-                        };
+                            let bufferline = BufferLine {
+                                prefix,
+                                ..Default::default()
+                            };
 
-                        update::update(
-                            to,
-                            &model.search,
-                            buffer,
-                            &BufferMessage::SetContent(vec![bufferline]),
-                        );
-                    } else if from.is_command() && !to.is_command() {
-                        update::update(
-                            &model.mode,
-                            &model.search,
-                            buffer,
-                            &BufferMessage::SetContent(vec![]),
-                        );
-                    }
-                }
-
-                if let &BufferMessage::Modification(
-                    _,
-                    TextModification::DeleteMotion(_, CursorDirection::Left),
-                ) = message
-                {
-                    if let Some(line) = buffer.lines.last() {
-                        if line.content.is_empty() {
-                            actions.pop();
-                            actions.push(Action::EmitMessages(vec![Message::Buffer(
-                                BufferMessage::ChangeMode(
-                                    model.mode.clone(),
-                                    get_mode_after_command(&model.mode_before),
-                                ),
-                            )]));
+                            update::update(
+                                to,
+                                &model.search,
+                                buffer,
+                                &BufferMessage::SetContent(vec![bufferline]),
+                            );
+                        } else if from.is_command() && !to.is_command() {
+                            update::update(
+                                &model.mode,
+                                &model.search,
+                                buffer,
+                                &BufferMessage::SetContent(vec![]),
+                            );
                         }
                     }
-                }
+                    &BufferMessage::Modification(
+                        _,
+                        TextModification::DeleteMotion(_, CursorDirection::Left),
+                    ) => {
+                        if let Some(line) = buffer.lines.last() {
+                            if line.content.is_empty() {
+                                actions.pop();
+                                actions.push(Action::EmitMessages(vec![Message::Buffer(
+                                    BufferMessage::ChangeMode(
+                                        model.mode.clone(),
+                                        get_mode_after_command(&model.mode_before),
+                                    ),
+                                )]));
+                            }
+                        }
+                    }
+                    _ => {}
+                };
 
                 update::update(&model.mode, &model.search, buffer, message);
             }
@@ -83,7 +88,9 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
             actions
         }
         CommandLineState::WaitingForInput => {
-            commandline.state = CommandLineState::Default;
+            if message.is_some() {
+                commandline.state = CommandLineState::Default;
+            }
 
             let mut messages = Vec::new();
             if let Some(&BufferMessage::Modification(_, TextModification::Insert(cnt))) =
