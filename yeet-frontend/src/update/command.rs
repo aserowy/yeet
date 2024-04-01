@@ -26,7 +26,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     tracing::debug!("executing command: {:?}", cmd_with_args);
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
-    let mut actions = match cmd_with_args {
+    let actions = match cmd_with_args {
         ("cclear", "") => {
             super::qfix::remove_all(model);
             vec![change_mode_action]
@@ -84,12 +84,9 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                     ]
                 }
                 None => {
-                    vec![
-                        Action::SkipRender,
-                        Action::EmitMessages(vec![Message::ExecuteCommandString(
-                            "cfirst".to_string(),
-                        )]),
-                    ]
+                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
+                        "cfirst".to_string(),
+                    )])]
                 }
             }
         }
@@ -114,10 +111,9 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                     ]
                 }
                 None => {
-                    vec![
-                        Action::SkipRender,
-                        Action::EmitMessages(vec![Message::ExecuteCommandString("cN".to_string())]),
-                    ]
+                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
+                        "cN".to_string(),
+                    )])]
                 }
             }
         }
@@ -231,8 +227,6 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             actions
         }
     };
-
-    actions.push(Action::SkipRender);
 
     // TODO: add command history and show previous command not current (this enables g: as well)
     model.register.command = Some(cmd.to_string());

@@ -17,7 +17,6 @@ pub enum Action {
     Open(PathBuf),
     Quit(Option<String>),
     Resize(u16, u16),
-    SkipRender,
     Task(Task),
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
@@ -55,7 +54,6 @@ fn is_preview_action(action: &Action) -> bool {
         Action::Load(_, _)
         | Action::Open(_)
         | Action::Resize(_, _)
-        | Action::SkipRender
         | Action::Task(_)
         | Action::UnwatchPath(_)
         | Action::WatchPath(_) => true,
@@ -71,8 +69,6 @@ async fn execute(
     terminal: &mut TerminalWrapper,
     actions: &[Action],
 ) -> Result<ActionResult, AppError> {
-    let mut result = ActionResult::Normal;
-
     for action in actions {
         if is_preview != is_preview_action(action) {
             continue;
@@ -122,13 +118,10 @@ async fn execute(
                 emitter.run(Task::SaveHistory(model.history.clone()));
                 emitter.run(Task::SaveMarks(model.marks.clone()));
                 emitter.run(Task::SaveQuickFix(model.qfix.clone()));
-
-                result = ActionResult::Quit;
             }
             Action::Resize(x, y) => {
                 terminal.resize(*x, *y)?;
             }
-            Action::SkipRender => result = ActionResult::SkipRender,
             Action::Task(task) => emitter.run(task.clone()),
             Action::UnwatchPath(path) => {
                 if path == &PathBuf::default() {
@@ -153,5 +146,21 @@ async fn execute(
         }
     }
 
+    let result = if is_preview && contains_emit(actions) {
+        ActionResult::SkipRender
+    } else if !is_preview && contains_quit(actions) {
+        ActionResult::Quit
+    } else {
+        ActionResult::Normal
+    };
+
     Ok(result)
+}
+
+fn contains_emit(actions: &[Action]) -> bool {
+    actions.iter().any(|a| matches!(a, Action::EmitMessages(_)))
+}
+
+fn contains_quit(actions: &[Action]) -> bool {
+    actions.iter().any(|a| matches!(a, Action::Quit(_)))
 }

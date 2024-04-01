@@ -19,11 +19,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
 
     match commandline.state {
         CommandLineState::Default => {
-            let mut actions = vec![
-                Action::SkipRender,
-                Action::EmitMessages(vec![Message::Rerender]),
-            ];
-
+            let mut actions = Vec::new();
             if let Some(message) = message {
                 match message {
                     BufferMessage::ChangeMode(from, to) => {
@@ -127,7 +123,6 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
                     ))
                 };
 
-                messages.push(Action::SkipRender);
                 messages.push(Action::EmitMessages(vec![action]));
             }
 
@@ -137,8 +132,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
 }
 
 pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
-    let mut actions = vec![Action::SkipRender];
-
+    let mut actions = Vec::new();
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
     match commandline.state {
