@@ -108,7 +108,7 @@ fn unset_sign(model: &mut Model, removed: &Path) {
         None => return,
     };
 
-    if let Some(line) = lines.iter().find(|bl| bl.content == file_name) {
+    if let Some(line) = lines.iter_mut().find(|bl| bl.content == file_name) {
         let position = line.signs.iter().position(|s| s.id == MARK_SIGN_ID);
         if let Some(position) = position {
             line.signs.remove(position);
