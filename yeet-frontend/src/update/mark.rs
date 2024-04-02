@@ -71,7 +71,6 @@ pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
 }
 
 fn set_sign(bl: &mut BufferLine) {
-    let sign = 'm';
     let is_signed = bl.signs.iter().any(|s| s.id == MARK_SIGN_ID);
     if is_signed {
         return;
@@ -79,23 +78,23 @@ fn set_sign(bl: &mut BufferLine) {
 
     bl.signs.push(Sign {
         id: MARK_SIGN_ID,
-        content: sign,
+        content: 'm',
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
     });
 }
 
 fn unset_sign(model: &mut Model, removed: &Path) {
-    let preview = match removed.parent() {
+    let parent = match removed.parent() {
         Some(it) => it,
         None => return,
     };
 
-    let lines = if preview == model.files.current.path {
+    let lines = if parent == model.files.current.path {
         &mut model.files.current.buffer.lines
-    } else if Some(preview) == model.files.preview.path.as_deref() {
+    } else if Some(parent) == model.files.preview.path.as_deref() {
         &mut model.files.preview.buffer.lines
-    } else if Some(preview) == model.files.parent.path.as_deref() {
+    } else if Some(parent) == model.files.parent.path.as_deref() {
         &mut model.files.parent.buffer.lines
     } else {
         return;
@@ -109,12 +108,10 @@ fn unset_sign(model: &mut Model, removed: &Path) {
         None => return,
     };
 
-    for line in lines {
-        if line.content == file_name {
-            let position = line.signs.iter().position(|s| s.id == MARK_SIGN_ID);
-            if let Some(position) = position {
-                line.signs.remove(position);
-            }
+    if let Some(line) = lines.iter().find(|bl| bl.content == file_name) {
+        let position = line.signs.iter().position(|s| s.id == MARK_SIGN_ID);
+        if let Some(position) = position {
+            line.signs.remove(position);
         }
     }
 }

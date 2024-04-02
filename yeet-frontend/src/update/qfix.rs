@@ -71,7 +71,6 @@ pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
 
 // TODO: refactor with marks impl
 fn set_sign(bl: &mut BufferLine) {
-    let sign = 'c';
     let is_signed = bl.signs.iter().any(|s| s.id == QFIX_SIGN_ID);
     if is_signed {
         return;
@@ -79,7 +78,7 @@ fn set_sign(bl: &mut BufferLine) {
 
     bl.signs.push(Sign {
         id: QFIX_SIGN_ID,
-        content: sign,
+        content: 'c',
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
     });
