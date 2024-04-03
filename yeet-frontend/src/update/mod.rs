@@ -24,6 +24,7 @@ pub mod model;
 mod navigation;
 mod path;
 mod qfix;
+mod register;
 mod search;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
@@ -41,11 +42,17 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     };
     commandline::update(model, None);
 
-    envelope
+    register::scope(&model.mode, &mut model.register, envelope);
+
+    let actions = envelope
         .messages
         .iter()
         .flat_map(|message| update_with_message(model, message))
-        .collect()
+        .collect();
+
+    register::finish(&model.mode, &mut model.register, envelope);
+
+    actions
 }
 
 #[tracing::instrument(skip(model))]
