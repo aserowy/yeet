@@ -2,6 +2,7 @@
 pub struct Register {
     pub command: Option<String>,
     pub dot: Option<String>,
+    pub find: Option<String>,
     pub searched: Option<String>,
     pub scope: Option<RegisterScope>,
 }
@@ -14,6 +15,9 @@ impl Register {
         }
         if let Some(command) = &self.command {
             contents.push(print_content(&':', command));
+        }
+        if let Some(find) = &self.find {
+            contents.push(print_content(&';', find));
         }
         if let Some(searched) = &self.searched {
             contents.push(print_content(&'/', searched));
@@ -28,9 +32,7 @@ fn print_content(prefix: &char, content: &str) -> String {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RegisterScope {
-    _Command,
     Dot,
-    _Find,
+    Find,
     _Macro(char),
-    _Search,
 }
