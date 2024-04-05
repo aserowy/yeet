@@ -15,7 +15,7 @@ use tokio::{
 use yeet_buffer::model::Mode;
 use yeet_keymap::{
     conversion,
-    message::{Envelope, KeySequence, Message},
+    message::{Envelope, KeySequence, Message, MessageSource},
     MessageResolver,
 };
 
@@ -28,17 +28,10 @@ use crate::{
 pub struct Emitter {
     cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
     tasks: TaskManager,
-    pub receiver: Receiver<(MessageSource, Envelope)>,
+    pub receiver: Receiver<Envelope>,
     resolver: Arc<Mutex<MessageResolver>>,
-    sender: mpsc::Sender<(MessageSource, Envelope)>,
+    sender: mpsc::Sender<Envelope>,
     watcher: RecommendedWatcher,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum MessageSource {
-    Filesystem,
-    Task,
-    User,
 }
 
 impl Emitter {
@@ -64,18 +57,26 @@ impl Emitter {
                 tokio::select! {
                     Some(Ok(event)) = notify_event => {
                         if let Some(messages) = handle_notify_event(event) {
-                            let _ = internal_sender.send((MessageSource::Filesystem, Envelope {
+                            let _ = internal_sender.send(Envelope {
                                 messages,
-                                sequence: KeySequence::None
-                            })).await;
+                                sequence: KeySequence::None,
+                                source: MessageSource::Filesystem,
+                            }).await;
                         }
                     }
                     event = task_event => {
-                        if let Some(messages) = event{
-                            let _ = internal_sender.send((MessageSource::Task, Envelope {
+                        if let Some(messages) = event {
+                            let (_execute, messages) = messages
+                                .into_iter()
+                                .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
+
+                            // TODO: resolve message from key sequence and return the rest within the envelope
+
+                            let _ = internal_sender.send(Envelope {
                                 messages,
-                                sequence: KeySequence::None
-                            })).await;
+                                sequence: KeySequence::None,
+                                source: MessageSource::Task,
+                            }).await;
                         }
                     },
                 }
@@ -154,7 +155,7 @@ impl Emitter {
 fn start_crossterm_listener(
     mut cancellation_receiver: oneshot::Receiver<oneshot::Sender<bool>>,
     resolver_mutex: Arc<Mutex<MessageResolver>>,
-    sender: mpsc::Sender<(MessageSource, Envelope)>,
+    sender: mpsc::Sender<Envelope>,
 ) {
     tokio::spawn(async move {
         let mut reader = crossterm::event::EventStream::new();
@@ -169,7 +170,7 @@ fn start_crossterm_listener(
                 }
                 Some(Ok(event)) = crossterm_event => {
                     if let Some(envelope) = handle_crossterm_event(&resolver_mutex, event).await {
-                        let _ = sender.send((MessageSource::User, envelope)).await;
+                        let _ = sender.send(envelope).await;
                     }
                 }
             }
@@ -194,6 +195,7 @@ async fn handle_crossterm_event(
         crossterm::event::Event::Resize(x, y) => Some(Envelope {
             messages: vec![Message::Resize(x, y)],
             sequence: KeySequence::None,
+            source: MessageSource::User,
         }),
         crossterm::event::Event::FocusLost
         | crossterm::event::Event::FocusGained

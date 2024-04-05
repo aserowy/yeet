@@ -1,7 +1,7 @@
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, Envelope, KeySequence, Message};
+use message::{Binding, BindingKind, Envelope, KeySequence, Message, MessageSource};
 use tree::KeyTree;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, TextModification},
@@ -54,6 +54,7 @@ impl MessageResolver {
                     self.buffer.to_string(),
                     key.code.to_string()
                 )),
+                source: MessageSource::User,
             };
         }
 
@@ -84,7 +85,11 @@ impl MessageResolver {
             }
         };
 
-        Envelope { messages, sequence }
+        Envelope {
+            messages,
+            sequence,
+            source: MessageSource::User,
+        }
     }
 }
 

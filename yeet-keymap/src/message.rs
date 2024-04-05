@@ -72,6 +72,7 @@ pub enum BindingKind {
 pub struct Envelope {
     pub messages: Vec<Message>,
     pub sequence: KeySequence,
+    pub source: MessageSource,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -82,15 +83,24 @@ pub enum KeySequence {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MessageSource {
+    Filesystem,
+    Task,
+    User,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Buffer(BufferMessage),
-    DeleteMarks(Vec<char>),
     ClearSearchHighlight,
+    DeleteMarks(Vec<char>),
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
     EnumerationFinished(PathBuf, Option<String>),
     Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
+    ExecuteKeySequence(String),
+    ExecuteRegister(char),
     NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),

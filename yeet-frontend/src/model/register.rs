@@ -8,6 +8,16 @@ pub struct Register {
 }
 
 impl Register {
+    pub fn get(&self, register: &char) -> Option<String> {
+        match register {
+            '.' => self.dot.clone(),
+            ';' => self.find.clone(),
+            ':' => self.command.clone(),
+            '/' => self.searched.clone(),
+            _ => None,
+        }
+    }
+
     pub fn print(&self) -> Vec<String> {
         let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
         if let Some(dot) = &self.dot {

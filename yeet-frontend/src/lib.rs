@@ -6,11 +6,11 @@ use model::{junkyard, mark, qfix, DirectoryBufferState};
 use task::Task;
 use update::model::commandline;
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{KeySequence, Message, PrintContent};
+use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
 
 use crate::{
     error::AppError,
-    event::{Emitter, MessageSource},
+    event::Emitter,
     layout::AppLayout,
     model::{
         history::{self},
@@ -68,11 +68,11 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     }
 
     let mut result = Vec::new();
-    while let Some((source, envelope)) = emitter.receiver.recv().await {
+    while let Some(envelope) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", envelope.messages);
 
         // TODO: C-c should interrupt (clear) cdo commands
-        if model.qfix.do_command_stack.is_some() && source == MessageSource::User {
+        if model.qfix.do_command_stack.is_some() && envelope.source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
                 envelope.messages
@@ -168,7 +168,7 @@ fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
         .files
         .get_mut_directories()
         .iter()
-        .any(|(_, state, _)| state == &&DirectoryBufferState::Loading);
+        .any(|(_, state, _)| state != &&DirectoryBufferState::Ready);
 
     if let Some(commands) = &mut model.qfix.do_command_stack {
         let contains_emit_messages = actions

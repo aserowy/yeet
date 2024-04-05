@@ -480,6 +480,21 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('.'), vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::ExecuteRegister('.')),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    // TODO: add support for ,
+                    vec![Key::new(KeyCode::from_char(';'), vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::ExecuteRegister(';')),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('$'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::LineEnd),

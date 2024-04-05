@@ -61,11 +61,11 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
 
     match message {
         Message::Buffer(msg) => buffer(model, msg),
-        Message::DeleteMarks(marks) => mark::delete(model, marks),
         Message::ClearSearchHighlight => {
             search::clear(model);
             Vec::new()
         }
+        Message::DeleteMarks(marks) => mark::delete(model, marks),
         Message::EnumerationChanged(path, contents, selection) => {
             enumeration::changed(model, path, contents, selection);
 
@@ -106,6 +106,21 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
+        Message::ExecuteKeySequence(_sequence) => {
+            let actions = Vec::new();
+            actions
+        }
+        Message::ExecuteRegister(register) => {
+            let key_sequence = model.register.get(register);
+            match key_sequence {
+                Some(key_sequence) => {
+                    vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
+                        key_sequence,
+                    )])]
+                }
+                None => Vec::new(),
+            }
+        }
         Message::NavigateToMark(char) => {
             let path = match model.marks.entries.get(char) {
                 Some(it) => it.clone(),
