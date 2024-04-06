@@ -13,6 +13,23 @@ impl Key {
             modifiers,
         }
     }
+
+    pub fn to_keycode_string(&self) -> String {
+        let mut modifiers = self.modifiers.clone();
+        modifiers.sort();
+
+        match self.code {
+            KeyCode::Char(_) => {
+                if modifiers.contains(&KeyModifier::Shift) {
+                    modifiers.retain(|modifier| *modifier != KeyModifier::Shift);
+                    get_key_string(self.code.to_string().to_uppercase(), modifiers, false)
+                } else {
+                    get_key_string(self.code.to_string(), modifiers, false)
+                }
+            }
+            _ => get_key_string(self.code.to_string(), modifiers, true),
+        }
+    }
 }
 
 impl Hash for Key {
@@ -42,7 +59,6 @@ impl PartialEq for Key {
 }
 
 impl ToString for Key {
-    // TODO: add support for mode dependent string representations
     fn to_string(&self) -> String {
         let mut modifiers = self.modifiers.clone();
         modifiers.sort();

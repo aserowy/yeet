@@ -51,8 +51,8 @@ impl MessageResolver {
                 messages: Vec::new(),
                 sequence: KeySequence::Completed(format!(
                     "{}{}",
-                    self.buffer.to_string(),
-                    key.code.to_string()
+                    self.buffer.to_keycode_string(),
+                    key.to_keycode_string()
                 )),
                 source: MessageSource::User,
             };
@@ -62,7 +62,7 @@ impl MessageResolver {
 
         let keys = self.buffer.get_keys();
         let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
-        let sequence = self.buffer.to_string();
+        let sequence = self.buffer.to_keycode_string();
 
         let (messages, sequence) = match binding {
             Ok(Some(binding)) => {

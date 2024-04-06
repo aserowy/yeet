@@ -22,6 +22,15 @@ impl KeyBuffer {
     pub fn clear(&mut self) {
         self.buffer.clear();
     }
+
+    pub fn to_keycode_string(&self) -> String {
+        let mut result = String::new();
+        for key in &self.buffer {
+            result.push_str(&key.to_keycode_string());
+        }
+
+        result
+    }
 }
 
 impl ToString for KeyBuffer {
