@@ -48,10 +48,9 @@ impl Emitter {
         .expect("Failed to create watcher");
 
         let resolver = Arc::new(Mutex::new(MessageResolver::default()));
-        let inner_resolver = resolver.clone();
 
         let (task_sender, mut task_receiver) = mpsc::channel(1);
-        let tasks = TaskManager::new(task_sender);
+        let tasks = TaskManager::new(task_sender, resolver.clone());
         tokio::spawn(async move {
             loop {
                 let notify_event = notify_receiver.recv().fuse();
@@ -69,29 +68,6 @@ impl Emitter {
                     }
                     event = task_event => {
                         if let Some(messages) = event {
-                            // TODO: this belongs to task, or?
-                            let (execute, mut messages): (Vec<_>, Vec<_>) = messages
-                                .into_iter()
-                                .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
-
-                            let sequence = execute
-                                .iter()
-                                .map(|m| match m {
-                                    Message::ExecuteKeySequence(sequence) => sequence.clone(),
-                                    _ => unreachable!(),
-                                })
-                                .collect::<Vec<_>>()
-                                .join("");
-
-                            let keys = conversion::from_keycode_string(&sequence);
-                            let mut resolver = inner_resolver.lock().await;
-                            if let Some(resolved) = resolver.add_keys(keys) {
-                                messages.extend(resolved.messages);
-                            }
-
-                            // NOTE: important to prevent deadlock for queue size of one
-                            drop(resolver);
-
                             let _ = internal_sender.send(Envelope {
                                 messages,
                                 sequence: KeySequence::None,

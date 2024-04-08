@@ -1,11 +1,18 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use tokio::{
     fs,
-    sync::mpsc::Sender,
+    sync::{mpsc::Sender, Mutex},
     task::{AbortHandle, JoinSet},
 };
-use yeet_keymap::message::{ContentKind, Message};
+use yeet_keymap::{
+    conversion,
+    message::{ContentKind, Message},
+    MessageResolver,
+};
 
 use crate::{
     error::AppError,
@@ -38,15 +45,17 @@ pub enum Task {
 
 pub struct TaskManager {
     abort_handles: Vec<(Task, AbortHandle)>,
+    resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Vec<Message>>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 // TODO: harmonize error handling and tracing
 impl TaskManager {
-    pub fn new(sender: Sender<Vec<Message>>) -> Self {
+    pub fn new(sender: Sender<Vec<Message>>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         Self {
             abort_handles: Vec::new(),
+            resolver,
             sender,
             tasks: JoinSet::new(),
         }
@@ -177,7 +186,30 @@ impl TaskManager {
             }),
             Task::EmitMessages(messages) => {
                 let sender = self.sender.clone();
+                let resolver = self.resolver.clone();
                 self.tasks.spawn(async move {
+                    let (execute, mut messages): (Vec<_>, Vec<_>) = messages
+                        .into_iter()
+                        .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
+
+                    let sequence = execute
+                        .iter()
+                        .map(|m| match m {
+                            Message::ExecuteKeySequence(sequence) => sequence.clone(),
+                            _ => unreachable!(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join("");
+
+                    let keys = conversion::from_keycode_string(&sequence);
+                    let mut resolver = resolver.lock().await;
+                    if let Some(resolved) = resolver.add_keys(keys) {
+                        messages.extend(resolved.messages);
+                    }
+
+                    // NOTE: important to prevent deadlock for queue size of one
+                    drop(resolver);
+
                     if let Err(error) = sender.send(messages).await {
                         emit_error(&sender, AppError::ActionSendFailed(error)).await;
                     }
