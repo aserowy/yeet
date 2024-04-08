@@ -2,12 +2,12 @@ use yeet_buffer::{
     message::{BufferMessage, CursorDirection},
     model::Mode,
 };
-use yeet_keymap::message::{Envelope, KeySequence, Message};
+use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource};
 
 use crate::model::register::{Register, RegisterScope};
 
 pub fn scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    if register.scope.is_some() || is_command_mode(mode) {
+    if register.scope.is_some() || envelope.source != MessageSource::User || is_command_mode(mode) {
         return;
     }
 

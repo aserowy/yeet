@@ -47,6 +47,9 @@ impl Emitter {
         })
         .expect("Failed to create watcher");
 
+        let resolver = Arc::new(Mutex::new(MessageResolver::default()));
+        let inner_resolver = resolver.clone();
+
         let (task_sender, mut task_receiver) = mpsc::channel(1);
         let tasks = TaskManager::new(task_sender);
         tokio::spawn(async move {
@@ -66,16 +69,33 @@ impl Emitter {
                     }
                     event = task_event => {
                         if let Some(messages) = event {
-                            let (_execute, messages) = messages
+                            // TODO: this belongs to task, or?
+                            let (execute, mut messages): (Vec<_>, Vec<_>) = messages
                                 .into_iter()
                                 .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
 
-                            // TODO: resolve message from key sequence and return the rest within the envelope
+                            let sequence = execute
+                                .iter()
+                                .map(|m| match m {
+                                    Message::ExecuteKeySequence(sequence) => sequence.clone(),
+                                    _ => unreachable!(),
+                                })
+                                .collect::<Vec<_>>()
+                                .join("");
+
+                            let keys = conversion::from_keycode_string(&sequence);
+                            let mut resolver = inner_resolver.lock().await;
+                            if let Some(resolved) = resolver.add_keys(keys) {
+                                messages.extend(resolved.messages);
+                            }
+
+                            // NOTE: important to prevent deadlock for queue size of one
+                            drop(resolver);
 
                             let _ = internal_sender.send(Envelope {
                                 messages,
                                 sequence: KeySequence::None,
-                                source: MessageSource::Task,
+                                source: MessageSource::Task
                             }).await;
                         }
                     },
@@ -84,8 +104,6 @@ impl Emitter {
         });
 
         let (cancellation, cancellation_receiver) = oneshot::channel();
-        let resolver = Arc::new(Mutex::new(MessageResolver::default()));
-
         start_crossterm_listener(cancellation_receiver, resolver.clone(), sender.clone());
 
         Self {
@@ -186,7 +204,7 @@ async fn handle_crossterm_event(
         crossterm::event::Event::Key(key) => {
             if let Some(key) = conversion::to_key(&key) {
                 let mut resolver = resolver_mutex.lock().await;
-                let envelope = resolver.add_and_resolve(key);
+                let envelope = resolver.add_key(key);
                 return Some(envelope);
             }
 

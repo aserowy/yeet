@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
@@ -43,7 +45,18 @@ impl Default for MessageResolver {
 }
 
 impl MessageResolver {
-    pub fn add_and_resolve(&mut self, key: Key) -> Envelope {
+    pub fn add_keys(&mut self, mut keys: VecDeque<Key>) -> Option<Envelope> {
+        while let Some(key) = keys.pop_front() {
+            let envelope = self.add_key(key);
+            if matches!(envelope.sequence, KeySequence::Completed(_)) {
+                // TODO: add remaining keys to support macros and enable one command at a time like cdo
+                return Some(envelope);
+            }
+        }
+        None
+    }
+
+    pub fn add_key(&mut self, key: Key) -> Envelope {
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();

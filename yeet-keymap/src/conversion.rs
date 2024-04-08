@@ -1,6 +1,21 @@
+use std::collections::VecDeque;
+
 use crossterm::event::{self, KeyEvent, KeyEventKind};
 
 use crate::key::{Key, KeyCode, KeyModifier};
+
+pub fn from_keycode_string(keycodes: &str) -> VecDeque<Key> {
+    let mut keys = VecDeque::new();
+
+    let regex = regex::Regex::new(r"<[^>]*>|.").expect("Failed to compile regex");
+    for capture in regex.find_iter(keycodes).map(|m| m.as_str()) {
+        if let Some(key) = Key::from_keycode_string(capture) {
+            keys.push_back(key);
+        }
+    }
+
+    keys
+}
 
 pub fn to_key(event: &KeyEvent) -> Option<Key> {
     let modifier = event
@@ -57,5 +72,62 @@ fn to_modifier(modifier: &str) -> Option<KeyModifier> {
         "SHIFT" => Some(KeyModifier::Shift),
         "SUPER" => Some(KeyModifier::Command),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::VecDeque;
+
+    #[test]
+    fn from_keycode_string_empty() {
+        let keycodes = "";
+        let expected: VecDeque<Key> = VecDeque::new();
+        assert_eq!(from_keycode_string(keycodes), expected);
+    }
+
+    #[test]
+    fn from_keycode_string_single() {
+        let keycodes = "<esc>";
+        let mut expected: VecDeque<Key> = VecDeque::new();
+        expected.push_back(Key {
+            code: KeyCode::Esc,
+            modifiers: Vec::new(),
+        });
+        assert_eq!(from_keycode_string(keycodes), expected);
+    }
+
+    #[test]
+    fn from_keycode_string_multiple() {
+        let keycodes = "<esc>a<C-w>A<C-e>";
+        let mut expected: VecDeque<Key> = VecDeque::new();
+        expected.push_back(Key {
+            code: KeyCode::Esc,
+            modifiers: Vec::new(),
+        });
+        expected.push_back(Key {
+            code: KeyCode::from_char('a'),
+            modifiers: Vec::new(),
+        });
+        expected.push_back(Key {
+            code: KeyCode::from_char('w'),
+            modifiers: vec![KeyModifier::Ctrl],
+        });
+        expected.push_back(Key {
+            code: KeyCode::from_char('a'),
+            modifiers: vec![KeyModifier::Shift],
+        });
+        expected.push_back(Key {
+            code: KeyCode::from_char('e'),
+            modifiers: vec![KeyModifier::Ctrl],
+        });
+        assert_eq!(from_keycode_string(keycodes), expected);
+    }
+
+    #[test]
+    fn from_keycode_string_invalid() {
+        let keycodes = "<Invalid>";
+        assert!(from_keycode_string(keycodes).is_empty());
     }
 }

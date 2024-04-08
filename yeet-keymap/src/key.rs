@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{collections::VecDeque, hash::Hash};
 
 #[derive(Clone, Debug, Eq)]
 pub struct Key {
@@ -29,6 +29,33 @@ impl Key {
             }
             _ => get_key_string(self.code.to_string(), modifiers, true),
         }
+    }
+
+    pub fn from_keycode_string(keycode: &str) -> Option<Self> {
+        let regex = regex::Regex::new(r"[^-<>]+").expect("Failed to compile regex");
+        let mut codes = regex
+            .find_iter(keycode)
+            .map(|m| m.as_str())
+            .collect::<VecDeque<_>>();
+
+        let mut modifiers = Vec::new();
+        let last = codes.pop_back()?;
+
+        if last.chars().count() == 1 && last.chars().last()?.is_ascii_uppercase() {
+            modifiers.push(KeyModifier::Shift);
+        }
+
+        for modifier in codes {
+            match modifier.to_ascii_uppercase().as_str() {
+                "A" => modifiers.push(KeyModifier::Alt),
+                "C" => modifiers.push(KeyModifier::Ctrl),
+                "D" => modifiers.push(KeyModifier::Command),
+                "S" => modifiers.push(KeyModifier::Shift),
+                _ => (),
+            }
+        }
+
+        KeyCode::from_keycode_string(last).map(|code| Self { code, modifiers })
     }
 }
 
@@ -131,6 +158,52 @@ pub enum KeyCode {
     Up,
 }
 
+impl KeyCode {
+    pub fn from_keycode_string(keycode: &str) -> Option<Self> {
+        match keycode {
+            "bslash" => Some(KeyCode::Backslash),
+            "bs" => Some(KeyCode::Backspace),
+            "bar" => Some(KeyCode::Bar),
+            "del" => Some(KeyCode::Delete),
+            "down" => Some(KeyCode::Down),
+            "end" => Some(KeyCode::End),
+            "cr" => Some(KeyCode::Enter),
+            "esc" => Some(KeyCode::Esc),
+            "home" => Some(KeyCode::Home),
+            "help" => Some(KeyCode::Help),
+            "insert" => Some(KeyCode::Insert),
+            "left" => Some(KeyCode::Left),
+            "lt" => Some(KeyCode::LessThan),
+            "nul" => Some(KeyCode::Null),
+            "pagedown" => Some(KeyCode::PageDown),
+            "pageup" => Some(KeyCode::PageUp),
+            "print" => Some(KeyCode::Print),
+            "right" => Some(KeyCode::Right),
+            "space" => Some(KeyCode::Space),
+            "tab" => Some(KeyCode::Tab),
+            "undo" => Some(KeyCode::Undo),
+            "up" => Some(KeyCode::Up),
+            code => {
+                if code.len() == 1 {
+                    code.chars().next().map(Self::from_char)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    pub fn from_char(c: char) -> KeyCode {
+        match c {
+            '\\' => KeyCode::Backslash,
+            '|' => KeyCode::Bar,
+            '<' => KeyCode::LessThan,
+            ' ' => KeyCode::Space,
+            passed => KeyCode::Char(passed.to_ascii_lowercase()),
+        }
+    }
+}
+
 impl ToString for KeyCode {
     fn to_string(&self) -> String {
         match self {
@@ -162,22 +235,64 @@ impl ToString for KeyCode {
     }
 }
 
-impl KeyCode {
-    pub fn from_char(c: char) -> KeyCode {
-        match c {
-            '\\' => KeyCode::Backslash,
-            '|' => KeyCode::Bar,
-            '<' => KeyCode::LessThan,
-            ' ' => KeyCode::Space,
-            passed => KeyCode::Char(passed.to_ascii_lowercase()),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum KeyModifier {
     Alt,
     Command,
     Ctrl,
     Shift,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_keycode_string_valid() {
+        let keycode = "a";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_some(), "Expected Some(Key), got None");
+    }
+
+    #[test]
+    fn from_keycode_string_invalid() {
+        let keycode = "<>";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_none(), "Expected None, got Some(Key)");
+    }
+
+    #[test]
+    fn from_keycode_string_empty() {
+        let keycode = "";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_none(), "Expected None, got Some(Key)");
+    }
+
+    #[test]
+    fn from_keycode_string_case_sensitive() {
+        let keycode = "A";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_some(), "Expected Some(Key), got None");
+        assert_eq!(result.as_ref().unwrap().code, KeyCode::Char('a'));
+        assert_eq!(result.unwrap().modifiers, vec![KeyModifier::Shift]);
+    }
+
+    #[test]
+    fn from_keycode_string_with_modifiers() {
+        let keycode = "<A-C-lt>";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_some(), "Expected Some(Key), got None");
+        assert_eq!(result.as_ref().unwrap().code, KeyCode::LessThan);
+
+        let modifiers = result.unwrap().modifiers;
+        assert!(modifiers.contains(&KeyModifier::Alt));
+        assert!(modifiers.contains(&KeyModifier::Ctrl));
+    }
+
+    #[test]
+    fn from_keycode_string_with_invalid_modifiers() {
+        let keycode = "<A-C-invalid>";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_none(), "Expected None, got Some(Key)");
+    }
 }

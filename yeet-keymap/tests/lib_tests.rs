@@ -11,7 +11,7 @@ use yeet_keymap::{
 #[test]
 fn add_and_resolve_key_navigation_colon() {
     let mut resolver = MessageResolver::default();
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -29,7 +29,7 @@ fn add_and_resolve_key_navigation_colon() {
 #[test]
 fn add_and_resolve_key_navigation_d() {
     let mut resolver = MessageResolver::default();
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -40,8 +40,8 @@ fn add_and_resolve_key_navigation_d() {
 #[test]
 fn add_and_resolve_key_navigation_dq() {
     let mut resolver = MessageResolver::default();
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -54,8 +54,8 @@ fn add_and_resolve_key_normal_dd() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -75,8 +75,8 @@ fn add_and_resolve_key_normal_fq() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -96,9 +96,9 @@ fn add_and_resolve_key_normal_dfq() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -118,10 +118,10 @@ fn add_and_resolve_key_normal_10fq() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -144,8 +144,8 @@ fn add_and_resolve_key_normal_d0() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -165,7 +165,7 @@ fn add_and_resolve_key_command_q() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Command(CommandMode::Command);
 
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -185,7 +185,7 @@ fn add_and_resolve_key_navigation_q() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Navigation;
 
-    let envelope = resolver.add_and_resolve(Key::new(
+    let envelope = resolver.add_key(Key::new(
         KeyCode::from_char('q'),
         vec![KeyModifier::Ctrl, KeyModifier::Shift],
     ));
@@ -203,9 +203,9 @@ fn add_and_resolve_key_navigation_q() {
 fn add_and_resolve_key_navigation_10h() {
     let mut resolver = MessageResolver::default();
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('h'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('h'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -227,8 +227,8 @@ fn add_and_resolve_key_navigation_10h() {
 fn add_and_resolve_key_navigation_yy() {
     let mut resolver = MessageResolver::default();
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -241,10 +241,10 @@ fn add_and_resolve_key_navigation_yy() {
 fn add_and_resolve_key_navigation_10yy() {
     let mut resolver = MessageResolver::default();
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('y'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -264,7 +264,7 @@ fn add_and_resolve_key_normal_0() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -284,11 +284,11 @@ fn add_and_resolve_key_normal_d10fq() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -311,13 +311,13 @@ fn add_and_resolve_key_normal_10d10fq() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('d'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char('q'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
     println!("{:?}", envelope);
 
@@ -339,9 +339,9 @@ fn add_and_resolve_key_normal_10d10fq() {
 fn add_and_resolve_key_normal_10colon() {
     let mut resolver = MessageResolver::default();
 
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('1'), vec![]));
-    let _ = resolver.add_and_resolve(Key::new(KeyCode::from_char('0'), vec![]));
-    let envelope = resolver.add_and_resolve(Key::new(KeyCode::from_char(':'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
 
     println!("{:?}", envelope);
 

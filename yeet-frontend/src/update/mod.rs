@@ -106,10 +106,6 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
-        Message::ExecuteKeySequence(_sequence) => {
-            let actions = Vec::new();
-            actions
-        }
         Message::ExecuteRegister(register) => {
             let key_sequence = model.register.get(register);
             match key_sequence {
@@ -200,6 +196,8 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::Quit => vec![Action::Quit(None)],
         Message::YankToJunkYard(repeat) => junkyard::yank(model, repeat),
+
+        Message::ExecuteKeySequence(_) => unreachable!(),
     }
 }
 
