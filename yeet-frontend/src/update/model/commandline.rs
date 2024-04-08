@@ -20,6 +20,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
     match commandline.state {
         CommandLineState::Default => {
             let mut actions = Vec::new();
+            // TODO: split into several message spicific fn
             if let Some(message) = message {
                 match message {
                     BufferMessage::ChangeMode(from, to) => {
@@ -188,6 +189,23 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
     }
 
     actions
+}
+
+pub fn update_on_leave(model: &mut Model) -> Vec<Action> {
+    model.commandline.state = CommandLineState::Default;
+    update::update(
+        &model.mode,
+        &model.search,
+        &mut model.commandline.buffer,
+        &BufferMessage::SetContent(vec![]),
+    );
+
+    vec![Action::EmitMessages(vec![Message::Buffer(
+        BufferMessage::ChangeMode(
+            model.mode.clone(),
+            get_mode_after_command(&model.mode_before),
+        ),
+    )])]
 }
 
 pub fn print(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {

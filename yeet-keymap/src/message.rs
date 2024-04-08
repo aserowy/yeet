@@ -101,6 +101,7 @@ pub enum Message {
     ExecuteCommandString(String),
     ExecuteKeySequence(String),
     ExecuteRegister(char),
+    LeaveCommandMode,
     NavigateToMark(char),
     NavigateToParent,
     NavigateToPath(PathBuf),

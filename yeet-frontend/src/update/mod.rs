@@ -117,6 +117,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
                 None => Vec::new(),
             }
         }
+        Message::LeaveCommandMode => match &model.mode {
+            Mode::Command(_) => commandline::update_on_leave(model),
+            _ => Vec::new(),
+        },
         Message::NavigateToMark(char) => {
             let path = match model.marks.entries.get(char) {
                 Some(it) => it.clone(),

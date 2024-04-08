@@ -65,7 +65,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
-                        force: Some(Mode::default()),
+                        kind: BindingKind::Message(Message::LeaveCommandMode),
                         ..Default::default()
                     },
                 ),
