@@ -44,20 +44,17 @@ pub fn update_on_modification(
     match commandline.state {
         CommandLineState::Default => {
             let mut actions = Vec::new();
-            match modification {
-                &TextModification::DeleteMotion(_, CursorDirection::Left) => {
-                    if let Some(line) = buffer.lines.last() {
-                        if line.content.is_empty() {
-                            actions.push(Action::EmitMessages(vec![Message::Buffer(
-                                BufferMessage::ChangeMode(
-                                    model.mode.clone(),
-                                    get_mode_after_command(&model.mode_before),
-                                ),
-                            )]));
-                        }
+            if let &TextModification::DeleteMotion(_, CursorDirection::Left) = modification {
+                if let Some(line) = buffer.lines.last() {
+                    if line.content.is_empty() {
+                        actions.push(Action::EmitMessages(vec![Message::Buffer(
+                            BufferMessage::ChangeMode(
+                                model.mode.clone(),
+                                get_mode_after_command(&model.mode_before),
+                            ),
+                        )]));
                     }
                 }
-                _ => {}
             };
 
             update::update(

@@ -301,10 +301,10 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
         }
         BufferMessage::Modification(repeat, modification) => match model.mode {
             Mode::Command(CommandMode::Command) => {
-                commandline::update_on_modification(model, &repeat, &modification)
+                commandline::update_on_modification(model, repeat, modification)
             }
             Mode::Command(_) => {
-                let actions = commandline::update_on_modification(model, &repeat, &modification);
+                let actions = commandline::update_on_modification(model, repeat, modification);
                 search::update(model);
 
                 actions
