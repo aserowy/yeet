@@ -69,17 +69,18 @@ current buffer. To delete the selected path completly, call command `:d!`.
 In normal mode, all register interactions target the default register (equal to
 `:reg` in nvim).
 
-| keys               | action                                               |
-| ------------------ | ---------------------------------------------------- |
-| h, l               | move cursor left/right                               |
-| 0, $               | move cursor to line start/end                        |
-| f\<char>, F\<char> | move cursor to next char forward/backward            |
-| t\<char>, T\<char> | move cursor before next char forward/backward        |
-| i, a               | change to insert mode                                |
-| c\<motion>         | delete according to motion and change to insert mode |
-| d\<motion>         | delete according to motion                           |
-| s                  | delete char on cursor and change to insert mode      |
-| x                  | delete char on cursor                                |
+| keys               | action                                                                       |
+| ------------------ | ---------------------------------------------------------------------------- |
+| h, l               | move cursor left/right                                                       |
+| 0, $               | move cursor to line start/end                                                |
+| f\<char>, F\<char> | move cursor to next char forward/backward                                    |
+| t\<char>, T\<char> | move cursor before next char forward/backward                                |
+| ;                  | repeat the last motion with f or t. Currently not valild to pair with c or d |
+| i, a               | change to insert mode                                                        |
+| c\<motion>         | delete according to motion and change to insert mode                         |
+| d\<motion>         | delete according to motion                                                   |
+| s                  | delete char on cursor and change to insert mode                              |
+| x                  | delete char on cursor                                                        |
 
 ## commands
 
@@ -99,6 +100,7 @@ In normal mode, all register interactions target the default register (equal to
 | marks                  | list all given marks                                                                                                                                                                                                   |
 | noh                    | remove search highlights                                                                                                                                                                                               |
 | q                      | quit yeet                                                                                                                                                                                                              |
+| reg                    | print all register entries                                                                                                                                                                                             |
 | w                      | write changes without changing mode                                                                                                                                                                                    |
 | wq                     | write changes and quit yeet                                                                                                                                                                                            |
 
