@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::VecDeque};
 
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, ViewPortDirection},
@@ -106,6 +106,16 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             _ => Vec::new(),
         },
         Message::ExecuteCommandString(command) => command::execute(command, model),
+        Message::ExecuteKeySequence(_) => {
+            if let Some(commands) = &mut model.command_stack {
+                commands.push_back(message.clone());
+            } else {
+                let mut stack = VecDeque::new();
+                stack.push_back(message.clone());
+                model.command_stack = Some(stack);
+            }
+            Vec::new()
+        }
         Message::ExecuteRegister(register) => {
             let key_sequence = model.register.get(register);
             match key_sequence {
@@ -200,8 +210,6 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::Quit => vec![Action::Quit(None)],
         Message::YankToJunkYard(repeat) => junkyard::yank(model, repeat),
-
-        Message::ExecuteKeySequence(_) => unreachable!(),
     }
 }
 

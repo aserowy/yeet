@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::VecDeque,
+    path::{Path, PathBuf},
+};
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{Message, PrintContent};
@@ -32,15 +35,14 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             vec![change_mode_action]
         }
         ("cdo", command) => {
-            let mut commands = Vec::new();
+            let mut commands = VecDeque::new();
             for path in &model.qfix.entries {
-                commands.push(Message::NavigateToPathAsPreview(path.clone()));
-                commands.push(Message::ExecuteCommandString(command.to_owned()));
+                commands.push_back(Message::NavigateToPathAsPreview(path.clone()));
+                commands.push_back(Message::ExecuteCommandString(command.to_owned()));
             }
-            commands.reverse();
 
             tracing::debug!("cdo commands set: {:?}", commands);
-            model.qfix.do_command_stack = Some(commands);
+            model.command_stack = Some(commands);
 
             vec![change_mode_action]
         }

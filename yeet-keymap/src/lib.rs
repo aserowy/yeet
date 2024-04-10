@@ -47,9 +47,20 @@ impl Default for MessageResolver {
 impl MessageResolver {
     pub fn add_keys(&mut self, mut keys: VecDeque<Key>) -> Option<Envelope> {
         while let Some(key) = keys.pop_front() {
-            let envelope = self.add_key(key);
+            let mut envelope = self.add_key(key);
             if matches!(envelope.sequence, KeySequence::Completed(_)) {
-                // TODO: add remaining keys to support macros and enable one command at a time like cdo
+                let remaining_sequence = keys
+                    .iter()
+                    .map(|key| key.to_keycode_string())
+                    .collect::<Vec<_>>()
+                    .join("");
+
+                if !remaining_sequence.is_empty() {
+                    envelope
+                        .messages
+                        .insert(0, Message::ExecuteKeySequence(remaining_sequence));
+                }
+
                 return Some(envelope);
             }
         }

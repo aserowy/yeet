@@ -4,7 +4,6 @@ use std::{
 };
 
 use yeet_buffer::model::SignIdentifier;
-use yeet_keymap::message::Message;
 
 use crate::error::AppError;
 
@@ -13,7 +12,6 @@ pub const QFIX_SIGN_ID: SignIdentifier = "qfix";
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct QuickFix {
     pub current_index: usize,
-    pub do_command_stack: Option<Vec<Message>>,
     pub entries: Vec<PathBuf>,
 }
 

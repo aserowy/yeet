@@ -72,7 +72,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         tracing::debug!("received messages: {:?}", envelope.messages);
 
         // TODO: C-c should interrupt (clear) cdo commands
-        if model.qfix.do_command_stack.is_some() && envelope.source == MessageSource::User {
+        if model.command_stack.is_some() && envelope.source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
                 envelope.messages
@@ -93,7 +93,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let mut actions = update::update(&mut model, &envelope);
         actions.extend(get_watcher_changes(&mut model));
-        actions.extend(get_cdo_commands(&mut model, &actions));
+        actions.extend(get_command_from_stack(&mut model, &actions));
 
         let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
@@ -163,14 +163,14 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
 }
 
 #[tracing::instrument(skip(model, actions))]
-fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
+fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> {
     let buffer_loading = model
         .files
         .get_mut_directories()
         .iter()
         .any(|(_, state, _)| state != &&DirectoryBufferState::Ready);
 
-    if let Some(commands) = &mut model.qfix.do_command_stack {
+    if let Some(commands) = &mut model.command_stack {
         let contains_emit_messages = actions
             .iter()
             .any(|msg| matches!(msg, Action::EmitMessages(_)));
@@ -186,25 +186,28 @@ fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
         }
 
         let mut actions = Vec::new();
-        let command = if let Some(Message::NavigateToPathAsPreview(_)) = commands.last() {
-            while let Some(last) = commands.last() {
+        let command = if let Some(Message::NavigateToPathAsPreview(_)) = commands.front() {
+            while let Some(last) = commands.front() {
                 if let Message::NavigateToPathAsPreview(path) = last {
                     if path.exists() {
                         break;
                     } else {
-                        tracing::warn!("removing non existing cdo path: {:?}", commands.pop());
+                        tracing::warn!(
+                            "removing non existing cdo path: {:?}",
+                            commands.pop_front()
+                        );
                     }
                 } else {
                     tracing::info!(
                         "removing command for non existing path: {:?}",
-                        commands.pop()
+                        commands.pop_front()
                     );
                 }
             }
 
-            commands.pop()
+            commands.pop_front()
         } else {
-            commands.pop()
+            commands.pop_front()
         };
 
         if let Some(command) = command {
@@ -214,7 +217,7 @@ fn get_cdo_commands(model: &mut Model, actions: &[Action]) -> Vec<Action> {
 
         if commands.is_empty() {
             tracing::trace!("cdo commands finished");
-            model.qfix.do_command_stack = None;
+            model.command_stack = None;
         }
         actions
     } else {

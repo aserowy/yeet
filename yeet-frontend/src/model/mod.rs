@@ -1,10 +1,14 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::VecDeque,
+    path::{Path, PathBuf},
+};
 
 use ratatui::layout::Rect;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Buffer, Cursor, CursorPosition, Mode, SearchModel,
 };
+use yeet_keymap::message::Message;
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
@@ -22,6 +26,7 @@ pub mod register;
 #[derive(Debug, Default)]
 pub struct Model {
     pub commandline: CommandLine,
+    pub command_stack: Option<VecDeque<Message>>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,

@@ -25,9 +25,18 @@ fn is_command_mode(mode: &Mode) -> bool {
 }
 
 fn contains_valid_dot(messages: &[Message]) -> bool {
-    messages
+    let starts_insert = messages.iter().any(|m| {
+        matches!(
+            m,
+            Message::Buffer(BufferMessage::ChangeMode(_, Mode::Insert))
+        )
+    });
+
+    let is_modification = messages
         .iter()
-        .any(|m| matches!(m, Message::Buffer(BufferMessage::Modification(..))))
+        .any(|m| matches!(m, Message::Buffer(BufferMessage::Modification(..))));
+
+    starts_insert || is_modification
 }
 
 fn contains_valid_find(messages: &[Message]) -> bool {
