@@ -81,6 +81,7 @@ In normal mode, all register interactions target the default register (equal to
 | d\<motion>         | delete according to motion                                                   |
 | s                  | delete char on cursor and change to insert mode                              |
 | x                  | delete char on cursor                                                        |
+| .                  | repeat last modification. Key sequence is stored in '.' register             |
 
 ## commands
 
