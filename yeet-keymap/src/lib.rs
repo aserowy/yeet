@@ -247,6 +247,7 @@ fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError
             let message = match msg {
                 Message::PasteFromJunkYard(_) => Message::PasteFromJunkYard(*raw),
                 Message::NavigateToMark(_) => Message::NavigateToMark(*raw),
+                Message::ReplayMacro(_) => Message::ReplayMacro(*raw),
                 Message::SetMark(_) => Message::SetMark(*raw),
                 Message::StartMacro(_) => Message::StartMacro(*raw),
                 _ => return Err(KeyMapError::NoValidBindingFound),

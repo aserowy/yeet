@@ -8,10 +8,7 @@ use crate::model::register::{Register, RegisterScope};
 
 #[tracing::instrument(skip(mode, register, envelope))]
 pub fn scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    if register.scope.is_some()
-        || envelope.source != MessageSource::User
-        || matches!(mode, Mode::Command(_))
-    {
+    if register.scope.is_some() || envelope.source != MessageSource::User || mode.is_command() {
         return;
     }
 
@@ -89,6 +86,7 @@ pub fn finish(mode: &Mode, register: &mut Register, envelope: &Envelope) {
     };
 
     let is_macro_start = resolve_macro_register(&envelope.messages).is_some();
+    let is_macro_stop = finish_macro_scope(&envelope.messages);
     match scope {
         RegisterScope::Dot => {
             if let Some(dot) = &mut register.dot {
@@ -107,7 +105,9 @@ pub fn finish(mode: &Mode, register: &mut Register, envelope: &Envelope) {
         RegisterScope::Macro(identifier) => {
             tracing::trace!("writing to macro at register {:?}", identifier);
 
-            if is_macro_start {
+            if is_macro_stop {
+                // NOTE: prevent writing q to finish macro into register
+            } else if is_macro_start {
                 register.content.remove(&identifier);
             } else if let Some(content) = register.content.get_mut(&identifier) {
                 content.push_str(sequence);
@@ -117,7 +117,7 @@ pub fn finish(mode: &Mode, register: &mut Register, envelope: &Envelope) {
         }
     };
 
-    if finish_mode_dependend_scope(mode, &scope) || finish_macro_scope(&envelope.messages) {
+    if finish_mode_dependend_scope(mode, &scope) || is_macro_stop {
         tracing::trace!("closing scope: {:?}", scope);
 
         register.scope = None;

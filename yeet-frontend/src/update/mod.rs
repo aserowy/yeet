@@ -200,6 +200,15 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Print(content) => commandline::print(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
+        Message::ReplayMacro(char) => {
+            if let Some(content) = model.register.get(char) {
+                vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
+                    content.to_string(),
+                )])]
+            } else {
+                Vec::new()
+            }
+        }
         Message::SetMark(char) => {
             mark::add(model, *char);
             Vec::new()

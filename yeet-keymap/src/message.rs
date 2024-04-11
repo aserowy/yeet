@@ -117,6 +117,7 @@ pub enum Message {
     Print(Vec<PrintContent>),
     Rerender,
     Resize(u16, u16),
+    ReplayMacro(char),
     SetMark(char),
     StartMacro(char),
     StopMacro,

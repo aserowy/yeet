@@ -17,7 +17,7 @@ impl Register {
             ';' => self.find.clone(),
             ':' => self.command.clone(),
             '/' => self.searched.clone(),
-            _ => None,
+            char => self.content.get(char).cloned(),
         }
     }
 
