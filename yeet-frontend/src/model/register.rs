@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
     pub command: Option<String>,
+    pub content: HashMap<char, String>,
     pub dot: Option<String>,
     pub find: Option<String>,
     pub searched: Option<String>,
@@ -20,6 +23,11 @@ impl Register {
 
     pub fn print(&self) -> Vec<String> {
         let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
+
+        for (key, content) in self.content.iter() {
+            contents.push(print_content(key, content));
+        }
+
         if let Some(dot) = &self.dot {
             contents.push(print_content(&'.', dot));
         }
@@ -44,5 +52,5 @@ fn print_content(prefix: &char, content: &str) -> String {
 pub enum RegisterScope {
     Dot,
     Find,
-    _Macro(char),
+    Macro(char),
 }
