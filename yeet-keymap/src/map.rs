@@ -196,6 +196,14 @@ impl Default for KeyMap {
             vec![Mode::Navigation, Mode::Normal],
             vec![
                 (
+                    vec![Key::new(KeyCode::Space, vec![])],
+                    Binding {
+                        kind: BindingKind::Message(Message::ToggleQuickFix),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
                         force: Some(Mode::Navigation),
@@ -411,10 +419,17 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    vec![Key::new(KeyCode::Space, vec![])],
+                    vec![Key::new(KeyCode::from_char('q'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::ToggleQuickFix),
+                        expects: Some(NextBindingKind::Raw(Some(
+                            Regex::new("[[:alpha:]]").expect("Invalid regex"),
+                        ))),
+                        kind: BindingKind::Message(Message::StartMacro(' ')),
                         repeatable: false,
+                        toggle: Some((
+                            "macro-toggle".to_owned(),
+                            BindingKind::Message(Message::StopMacro),
+                        )),
                         ..Default::default()
                     },
                 ),

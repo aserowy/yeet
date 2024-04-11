@@ -204,6 +204,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             mark::add(model, *char);
             Vec::new()
         }
+        Message::StartMacro(_) | Message::StopMacro => {
+            // NOTE: macro scopes are handled with register scopes
+            Vec::new()
+        }
         Message::ToggleQuickFix => {
             qfix::toggle(model);
             Vec::new()

@@ -355,3 +355,26 @@ fn add_and_resolve_key_normal_10colon() {
     assert_eq!(KeySequence::Completed("10:".to_string()), envelope.sequence);
     assert_eq!(1, envelope.messages.len());
 }
+
+#[test]
+fn add_and_resolve_key_normal_qa_and_q() {
+    let mut resolver = MessageResolver::default();
+    resolver.mode = Mode::Normal;
+
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('a'), vec![]));
+
+    println!("{:?}", envelope);
+
+    assert_eq!(Some(&Message::StartMacro('a')), envelope.messages.first());
+    assert_eq!(KeySequence::Completed("qa".to_string()), envelope.sequence);
+    assert_eq!(1, envelope.messages.len());
+
+    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+
+    println!("{:?}", envelope);
+
+    assert_eq!(Some(&Message::StopMacro), envelope.messages.first());
+    assert_eq!(KeySequence::Completed("q".to_string()), envelope.sequence);
+    assert_eq!(1, envelope.messages.len());
+}

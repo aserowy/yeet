@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
@@ -21,25 +21,29 @@ mod tree;
 enum KeyMapError {
     #[error("Key sequence is incomplete.")]
     KeySequenceIncomplete,
-    #[error("Failed to add mapping for mode {0}")]
+    #[error("Failed to add mapping for mode {0}.")]
     ModeUnresolvable(String),
     #[error("Failed to resolve valid binding.")]
     NoValidBindingFound,
+    #[error("No keys left.")]
+    NoKeysRemaining,
 }
 
 #[derive(Debug)]
 pub struct MessageResolver {
     buffer: KeyBuffer,
-    tree: KeyTree,
     pub mode: Mode,
+    toggle: HashSet<String>,
+    tree: KeyTree,
 }
 
 impl Default for MessageResolver {
     fn default() -> Self {
         Self {
             buffer: KeyBuffer::default(),
-            tree: KeyMap::default().into_tree(),
             mode: Mode::default(),
+            toggle: HashSet::new(),
+            tree: KeyMap::default().into_tree(),
         }
     }
 }
@@ -85,16 +89,19 @@ impl MessageResolver {
         self.buffer.add_key(key);
 
         let keys = self.buffer.get_keys();
-        let binding = resolve_binding(&self.tree, &self.mode, &keys, None);
+        let binding = resolve_binding(&self.tree, &self.mode, &mut self.toggle, &keys, None);
         let sequence = self.buffer.to_keycode_string();
 
         let (messages, sequence) = match binding {
-            Ok(Some(binding)) => {
+            Ok(binding) => {
+                if let Some((identifier, _)) = &binding.toggle {
+                    self.toggle.insert(identifier.to_string());
+                }
+
                 self.buffer.clear();
                 let messages = get_messages_from_binding(&self.mode, binding);
                 (messages, KeySequence::Completed(sequence))
             }
-            Ok(None) => (Vec::new(), KeySequence::Changed(sequence)),
             Err(KeyMapError::KeySequenceIncomplete) => (Vec::new(), KeySequence::Changed(sequence)),
             Err(_) => {
                 let messages = if get_passthrough_by_mode(&self.mode) {
@@ -120,27 +127,38 @@ impl MessageResolver {
 fn resolve_binding(
     tree: &KeyTree,
     mode: &Mode,
+    toggle: &mut HashSet<String>,
     keys: &[Key],
     before: Option<&Binding>,
-) -> Result<Option<Binding>, KeyMapError> {
+) -> Result<Binding, KeyMapError> {
     if keys.is_empty() {
-        return Ok(None);
+        return Err(KeyMapError::NoKeysRemaining);
     }
 
     if let Some(raw) = return_raw_if_expected(before, keys)? {
-        return Ok(Some(raw));
+        return Ok(raw);
     }
 
     let (mut binding, unused_keys) = get_binding_by_keys(before, tree, mode, keys)?;
-    let mut next = match resolve_binding(tree, mode, &unused_keys, Some(&binding))? {
-        Some(it) => it,
-        None => {
+    if let Some((identifier, kind)) = &binding.toggle {
+        if toggle.remove(identifier) {
+            return Ok(Binding {
+                kind: kind.clone(),
+                ..Default::default()
+            });
+        }
+    }
+
+    let mut next = match resolve_binding(tree, mode, toggle, &unused_keys, Some(&binding)) {
+        Ok(it) => it,
+        Err(KeyMapError::NoKeysRemaining) => {
             if binding.expects.is_some() || binding.kind == BindingKind::Repeat {
                 return Err(KeyMapError::KeySequenceIncomplete);
             } else {
-                return Ok(Some(binding));
+                return Ok(binding);
             }
         }
+        Err(error) => return Err(error),
     };
 
     let result = if binding.expects.is_some() {
@@ -159,7 +177,7 @@ fn resolve_binding(
         binding
     };
 
-    Ok(Some(result))
+    Ok(result)
 }
 
 fn return_raw_if_expected(
@@ -230,6 +248,7 @@ fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError
                 Message::PasteFromJunkYard(_) => Message::PasteFromJunkYard(*raw),
                 Message::NavigateToMark(_) => Message::NavigateToMark(*raw),
                 Message::SetMark(_) => Message::SetMark(*raw),
+                Message::StartMacro(_) => Message::StartMacro(*raw),
                 _ => return Err(KeyMapError::NoValidBindingFound),
             };
 

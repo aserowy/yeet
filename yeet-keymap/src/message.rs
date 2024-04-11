@@ -13,6 +13,7 @@ pub struct Binding {
     pub kind: BindingKind,
     pub repeat: Option<usize>,
     pub repeatable: bool,
+    pub toggle: Option<(String, BindingKind)>,
 }
 
 impl Default for Binding {
@@ -23,6 +24,7 @@ impl Default for Binding {
             kind: BindingKind::default(),
             repeat: None,
             repeatable: true,
+            toggle: None,
         }
     }
 }
@@ -116,6 +118,8 @@ pub enum Message {
     Rerender,
     Resize(u16, u16),
     SetMark(char),
+    StartMacro(char),
+    StopMacro,
     ToggleQuickFix,
     Quit,
     // TODO: yank to junk with motion
