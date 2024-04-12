@@ -44,21 +44,24 @@ register holds all files which got yanked and the last nine trashes.
 
 ### navigation and normal mode
 
-| keys       | action                                                             |
-| ---------- | ------------------------------------------------------------------ |
-| j, k       | navigating the current directory down/up                           |
-| o, O       | add a new line and change to insert mode                           |
-| I, A       | jump to line start/end and change to insert mode                   |
-| dd         | go into normal and trash\* the current line                        |
-| :          | change to command mode                                             |
-| /          | change to search downward                                          |
-| ?          | change to search upward                                            |
-| n, N       | repeat last search in same/reverse direction                       |
-| \<space>   | add or remove (toggle) current file to quick fix list              |
-| m\<char>   | set mark for current selection. Only letters [a-zA-Z] are allowed! |
-| '\<char>   | jump to mark                                                       |
-| zt, zz, zb | move viewport to start, center, bottom of cursor position          |
-| C-u, C-d   | move viewport half screen up/down                                  |
+| keys       | action                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| j, k       | navigating the current directory down/up                                                          |
+| o, O       | add a new line and change to insert mode                                                          |
+| I, A       | jump to line start/end and change to insert mode                                                  |
+| dd         | go into normal and trash\* the current line                                                       |
+| :          | change to command mode                                                                            |
+| /          | change to search downward                                                                         |
+| ?          | change to search upward                                                                           |
+| n, N       | repeat last search in same/reverse direction                                                      |
+| \<space>   | add or remove (toggle) current file to quick fix list                                             |
+| q\<char>   | start recording a macro on register \<char>. Only letters [a-zA-Z] are allowed!                   |
+| q          | while recording a macro, q finishes the recording and writes the input to the specified register. |
+| @\<char>   | replay a recorded macro on register \<char>                                                       |
+| m\<char>   | set mark for current selection. Only letters [a-zA-Z] are allowed!                                |
+| '\<char>   | jump to mark                                                                                      |
+| zt, zz, zb | move viewport to start, center, bottom of cursor position                                         |
+| C-u, C-d   | move viewport half screen up/down                                                                 |
 
 \*trash: files are not deleted but moved to yeets cache folder to enable junk yard
 interactions. Trashes get executed when leaving normal to navigation or saving the
