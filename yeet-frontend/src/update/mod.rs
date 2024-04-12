@@ -9,7 +9,10 @@ use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, DirectoryBufferState, Model},
+    model::{
+        mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, register::RegisterScope, DirectoryBufferState,
+        Model,
+    },
 };
 
 use self::model::{commandline, current, preview};
@@ -213,8 +216,14 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             mark::add(model, *char);
             Vec::new()
         }
-        Message::StartMacro(_) | Message::StopMacro => {
+        Message::StartMacro(identifier) => {
             // NOTE: macro scopes are handled with register scopes
+            set_commandline_content_to_macro(model, *identifier);
+            Vec::new()
+        }
+        Message::StopMacro => {
+            // NOTE: macro scopes are handled with register scopes
+            set_commandline_content_to_mode(model);
             Vec::new()
         }
         Message::ToggleQuickFix => {
@@ -291,8 +300,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 }
             });
 
-            let content = format!("--{}--", to.to_string().to_uppercase());
-            commandline::print(model, &[PrintContent::Default(content)]);
+            set_commandline_content(model);
 
             actions.extend(match to {
                 Mode::Command(_) => {
@@ -392,4 +400,22 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
         | BufferMessage::SetCursorToLineContent(_)
         | BufferMessage::SortContent(_) => unreachable!(),
     }
+}
+
+fn set_commandline_content(model: &mut Model) {
+    if let Some(RegisterScope::Macro(identifier)) = &model.register.resolve_macro() {
+        set_commandline_content_to_macro(model, *identifier);
+    } else {
+        set_commandline_content_to_mode(model);
+    };
+}
+
+fn set_commandline_content_to_macro(model: &mut Model, identifier: char) {
+    let content = format!("recording @{}", identifier);
+    commandline::print(model, &[PrintContent::Default(content)]);
+}
+
+fn set_commandline_content_to_mode(model: &mut Model) {
+    let content = format!("--{}--", model.mode.to_string().to_uppercase());
+    commandline::print(model, &[PrintContent::Default(content)]);
 }

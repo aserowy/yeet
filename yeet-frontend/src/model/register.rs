@@ -24,6 +24,12 @@ impl Register {
         }
     }
 
+    pub fn resolve_macro(&self) -> Option<&RegisterScope> {
+        self.scopes
+            .keys()
+            .find(|scope| matches!(scope, RegisterScope::Macro(_)))
+    }
+
     pub fn print(&self) -> Vec<String> {
         let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
 
