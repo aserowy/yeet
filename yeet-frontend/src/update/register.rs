@@ -6,43 +6,46 @@ use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource};
 
 use crate::model::register::{Register, RegisterScope};
 
+// TODO: handle search scope as well
 #[tracing::instrument(skip(mode, register, envelope))]
-pub fn scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    if register.scope.is_some() || envelope.source != MessageSource::User || mode.is_command() {
+pub fn start_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
+    // FIX: remove source check and pass used sequence in task to event
+    // TODO: @@
+    if mode.is_command() || envelope.source != MessageSource::User {
         return;
     }
 
-    if start_dot_scope(&envelope.messages) {
-        register.scope = Some(RegisterScope::Dot);
-        register.dot = None;
-    } else if start_find_scope(&envelope.messages) {
-        register.scope = Some(RegisterScope::Find);
-        register.find = None;
-    } else if let Some(identifier) = resolve_macro_register(&envelope.messages) {
-        register.scope = Some(RegisterScope::Macro(identifier));
-    }
+    if let Some(scope) = resolve_register_scope(&envelope.messages) {
+        tracing::trace!("starting scope: {:?}", scope);
 
-    if register.scope.is_some() {
-        tracing::trace!("starting scope: {:?}", register.scope);
+        register
+            .scopes
+            .entry(scope)
+            .or_insert_with(|| "".to_owned());
     }
 }
 
-fn start_dot_scope(messages: &[Message]) -> bool {
-    let starts_insert = messages.iter().any(|m| {
+fn resolve_register_scope(messages: &[Message]) -> Option<RegisterScope> {
+    if is_dot_scope(messages) {
+        Some(RegisterScope::Dot)
+    } else if is_find_scope(messages) {
+        Some(RegisterScope::Find)
+    } else {
+        resolve_macro_register(messages).map(RegisterScope::Macro)
+    }
+}
+
+fn is_dot_scope(messages: &[Message]) -> bool {
+    messages.iter().any(|message| {
         matches!(
-            m,
+            message,
             Message::Buffer(BufferMessage::ChangeMode(_, Mode::Insert))
+                | Message::Buffer(BufferMessage::Modification(..))
         )
-    });
-
-    let is_modification = messages
-        .iter()
-        .any(|m| matches!(m, Message::Buffer(BufferMessage::Modification(..))));
-
-    starts_insert || is_modification
+    })
 }
 
-fn start_find_scope(messages: &[Message]) -> bool {
+fn is_find_scope(messages: &[Message]) -> bool {
     let direction = messages.iter().find_map(|m| {
         if let Message::Buffer(BufferMessage::MoveCursor(_, direction)) = m {
             Some(direction)
@@ -73,65 +76,6 @@ fn start_find_scope(messages: &[Message]) -> bool {
     }
 }
 
-#[tracing::instrument(skip(mode, register, envelope))]
-pub fn finish(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    let sequence = match &envelope.sequence {
-        KeySequence::Completed(sequence) => sequence.as_str(),
-        KeySequence::Changed(_) | KeySequence::None => return,
-    };
-
-    let scope = match &register.scope {
-        Some(scope) => scope.clone(),
-        None => return,
-    };
-
-    let is_macro_start = resolve_macro_register(&envelope.messages).is_some();
-    let is_macro_stop = finish_macro_scope(&envelope.messages);
-    match scope {
-        RegisterScope::Dot => {
-            if let Some(dot) = &mut register.dot {
-                dot.push_str(sequence);
-            } else {
-                register.dot = Some(sequence.to_string());
-            }
-        }
-        RegisterScope::Find => {
-            if let Some(find) = &mut register.find {
-                find.push_str(sequence);
-            } else {
-                register.find = Some(sequence.to_string());
-            }
-        }
-        RegisterScope::Macro(identifier) => {
-            tracing::trace!("writing to macro at register {:?}", identifier);
-
-            if is_macro_stop {
-                // NOTE: prevent writing q to finish macro into register
-            } else if is_macro_start {
-                register.content.remove(&identifier);
-            } else if let Some(content) = register.content.get_mut(&identifier) {
-                content.push_str(sequence);
-            } else {
-                register.content.insert(identifier, sequence.to_string());
-            }
-        }
-    };
-
-    if finish_mode_dependend_scope(mode, &scope) || is_macro_stop {
-        tracing::trace!("closing scope: {:?}", scope);
-
-        register.scope = None;
-    }
-}
-
-fn finish_mode_dependend_scope(mode: &Mode, scope: &RegisterScope) -> bool {
-    mode != &Mode::Insert && !matches!(scope, RegisterScope::Macro(_))
-}
-
-fn finish_macro_scope(messages: &[Message]) -> bool {
-    messages.iter().any(|m| m == &Message::StopMacro)
-}
-
 fn resolve_macro_register(messages: &[Message]) -> Option<char> {
     let message = messages
         .iter()
@@ -142,4 +86,56 @@ fn resolve_macro_register(messages: &[Message]) -> Option<char> {
     } else {
         None
     }
+}
+
+#[tracing::instrument(skip(mode, register, envelope))]
+pub fn finish_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
+    let sequence = match &envelope.sequence {
+        KeySequence::Completed(sequence) => sequence.as_str(),
+        KeySequence::Changed(_) | KeySequence::None => return,
+    };
+
+    let is_macro_start = resolve_macro_register(&envelope.messages).is_some();
+    let is_macro_stop = finish_macro_scope(&envelope.messages);
+
+    let mut to_close = Vec::new();
+    for (scope, content) in register.scopes.iter_mut() {
+        match scope {
+            RegisterScope::Dot | RegisterScope::Find => {
+                if finish_mode_dependend_scope(mode, scope) {
+                    to_close.push(scope.clone());
+                }
+                content.push_str(sequence);
+            }
+            RegisterScope::Macro(_) => {
+                if is_macro_start {
+                    continue;
+                } else if is_macro_stop {
+                    to_close.push(scope.clone());
+                    continue;
+                }
+                content.push_str(sequence);
+            }
+        }
+    }
+
+    for scope in to_close {
+        tracing::trace!("closing scope: {:?}", scope);
+
+        if let Some(content) = register.scopes.remove(&scope) {
+            match scope {
+                RegisterScope::Dot => register.dot.replace(content),
+                RegisterScope::Find => register.find.replace(content),
+                RegisterScope::Macro(identifier) => register.content.insert(identifier, content),
+            };
+        }
+    }
+}
+
+fn finish_mode_dependend_scope(mode: &Mode, scope: &RegisterScope) -> bool {
+    mode != &Mode::Insert && !matches!(scope, RegisterScope::Macro(_))
+}
+
+fn finish_macro_scope(messages: &[Message]) -> bool {
+    messages.iter().any(|m| m == &Message::StopMacro)
 }

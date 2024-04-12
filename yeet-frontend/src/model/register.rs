@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
@@ -7,7 +10,7 @@ pub struct Register {
     pub dot: Option<String>,
     pub find: Option<String>,
     pub searched: Option<String>,
-    pub scope: Option<RegisterScope>,
+    pub scopes: HashMap<RegisterScope, String>,
 }
 
 impl Register {
@@ -48,9 +51,30 @@ fn print_content(prefix: &char, content: &str) -> String {
     format!("\"{:<3} {}", prefix, content)
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub enum RegisterScope {
     Dot,
     Find,
     Macro(char),
+}
+
+impl Hash for RegisterScope {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            RegisterScope::Dot => state.write_u8(1),
+            RegisterScope::Find => state.write_u8(2),
+            RegisterScope::Macro(_) => state.write_u8(3),
+        }
+    }
+}
+
+impl PartialEq for RegisterScope {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (RegisterScope::Dot, RegisterScope::Dot)
+                | (RegisterScope::Find, RegisterScope::Find)
+                | (RegisterScope::Macro(_), RegisterScope::Macro(_))
+        )
+    }
 }

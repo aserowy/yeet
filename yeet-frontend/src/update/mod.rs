@@ -42,7 +42,7 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     };
     commandline::update(model, None);
 
-    register::scope(&model.mode, &mut model.register, envelope);
+    register::start_scope(&model.mode, &mut model.register, envelope);
 
     let actions = envelope
         .messages
@@ -50,7 +50,7 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
         .flat_map(|message| update_with_message(model, message))
         .collect();
 
-    register::finish(&model.mode, &mut model.register, envelope);
+    register::finish_scope(&model.mode, &mut model.register, envelope);
 
     actions
 }
