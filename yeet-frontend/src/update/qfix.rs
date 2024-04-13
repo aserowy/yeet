@@ -8,7 +8,7 @@ use crate::model::{
     Model,
 };
 
-use super::model::current;
+use super::current;
 
 pub fn toggle(model: &mut Model) {
     let selected = current::selection(model);

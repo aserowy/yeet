@@ -8,7 +8,7 @@ use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{CommandLineState, Model},
+    model::{register::RegisterScope, CommandLineState, Model},
 };
 
 pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
@@ -335,4 +335,22 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     } else {
         Mode::default()
     }
+}
+
+pub fn set_content_status(model: &mut Model) {
+    if let Some(RegisterScope::Macro(identifier)) = &model.register.resolve_macro() {
+        set_content_to_macro(model, *identifier);
+    } else {
+        set_content_to_mode(model);
+    };
+}
+
+pub fn set_content_to_macro(model: &mut Model, identifier: char) {
+    let content = format!("recording @{}", identifier);
+    print(model, &[PrintContent::Default(content)]);
+}
+
+pub fn set_content_to_mode(model: &mut Model) {
+    let content = format!("--{}--", model.mode.to_string().to_uppercase());
+    print(model, &[PrintContent::Default(content)]);
 }

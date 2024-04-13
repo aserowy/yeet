@@ -1,31 +1,30 @@
 use std::{cmp::Ordering, collections::VecDeque};
 
+use ratatui::layout::Rect;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, ViewPortDirection},
-    model::{Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
+    model::{viewport::ViewPort, Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
     update,
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{
-        mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, register::RegisterScope, DirectoryBufferState,
-        Model,
-    },
+    model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, DirectoryBufferState, Model},
 };
-
-use self::model::{commandline, current, preview};
 
 mod bufferline;
 mod command;
+pub mod commandline;
+mod current;
 mod cursor;
 mod enumeration;
 mod junkyard;
 mod mark;
-pub mod model;
 mod navigation;
+mod parent;
 mod path;
+mod preview;
 mod qfix;
 mod register;
 mod search;
@@ -218,12 +217,12 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::StartMacro(identifier) => {
             // NOTE: macro scopes are handled with register scopes
-            set_commandline_content_to_macro(model, *identifier);
+            commandline::set_content_to_macro(model, *identifier);
             Vec::new()
         }
         Message::StopMacro => {
             // NOTE: macro scopes are handled with register scopes
-            set_commandline_content_to_mode(model);
+            commandline::set_content_to_mode(model);
             Vec::new()
         }
         Message::ToggleQuickFix => {
@@ -300,7 +299,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 }
             });
 
-            set_commandline_content(model);
+            commandline::set_content_status(model);
 
             actions.extend(match to {
                 Mode::Command(_) => {
@@ -402,20 +401,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     }
 }
 
-fn set_commandline_content(model: &mut Model) {
-    if let Some(RegisterScope::Macro(identifier)) = &model.register.resolve_macro() {
-        set_commandline_content_to_macro(model, *identifier);
-    } else {
-        set_commandline_content_to_mode(model);
-    };
-}
-
-fn set_commandline_content_to_macro(model: &mut Model, identifier: char) {
-    let content = format!("recording @{}", identifier);
-    commandline::print(model, &[PrintContent::Default(content)]);
-}
-
-fn set_commandline_content_to_mode(model: &mut Model) {
-    let content = format!("--{}--", model.mode.to_string().to_uppercase());
-    commandline::print(model, &[PrintContent::Default(content)]);
+fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
+    vp.height = usize::from(rect.height);
+    vp.width = usize::from(rect.width);
 }

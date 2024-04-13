@@ -4,7 +4,6 @@ use action::{Action, ActionResult};
 use layout::CommandLineLayout;
 use model::{junkyard, mark, qfix, DirectoryBufferState};
 use task::Task;
-use update::model::commandline;
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
 
@@ -18,6 +17,7 @@ use crate::{
     },
     settings::Settings,
     terminal::TerminalWrapper,
+    update::commandline,
 };
 
 mod action;

@@ -7,7 +7,7 @@ use crate::{
     model::{DirectoryBufferState, Model},
 };
 
-use super::{current, cursor, model::parent, preview};
+use super::{current, cursor, parent, preview};
 
 #[tracing::instrument(skip(model))]
 pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {

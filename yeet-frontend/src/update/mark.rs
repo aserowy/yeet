@@ -12,7 +12,7 @@ use crate::{
     task::Task,
 };
 
-use super::model::current;
+use super::current;
 
 pub fn add(model: &mut Model, char: char) {
     let selected = current::selection(model);
