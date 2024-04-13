@@ -92,6 +92,7 @@ pub fn update(
 
             if let Some((index, _)) = line {
                 cursor.vertical_index = index;
+                cursor.hide_cursor_line = false;
 
                 cursor::validate(mode, model);
                 viewport::update_by_cursor(model);

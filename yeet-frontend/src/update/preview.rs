@@ -70,17 +70,17 @@ pub fn viewport(model: &mut Model) {
         &BufferMessage::ResetCursor,
     );
 
-    if !target.is_dir() {
-        return;
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor_line = true;
     }
 
-    if !cursor::set_cursor_index_with_history(
-        &model.mode,
-        &model.history,
-        &model.search,
-        buffer,
-        target,
-    ) {
-        buffer.cursor = None;
-    };
+    if target.is_dir() {
+        cursor::set_cursor_index_with_history(
+            &model.mode,
+            &model.history,
+            &model.search,
+            buffer,
+            target,
+        );
+    }
 }
