@@ -58,6 +58,7 @@ register holds all files which got yanked and the last nine trashes.
 | q\<char>   | start recording a macro on register \<char>. Only letters [a-zA-Z] are allowed!                   |
 | q          | while recording a macro, q finishes the recording and writes the input to the specified register. |
 | @\<char>   | replay a recorded macro on register \<char>                                                       |
+| @@         | replay the last played macro                                                                      |
 | m\<char>   | set mark for current selection. Only letters [a-zA-Z] are allowed!                                |
 | '\<char>   | jump to mark                                                                                      |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position                                         |

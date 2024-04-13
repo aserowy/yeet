@@ -9,6 +9,7 @@ pub struct Register {
     pub content: HashMap<char, String>,
     pub dot: Option<String>,
     pub find: Option<String>,
+    pub r#macro: Option<String>,
     pub searched: Option<String>,
     pub scopes: HashMap<RegisterScope, String>,
 }
@@ -16,6 +17,7 @@ pub struct Register {
 impl Register {
     pub fn get(&self, register: &char) -> Option<String> {
         match register {
+            '@' => self.r#macro.clone(),
             '.' => self.dot.clone(),
             ';' => self.find.clone(),
             ':' => self.command.clone(),
@@ -37,6 +39,9 @@ impl Register {
             contents.push(print_content(key, content));
         }
 
+        if let Some(r#macro) = &self.r#macro {
+            contents.push(print_content(&'@', r#macro));
+        }
         if let Some(dot) = &self.dot {
             contents.push(print_content(&'.', dot));
         }

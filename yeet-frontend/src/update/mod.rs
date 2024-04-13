@@ -204,6 +204,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
         Message::ReplayMacro(char) => {
             if let Some(content) = model.register.get(char) {
+                model.register.r#macro = Some(content.to_string());
                 vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
                     content.to_string(),
                 )])]

@@ -293,6 +293,16 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![
+                        Key::new(KeyCode::from_char('@'), vec![]),
+                        Key::new(KeyCode::from_char('@'), vec![]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(Message::ReplayMacro('@')),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('\''), vec![])],
                     Binding {
                         expects: Some(NextBindingKind::Raw(None)),
