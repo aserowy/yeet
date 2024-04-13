@@ -10,7 +10,7 @@ use tokio::{
 };
 use yeet_keymap::{
     conversion,
-    message::{ContentKind, Message},
+    message::{ContentKind, Envelope, KeySequence, Message, MessageSource},
     MessageResolver,
 };
 
@@ -46,13 +46,13 @@ pub enum Task {
 pub struct TaskManager {
     abort_handles: Vec<(Task, AbortHandle)>,
     resolver: Arc<Mutex<MessageResolver>>,
-    sender: Sender<Vec<Message>>,
+    sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 // TODO: harmonize error handling and tracing
 impl TaskManager {
-    pub fn new(sender: Sender<Vec<Message>>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
+    pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         Self {
             abort_handles: Vec::new(),
             resolver,
@@ -188,9 +188,11 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 let resolver = self.resolver.clone();
                 self.tasks.spawn(async move {
-                    let (execute, mut messages): (Vec<_>, Vec<_>) = messages
+                    let (execute, messages): (Vec<_>, Vec<_>) = messages
                         .into_iter()
                         .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
+
+                    let mut envelope = to_envelope(messages);
 
                     let sequence = execute
                         .iter()
@@ -204,13 +206,14 @@ impl TaskManager {
                     let keys = conversion::from_keycode_string(&sequence);
                     let mut resolver = resolver.lock().await;
                     if let Some(resolved) = resolver.add_keys(keys) {
-                        messages.extend(resolved.messages);
+                        envelope.messages.extend(resolved.messages);
+                        envelope.sequence = resolved.sequence;
                     }
 
                     // NOTE: important to prevent deadlock for queue size of one
                     drop(resolver);
 
-                    if let Err(error) = sender.send(messages).await {
+                    if let Err(error) = sender.send(envelope).await {
                         emit_error(&sender, AppError::ActionSendFailed(error)).await;
                     }
                     Ok(())
@@ -267,11 +270,11 @@ impl TaskManager {
 
                                 if cache.len() >= cache_size {
                                     let _ = internal_sender
-                                        .send(vec![Message::EnumerationChanged(
+                                        .send(to_envelope(vec![Message::EnumerationChanged(
                                             path.clone(),
                                             cache.clone(),
                                             selection.clone(),
-                                        )])
+                                        )]))
                                         .await;
 
                                     cache_size *= 2;
@@ -279,14 +282,14 @@ impl TaskManager {
                             }
 
                             let _ = internal_sender
-                                .send(vec![
+                                .send(to_envelope(vec![
                                     Message::EnumerationChanged(
                                         path.clone(),
                                         cache.clone(),
                                         selection.clone(),
                                     ),
                                     Message::EnumerationFinished(path, selection),
-                                ])
+                                ]))
                                 .await;
 
                             Ok(())
@@ -314,10 +317,10 @@ impl TaskManager {
                     };
 
                     let result = sender
-                        .send(vec![Message::PreviewLoaded(
+                        .send(to_envelope(vec![Message::PreviewLoaded(
                             path.clone(),
                             content.lines().map(|s| s.to_string()).collect(),
-                        )])
+                        )]))
                         .await;
 
                     if let Err(error) = result {
@@ -406,11 +409,19 @@ impl TaskManager {
     }
 }
 
-async fn emit_error(sender: &Sender<Vec<Message>>, error: AppError) {
+async fn emit_error(sender: &Sender<Envelope>, error: AppError) {
     tracing::error!("task failed: {:?}", error);
 
     let error = format!("Error: {:?}", error);
-    let _ = sender.send(vec![Message::Error(error)]).await;
+    let _ = sender.send(to_envelope(vec![Message::Error(error)])).await;
+}
+
+fn to_envelope(messages: Vec<Message>) -> Envelope {
+    Envelope {
+        messages,
+        sequence: KeySequence::None,
+        source: MessageSource::Task,
+    }
 }
 
 fn should_abort_on_finish(task: Task) -> bool {

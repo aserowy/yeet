@@ -2,16 +2,15 @@ use yeet_buffer::{
     message::{BufferMessage, CursorDirection},
     model::Mode,
 };
-use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource};
+use yeet_keymap::message::{Envelope, KeySequence, Message};
 
 use crate::model::register::{Register, RegisterScope};
 
 // TODO: handle search scope as well
 #[tracing::instrument(skip(mode, register, envelope))]
 pub fn start_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    // FIX: remove source check and pass used sequence in task to event to enable ; and . while replaying a macro
     // TODO: @@
-    if mode.is_command() || envelope.source != MessageSource::User {
+    if mode.is_command() {
         return;
     }
 

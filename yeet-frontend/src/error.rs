@@ -1,10 +1,10 @@
 use thiserror::Error;
-use yeet_keymap::message::Message;
+use yeet_keymap::message::Envelope;
 
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("Sending render action failed")]
-    ActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Vec<Message>>),
+    ActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Envelope>),
     #[error("Error aggregation")]
     Aggregate(Vec<AppError>),
     #[error("File operation failed")]

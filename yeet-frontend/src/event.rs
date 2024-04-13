@@ -67,12 +67,8 @@ impl Emitter {
                         }
                     }
                     event = task_event => {
-                        if let Some(messages) = event {
-                            let _ = internal_sender.send(Envelope {
-                                messages,
-                                sequence: KeySequence::None,
-                                source: MessageSource::Task
-                            }).await;
+                        if let Some(envelope) = event {
+                            let _ = internal_sender.send(envelope).await;
                         }
                     },
                 }
