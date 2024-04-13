@@ -99,7 +99,6 @@ impl Default for FileWindow {
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
-    pub state: CommandLineState,
 }
 
 impl Default for CommandLine {
@@ -115,16 +114,8 @@ impl Default for CommandLine {
                 ..Default::default()
             },
             layout: CommandLineLayout::new(Rect::default(), 0),
-            state: CommandLineState::default(),
         }
     }
-}
-
-#[derive(Debug, Default)]
-pub enum CommandLineState {
-    #[default]
-    Default,
-    WaitingForInput,
 }
 
 #[derive(Debug, Default)]

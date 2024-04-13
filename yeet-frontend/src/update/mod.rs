@@ -291,7 +291,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             actions.extend(match from {
                 Mode::Command(_) => {
                     update::unfocus(&mut model.commandline.buffer);
-                    commandline::update_on_mode_change(model, from, to)
+                    commandline::update_on_mode_change(model)
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
                     update::unfocus(&mut model.files.current.buffer);
@@ -304,7 +304,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             actions.extend(match to {
                 Mode::Command(_) => {
                     update::focus(&mut model.commandline.buffer);
-                    commandline::update_on_mode_change(model, from, to)
+                    commandline::update_on_mode_change(model)
                 }
                 Mode::Insert => {
                     update::focus(&mut model.files.current.buffer);

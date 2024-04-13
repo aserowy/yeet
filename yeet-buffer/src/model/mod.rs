@@ -39,6 +39,7 @@ impl ToString for Mode {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CommandMode {
     Command,
+    PrintMultiline,
     Search(SearchDirection),
 }
 
