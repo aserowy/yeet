@@ -230,6 +230,9 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
     };
 
+    // TODO: add command history and show previous command not current (this enables g: as well)
+    model.register.command = Some(cmd.to_string());
+
     actions
 }
 
