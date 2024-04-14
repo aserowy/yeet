@@ -45,6 +45,7 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     commandline::update(model, None);
 
     register::start_scope(&model.mode, &mut model.register, envelope);
+    register::write_to_scope(&mut model.register, envelope);
 
     let actions = envelope
         .messages
@@ -329,7 +330,7 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             actions
         }
         BufferMessage::Modification(repeat, modification) => match model.mode {
-            Mode::Command(CommandMode::Command) => {
+            Mode::Command(CommandMode::Command) | Mode::Command(CommandMode::PrintMultiline) => {
                 commandline::update_on_modification(model, repeat, modification)
             }
             Mode::Command(_) => {

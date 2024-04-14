@@ -64,17 +64,21 @@ fn print_content(prefix: &char, content: &str) -> String {
 
 #[derive(Clone, Debug, Eq)]
 pub enum RegisterScope {
+    Command,
     Dot,
     Find,
     Macro(char),
+    Search,
 }
 
 impl Hash for RegisterScope {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            RegisterScope::Dot => state.write_u8(1),
-            RegisterScope::Find => state.write_u8(2),
-            RegisterScope::Macro(_) => state.write_u8(3),
+            RegisterScope::Command => state.write_u8(1),
+            RegisterScope::Dot => state.write_u8(2),
+            RegisterScope::Find => state.write_u8(3),
+            RegisterScope::Macro(_) => state.write_u8(4),
+            RegisterScope::Search => state.write_u8(5),
         }
     }
 }
@@ -83,9 +87,11 @@ impl PartialEq for RegisterScope {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (RegisterScope::Dot, RegisterScope::Dot)
+            (RegisterScope::Command, RegisterScope::Command)
+                | (RegisterScope::Dot, RegisterScope::Dot)
                 | (RegisterScope::Find, RegisterScope::Find)
                 | (RegisterScope::Macro(_), RegisterScope::Macro(_))
+                | (RegisterScope::Search, RegisterScope::Search)
         )
     }
 }
