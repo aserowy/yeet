@@ -1,6 +1,6 @@
 use crate::{
-    message::{BufferMessage, CursorDirection},
-    model::{Buffer, BufferResult, CursorPosition, Mode, SearchModel},
+    message::{BufferMessage, CursorDirection, SearchDirection},
+    model::{Buffer, BufferResult, CursorPosition, Mode},
 };
 
 mod cursor;
@@ -9,7 +9,7 @@ mod viewport;
 
 pub fn update(
     mode: &Mode,
-    search: &Option<SearchModel>,
+    search: Option<&SearchDirection>,
     model: &mut Buffer,
     message: &BufferMessage,
 ) -> Option<BufferResult> {

@@ -61,7 +61,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             // TODO: check if set content and update methods can be combined for current, parent and preview
             update::update(
                 &model.mode,
-                &model.search,
+                model.register.get_search_direction(),
                 &mut model.files.current.buffer,
                 &BufferMessage::SetContent(it.to_vec()),
             );
@@ -70,7 +70,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             if let Some(selection) = &selection {
                 cursor::set_cursor_index(
                     &model.mode,
-                    &model.search,
+                    model.register.get_search_direction(),
                     &mut model.files.current.buffer,
                     selection,
                 );
@@ -92,7 +92,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             Some(it) => {
                 update::update(
                     &model.mode,
-                    &model.search,
+                    model.register.get_search_direction(),
                     &mut model.files.parent.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
@@ -130,7 +130,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
             Some(it) => {
                 update::update(
                     &model.mode,
-                    &model.search,
+                    model.register.get_search_direction(),
                     &mut model.files.preview.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
@@ -181,7 +181,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         model.files.preview.path = Some(model.files.current.path.clone());
         update::update(
             &model.mode,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(model.files.current.buffer.lines.drain(..).collect()),
         );
@@ -190,7 +190,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         model.files.current.path = path.to_path_buf();
         update::update(
             &model.mode,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.parent.buffer.lines.drain(..).collect()),
         );
@@ -199,7 +199,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         cursor::set_cursor_index_with_history(
             &model.mode,
             &model.history,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.current.buffer,
             &model.files.current.path,
         );
@@ -225,7 +225,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         model.files.current.path = selected.to_path_buf();
         update::update(
             &model.mode,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.preview.buffer.lines.drain(..).collect()),
         );
@@ -234,7 +234,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         cursor::set_cursor_index_with_history(
             &model.mode,
             &model.history,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.current.buffer,
             &model.files.current.path,
         );
@@ -242,7 +242,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         model.files.parent.path = model.files.current.path.parent().map(|p| p.to_path_buf());
         update::update(
             &model.mode,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.parent.buffer,
             &BufferMessage::SetContent(current_content),
         );

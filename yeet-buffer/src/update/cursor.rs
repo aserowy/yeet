@@ -2,13 +2,13 @@ use std::cmp::Ordering;
 
 use crate::{
     message::{CursorDirection, SearchDirection},
-    model::{Buffer, BufferLine, Cursor, CursorPosition, Mode, SearchModel},
+    model::{Buffer, BufferLine, Cursor, CursorPosition, Mode},
 };
 
 // TODO: refactor
 pub fn update_by_direction(
     mode: &Mode,
-    search: &Option<SearchModel>,
+    search: Option<&SearchDirection>,
     model: &mut Buffer,
     count: &usize,
     direction: &CursorDirection,
@@ -317,15 +317,20 @@ fn get_index_correction(mode: &Mode) -> usize {
     }
 }
 
-fn select(model: &Option<SearchModel>, cursor: &mut Cursor, lines: &[BufferLine], is_next: bool) {
-    let model = match &model {
-        Some(it) => it,
-        None => return,
-    };
-
+fn select(
+    direction: Option<&SearchDirection>,
+    cursor: &mut Cursor,
+    lines: &[BufferLine],
+    is_next: bool,
+) {
     if cursor.horizontal_index == CursorPosition::None {
         return;
     }
+
+    let direction = match direction {
+        Some(it) => it,
+        None => return,
+    };
 
     let vertical_index = cursor.vertical_index;
     let mut enumeration: Vec<_> = lines
@@ -335,9 +340,9 @@ fn select(model: &Option<SearchModel>, cursor: &mut Cursor, lines: &[BufferLine]
         .collect();
 
     let direction = if is_next {
-        &model.direction
+        direction
     } else {
-        match model.direction {
+        match direction {
             SearchDirection::Down => &SearchDirection::Up,
             SearchDirection::Up => &SearchDirection::Down,
         }

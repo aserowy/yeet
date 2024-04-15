@@ -45,7 +45,7 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
         model.files.preview.state = DirectoryBufferState::Ready;
         update::update(
             &model.mode,
-            &model.search,
+            model.register.get_search_direction(),
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(content),
         );
@@ -65,7 +65,7 @@ pub fn viewport(model: &mut Model) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
     update::update(
         &model.mode,
-        &model.search,
+        model.register.get_search_direction(),
         buffer,
         &BufferMessage::ResetCursor,
     );
@@ -78,7 +78,7 @@ pub fn viewport(model: &mut Model) {
         cursor::set_cursor_index_with_history(
             &model.mode,
             &model.history,
-            &model.search,
+            model.register.get_search_direction(),
             buffer,
             target,
         );

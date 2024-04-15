@@ -15,7 +15,12 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
     match &model.files.parent.path {
         Some(_) => {
             if let Some(message) = message {
-                update::update(&model.mode, &model.search, buffer, message);
+                update::update(
+                    &model.mode,
+                    model.register.get_search_direction(),
+                    buffer,
+                    message,
+                );
             }
 
             let current_filename = match model.files.current.path.file_name() {
@@ -41,7 +46,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
 
                 update::update(
                     &model.mode,
-                    &model.search,
+                    model.register.get_search_direction(),
                     buffer,
                     &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
                 );
@@ -52,13 +57,18 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
 
             update::update(
                 &model.mode,
-                &model.search,
+                model.register.get_search_direction(),
                 buffer,
                 &BufferMessage::SetContent(vec![]),
             );
 
             if let Some(message) = message {
-                update::update(&model.mode, &model.search, buffer, message);
+                update::update(
+                    &model.mode,
+                    model.register.get_search_direction(),
+                    buffer,
+                    message,
+                );
             }
         }
     }

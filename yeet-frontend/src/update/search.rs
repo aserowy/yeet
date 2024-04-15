@@ -1,49 +1,33 @@
 use ratatui::style::Color;
-use yeet_buffer::model::{Buffer, CommandMode, Mode, SearchModel, StylePartial, StylePartialSpan};
+use yeet_buffer::model::{Buffer, StylePartial, StylePartialSpan};
 
 use crate::model::Model;
 
-pub fn update(model: &mut Model) {
-    let search = match model.commandline.buffer.lines.last() {
-        Some(line) => &line.content,
-        None => return,
-    };
-
-    let direction = if let Mode::Command(CommandMode::Search(direction)) = &model.mode {
-        direction.clone()
-    } else {
-        return;
-    };
-
-    model.search = Some(SearchModel {
-        last: search.to_owned(),
-        direction,
-    });
-
-    super::search::search(model);
-}
-
-pub fn search(model: &mut Model) {
-    let search = match &model.search {
-        Some(it) => it.last.as_str(),
-        None => return,
+pub fn search(model: &mut Model, search: Option<String>) {
+    let search = match search {
+        Some(it) => it,
+        None => {
+            clear(model);
+            return;
+        }
     };
 
     if model.files.parent.path.is_some() {
-        set_styles(&mut model.files.parent.buffer, search);
+        set_styles(&mut model.files.parent.buffer, search.as_str());
     }
 
-    if model
+    let is_preview_dir = model
         .files
         .preview
         .path
         .as_ref()
-        .is_some_and(|p| p.is_dir())
-    {
-        set_styles(&mut model.files.preview.buffer, search);
+        .is_some_and(|p| p.is_dir());
+
+    if is_preview_dir {
+        set_styles(&mut model.files.preview.buffer, search.as_str());
     }
 
-    set_styles(&mut model.files.current.buffer, search);
+    set_styles(&mut model.files.current.buffer, search.as_str());
 }
 
 pub fn clear(model: &mut Model) {

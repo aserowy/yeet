@@ -3,6 +3,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use yeet_buffer::message::SearchDirection;
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
     pub command: Option<String>,
@@ -10,7 +12,7 @@ pub struct Register {
     pub dot: Option<String>,
     pub find: Option<String>,
     pub r#macro: Option<String>,
-    pub searched: Option<String>,
+    pub searched: Option<(SearchDirection, String)>,
     pub scopes: HashMap<RegisterScope, String>,
 }
 
@@ -21,9 +23,13 @@ impl Register {
             '.' => self.dot.clone(),
             ';' => self.find.clone(),
             ':' => self.command.clone(),
-            '/' => self.searched.clone(),
+            '/' => self.searched.as_ref().map(|sd| sd.1.clone()),
             char => self.content.get(char).cloned(),
         }
+    }
+
+    pub fn get_search_direction(&self) -> Option<&SearchDirection> {
+        self.searched.as_ref().map(|sd| &sd.0)
     }
 
     pub fn resolve_macro(&self) -> Option<&RegisterScope> {
@@ -52,7 +58,7 @@ impl Register {
             contents.push(print_content(&';', find));
         }
         if let Some(searched) = &self.searched {
-            contents.push(print_content(&'/', searched));
+            contents.push(print_content(&'/', &searched.1));
         }
         contents
     }
@@ -67,7 +73,6 @@ pub enum RegisterScope {
     Dot,
     Find,
     Macro(char),
-    Search,
 }
 
 impl Hash for RegisterScope {
@@ -76,7 +81,6 @@ impl Hash for RegisterScope {
             RegisterScope::Dot => state.write_u8(2),
             RegisterScope::Find => state.write_u8(3),
             RegisterScope::Macro(_) => state.write_u8(4),
-            RegisterScope::Search => state.write_u8(5),
         }
     }
 }
@@ -88,7 +92,6 @@ impl PartialEq for RegisterScope {
             (RegisterScope::Dot, RegisterScope::Dot)
                 | (RegisterScope::Find, RegisterScope::Find)
                 | (RegisterScope::Macro(_), RegisterScope::Macro(_))
-                | (RegisterScope::Search, RegisterScope::Search)
         )
     }
 }

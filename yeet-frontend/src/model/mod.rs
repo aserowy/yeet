@@ -6,7 +6,7 @@ use std::{
 use ratatui::layout::Rect;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
-    Buffer, Cursor, CursorPosition, Mode, SearchModel,
+    Buffer, Cursor, CursorPosition, Mode,
 };
 use yeet_keymap::message::Message;
 
@@ -37,7 +37,6 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub qfix: QuickFix,
     pub register: Register,
-    pub search: Option<SearchModel>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
 }

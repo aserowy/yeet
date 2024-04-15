@@ -1,13 +1,13 @@
 use crate::{
-    message::{CursorDirection, LineDirection, TextModification},
-    model::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode, SearchModel},
+    message::{CursorDirection, LineDirection, SearchDirection, TextModification},
+    model::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode},
 };
 
 use super::cursor;
 
 pub fn update(
     mode: &Mode,
-    search: &Option<SearchModel>,
+    search: Option<&SearchDirection>,
     model: &mut Buffer,
     count: &usize,
     modification: &TextModification,

@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use yeet_buffer::{
-    message::BufferMessage,
-    model::{Buffer, BufferResult, Mode, SearchModel},
+    message::{BufferMessage, SearchDirection},
+    model::{Buffer, BufferResult, Mode},
     update::{self},
 };
 
@@ -19,7 +19,7 @@ pub fn get_selection(model: &Buffer) -> Option<String> {
 
 pub fn set_cursor_index(
     mode: &Mode,
-    search: &Option<SearchModel>,
+    search: Option<&SearchDirection>,
     model: &mut Buffer,
     selection: &str,
 ) -> bool {
@@ -36,12 +36,12 @@ pub fn set_cursor_index(
 pub fn set_cursor_index_with_history(
     mode: &Mode,
     history: &History,
-    search: &Option<SearchModel>,
-    model: &mut Buffer,
+    search: Option<&SearchDirection>,
+    buffer: &mut Buffer,
     path: &Path,
 ) -> bool {
     if let Some(history) = history.get_selection(path) {
-        set_cursor_index(mode, search, model, history)
+        set_cursor_index(mode, search, buffer, history)
     } else {
         false
     }

@@ -45,7 +45,6 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     commandline::update(model, None);
 
     register::start_scope(&model.mode, &mut model.register, envelope);
-    register::write_to_scope(&mut model.register, envelope);
 
     let actions = envelope
         .messages
@@ -90,7 +89,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
 
             update::update(
                 &model.mode,
-                &model.search,
+                model.register.get_search_direction(),
                 &mut model.files.parent.buffer,
                 &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
             );
@@ -335,7 +334,15 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             }
             Mode::Command(_) => {
                 let actions = commandline::update_on_modification(model, repeat, modification);
-                search::update(model);
+
+                let search = model
+                    .commandline
+                    .buffer
+                    .lines
+                    .last()
+                    .map(|bl| bl.content.clone());
+
+                search::search(model, search);
 
                 actions
             }
@@ -358,10 +365,8 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if matches!(mtn, &CursorDirection::Search(_)) {
-                    let search = model.search.as_ref().map(|srch| srch.last.to_string());
-                    model.register.searched = search;
-
-                    search::search(model);
+                    let search = model.register.get(&'/');
+                    search::search(model, search);
                 }
 
                 current::update(model, Some(msg));

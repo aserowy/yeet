@@ -141,9 +141,3 @@ pub enum BufferResult {
     Changes(Vec<BufferChanged>),
     CursorPositionChanged,
 }
-
-#[derive(Clone, Debug, Default)]
-pub struct SearchModel {
-    pub last: String,
-    pub direction: SearchDirection,
-}
