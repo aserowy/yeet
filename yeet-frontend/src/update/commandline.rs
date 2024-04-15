@@ -191,6 +191,9 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
     let messages = match command_mode {
         CommandMode::Command => {
             if let Some(cmd) = model.commandline.buffer.lines.last() {
+                // TODO: add command history and show previous command not current (this enables g: as well)
+                model.register.command = Some(cmd.content.clone());
+
                 vec![Message::ExecuteCommandString(cmd.content.clone())]
             } else {
                 Vec::new()
