@@ -36,21 +36,11 @@ pub fn changed(
             })
             .collect();
 
-        update::update(
-            &model.mode,
-            None,
-            buffer,
-            &BufferMessage::SetContent(content),
-        );
+        update::update(&model.mode, buffer, &BufferMessage::SetContent(content));
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if cursor::set_cursor_index(
-                    &model.mode,
-                    model.register.get_search_direction(),
-                    buffer,
-                    selection,
-                ) {
+                if cursor::set_cursor_index(&model.mode, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                     *state = DirectoryBufferState::PartiallyLoaded;
                 }
@@ -77,7 +67,6 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         update::update(
             &model.mode,
-            model.register.get_search_direction(),
             buffer,
             &BufferMessage::SortContent(super::SORT),
         );
@@ -91,19 +80,8 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
                 });
             }
 
-            if !cursor::set_cursor_index(
-                &model.mode,
-                model.register.get_search_direction(),
-                buffer,
-                selection,
-            ) {
-                cursor::set_cursor_index_with_history(
-                    &model.mode,
-                    &model.history,
-                    model.register.get_search_direction(),
-                    buffer,
-                    path,
-                );
+            if !cursor::set_cursor_index(&model.mode, buffer, selection) {
+                cursor::set_cursor_index_with_history(&model.mode, &model.history, buffer, path);
             }
         }
 

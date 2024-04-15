@@ -18,19 +18,9 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
-        update::update(
-            &model.mode,
-            model.register.get_search_direction(),
-            buffer,
-            message,
-        );
+        update::update(&model.mode, buffer, message);
     } else {
-        update::update(
-            &model.mode,
-            model.register.get_search_direction(),
-            buffer,
-            &BufferMessage::ResetCursor,
-        );
+        update::update(&model.mode, buffer, &BufferMessage::ResetCursor);
     }
 }
 
@@ -59,7 +49,6 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
 
     update::update(
         &model.mode,
-        model.register.get_search_direction(),
         &mut model.files.current.buffer,
         &BufferMessage::SetContent(content),
     );
@@ -67,7 +56,6 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
     if let Some(selection) = selection {
         update::update(
             &model.mode,
-            model.register.get_search_direction(),
             &mut model.files.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection),
         );
@@ -75,7 +63,6 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
 
     if let Some(result) = update::update(
         &model.mode,
-        model.register.get_search_direction(),
         &mut model.files.current.buffer,
         &BufferMessage::SaveBuffer,
     ) {

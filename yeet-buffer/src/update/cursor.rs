@@ -8,7 +8,6 @@ use crate::{
 // TODO: refactor
 pub fn update_by_direction(
     mode: &Mode,
-    search: Option<&SearchDirection>,
     model: &mut Buffer,
     count: &usize,
     direction: &CursorDirection,
@@ -146,8 +145,8 @@ pub fn update_by_direction(
                     };
                 }
             }
-            CursorDirection::Search(is_next) => {
-                select(search, cursor, &model.lines, *is_next);
+            CursorDirection::Search(direction) => {
+                select(cursor, &model.lines, direction);
             }
             CursorDirection::TillBackward(find) => {
                 if let Some(found) = find_char_backward(find, &model.lines, cursor) {
@@ -317,20 +316,10 @@ fn get_index_correction(mode: &Mode) -> usize {
     }
 }
 
-fn select(
-    direction: Option<&SearchDirection>,
-    cursor: &mut Cursor,
-    lines: &[BufferLine],
-    is_next: bool,
-) {
+fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &SearchDirection) {
     if cursor.horizontal_index == CursorPosition::None {
         return;
     }
-
-    let direction = match direction {
-        Some(it) => it,
-        None => return,
-    };
 
     let vertical_index = cursor.vertical_index;
     let mut enumeration: Vec<_> = lines
@@ -338,15 +327,6 @@ fn select(
         .enumerate()
         .filter(|(_, bl)| bl.search.is_some())
         .collect();
-
-    let direction = if is_next {
-        direction
-    } else {
-        match direction {
-            SearchDirection::Down => &SearchDirection::Up,
-            SearchDirection::Up => &SearchDirection::Down,
-        }
-    };
 
     enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
         sort_by_index(*current, *cmp, vertical_index, direction)

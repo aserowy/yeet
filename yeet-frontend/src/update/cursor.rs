@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use yeet_buffer::{
-    message::{BufferMessage, SearchDirection},
+    message::BufferMessage,
     model::{Buffer, BufferResult, Mode},
     update::{self},
 };
@@ -17,15 +17,9 @@ pub fn get_selection(model: &Buffer) -> Option<String> {
     model.lines.get(index).map(|line| line.content.clone())
 }
 
-pub fn set_cursor_index(
-    mode: &Mode,
-    search: Option<&SearchDirection>,
-    model: &mut Buffer,
-    selection: &str,
-) -> bool {
+pub fn set_cursor_index(mode: &Mode, model: &mut Buffer, selection: &str) -> bool {
     let result = update::update(
         mode,
-        search,
         model,
         &BufferMessage::SetCursorToLineContent(selection.to_string()),
     );
@@ -36,12 +30,11 @@ pub fn set_cursor_index(
 pub fn set_cursor_index_with_history(
     mode: &Mode,
     history: &History,
-    search: Option<&SearchDirection>,
     buffer: &mut Buffer,
     path: &Path,
 ) -> bool {
     if let Some(history) = history.get_selection(path) {
-        set_cursor_index(mode, search, buffer, history)
+        set_cursor_index(mode, buffer, history)
     } else {
         false
     }

@@ -87,7 +87,6 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         if sort {
             update::update(
                 &model.mode,
-                model.register.get_search_direction(),
                 buffer,
                 &BufferMessage::SortContent(super::SORT),
             );
@@ -96,7 +95,6 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         if let Some(selection) = selection {
             update::update(
                 &model.mode,
-                model.register.get_search_direction(),
                 buffer,
                 &BufferMessage::SetCursorToLineContent(selection),
             );
@@ -144,12 +142,7 @@ fn remove_path(model: &mut Model, path: &Path) {
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {
-                    update::update(
-                        &model.mode,
-                        model.register.get_search_direction(),
-                        buffer,
-                        &BufferMessage::RemoveLine(index),
-                    );
+                    update::update(&model.mode, buffer, &BufferMessage::RemoveLine(index));
                 }
             }
         }

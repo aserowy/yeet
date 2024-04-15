@@ -407,14 +407,14 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::Search(true)),
+                        kind: BindingKind::Motion(CursorDirection::Search(SearchDirection::Down)),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::Search(false)),
+                        kind: BindingKind::Motion(CursorDirection::Search(SearchDirection::Up)),
                         ..Default::default()
                     },
                 ),

@@ -42,7 +42,7 @@ pub enum CursorDirection {
     LineEnd,
     LineStart,
     Right,
-    Search(bool),
+    Search(SearchDirection),
     TillBackward(char),
     TillForward(char),
     Top,
@@ -51,9 +51,9 @@ pub enum CursorDirection {
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub enum SearchDirection {
-    Up,
     #[default]
     Down,
+    Up,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

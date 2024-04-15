@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::VecDeque};
 
 use ratatui::layout::Rect;
 use yeet_buffer::{
-    message::{BufferMessage, CursorDirection, ViewPortDirection},
+    message::{BufferMessage, CursorDirection, SearchDirection, ViewPortDirection},
     model::{viewport::ViewPort, Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
     update,
 };
@@ -89,7 +89,6 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
 
             update::update(
                 &model.mode,
-                model.register.get_search_direction(),
                 &mut model.files.parent.buffer,
                 &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
             );
@@ -361,15 +360,30 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
             }
             Mode::Navigation => Vec::new(),
         },
-        BufferMessage::MoveCursor(_, mtn) => match &model.mode {
+        BufferMessage::MoveCursor(rpt, mtn) => match &model.mode {
             Mode::Command(_) => commandline::update(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                if matches!(mtn, &CursorDirection::Search(_)) {
+                if let CursorDirection::Search(dr) = mtn {
                     let search = model.register.get(&'/');
                     search::search(model, search);
-                }
 
-                current::update(model, Some(msg));
+                    let current_dr = match model.register.get_search_direction() {
+                        Some(it) => it,
+                        None => return Vec::new(),
+                    };
+
+                    let dr = match (dr, current_dr) {
+                        (SearchDirection::Down, SearchDirection::Down) => SearchDirection::Down,
+                        (SearchDirection::Down, SearchDirection::Up) => SearchDirection::Up,
+                        (SearchDirection::Up, SearchDirection::Down) => SearchDirection::Up,
+                        (SearchDirection::Up, SearchDirection::Up) => SearchDirection::Down,
+                    };
+
+                    let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
+                    current::update(model, Some(&msg));
+                } else {
+                    current::update(model, Some(msg));
+                };
 
                 let mut actions = Vec::new();
                 if let Some(path) = preview::selected_path(model) {

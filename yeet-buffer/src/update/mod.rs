@@ -1,5 +1,5 @@
 use crate::{
-    message::{BufferMessage, CursorDirection, SearchDirection},
+    message::{BufferMessage, CursorDirection},
     model::{Buffer, BufferResult, CursorPosition, Mode},
 };
 
@@ -7,12 +7,7 @@ mod cursor;
 mod modification;
 mod viewport;
 
-pub fn update(
-    mode: &Mode,
-    search: Option<&SearchDirection>,
-    model: &mut Buffer,
-    message: &BufferMessage,
-) -> Option<BufferResult> {
+pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Option<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
 
     let result = match message {
@@ -21,19 +16,19 @@ pub fn update(
         BufferMessage::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
-                cursor::update_by_direction(mode, search, model, &1, &CursorDirection::Left);
+                cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
             }
             None
         }
         BufferMessage::Modification(count, modification) => {
-            let buffer_changes = modification::update(mode, search, model, count, modification);
+            let buffer_changes = modification::update(mode, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
             None
         }
         BufferMessage::MoveCursor(count, direction) => {
-            cursor::update_by_direction(mode, search, model, count, direction);
+            cursor::update_by_direction(mode, model, count, direction);
             None
         }
         BufferMessage::MoveViewPort(direction) => {

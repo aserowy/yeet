@@ -1,5 +1,5 @@
 use crate::{
-    message::{CursorDirection, LineDirection, SearchDirection, TextModification},
+    message::{CursorDirection, LineDirection, TextModification},
     model::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode},
 };
 
@@ -7,7 +7,6 @@ use super::cursor;
 
 pub fn update(
     mode: &Mode,
-    search: Option<&SearchDirection>,
     model: &mut Buffer,
     count: &usize,
     modification: &TextModification,
@@ -52,7 +51,7 @@ pub fn update(
             };
 
             for _ in 0..*count {
-                cursor::update_by_direction(mode, search, model, delete_count, motion);
+                cursor::update_by_direction(mode, model, delete_count, motion);
             }
 
             let post_motion_cursor = match &model.cursor {
@@ -77,7 +76,7 @@ pub fn update(
                 };
 
                 let action = &TextModification::DeleteLine;
-                if let Some(cng) = update(mode, search, model, &count, action) {
+                if let Some(cng) = update(mode, model, &count, action) {
                     changes.extend(cng);
                 }
             } else {
