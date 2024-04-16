@@ -3,7 +3,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use yeet_buffer::message::SearchDirection;
+use yeet_buffer::model::SearchDirection;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {

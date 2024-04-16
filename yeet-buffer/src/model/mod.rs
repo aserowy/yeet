@@ -1,7 +1,5 @@
 use ratatui::style::{Color, Modifier};
 
-use crate::message::SearchDirection;
-
 use self::{
     undo::{BufferChanged, Undo},
     viewport::ViewPort,
@@ -41,6 +39,13 @@ pub enum CommandMode {
     Command,
     PrintMultiline,
     Search(SearchDirection),
+}
+
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+pub enum SearchDirection {
+    #[default]
+    Down,
+    Up,
 }
 
 #[derive(Debug, Default)]

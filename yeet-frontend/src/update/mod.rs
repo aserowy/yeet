@@ -2,8 +2,10 @@ use std::{cmp::Ordering, collections::VecDeque};
 
 use ratatui::layout::Rect;
 use yeet_buffer::{
-    message::{BufferMessage, CursorDirection, SearchDirection, ViewPortDirection},
-    model::{viewport::ViewPort, Buffer, BufferLine, CommandMode, Mode, SignIdentifier},
+    message::{BufferMessage, CursorDirection, Search, ViewPortDirection},
+    model::{
+        viewport::ViewPort, Buffer, BufferLine, CommandMode, Mode, SearchDirection, SignIdentifier,
+    },
     update,
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
@@ -373,10 +375,10 @@ fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                     };
 
                     let dr = match (dr, current_dr) {
-                        (SearchDirection::Down, SearchDirection::Down) => SearchDirection::Down,
-                        (SearchDirection::Down, SearchDirection::Up) => SearchDirection::Up,
-                        (SearchDirection::Up, SearchDirection::Down) => SearchDirection::Up,
-                        (SearchDirection::Up, SearchDirection::Up) => SearchDirection::Down,
+                        (Search::Next, SearchDirection::Down) => Search::Next,
+                        (Search::Next, SearchDirection::Up) => Search::Previous,
+                        (Search::Previous, SearchDirection::Down) => Search::Previous,
+                        (Search::Previous, SearchDirection::Up) => Search::Next,
                     };
 
                     let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));

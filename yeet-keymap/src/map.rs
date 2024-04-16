@@ -3,10 +3,9 @@ use std::{collections::HashMap, path::PathBuf};
 use regex::Regex;
 use yeet_buffer::{
     message::{
-        BufferMessage, CursorDirection, LineDirection, SearchDirection, TextModification,
-        ViewPortDirection,
+        BufferMessage, CursorDirection, LineDirection, Search, TextModification, ViewPortDirection,
     },
-    model::{CommandMode, Mode},
+    model::{CommandMode, Mode, SearchDirection},
 };
 
 use crate::{
@@ -407,14 +406,14 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::Search(SearchDirection::Down)),
+                        kind: BindingKind::Motion(CursorDirection::Search(Search::Next)),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::Search(SearchDirection::Up)),
+                        kind: BindingKind::Motion(CursorDirection::Search(Search::Previous)),
                         ..Default::default()
                     },
                 ),

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::{
-    message::{CursorDirection, SearchDirection},
+    message::{CursorDirection, Search},
     model::{Buffer, BufferLine, Cursor, CursorPosition, Mode},
 };
 
@@ -316,7 +316,7 @@ fn get_index_correction(mode: &Mode) -> usize {
     }
 }
 
-fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &SearchDirection) {
+fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     if cursor.horizontal_index == CursorPosition::None {
         return;
     }
@@ -341,7 +341,7 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &SearchDirection
             None => continue,
         };
 
-        let downward = direction == &SearchDirection::Down;
+        let downward = direction == &Search::Next;
         if i == vertical_index {
             if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
                 if downward && current >= &start || !downward && current <= &start {
@@ -360,13 +360,8 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &SearchDirection
     }
 }
 
-fn sort_by_index(
-    current: usize,
-    cmp: usize,
-    index: usize,
-    direction: &SearchDirection,
-) -> Ordering {
-    let downward = direction == &SearchDirection::Down;
+fn sort_by_index(current: usize, cmp: usize, index: usize, direction: &Search) -> Ordering {
+    let downward = direction == &Search::Next;
     if current == cmp {
         return Ordering::Equal;
     }
@@ -407,22 +402,22 @@ fn sort_by_index(
 mod test {
     #[test]
     fn sort_by_index_downward() {
-        use crate::message::SearchDirection;
+        use crate::message::Search;
 
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &SearchDirection::Down));
+        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &Search::Next));
 
         assert_eq!(vec![5, 6, 7, 8, 9, 0, 1, 2, 3, 4], sorted);
     }
 
     #[test]
     fn sort_by_index_upward() {
-        use crate::message::SearchDirection;
+        use crate::message::Search;
 
         let vertical = 5;
         let mut sorted = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &SearchDirection::Up));
+        sorted.sort_by(|i, j| super::sort_by_index(*i, *j, vertical, &Search::Previous));
 
         assert_eq!(vec![5, 4, 3, 2, 1, 0, 9, 8, 7, 6], sorted);
     }

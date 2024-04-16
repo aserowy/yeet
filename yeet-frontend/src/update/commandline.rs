@@ -1,7 +1,7 @@
 use ratatui::style::Color;
 use yeet_buffer::{
-    message::{BufferMessage, CursorDirection, SearchDirection, TextModification},
-    model::{BufferLine, CommandMode, Mode, StylePartial, StylePartialSpan},
+    message::{BufferMessage, CursorDirection, Search, TextModification},
+    model::{BufferLine, CommandMode, Mode, SearchDirection, StylePartial, StylePartialSpan},
     update,
 };
 use yeet_keymap::message::{Message, PrintContent};
@@ -202,7 +202,7 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 )),
                 Message::Buffer(BufferMessage::MoveCursor(
                     1,
-                    CursorDirection::Search(SearchDirection::Down),
+                    CursorDirection::Search(Search::Next),
                 )),
             ]
         }
