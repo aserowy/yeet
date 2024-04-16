@@ -191,7 +191,6 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 .last()
                 .map(|bl| (direction.clone(), bl.content.clone()));
 
-            let direction_for_action = direction.clone();
             if model.register.searched.is_none() {
                 search::clear(model);
             }
@@ -203,7 +202,7 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 )),
                 Message::Buffer(BufferMessage::MoveCursor(
                     1,
-                    CursorDirection::Search(direction_for_action),
+                    CursorDirection::Search(SearchDirection::Down),
                 )),
             ]
         }
