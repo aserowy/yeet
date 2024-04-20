@@ -32,14 +32,17 @@ impl Key {
     }
 
     pub fn from_keycode_string(keycode: &str) -> Option<Self> {
-        let regex = regex::Regex::new(r"[^-<>]+").expect("Failed to compile regex");
+        let regex = regex::Regex::new(r"[^-<>]+|^-$|--").expect("Failed to compile regex");
         let mut codes = regex
             .find_iter(keycode)
             .map(|m| m.as_str())
             .collect::<VecDeque<_>>();
 
         let mut modifiers = Vec::new();
-        let last = codes.pop_back()?;
+        let mut last = codes.pop_back()?;
+        if last == "--" {
+            last = "-";
+        }
 
         if last.chars().count() == 1 && last.chars().last()?.is_ascii_uppercase() {
             modifiers.push(KeyModifier::Shift);
@@ -255,6 +258,13 @@ mod tests {
     }
 
     #[test]
+    fn from_keycode_string_dash() {
+        let keycode = "-";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_some(), "Expected Some(Key), got None");
+    }
+
+    #[test]
     fn from_keycode_string_invalid() {
         let keycode = "<>";
         let result = Key::from_keycode_string(keycode);
@@ -283,6 +293,18 @@ mod tests {
         let result = Key::from_keycode_string(keycode);
         assert!(result.is_some(), "Expected Some(Key), got None");
         assert_eq!(result.as_ref().unwrap().code, KeyCode::LessThan);
+
+        let modifiers = result.unwrap().modifiers;
+        assert!(modifiers.contains(&KeyModifier::Alt));
+        assert!(modifiers.contains(&KeyModifier::Ctrl));
+    }
+
+    #[test]
+    fn from_keycode_string_dash_with_modifiers() {
+        let keycode = "<A-C-->";
+        let result = Key::from_keycode_string(keycode);
+        assert!(result.is_some(), "Expected Some(Key), got None");
+        assert_eq!(result.as_ref().unwrap().code, KeyCode::from_char('-'));
 
         let modifiers = result.unwrap().modifiers;
         assert!(modifiers.contains(&KeyModifier::Alt));

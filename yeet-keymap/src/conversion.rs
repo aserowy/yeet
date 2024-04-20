@@ -99,6 +99,21 @@ mod tests {
     }
 
     #[test]
+    fn from_keycode_string_with_dash() {
+        let keycodes = "f-";
+        let mut expected: VecDeque<Key> = VecDeque::new();
+        expected.push_back(Key {
+            code: KeyCode::from_char('f'),
+            modifiers: Vec::new(),
+        });
+        expected.push_back(Key {
+            code: KeyCode::from_char('-'),
+            modifiers: Vec::new(),
+        });
+        assert_eq!(from_keycode_string(keycodes), expected);
+    }
+
+    #[test]
     fn from_keycode_string_multiple() {
         let keycodes = "<esc>a<C-w>A<C-e>";
         let mut expected: VecDeque<Key> = VecDeque::new();
