@@ -61,15 +61,16 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
         );
     }
 
-    if let Some(result) = update::update(
+    let result = update::update(
         &model.mode,
         &mut model.files.current.buffer,
         &BufferMessage::SaveBuffer,
-    ) {
-        let path = &model.files.current.path;
+    );
 
-        let mut actions = Vec::new();
-        if let BufferResult::Changes(modifications) = result {
+    let mut actions = Vec::new();
+    for br in result {
+        if let BufferResult::Changes(modifications) = br {
+            let path = &model.files.current.path;
             let mut trashes = Vec::new();
             for modification in undo::consolidate(&modifications) {
                 match modification {
@@ -105,11 +106,8 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
                 }
             }
         }
-
-        actions
-    } else {
-        vec![]
     }
+    actions
 }
 
 pub fn selection(model: &Model) -> Option<PathBuf> {

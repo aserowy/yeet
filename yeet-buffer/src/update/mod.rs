@@ -7,7 +7,7 @@ mod cursor;
 mod modification;
 mod viewport;
 
-pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Option<BufferResult> {
+pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Vec<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
 
     let result = match message {
@@ -18,27 +18,26 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Optio
                 model.undo.close_transaction();
                 cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
             }
-            None
+            Vec::new()
         }
         BufferMessage::Modification(count, modification) => {
             let buffer_changes = modification::update(mode, model, count, modification);
             if let Some(changes) = buffer_changes {
                 model.undo.add(mode, changes);
             }
-            None
+            Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            cursor::update_by_direction(mode, model, count, direction);
-            None
+            cursor::update_by_direction(mode, model, count, direction)
         }
         BufferMessage::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);
-            None
+            Vec::new()
         }
         BufferMessage::RemoveLine(index) => {
             model.lines.remove(*index);
             cursor::validate(mode, model);
-            None
+            Vec::new()
         }
         BufferMessage::ResetCursor => {
             let view_port = &mut model.view_port;
@@ -61,22 +60,22 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Optio
                 }
             }
 
-            None
+            Vec::new()
         }
         BufferMessage::SaveBuffer => {
             let changes = model.undo.save();
-            Some(BufferResult::Changes(changes))
+            vec![BufferResult::Changes(changes)]
         }
         BufferMessage::SetContent(content) => {
             // TODO: optional selection?
             model.lines = content.to_vec();
             cursor::validate(mode, model);
-            None
+            Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
             let cursor = match &mut model.cursor {
                 Some(it) => it,
-                None => return None,
+                None => return Vec::new(),
             };
 
             let line = model
@@ -92,16 +91,16 @@ pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Optio
                 cursor::validate(mode, model);
                 viewport::update_by_cursor(model);
 
-                Some(BufferResult::CursorPositionChanged)
+                vec![BufferResult::CursorPositionChanged]
             } else {
-                None
+                Vec::new()
             }
         }
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             model.lines.sort_unstable_by(sort);
             cursor::validate(mode, model);
-            None
+            Vec::new()
         }
     };
 

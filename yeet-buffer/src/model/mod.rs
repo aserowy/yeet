@@ -145,4 +145,5 @@ impl Default for StylePartial {
 pub enum BufferResult {
     Changes(Vec<BufferChanged>),
     CursorPositionChanged,
+    FindScopeChanged,
 }

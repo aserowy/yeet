@@ -24,7 +24,7 @@ pub fn set_cursor_index(mode: &Mode, model: &mut Buffer, selection: &str) -> boo
         &BufferMessage::SetCursorToLineContent(selection.to_string()),
     );
 
-    matches!(result, Some(BufferResult::CursorPositionChanged))
+    result.contains(&BufferResult::CursorPositionChanged)
 }
 
 pub fn set_cursor_index_with_history(

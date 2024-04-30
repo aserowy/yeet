@@ -2,19 +2,18 @@ use std::{cmp::Ordering, collections::VecDeque};
 
 use ratatui::layout::Rect;
 use yeet_buffer::{
-    message::{BufferMessage, CursorDirection, Search, ViewPortDirection},
-    model::{
-        viewport::ViewPort, Buffer, BufferLine, CommandMode, Mode, SearchDirection, SignIdentifier,
-    },
+    message::{BufferMessage, ViewPortDirection},
+    model::{viewport::ViewPort, BufferLine, Mode},
     update,
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, DirectoryBufferState, Model},
+    model::{DirectoryBufferState, Model},
 };
 
+mod buffer;
 mod bufferline;
 mod command;
 pub mod commandline;
@@ -30,6 +29,7 @@ mod preview;
 mod qfix;
 mod register;
 mod search;
+mod settings;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
     a.content
@@ -61,10 +61,10 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
 
 #[tracing::instrument(skip(model))]
 fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
-    update_settings(model);
+    settings::update(model);
 
     match message {
-        Message::Buffer(msg) => buffer(model, msg),
+        Message::Buffer(msg) => buffer::update(model, msg),
         Message::ClearSearchHighlight => {
             search::clear(model);
             Vec::new()
@@ -233,194 +233,6 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::Quit => vec![Action::Quit(None)],
         Message::YankToJunkYard(repeat) => junkyard::yank(model, repeat),
-    }
-}
-
-fn update_settings(model: &mut Model) {
-    model.files.current.buffer.set(&model.settings.current);
-    model.files.parent.buffer.set(&model.settings.parent);
-    model.files.preview.buffer.set(&model.settings.preview);
-
-    if model.settings.show_mark_signs {
-        remove_hidden_sign_on_all_buffer(model, &MARK_SIGN_ID);
-    } else {
-        add_hidden_sign_on_all_buffer(model, MARK_SIGN_ID);
-    }
-
-    if model.settings.show_quickfix_signs {
-        remove_hidden_sign_on_all_buffer(model, &QFIX_SIGN_ID);
-    } else {
-        add_hidden_sign_on_all_buffer(model, QFIX_SIGN_ID);
-    }
-}
-
-fn add_hidden_sign_on_all_buffer(model: &mut Model, id: SignIdentifier) {
-    add_hidden_sign(&mut model.files.current.buffer, id);
-    add_hidden_sign(&mut model.files.parent.buffer, id);
-    add_hidden_sign(&mut model.files.preview.buffer, id);
-}
-
-fn add_hidden_sign(buffer: &mut Buffer, id: SignIdentifier) {
-    buffer.view_port.hidden_sign_ids.insert(id);
-}
-
-fn remove_hidden_sign_on_all_buffer(model: &mut Model, id: &SignIdentifier) {
-    remove_hidden_sign(&mut model.files.current.buffer, id);
-    remove_hidden_sign(&mut model.files.parent.buffer, id);
-    remove_hidden_sign(&mut model.files.preview.buffer, id);
-}
-
-fn remove_hidden_sign(buffer: &mut Buffer, id: &SignIdentifier) {
-    buffer.view_port.hidden_sign_ids.remove(id);
-}
-
-#[tracing::instrument(skip(model, msg))]
-fn buffer(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
-    match msg {
-        BufferMessage::ChangeMode(from, to) => {
-            match (from, to) {
-                (Mode::Command(_), Mode::Command(_))
-                | (Mode::Insert, Mode::Insert)
-                | (Mode::Navigation, Mode::Navigation)
-                | (Mode::Normal, Mode::Normal) => return Vec::new(),
-                _ => {}
-            }
-
-            model.mode = to.clone();
-            model.mode_before = Some(from.clone());
-
-            let mut actions = vec![Action::ModeChanged];
-            actions.extend(match from {
-                Mode::Command(_) => {
-                    update::unfocus(&mut model.commandline.buffer);
-                    commandline::update_on_mode_change(model)
-                }
-                Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    update::unfocus(&mut model.files.current.buffer);
-                    vec![]
-                }
-            });
-
-            commandline::set_content_status(model);
-
-            actions.extend(match to {
-                Mode::Command(_) => {
-                    update::focus(&mut model.commandline.buffer);
-                    commandline::update_on_mode_change(model)
-                }
-                Mode::Insert => {
-                    update::focus(&mut model.files.current.buffer);
-                    current::update(model, Some(msg));
-                    vec![]
-                }
-                Mode::Navigation => {
-                    // TODO: handle file operations: show pending with gray, refresh on operation success
-                    // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    update::focus(&mut model.files.current.buffer);
-                    current::update(model, Some(msg));
-                    current::save_changes(model)
-                }
-                Mode::Normal => {
-                    update::focus(&mut model.files.current.buffer);
-                    current::update(model, Some(msg));
-                    vec![]
-                }
-            });
-
-            actions
-        }
-        BufferMessage::Modification(repeat, modification) => match model.mode {
-            Mode::Command(CommandMode::Command) | Mode::Command(CommandMode::PrintMultiline) => {
-                commandline::update_on_modification(model, repeat, modification)
-            }
-            Mode::Command(_) => {
-                let actions = commandline::update_on_modification(model, repeat, modification);
-
-                let search = model
-                    .commandline
-                    .buffer
-                    .lines
-                    .last()
-                    .map(|bl| bl.content.clone());
-
-                search::search(model, search);
-
-                actions
-            }
-            Mode::Insert | Mode::Normal => {
-                current::update(model, Some(msg));
-
-                let mut actions = Vec::new();
-                if let Some(path) = preview::selected_path(model) {
-                    preview::viewport(model);
-
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-                    actions.push(Action::Load(path, selection));
-                }
-
-                actions
-            }
-            Mode::Navigation => Vec::new(),
-        },
-        BufferMessage::MoveCursor(rpt, mtn) => match &model.mode {
-            Mode::Command(_) => commandline::update(model, Some(msg)),
-            Mode::Insert | Mode::Navigation | Mode::Normal => {
-                if let CursorDirection::Search(dr) = mtn {
-                    let search = model.register.get(&'/');
-                    search::search(model, search);
-
-                    let current_dr = match model.register.get_search_direction() {
-                        Some(it) => it,
-                        None => return Vec::new(),
-                    };
-
-                    let dr = match (dr, current_dr) {
-                        (Search::Next, SearchDirection::Down) => Search::Next,
-                        (Search::Next, SearchDirection::Up) => Search::Previous,
-                        (Search::Previous, SearchDirection::Down) => Search::Previous,
-                        (Search::Previous, SearchDirection::Up) => Search::Next,
-                    };
-
-                    let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-                    current::update(model, Some(&msg));
-                } else {
-                    current::update(model, Some(msg));
-                };
-
-                let mut actions = Vec::new();
-                if let Some(path) = preview::selected_path(model) {
-                    preview::viewport(model);
-
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-                    actions.push(Action::Load(path, selection));
-                }
-
-                actions
-            }
-        },
-        BufferMessage::MoveViewPort(_) => match model.mode {
-            Mode::Command(_) => commandline::update(model, Some(msg)),
-            Mode::Insert | Mode::Navigation | Mode::Normal => {
-                current::update(model, Some(msg));
-
-                let mut actions = Vec::new();
-                if let Some(path) = preview::selected_path(model) {
-                    preview::viewport(model);
-
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-                    actions.push(Action::Load(path, selection));
-                }
-
-                actions
-            }
-        },
-        BufferMessage::SaveBuffer => current::save_changes(model),
-
-        BufferMessage::RemoveLine(_)
-        | BufferMessage::ResetCursor
-        | BufferMessage::SetContent(_)
-        | BufferMessage::SetCursorToLineContent(_)
-        | BufferMessage::SortContent(_) => unreachable!(),
     }
 }
 
