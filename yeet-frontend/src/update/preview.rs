@@ -10,7 +10,7 @@ use crate::{
 use super::current;
 
 #[tracing::instrument(skip(model))]
-pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
+pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
     let new = current::selection(model);
     if model.files.preview.path == new {
         return None;
@@ -30,7 +30,7 @@ pub fn selected_path(model: &mut Model) -> Option<PathBuf> {
 }
 
 #[tracing::instrument(skip(model, content))]
-pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
+pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) {
     if Some(path) == model.files.preview.path.as_ref() {
         tracing::trace!("updating preview buffer: {:?}", path);
 
@@ -48,11 +48,11 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(content),
         );
-        viewport(model);
+        validate_preview_viewport(model);
     }
 }
 
-pub fn viewport(model: &mut Model) {
+pub fn validate_preview_viewport(model: &mut Model) {
     let target = match &model.files.preview.path {
         Some(it) => it,
         None => return,

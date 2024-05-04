@@ -24,7 +24,7 @@ pub fn update_current(model: &mut Model, message: Option<&BufferMessage>) {
     }
 }
 
-pub fn open(model: &Model) -> Vec<Action> {
+pub fn open_selected(model: &Model) -> Vec<Action> {
     if model.mode != Mode::Navigation {
         return Vec::new();
     }

@@ -160,7 +160,7 @@ pub fn update_on_mode_change(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
+pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
     let command_mode = match &model.mode {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
@@ -192,7 +192,7 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
                 .map(|bl| (direction.clone(), bl.content.clone()));
 
             if model.register.searched.is_none() {
-                search::clear(model);
+                search::clear_search(model);
             }
 
             vec![
@@ -217,7 +217,7 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
     vec![Action::EmitMessages(messages)]
 }
 
-pub fn update_on_leave(model: &mut Model) -> Vec<Action> {
+pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
     if matches!(model.mode, Mode::Command(CommandMode::Search(_))) {
         let search = model.register.get(&'/');
         search::search(model, search);
@@ -237,7 +237,7 @@ pub fn update_on_leave(model: &mut Model) -> Vec<Action> {
     )])]
 }
 
-pub fn print(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
+pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
@@ -344,18 +344,18 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 
 pub fn set_content_status(model: &mut Model) {
     if let Some(RegisterScope::Macro(identifier)) = &model.register.resolve_macro() {
-        set_content_to_macro(model, *identifier);
+        set_recording_in_commandline(model, *identifier);
     } else {
-        set_content_to_mode(model);
+        set_mode_in_commandline(model);
     };
 }
 
-pub fn set_content_to_macro(model: &mut Model, identifier: char) {
+pub fn set_recording_in_commandline(model: &mut Model, identifier: char) {
     let content = format!("recording @{}", identifier);
-    print(model, &[PrintContent::Default(content)]);
+    print_in_commandline(model, &[PrintContent::Default(content)]);
 }
 
-pub fn set_content_to_mode(model: &mut Model) {
+pub fn set_mode_in_commandline(model: &mut Model) {
     let content = format!("--{}--", model.mode.to_string().to_uppercase());
-    print(model, &[PrintContent::Default(content)]);
+    print_in_commandline(model, &[PrintContent::Default(content)]);
 }

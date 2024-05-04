@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[tracing::instrument(skip(model))]
-pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
+pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
     let change_mode_message = Message::Buffer(BufferMessage::ChangeMode(
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),

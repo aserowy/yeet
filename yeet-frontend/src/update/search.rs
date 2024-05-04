@@ -7,7 +7,7 @@ pub fn search(model: &mut Model, search: Option<String>) {
     let search = match search {
         Some(it) => it,
         None => {
-            clear(model);
+            clear_search(model);
             return;
         }
     };
@@ -30,7 +30,7 @@ pub fn search(model: &mut Model, search: Option<String>) {
     set_styles(&mut model.files.current.buffer, search.as_str());
 }
 
-pub fn clear(model: &mut Model) {
+pub fn clear_search(model: &mut Model) {
     for line in &mut model.files.parent.buffer.lines {
         line.search = None;
     }

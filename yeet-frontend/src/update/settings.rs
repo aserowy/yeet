@@ -2,7 +2,7 @@ use yeet_buffer::model::{Buffer, SignIdentifier};
 
 use crate::model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, Model};
 
-pub fn update(model: &mut Model) {
+pub fn update_with_settings(model: &mut Model) {
     model.files.current.buffer.set(&model.settings.current);
     model.files.parent.buffer.set(&model.settings.parent);
     model.files.preview.buffer.set(&model.settings.preview);

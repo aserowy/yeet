@@ -15,21 +15,7 @@ use crate::{action::Action, model::Model};
 use super::{cursor, mark, preview, qfix};
 
 #[tracing::instrument(skip(model))]
-pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
-    add_paths(model, paths);
-
-    let mut actions = Vec::new();
-    if let Some(path) = preview::selected_path(model) {
-        preview::viewport(model);
-
-        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
-    }
-
-    actions
-}
-
-fn add_paths(model: &mut Model, paths: &[PathBuf]) {
+pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     let mut buffer = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,
@@ -105,6 +91,16 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
             );
         }
     }
+
+    let mut actions = Vec::new();
+    if let Some(path) = preview::set_preview_to_selected(model) {
+        preview::validate_preview_viewport(model);
+
+        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        actions.push(Action::Load(path, selection));
+    }
+
+    actions
 }
 
 fn from(path: &Path) -> BufferLine {
@@ -133,21 +129,7 @@ fn from(path: &Path) -> BufferLine {
 }
 
 #[tracing::instrument(skip(model))]
-pub fn remove(model: &mut Model, path: &Path) -> Vec<Action> {
-    remove_path(model, path);
-
-    let mut actions = Vec::new();
-    if let Some(path) = preview::selected_path(model) {
-        preview::viewport(model);
-
-        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
-    }
-
-    actions
-}
-
-fn remove_path(model: &mut Model, path: &Path) {
+pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     let mut buffer = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,
@@ -177,4 +159,14 @@ fn remove_path(model: &mut Model, path: &Path) {
             }
         }
     }
+
+    let mut actions = Vec::new();
+    if let Some(path) = preview::set_preview_to_selected(model) {
+        preview::validate_preview_viewport(model);
+
+        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        actions.push(Action::Load(path, selection));
+    }
+
+    actions
 }

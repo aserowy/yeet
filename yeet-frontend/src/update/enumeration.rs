@@ -13,7 +13,7 @@ use crate::model::{DirectoryBufferState, Model};
 use super::{cursor, mark, qfix};
 
 #[tracing::instrument(skip(model, contents))]
-pub fn changed(
+pub fn update_on_enumeration_change(
     model: &mut Model,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
@@ -59,7 +59,11 @@ pub fn changed(
 }
 
 #[tracing::instrument(skip(model))]
-pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
+pub fn update_on_enumeration_finished(
+    model: &mut Model,
+    path: &PathBuf,
+    selection: &Option<String>,
+) {
     if model.mode != Mode::Navigation {
         return;
     }

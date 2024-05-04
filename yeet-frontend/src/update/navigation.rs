@@ -10,7 +10,7 @@ use crate::{
 use super::{current, cursor, parent, preview};
 
 #[tracing::instrument(skip(model))]
-pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {
+pub fn navigate_to_path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {
     if path.is_file() {
         tracing::warn!("path is a file, not a directory: {:?}", path);
         return Vec::new();
@@ -126,14 +126,14 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
                     &mut model.files.preview.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
-                preview::viewport(model);
+                preview::validate_preview_viewport(model);
             }
             None => {
                 tracing::trace!("loading preview: {:?}", path);
 
                 model.files.preview.buffer.lines.clear();
                 model.files.preview.state = DirectoryBufferState::Loading;
-                preview::viewport(model);
+                preview::validate_preview_viewport(model);
 
                 let selection = model.history.get_selection(&preview).map(|s| s.to_owned());
                 actions.push(Action::Load(preview, selection));
@@ -141,7 +141,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
         }
     } else {
         model.files.preview.buffer.lines.clear();
-        preview::viewport(model);
+        preview::validate_preview_viewport(model);
     }
 
     model.history.add(&model.files.current.path);
@@ -150,7 +150,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
 }
 
 #[tracing::instrument(skip(model))]
-pub fn parent(model: &mut Model) -> Vec<Action> {
+pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
     if let Some(path) = model.files.current.path.clone().parent() {
         if model.files.current.path == path {
             return Vec::new();
@@ -176,7 +176,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(model.files.current.buffer.lines.drain(..).collect()),
         );
-        preview::viewport(model);
+        preview::validate_preview_viewport(model);
 
         model.files.current.path = path.to_path_buf();
         update::update_buffer(
@@ -203,7 +203,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
 }
 
 #[tracing::instrument(skip(model))]
-pub fn selected(model: &mut Model) -> Vec<Action> {
+pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
     if let Some(selected) = current::selection(model) {
         if model.files.current.path == selected || !selected.is_dir() {
             return Vec::new();
@@ -235,11 +235,11 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         parent::update(model, None);
 
         let mut actions = Vec::new();
-        if let Some(path) = preview::selected_path(model) {
+        if let Some(path) = preview::set_preview_to_selected(model) {
             tracing::trace!("loading preview: {:?}", path);
 
             model.files.preview.state = DirectoryBufferState::Loading;
-            preview::viewport(model);
+            preview::validate_preview_viewport(model);
 
             let selection = model.history.get_selection(&path).map(|s| s.to_owned());
             actions.push(Action::Load(path, selection));

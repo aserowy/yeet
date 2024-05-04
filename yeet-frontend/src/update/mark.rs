@@ -14,7 +14,7 @@ use crate::{
 
 use super::current;
 
-pub fn add(model: &mut Model, char: char) {
+pub fn add_mark(model: &mut Model, char: char) {
     let selected = current::selection(model);
     if let Some(selected) = selected {
         let removed = model.marks.entries.insert(char, selected);
@@ -28,7 +28,7 @@ pub fn add(model: &mut Model, char: char) {
     }
 }
 
-pub fn delete(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
+pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
     let mut persisted = Vec::new();
     for mark in delete {
         let deleted = model.marks.entries.remove_entry(mark);

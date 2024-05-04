@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{action::Action, model::Model, task::Task};
 
-pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
+pub fn add_to_junkyard(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
     for path in paths {
         if path.starts_with(&model.junk.path) {
@@ -17,7 +17,7 @@ pub fn add(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
     actions
 }
 
-pub fn paste(model: &mut Model, entry_id: &char) -> Vec<Action> {
+pub fn paste_to_junkyard(model: &mut Model, entry_id: &char) -> Vec<Action> {
     if let Some(transaction) = model.junk.get(entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries {
@@ -32,7 +32,7 @@ pub fn paste(model: &mut Model, entry_id: &char) -> Vec<Action> {
     }
 }
 
-pub fn yank(model: &mut Model, repeat: &usize) -> Vec<Action> {
+pub fn yank_to_junkyard(model: &mut Model, repeat: &usize) -> Vec<Action> {
     let current_buffer = &model.files.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()

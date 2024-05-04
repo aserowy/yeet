@@ -10,7 +10,7 @@ use crate::model::{
 
 use super::current;
 
-pub fn toggle(model: &mut Model) {
+pub fn toggle_selected_to_qfix(model: &mut Model) {
     let selected = current::selection(model);
     if let Some(selected) = selected {
         if model.qfix.entries.contains(&selected) {

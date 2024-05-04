@@ -10,12 +10,12 @@ use super::{
         set_content_status, update_commandline, update_on_mode_change, update_on_modification,
     },
     current::save_changes,
-    preview::{selected_path, viewport},
+    preview::{set_preview_to_selected, validate_preview_viewport},
     search::search,
 };
 
 #[tracing::instrument(skip(model, msg))]
-pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
+pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     match msg {
         BufferMessage::ChangeMode(from, to) => {
             match (from, to) {
@@ -91,8 +91,8 @@ pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 update_current(model, Some(msg));
 
                 let mut actions = Vec::new();
-                if let Some(path) = selected_path(model) {
-                    viewport(model);
+                if let Some(path) = set_preview_to_selected(model) {
+                    validate_preview_viewport(model);
 
                     let selection = model.history.get_selection(&path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));
@@ -128,8 +128,8 @@ pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 };
 
                 let mut actions = Vec::new();
-                if let Some(path) = selected_path(model) {
-                    viewport(model);
+                if let Some(path) = set_preview_to_selected(model) {
+                    validate_preview_viewport(model);
 
                     let selection = model.history.get_selection(&path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));
@@ -144,8 +144,8 @@ pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                 update_current(model, Some(msg));
 
                 let mut actions = Vec::new();
-                if let Some(path) = selected_path(model) {
-                    viewport(model);
+                if let Some(path) = set_preview_to_selected(model) {
+                    validate_preview_viewport(model);
 
                     let selection = model.history.get_selection(&path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));

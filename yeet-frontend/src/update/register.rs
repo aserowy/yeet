@@ -7,7 +7,7 @@ use yeet_keymap::message::{Envelope, KeySequence, Message};
 use crate::model::register::{Register, RegisterScope};
 
 #[tracing::instrument(skip(mode, register, envelope))]
-pub fn start_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
+pub fn start_register_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
     if let Some(scope) = resolve_register_scope(mode, &envelope.messages) {
         tracing::trace!("starting scope: {:?}", scope);
 
@@ -90,7 +90,7 @@ fn resolve_macro_register(messages: &[Message]) -> Option<char> {
 }
 
 #[tracing::instrument(skip(mode, register, envelope))]
-pub fn finish_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
+pub fn finish_register_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
     let sequence = match &envelope.sequence {
         KeySequence::Completed(sequence) => sequence.as_str(),
         KeySequence::Changed(_) | KeySequence::None => return,
