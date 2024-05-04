@@ -12,7 +12,7 @@ use super::{
     },
     preview::{set_preview_to_selected, validate_preview_viewport},
     save::persist_path_changes,
-    search::search,
+    search::search_in_buffers,
 };
 
 // TODO: refactor like update mod into function per Message match
@@ -85,7 +85,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                     .last()
                     .map(|bl| bl.content.clone());
 
-                search(model, term);
+                search_in_buffers(model, term);
 
                 actions
             }
@@ -109,7 +109,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if let CursorDirection::Search(dr) = mtn {
                     let term = model.register.get(&'/');
-                    search(model, term);
+                    search_in_buffers(model, term);
 
                     let current_dr = match model.register.get_search_direction() {
                         Some(it) => it,

@@ -3,7 +3,7 @@ use yeet_buffer::model::{Buffer, StylePartial, StylePartialSpan};
 
 use crate::{action::Action, model::Model};
 
-pub fn search(model: &mut Model, search: Option<String>) {
+pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     let search = match search {
         Some(it) => it,
         None => {
