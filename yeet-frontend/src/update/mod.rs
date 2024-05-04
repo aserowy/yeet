@@ -13,7 +13,6 @@ use self::{
         leave_commandline, print_in_commandline, set_mode_in_commandline,
         set_recording_in_commandline, update_commandline, update_commandline_on_execute,
     },
-    current::open_selected,
     enumeration::{update_on_enumeration_change, update_on_enumeration_finished},
     junkyard::{add_to_junkyard, paste_to_junkyard, yank_to_junkyard},
     mark::{add_mark, delete_mark},
@@ -21,6 +20,7 @@ use self::{
         navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_preview_path,
         navigate_to_selected,
     },
+    open::open_selected,
     path::{add_paths, remove_path},
     preview::update_preview,
     qfix::toggle_selected_to_qfix,
@@ -38,11 +38,13 @@ mod enumeration;
 mod junkyard;
 mod mark;
 mod navigation;
+mod open;
 mod parent;
 mod path;
 mod preview;
 mod qfix;
 mod register;
+mod save;
 mod search;
 mod settings;
 

@@ -175,7 +175,7 @@ pub fn navigate_to_path_with_selection(
                 None
             }
         }
-        None => current::selection(model),
+        None => current::get_current_selected_path(model),
     };
 
     if let Some(preview) = preview {
@@ -265,7 +265,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
-    if let Some(selected) = current::selection(model) {
+    if let Some(selected) = current::get_current_selected_path(model) {
         if model.files.current.path == selected || !selected.is_dir() {
             return Vec::new();
         }

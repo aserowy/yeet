@@ -170,7 +170,7 @@ fn update_current(
     }
 }
 
-pub fn consolidate(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
+pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
     let mut consolidated_changes = Vec::new();
     'changes: for change in changes {
         match change {
@@ -351,7 +351,7 @@ mod test {
             BufferChanged::Content(3, "".to_string(), "k".to_string()),
             BufferChanged::LineRemoved(4, "m".to_string()),
         ];
-        let consolidated_changes = super::consolidate(&changes);
+        let consolidated_changes = super::consolidate_modifications(&changes);
 
         assert_eq!(
             consolidated_changes,

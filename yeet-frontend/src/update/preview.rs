@@ -12,7 +12,7 @@ use super::current;
 
 #[tracing::instrument(skip(model))]
 pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
-    let new = current::selection(model);
+    let new = current::get_current_selected_path(model);
     if model.files.preview.path == new {
         return None;
     }

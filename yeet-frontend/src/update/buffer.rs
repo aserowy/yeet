@@ -9,8 +9,8 @@ use super::{
     commandline::{
         set_content_status, update_commandline, update_on_mode_change, update_on_modification,
     },
-    current::save_changes,
     preview::{set_preview_to_selected, validate_preview_viewport},
+    save::persist_path_changes,
     search::search,
 };
 
@@ -58,7 +58,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                     focus(&mut model.files.current.buffer);
                     update_current(model, Some(msg));
-                    save_changes(model)
+                    persist_path_changes(model)
                 }
                 Mode::Normal => {
                     focus(&mut model.files.current.buffer);
@@ -154,7 +154,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 actions
             }
         },
-        BufferMessage::SaveBuffer => save_changes(model),
+        BufferMessage::SaveBuffer => persist_path_changes(model),
 
         BufferMessage::RemoveLine(_)
         | BufferMessage::ResetCursor
