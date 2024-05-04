@@ -7,7 +7,8 @@ use yeet_buffer::{
 
 use super::{
     commandline::{
-        set_content_status, update_commandline, update_on_mode_change, update_on_modification,
+        set_content_status, update_commandline, update_commandline_on_mode_change,
+        update_commandline_on_modification,
     },
     preview::{set_preview_to_selected, validate_preview_viewport},
     save::persist_path_changes,
@@ -34,7 +35,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
             actions.extend(match from {
                 Mode::Command(_) => {
                     unfocus_buffer(&mut model.commandline.buffer);
-                    update_on_mode_change(model)
+                    update_commandline_on_mode_change(model)
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
                     unfocus_buffer(&mut model.files.current.buffer);
@@ -47,7 +48,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
             actions.extend(match to {
                 Mode::Command(_) => {
                     focus_buffer(&mut model.commandline.buffer);
-                    update_on_mode_change(model)
+                    update_commandline_on_mode_change(model)
                 }
                 Mode::Insert => {
                     focus_buffer(&mut model.files.current.buffer);
@@ -72,10 +73,10 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
         }
         BufferMessage::Modification(repeat, modification) => match model.mode {
             Mode::Command(CommandMode::Command) | Mode::Command(CommandMode::PrintMultiline) => {
-                update_on_modification(model, repeat, modification)
+                update_commandline_on_modification(model, repeat, modification)
             }
             Mode::Command(_) => {
-                let actions = update_on_modification(model, repeat, modification);
+                let actions = update_commandline_on_modification(model, repeat, modification);
 
                 let term = model
                     .commandline

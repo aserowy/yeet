@@ -35,7 +35,7 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
     Vec::new()
 }
 
-pub fn update_on_modification(
+pub fn update_commandline_on_modification(
     model: &mut Model,
     repeat: &usize,
     modification: &TextModification,
@@ -111,7 +111,7 @@ pub fn update_on_modification(
     }
 }
 
-pub fn update_on_mode_change(model: &mut Model) -> Vec<Action> {
+pub fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
