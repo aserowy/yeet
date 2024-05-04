@@ -124,9 +124,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::OpenSelected => open_selected(model),
         Message::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),
         Message::PathRemoved(path) => remove_path(model, path),
-        Message::PathsAdded(paths) => {
-            [add_paths(model, paths), add_to_junkyard(model, paths)].concat()
-        }
+        Message::PathsAdded(paths) => add_paths(model, paths)
+            .into_iter()
+            .chain(add_to_junkyard(model, paths).into_iter())
+            .collect(),
         Message::PreviewLoaded(path, content) => update_preview(model, path, content),
         Message::Print(content) => print_in_commandline(model, content),
         Message::Rerender => Vec::new(),
