@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use yeet_buffer::{message::BufferMessage, model::BufferLine, update};
 
 use crate::{
+    action::Action,
     model::{DirectoryBufferState, Model},
     update::cursor,
 };
@@ -30,7 +31,7 @@ pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
 }
 
 #[tracing::instrument(skip(model, content))]
-pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) {
+pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) -> Vec<Action> {
     if Some(path) == model.files.preview.path.as_ref() {
         tracing::trace!("updating preview buffer: {:?}", path);
 
@@ -50,6 +51,8 @@ pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) {
         );
         validate_preview_viewport(model);
     }
+
+    Vec::new()
 }
 
 pub fn validate_preview_viewport(model: &mut Model) {

@@ -237,7 +237,12 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
     )])]
 }
 
+// TODO: buffer messages till command mode left
 pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
+    if model.mode.is_command() {
+        return Vec::new();
+    }
+
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
@@ -350,12 +355,14 @@ pub fn set_content_status(model: &mut Model) {
     };
 }
 
-pub fn set_recording_in_commandline(model: &mut Model, identifier: char) {
+pub fn set_recording_in_commandline(model: &mut Model, identifier: char) -> Vec<Action> {
     let content = format!("recording @{}", identifier);
     print_in_commandline(model, &[PrintContent::Default(content)]);
+    Vec::new()
 }
 
-pub fn set_mode_in_commandline(model: &mut Model) {
+pub fn set_mode_in_commandline(model: &mut Model) -> Vec<Action> {
     let content = format!("--{}--", model.mode.to_string().to_uppercase());
     print_in_commandline(model, &[PrintContent::Default(content)]);
+    Vec::new()
 }

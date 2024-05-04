@@ -1,7 +1,7 @@
 use ratatui::style::Color;
 use yeet_buffer::model::{Buffer, StylePartial, StylePartialSpan};
 
-use crate::model::Model;
+use crate::{action::Action, model::Model};
 
 pub fn search(model: &mut Model, search: Option<String>) {
     let search = match search {
@@ -30,7 +30,7 @@ pub fn search(model: &mut Model, search: Option<String>) {
     set_styles(&mut model.files.current.buffer, search.as_str());
 }
 
-pub fn clear_search(model: &mut Model) {
+pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.parent.buffer.lines {
         line.search = None;
     }
@@ -40,6 +40,7 @@ pub fn clear_search(model: &mut Model) {
     for line in &mut model.files.current.buffer.lines {
         line.search = None;
     }
+    Vec::new()
 }
 
 fn set_styles(buffer: &mut Buffer, search: &str) {

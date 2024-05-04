@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::VecDeque};
 
 use ratatui::layout::Rect;
-use yeet_buffer::model::{viewport::ViewPort, BufferLine, Mode};
+use yeet_buffer::model::{viewport::ViewPort, BufferLine};
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{action::Action, model::Model};
@@ -79,10 +79,7 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
 fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
     match message {
         Message::Buffer(msg) => update_with_buffer_message(model, msg),
-        Message::ClearSearchHighlight => {
-            clear_search(model);
-            Vec::new()
-        }
+        Message::ClearSearchHighlight => clear_search(model),
         Message::DeleteMarks(marks) => delete_mark(model, marks),
         Message::EnumerationChanged(path, contents, selection) => {
             update_on_enumeration_change(model, path, contents, selection)
@@ -91,17 +88,11 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             update_on_enumeration_finished(model, path, selection)
         }
         Message::Error(error) => {
-            // TODO: buffer messages till command mode left
-            if !model.mode.is_command() {
-                print_in_commandline(model, &[PrintContent::Error(error.to_string())]);
-            }
-            Vec::new()
+            print_in_commandline(model, &[PrintContent::Error(error.to_string())])
         }
-        Message::ExecuteCommand => match &model.mode {
-            Mode::Command(_) => update_commandline_on_execute(model),
-            _ => Vec::new(),
-        },
+        Message::ExecuteCommand => update_commandline_on_execute(model),
         Message::ExecuteCommandString(command) => execute_command(command, model),
+        // TODO: refactor into own function
         Message::ExecuteKeySequence(_) => {
             if let Some(commands) = &mut model.command_stack {
                 commands.push_back(message.clone());
@@ -112,6 +103,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             }
             Vec::new()
         }
+        // TODO: refactor into own function
         Message::ExecuteRegister(register) => {
             let key_sequence = model.register.get(register);
             match key_sequence {
@@ -123,10 +115,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
                 None => Vec::new(),
             }
         }
-        Message::LeaveCommandMode => match &model.mode {
-            Mode::Command(_) => leave_commandline(model),
-            _ => Vec::new(),
-        },
+        Message::LeaveCommandMode => leave_commandline(model),
         Message::NavigateToMark(char) => navigate_to_mark(char, model),
         Message::NavigateToParent => navigate_to_parent(model),
         Message::NavigateToPath(path) => navigate_to_path(model, path),
@@ -134,26 +123,15 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::NavigateToSelected => navigate_to_selected(model),
         Message::OpenSelected => open_selected(model),
         Message::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),
-        Message::PathRemoved(path) => {
-            if path.starts_with(&model.junk.path) {
-                model.junk.remove(path);
-            }
-
-            remove_path(model, path)
-        }
+        Message::PathRemoved(path) => remove_path(model, path),
         Message::PathsAdded(paths) => {
-            let mut actions = add_paths(model, paths);
-            actions.extend(add_to_junkyard(model, paths));
-
-            actions
+            [add_paths(model, paths), add_to_junkyard(model, paths)].concat()
         }
-        Message::PreviewLoaded(path, content) => {
-            update_preview(model, path, content);
-            Vec::new()
-        }
+        Message::PreviewLoaded(path, content) => update_preview(model, path, content),
         Message::Print(content) => print_in_commandline(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
+        // TODO: refactor into own function
         Message::ReplayMacro(char) => {
             if let Some(content) = model.register.get(char) {
                 model.register.r#macro = Some(content.to_string());
@@ -164,24 +142,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
                 Vec::new()
             }
         }
-        Message::SetMark(char) => {
-            add_mark(model, *char);
-            Vec::new()
-        }
-        Message::StartMacro(identifier) => {
-            // NOTE: macro scopes are handled with register scopes
-            set_recording_in_commandline(model, *identifier);
-            Vec::new()
-        }
-        Message::StopMacro => {
-            // NOTE: macro scopes are handled with register scopes
-            set_mode_in_commandline(model);
-            Vec::new()
-        }
-        Message::ToggleQuickFix => {
-            toggle_selected_to_qfix(model);
-            Vec::new()
-        }
+        Message::SetMark(char) => add_mark(model, *char),
+        Message::StartMacro(identifier) => set_recording_in_commandline(model, *identifier),
+        Message::StopMacro => set_mode_in_commandline(model),
+        Message::ToggleQuickFix => toggle_selected_to_qfix(model),
         Message::Quit => vec![Action::Quit(None)],
         Message::YankToJunkYard(repeat) => yank_to_junkyard(model, repeat),
     }

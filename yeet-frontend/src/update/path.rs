@@ -130,6 +130,10 @@ fn from(path: &Path) -> BufferLine {
 
 #[tracing::instrument(skip(model))]
 pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
+    if path.starts_with(&model.junk.path) {
+        model.junk.remove(path);
+    }
+
     let mut buffer = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,

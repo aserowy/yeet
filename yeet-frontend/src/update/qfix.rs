@@ -3,14 +3,17 @@ use std::path::Path;
 use ratatui::style::Color;
 use yeet_buffer::model::{BufferLine, Sign, StylePartial};
 
-use crate::model::{
-    qfix::{QuickFix, QFIX_SIGN_ID},
-    Model,
+use crate::{
+    action::Action,
+    model::{
+        qfix::{QuickFix, QFIX_SIGN_ID},
+        Model,
+    },
 };
 
 use super::current;
 
-pub fn toggle_selected_to_qfix(model: &mut Model) {
+pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
     let selected = current::selection(model);
     if let Some(selected) = selected {
         if model.qfix.entries.contains(&selected) {
@@ -25,6 +28,7 @@ pub fn toggle_selected_to_qfix(model: &mut Model) {
             }
         }
     }
+    Vec::new()
 }
 
 pub fn print(qfix: &QuickFix) -> Vec<String> {
