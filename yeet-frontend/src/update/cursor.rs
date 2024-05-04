@@ -18,7 +18,7 @@ pub fn get_selection(model: &Buffer) -> Option<String> {
 }
 
 pub fn set_cursor_index(mode: &Mode, model: &mut Buffer, selection: &str) -> bool {
-    let result = update::update(
+    let result = update::update_buffer(
         mode,
         model,
         &BufferMessage::SetCursorToLineContent(selection.to_string()),

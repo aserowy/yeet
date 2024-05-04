@@ -11,16 +11,16 @@ use yeet_buffer::{
 
 use crate::{action::Action, model::Model, task::Task};
 
-pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
+pub fn update_current(model: &mut Model, message: Option<&BufferMessage>) {
     let buffer = &mut model.files.current.buffer;
     let layout = &model.layout.current;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
-        update::update(&model.mode, buffer, message);
+        update::update_buffer(&model.mode, buffer, message);
     } else {
-        update::update(&model.mode, buffer, &BufferMessage::ResetCursor);
+        update::update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
     }
 }
 
@@ -47,21 +47,21 @@ pub fn save_changes(model: &mut Model) -> Vec<Action> {
     let mut content: Vec<_> = model.files.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
-    update::update(
+    update::update_buffer(
         &model.mode,
         &mut model.files.current.buffer,
         &BufferMessage::SetContent(content),
     );
 
     if let Some(selection) = selection {
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection),
         );
     }
 
-    let result = update::update(
+    let result = update::update_buffer(
         &model.mode,
         &mut model.files.current.buffer,
         &BufferMessage::SaveBuffer,

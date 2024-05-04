@@ -12,7 +12,7 @@ use yeet_buffer::{
 
 use crate::{action::Action, model::Model};
 
-use super::{bufferline, cursor, mark, preview, qfix};
+use super::{cursor, mark, preview, qfix};
 
 #[tracing::instrument(skip(model))]
 pub fn add(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
@@ -90,7 +90,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         }
 
         if sort {
-            update::update(
+            update::update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::SortContent(super::SORT),
@@ -98,7 +98,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
         }
 
         if let Some(selection) = selection {
-            update::update(
+            update::update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::SetCursorToLineContent(selection),
@@ -172,7 +172,7 @@ fn remove_path(model: &mut Model, path: &Path) {
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {
-                    update::update(&model.mode, buffer, &BufferMessage::RemoveLine(index));
+                    update::update_buffer(&model.mode, buffer, &BufferMessage::RemoveLine(index));
                 }
             }
         }

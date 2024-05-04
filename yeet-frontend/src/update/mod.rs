@@ -4,7 +4,7 @@ use ratatui::layout::Rect;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{viewport::ViewPort, BufferLine, Mode},
-    update,
+    update::update_buffer,
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
@@ -43,7 +43,7 @@ pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
         KeySequence::Changed(sequence) => model.key_sequence = sequence.to_owned(),
         KeySequence::None => {}
     };
-    commandline::update(model, None);
+    commandline::update_commandline(model, None);
 
     register::start_scope(&model.mode, &mut model.register, envelope);
 
@@ -88,7 +88,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::EnumerationFinished(path, selection) => {
             enumeration::finished(model, path, selection);
 
-            update::update(
+            update_buffer(
                 &model.mode,
                 &mut model.files.parent.buffer,
                 &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),

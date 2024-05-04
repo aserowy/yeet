@@ -43,7 +43,7 @@ pub fn update(model: &mut Model, path: &PathBuf, content: &[String]) {
             .collect();
 
         model.files.preview.state = DirectoryBufferState::Ready;
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(content),
@@ -62,7 +62,7 @@ pub fn viewport(model: &mut Model) {
     let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
-    update::update(&model.mode, buffer, &BufferMessage::ResetCursor);
+    update::update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
 
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor_line = true;

@@ -12,7 +12,7 @@ use crate::{
     update::search,
 };
 
-pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
+pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
     let command_mode = match &model.mode {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
@@ -26,7 +26,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action>
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                update::update(&model.mode, buffer, message);
+                update::update_buffer(&model.mode, buffer, message);
             }
             CommandMode::PrintMultiline => {}
         }
@@ -66,7 +66,7 @@ pub fn update_on_modification(
                 }
             };
 
-            update::update(
+            update::update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::Modification(*repeat, modification.clone()),
@@ -95,7 +95,7 @@ pub fn update_on_modification(
 
                     Message::Rerender
                 } else {
-                    update::update(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+                    update::update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
 
                     Message::Buffer(BufferMessage::ChangeMode(
                         model.mode.clone(),
@@ -126,7 +126,7 @@ pub fn update_on_mode_change(model: &mut Model) -> Vec<Action> {
                 .is_some_and(|mode| mode.is_command());
 
             if from_command {
-                update::update(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+                update::update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
             }
             return Vec::new();
         }
@@ -134,7 +134,7 @@ pub fn update_on_mode_change(model: &mut Model) -> Vec<Action> {
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
-            update::update(&model.mode, buffer, &BufferMessage::ResetCursor);
+            update::update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
 
             let prefix = match &command_mode {
                 CommandMode::Command => Some(":".to_string()),
@@ -148,7 +148,7 @@ pub fn update_on_mode_change(model: &mut Model) -> Vec<Action> {
                 ..Default::default()
             };
 
-            update::update(
+            update::update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::SetContent(vec![bufferline]),
@@ -208,7 +208,7 @@ pub fn update_on_execute(model: &mut Model) -> Vec<Action> {
         }
     };
 
-    update::update(
+    update::update_buffer(
         &model.mode,
         &mut model.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -223,7 +223,7 @@ pub fn update_on_leave(model: &mut Model) -> Vec<Action> {
         search::search(model, search);
     }
 
-    update::update(
+    update::update_buffer(
         &model.mode,
         &mut model.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -303,12 +303,12 @@ pub fn print(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
         Vec::new()
     };
 
-    update::update(
+    update::update_buffer(
         &model.mode,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::Bottom),
     );
-    update::update(
+    update::update_buffer(
         &model.mode,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::LineEnd),

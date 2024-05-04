@@ -37,7 +37,7 @@ pub fn changed(
             })
             .collect();
 
-        update::update(&model.mode, buffer, &BufferMessage::SetContent(content));
+        update::update_buffer(&model.mode, buffer, &BufferMessage::SetContent(content));
 
         if is_first_changed_event {
             if let Some(selection) = selection {
@@ -66,7 +66,7 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
 
     let directories = model.files.get_mut_directories();
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
-        update::update(
+        update::update_buffer(
             &model.mode,
             buffer,
             &BufferMessage::SortContent(super::SORT),

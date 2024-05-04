@@ -59,12 +59,12 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     match current_contents.get(path) {
         Some(it) => {
             // TODO: check if set content and update methods can be combined for current, parent and preview
-            update::update(
+            update::update_buffer(
                 &model.mode,
                 &mut model.files.current.buffer,
                 &BufferMessage::SetContent(it.to_vec()),
             );
-            current::update(model, None);
+            current::update_current(model, None);
 
             if let Some(selection) = &selection {
                 cursor::set_cursor_index(&model.mode, &mut model.files.current.buffer, selection);
@@ -75,7 +75,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
 
             model.files.current.state = DirectoryBufferState::Loading;
             model.files.current.buffer.lines.clear();
-            current::update(model, None);
+            current::update_current(model, None);
             actions.push(Action::Load(path.to_path_buf(), selection.clone()));
         }
     }
@@ -84,7 +84,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
     if let Some(parent) = &model.files.parent.path.clone() {
         match current_contents.get(parent) {
             Some(it) => {
-                update::update(
+                update::update_buffer(
                     &model.mode,
                     &mut model.files.parent.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
@@ -121,7 +121,7 @@ pub fn path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<A
         model.files.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
-                update::update(
+                update::update_buffer(
                     &model.mode,
                     &mut model.files.preview.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
@@ -171,7 +171,7 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         }
 
         model.files.preview.path = Some(model.files.current.path.clone());
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(model.files.current.buffer.lines.drain(..).collect()),
@@ -179,12 +179,12 @@ pub fn parent(model: &mut Model) -> Vec<Action> {
         preview::viewport(model);
 
         model.files.current.path = path.to_path_buf();
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.parent.buffer.lines.drain(..).collect()),
         );
-        current::update(model, None);
+        current::update_current(model, None);
 
         cursor::set_cursor_index_with_history(
             &model.mode,
@@ -212,12 +212,12 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         let current_content = model.files.current.buffer.lines.drain(..).collect();
 
         model.files.current.path = selected.to_path_buf();
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.preview.buffer.lines.drain(..).collect()),
         );
-        current::update(model, None);
+        current::update_current(model, None);
 
         cursor::set_cursor_index_with_history(
             &model.mode,
@@ -227,7 +227,7 @@ pub fn selected(model: &mut Model) -> Vec<Action> {
         );
 
         model.files.parent.path = model.files.current.path.parent().map(|p| p.to_path_buf());
-        update::update(
+        update::update_buffer(
             &model.mode,
             &mut model.files.parent.buffer,
             &BufferMessage::SetContent(current_content),

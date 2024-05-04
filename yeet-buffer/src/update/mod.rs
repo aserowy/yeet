@@ -7,7 +7,11 @@ mod cursor;
 mod modification;
 mod viewport;
 
-pub fn update(mode: &Mode, model: &mut Buffer, message: &BufferMessage) -> Vec<BufferResult> {
+pub fn update_buffer(
+    mode: &Mode,
+    model: &mut Buffer,
+    message: &BufferMessage,
+) -> Vec<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
 
     let result = match message {
