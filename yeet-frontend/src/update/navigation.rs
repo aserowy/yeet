@@ -10,7 +10,68 @@ use crate::{
 use super::{current, cursor, parent, preview};
 
 #[tracing::instrument(skip(model))]
-pub fn navigate_to_path(model: &mut Model, path: &Path, selection: &Option<String>) -> Vec<Action> {
+pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
+    let path = match model.marks.entries.get(char) {
+        Some(it) => it.clone(),
+        None => return Vec::new(),
+    };
+
+    let selection = path
+        .file_name()
+        .map(|oss| oss.to_string_lossy().to_string());
+
+    let path = match path.parent() {
+        Some(parent) => parent,
+        None => &path,
+    };
+
+    navigate_to_path_with_selection(model, path, &selection)
+}
+
+#[tracing::instrument(skip(model))]
+pub fn navigate_to_path(model: &mut Model, path: &Path) -> Vec<Action> {
+    let (path, selection) = if path.is_file() {
+        tracing::warn!("path is a file, not a directory: {:?}", path);
+        let selection = path
+            .file_name()
+            .map(|oss| oss.to_string_lossy().to_string());
+
+        match path.parent() {
+            Some(parent) => (parent, selection),
+            None => {
+                tracing::warn!(
+                    "parent from path with file name could not get resolved: {:?}",
+                    path
+                );
+                return Vec::new();
+            }
+        }
+    } else {
+        (path, None)
+    };
+
+    navigate_to_path_with_selection(model, path, &selection)
+}
+
+pub fn navigate_to_preview_path(model: &mut Model, path: &Path) -> Vec<Action> {
+    let selection = path
+        .file_name()
+        .map(|oss| oss.to_string_lossy().to_string());
+
+    let path = match path.parent() {
+        Some(parent) => parent,
+        None => path,
+    };
+
+    navigate_to_path_with_selection(model, path, &selection)
+}
+
+#[tracing::instrument(skip(model))]
+pub fn navigate_to_path_with_selection(
+    model: &mut Model,
+    path: &Path,
+    selection: &Option<String>,
+) -> Vec<Action> {
     if path.is_file() {
         tracing::warn!("path is a file, not a directory: {:?}", path);
         return Vec::new();

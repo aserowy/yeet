@@ -1,17 +1,10 @@
 use std::{cmp::Ordering, collections::VecDeque};
 
 use ratatui::layout::Rect;
-use yeet_buffer::{
-    message::{BufferMessage, ViewPortDirection},
-    model::{viewport::ViewPort, BufferLine, Mode},
-    update::update_buffer,
-};
+use yeet_buffer::model::{viewport::ViewPort, BufferLine, Mode};
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
-use crate::{
-    action::Action,
-    model::{DirectoryBufferState, Model},
-};
+use crate::{action::Action, model::Model};
 
 use self::{
     buffer::update_with_buffer_message,
@@ -24,9 +17,12 @@ use self::{
     enumeration::{update_on_enumeration_change, update_on_enumeration_finished},
     junkyard::{add_to_junkyard, paste_to_junkyard, yank_to_junkyard},
     mark::{add_mark, delete_mark},
-    navigation::{navigate_to_parent, navigate_to_path, navigate_to_selected},
+    navigation::{
+        navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_preview_path,
+        navigate_to_selected,
+    },
     path::{add_paths, remove_path},
-    preview::{set_preview_to_selected, update_preview, validate_preview_viewport},
+    preview::update_preview,
     qfix::toggle_selected_to_qfix,
     register::{finish_register_scope, start_register_scope},
     search::clear_search,
@@ -89,31 +85,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::DeleteMarks(marks) => delete_mark(model, marks),
         Message::EnumerationChanged(path, contents, selection) => {
-            update_on_enumeration_change(model, path, contents, selection);
-
-            let mut actions = Vec::new();
-            if model.files.current.state != DirectoryBufferState::Loading {
-                if let Some(path) = set_preview_to_selected(model) {
-                    model.files.preview.state = DirectoryBufferState::Loading;
-                    validate_preview_viewport(model);
-
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
-                    actions.push(Action::Load(path, selection));
-                }
-            }
-
-            actions
+            update_on_enumeration_change(model, path, contents, selection)
         }
         Message::EnumerationFinished(path, selection) => {
-            update_on_enumeration_finished(model, path, selection);
-
-            update_buffer(
-                &model.mode,
-                &mut model.files.parent.buffer,
-                &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
-            );
-
-            Vec::new()
+            update_on_enumeration_finished(model, path, selection)
         }
         Message::Error(error) => {
             // TODO: buffer messages till command mode left
@@ -152,54 +127,10 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             Mode::Command(_) => leave_commandline(model),
             _ => Vec::new(),
         },
-        Message::NavigateToMark(char) => {
-            // TODO: move logic into to mark fn
-            let path = match model.marks.entries.get(char) {
-                Some(it) => it.clone(),
-                None => return Vec::new(),
-            };
-
-            let selection = path
-                .file_name()
-                .map(|oss| oss.to_string_lossy().to_string());
-
-            let path = match path.parent() {
-                Some(parent) => parent,
-                None => &path,
-            };
-
-            navigate_to_path(model, path, &selection)
-        }
+        Message::NavigateToMark(char) => navigate_to_mark(char, model),
         Message::NavigateToParent => navigate_to_parent(model),
-        Message::NavigateToPath(path) => {
-            // TODO: move logic into to path fn
-            if path.is_dir() {
-                navigate_to_path(model, path, &None)
-            } else {
-                let selection = path
-                    .file_name()
-                    .map(|oss| oss.to_string_lossy().to_string());
-
-                let path = match path.parent() {
-                    Some(parent) => parent,
-                    None => path,
-                };
-
-                navigate_to_path(model, path, &selection)
-            }
-        }
-        Message::NavigateToPathAsPreview(path) => {
-            let selection = path
-                .file_name()
-                .map(|oss| oss.to_string_lossy().to_string());
-
-            let path = match path.parent() {
-                Some(parent) => parent,
-                None => path,
-            };
-
-            navigate_to_path(model, path, &selection)
-        }
+        Message::NavigateToPath(path) => navigate_to_path(model, path),
+        Message::NavigateToPathAsPreview(path) => navigate_to_preview_path(model, path),
         Message::NavigateToSelected => navigate_to_selected(model),
         Message::OpenSelected => open_selected(model),
         Message::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),

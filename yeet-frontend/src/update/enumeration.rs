@@ -2,13 +2,17 @@ use std::path::PathBuf;
 
 use ratatui::style::Color;
 use yeet_buffer::{
-    message::BufferMessage,
+    message::{BufferMessage, ViewPortDirection},
     model::{BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan},
-    update,
+    update::{self, update_buffer},
 };
 use yeet_keymap::message::ContentKind;
 
-use crate::model::{DirectoryBufferState, Model};
+use crate::{
+    action::Action,
+    model::{DirectoryBufferState, Model},
+    update::preview::{set_preview_to_selected, validate_preview_viewport},
+};
 
 use super::{cursor, mark, qfix};
 
@@ -18,7 +22,7 @@ pub fn update_on_enumeration_change(
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
-) {
+) -> Vec<Action> {
     // TODO: handle unsaved changes
 
     let directories = model.files.get_mut_directories();
@@ -56,6 +60,19 @@ pub fn update_on_enumeration_change(
         model.files.parent.state,
         model.files.preview.state
     );
+
+    let mut actions = Vec::new();
+    if model.files.current.state != DirectoryBufferState::Loading {
+        if let Some(path) = set_preview_to_selected(model) {
+            model.files.preview.state = DirectoryBufferState::Loading;
+            validate_preview_viewport(model);
+
+            let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+            actions.push(Action::Load(path, selection));
+        }
+    }
+
+    actions
 }
 
 #[tracing::instrument(skip(model))]
@@ -63,9 +80,9 @@ pub fn update_on_enumeration_finished(
     model: &mut Model,
     path: &PathBuf,
     selection: &Option<String>,
-) {
+) -> Vec<Action> {
     if model.mode != Mode::Navigation {
-        return;
+        return Vec::new();
     }
 
     let directories = model.files.get_mut_directories();
@@ -100,6 +117,14 @@ pub fn update_on_enumeration_finished(
         model.files.parent.state,
         model.files.preview.state
     );
+
+    update_buffer(
+        &model.mode,
+        &mut model.files.parent.buffer,
+        &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
+    );
+
+    Vec::new()
 }
 
 pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
