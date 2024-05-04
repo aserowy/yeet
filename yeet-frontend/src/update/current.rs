@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{message::BufferMessage, model::BufferLine, update};
+use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
 
 use crate::model::Model;
 
@@ -11,9 +11,9 @@ pub fn update_current(model: &mut Model, message: Option<&BufferMessage>) {
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
-        update::update_buffer(&model.mode, buffer, message);
+        update_buffer(&model.mode, buffer, message);
     } else {
-        update::update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
+        update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
     }
 }
 

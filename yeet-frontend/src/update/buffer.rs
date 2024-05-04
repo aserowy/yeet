@@ -2,7 +2,7 @@ use crate::{action::Action, model::Model, update::current::update_current};
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{CommandMode, Mode, SearchDirection},
-    update::{focus, unfocus},
+    update::{focus_buffer, unfocus_buffer},
 };
 
 use super::{
@@ -14,6 +14,7 @@ use super::{
     search::search,
 };
 
+// TODO: refactor like update mod into function per Message match
 #[tracing::instrument(skip(model, msg))]
 pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     match msg {
@@ -32,11 +33,11 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
             let mut actions = vec![Action::ModeChanged];
             actions.extend(match from {
                 Mode::Command(_) => {
-                    unfocus(&mut model.commandline.buffer);
+                    unfocus_buffer(&mut model.commandline.buffer);
                     update_on_mode_change(model)
                 }
                 Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    unfocus(&mut model.files.current.buffer);
+                    unfocus_buffer(&mut model.files.current.buffer);
                     vec![]
                 }
             });
@@ -45,23 +46,23 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
 
             actions.extend(match to {
                 Mode::Command(_) => {
-                    focus(&mut model.commandline.buffer);
+                    focus_buffer(&mut model.commandline.buffer);
                     update_on_mode_change(model)
                 }
                 Mode::Insert => {
-                    focus(&mut model.files.current.buffer);
+                    focus_buffer(&mut model.files.current.buffer);
                     update_current(model, Some(msg));
                     vec![]
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    focus(&mut model.files.current.buffer);
+                    focus_buffer(&mut model.files.current.buffer);
                     update_current(model, Some(msg));
                     persist_path_changes(model)
                 }
                 Mode::Normal => {
-                    focus(&mut model.files.current.buffer);
+                    focus_buffer(&mut model.files.current.buffer);
                     update_current(model, Some(msg));
                     vec![]
                 }

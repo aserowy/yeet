@@ -1,21 +1,23 @@
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{Cursor, CursorPosition},
-    update,
+    update::update_buffer,
 };
 
 use crate::model::Model;
 
-pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
+use super::set_viewport_dimensions;
+
+pub fn update_parent(model: &mut Model, message: Option<&BufferMessage>) {
     let buffer = &mut model.files.parent.buffer;
     let layout = &model.layout.parent;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, layout);
+    set_viewport_dimensions(&mut buffer.view_port, layout);
 
     match &model.files.parent.path {
         Some(_) => {
             if let Some(message) = message {
-                update::update_buffer(&model.mode, buffer, message);
+                update_buffer(&model.mode, buffer, message);
             }
 
             let current_filename = match model.files.current.path.file_name() {
@@ -39,7 +41,7 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
                     });
                 }
 
-                update::update_buffer(
+                update_buffer(
                     &model.mode,
                     buffer,
                     &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
@@ -49,10 +51,10 @@ pub fn update(model: &mut Model, message: Option<&BufferMessage>) {
         None => {
             buffer.cursor = None;
 
-            update::update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+            update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
 
             if let Some(message) = message {
-                update::update_buffer(&model.mode, buffer, message);
+                update_buffer(&model.mode, buffer, message);
             }
         }
     }

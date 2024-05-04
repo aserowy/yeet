@@ -150,14 +150,14 @@ pub fn navigate_to_path_with_selection(
                     &mut model.files.parent.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
-                parent::update(model, None);
+                parent::update_parent(model, None);
             }
             None => {
                 tracing::trace!("loading parent: {:?}", parent);
 
                 model.files.parent.state = DirectoryBufferState::Loading;
                 model.files.parent.buffer.lines.clear();
-                parent::update(model, None);
+                parent::update_parent(model, None);
                 actions.push(Action::Load(
                     parent.to_path_buf(),
                     path.file_name().map(|it| it.to_string_lossy().to_string()),
@@ -255,7 +255,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         );
 
         model.files.parent.buffer.lines.clear();
-        parent::update(model, None);
+        parent::update_parent(model, None);
 
         actions
     } else {
@@ -293,7 +293,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             &mut model.files.parent.buffer,
             &BufferMessage::SetContent(current_content),
         );
-        parent::update(model, None);
+        parent::update_parent(model, None);
 
         let mut actions = Vec::new();
         if let Some(path) = preview::set_preview_to_selected(model) {

@@ -1,18 +1,22 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{message::BufferMessage, model::BufferLine, update};
+use yeet_buffer::{
+    message::BufferMessage,
+    model::BufferLine,
+    update::{self, update_buffer},
+};
 
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
-    update::cursor,
+    update::current::get_current_selected_path,
 };
 
-use super::current;
+use super::cursor::set_cursor_index_with_history;
 
 #[tracing::instrument(skip(model))]
 pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
-    let new = current::get_current_selected_path(model);
+    let new = get_current_selected_path(model);
     if model.files.preview.path == new {
         return None;
     }
@@ -43,8 +47,9 @@ pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) -> 
             })
             .collect();
 
+        // FIX: why here? this should get handled with enumeration or file preview
         model.files.preview.state = DirectoryBufferState::Ready;
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(content),
@@ -72,6 +77,6 @@ pub fn validate_preview_viewport(model: &mut Model) {
     }
 
     if target.is_dir() {
-        cursor::set_cursor_index_with_history(&model.mode, &model.history, buffer, target);
+        set_cursor_index_with_history(&model.mode, &model.history, buffer, target);
     }
 }

@@ -113,13 +113,13 @@ pub fn update_buffer(
     result
 }
 
-pub fn focus(buffer: &mut Buffer) {
+pub fn focus_buffer(buffer: &mut Buffer) {
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor = false;
     }
 }
 
-pub fn unfocus(buffer: &mut Buffer) {
+pub fn unfocus_buffer(buffer: &mut Buffer) {
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor = true;
     }
