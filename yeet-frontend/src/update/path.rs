@@ -3,7 +3,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use yeet_buffer::{message::BufferMessage, model::Mode, update};
+use ratatui::style::Color;
+use yeet_buffer::{
+    message::BufferMessage,
+    model::{BufferLine, Mode, StylePartial, StylePartialSpan},
+    update,
+};
 
 use crate::{action::Action, model::Model};
 
@@ -64,7 +69,7 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
 
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
-                let mut line = bufferline::from(path);
+                let mut line = from(path);
                 mark::set_sign_if_marked(&model.marks, &mut line, path);
                 qfix::set_sign_if_qfix(&model.qfix, &mut line, path);
 
@@ -99,6 +104,31 @@ fn add_paths(model: &mut Model, paths: &[PathBuf]) {
                 &BufferMessage::SetCursorToLineContent(selection),
             );
         }
+    }
+}
+
+fn from(path: &Path) -> BufferLine {
+    let content = match path.file_name() {
+        Some(content) => content.to_str().unwrap_or("").to_string(),
+        None => "".to_string(),
+    };
+
+    // TODO: Handle transition states like adding, removing, renaming
+    let style = if path.is_dir() {
+        let length = content.chars().count();
+        vec![StylePartialSpan {
+            end: length,
+            style: StylePartial::Foreground(Color::LightBlue),
+            ..Default::default()
+        }]
+    } else {
+        vec![]
+    };
+
+    BufferLine {
+        content,
+        style,
+        ..Default::default()
     }
 }
 

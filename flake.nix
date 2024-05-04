@@ -54,9 +54,12 @@
             );
             nativeBuildInputs = [
               rust-stable
+
               pkgs.asciinema
               pkgs.asciinema-agg
               pkgs.gh
+              pkgs.gephi
+              pkgs.graphviz
               pkgs.nil
               pkgs.nixpkgs-fmt
               pkgs.nodejs_20

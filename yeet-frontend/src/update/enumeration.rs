@@ -1,15 +1,16 @@
 use std::path::PathBuf;
 
+use ratatui::style::Color;
 use yeet_buffer::{
     message::BufferMessage,
-    model::{Cursor, CursorPosition, Mode},
+    model::{BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan},
     update,
 };
 use yeet_keymap::message::ContentKind;
 
 use crate::model::{DirectoryBufferState, Model};
 
-use super::{bufferline, cursor, mark, qfix};
+use super::{cursor, mark, qfix};
 
 #[tracing::instrument(skip(model, contents))]
 pub fn changed(
@@ -28,7 +29,7 @@ pub fn changed(
         let content = contents
             .iter()
             .map(|(knd, cntnt)| {
-                let mut line = bufferline::from_enumeration(cntnt, knd);
+                let mut line = from_enumeration(cntnt, knd);
                 mark::set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
                 qfix::set_sign_if_qfix(&model.qfix, &mut line, &path.join(cntnt));
 
@@ -95,4 +96,24 @@ pub fn finished(model: &mut Model, path: &PathBuf, selection: &Option<String>) {
         model.files.parent.state,
         model.files.preview.state
     );
+}
+
+pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
+    // TODO: refactor with by path
+    let style = if kind == &ContentKind::Directory {
+        let length = content.chars().count();
+        vec![StylePartialSpan {
+            end: length,
+            style: StylePartial::Foreground(Color::LightBlue),
+            ..Default::default()
+        }]
+    } else {
+        vec![]
+    };
+
+    BufferLine {
+        content: content.to_string(),
+        style,
+        ..Default::default()
+    }
 }

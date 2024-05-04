@@ -14,7 +14,6 @@ use crate::{
 };
 
 mod buffer;
-mod bufferline;
 mod command;
 pub mod commandline;
 mod current;

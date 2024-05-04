@@ -5,7 +5,7 @@ use yeet_buffer::{
     update,
 };
 
-use super::{commandline, preview, search};
+use super::{commandline, current::save_changes, preview, search};
 
 #[tracing::instrument(skip(model, msg))]
 pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
@@ -51,7 +51,7 @@ pub fn update(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                     update::focus(&mut model.files.current.buffer);
                     current::update(model, Some(msg));
-                    current::save_changes(model)
+                    save_changes(model)
                 }
                 Mode::Normal => {
                     update::focus(&mut model.files.current.buffer);
