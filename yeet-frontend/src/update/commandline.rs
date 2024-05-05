@@ -241,10 +241,6 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
 
 // TODO: buffer messages till command mode left
 pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<Action> {
-    if model.mode.is_command() {
-        return Vec::new();
-    }
-
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
