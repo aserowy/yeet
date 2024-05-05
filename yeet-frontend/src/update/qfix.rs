@@ -31,7 +31,7 @@ pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn print(qfix: &QuickFix) -> Vec<String> {
+pub fn print_qfix_list(qfix: &QuickFix) -> Vec<String> {
     let max_width = (qfix.entries.len() + 1).to_string().len();
 
     let entries: Vec<_> = qfix
@@ -52,7 +52,7 @@ pub fn print(qfix: &QuickFix) -> Vec<String> {
     contents
 }
 
-pub fn remove_all(model: &mut Model) {
+pub fn clear_qfix_list(model: &mut Model) {
     model.qfix.entries.clear();
     model.qfix.current_index = 0;
 

@@ -46,7 +46,7 @@ pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
     }
 }
 
-pub fn print(marks: &Marks) -> Vec<String> {
+pub fn print_marks(marks: &Marks) -> Vec<String> {
     let mut marks: Vec<_> = marks
         .entries
         .iter()

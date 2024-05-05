@@ -10,7 +10,10 @@ use crate::{
     action::Action,
     model::{mark::Marks, Model},
     task::Task,
-    update::{mark, qfix},
+    update::{
+        mark::print_marks,
+        qfix::{clear_qfix_list, print_qfix_list},
+    },
 };
 
 #[tracing::instrument(skip(model))]
@@ -31,7 +34,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     let actions = match cmd_with_args {
         ("cclear", "") => {
-            super::qfix::remove_all(model);
+            clear_qfix_list(model);
             vec![change_mode_action]
         }
         ("cdo", command) => {
@@ -61,7 +64,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         // TODO: multiple cl to enable better workflow
         ("cl", "") => {
-            let content = qfix::print(&model.qfix)
+            let content = print_qfix_list(&model.qfix)
                 .iter()
                 .enumerate()
                 .map(|(i, cntnt)| {
@@ -174,7 +177,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
         ("marks", "") => {
-            let content = mark::print(&model.marks)
+            let content = print_marks(&model.marks)
                 .iter()
                 .map(|cntnt| PrintContent::Default(cntnt.to_string()))
                 .collect();
