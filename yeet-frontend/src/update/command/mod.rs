@@ -64,7 +64,6 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Action::EmitMessages(vec![Message::NavigateToPathAsPreview(path.clone())]),
             ]
         }
-        // TODO: multiple cl to enable better workflow
         ("cl", "") => {
             let content = print_qfix_list(&model.qfix);
             vec![Action::EmitMessages(vec![Message::Print(content)])]

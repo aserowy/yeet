@@ -1,6 +1,10 @@
 use std::{collections::HashMap, path::Path};
 
-use yeet_buffer::{message::BufferMessage, update::update_buffer};
+use yeet_buffer::{
+    message::{BufferMessage, ViewPortDirection},
+    model::{Cursor, CursorPosition},
+    update::update_buffer,
+};
 
 use crate::{
     action::Action,
@@ -8,10 +12,10 @@ use crate::{
 };
 
 use super::{
-    current::{get_current_selected_path, update_current},
     cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
-    parent::update_parent,
     preview::{set_preview_to_selected, validate_preview_viewport},
+    selection::get_current_selected_path,
+    set_viewport_dimensions,
 };
 
 #[tracing::instrument(skip(model))]
@@ -130,7 +134,7 @@ pub fn navigate_to_path_with_selection(
                 &mut model.files.current.buffer,
                 &BufferMessage::SetContent(it.to_vec()),
             );
-            update_current(model, None);
+            update_current(model);
 
             if let Some(selection) = &selection {
                 set_cursor_index_to_selection(
@@ -145,7 +149,7 @@ pub fn navigate_to_path_with_selection(
 
             model.files.current.state = DirectoryBufferState::Loading;
             model.files.current.buffer.lines.clear();
-            update_current(model, None);
+            update_current(model);
             actions.push(Action::Load(path.to_path_buf(), selection.clone()));
         }
     }
@@ -159,14 +163,14 @@ pub fn navigate_to_path_with_selection(
                     &mut model.files.parent.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
-                update_parent(model, None);
+                update_parent(model);
             }
             None => {
                 tracing::trace!("loading parent: {:?}", parent);
 
                 model.files.parent.state = DirectoryBufferState::Loading;
                 model.files.parent.buffer.lines.clear();
-                update_parent(model, None);
+                update_parent(model);
                 actions.push(Action::Load(
                     parent.to_path_buf(),
                     path.file_name().map(|it| it.to_string_lossy().to_string()),
@@ -254,7 +258,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.parent.buffer.lines.drain(..).collect()),
         );
-        update_current(model, None);
+        update_current(model);
 
         set_cursor_index_with_history(
             &model.mode,
@@ -264,7 +268,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         );
 
         model.files.parent.buffer.lines.clear();
-        update_parent(model, None);
+        update_parent(model);
 
         actions
     } else {
@@ -287,7 +291,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.preview.buffer.lines.drain(..).collect()),
         );
-        update_current(model, None);
+        update_current(model);
 
         set_cursor_index_with_history(
             &model.mode,
@@ -302,7 +306,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             &mut model.files.parent.buffer,
             &BufferMessage::SetContent(current_content),
         );
-        update_parent(model, None);
+        update_parent(model);
 
         let mut actions = Vec::new();
         if let Some(path) = set_preview_to_selected(model) {
@@ -321,4 +325,55 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
     } else {
         Vec::new()
     }
+}
+
+fn update_parent(model: &mut Model) {
+    let buffer = &mut model.files.parent.buffer;
+    let layout = &model.layout.parent;
+
+    set_viewport_dimensions(&mut buffer.view_port, layout);
+
+    match &model.files.parent.path {
+        Some(_) => {
+            let current_filename = match model.files.current.path.file_name() {
+                Some(content) => content.to_str(),
+                None => None,
+            };
+
+            let current_line = match current_filename {
+                Some(content) => buffer.lines.iter().position(|line| line.content == content),
+                None => None,
+            };
+
+            if let Some(index) = current_line {
+                if let Some(cursor) = &mut buffer.cursor {
+                    cursor.vertical_index = index;
+                } else {
+                    buffer.cursor = Some(Cursor {
+                        horizontal_index: CursorPosition::None,
+                        vertical_index: index,
+                        ..Default::default()
+                    });
+                }
+
+                update_buffer(
+                    &model.mode,
+                    buffer,
+                    &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                );
+            }
+        }
+        None => {
+            buffer.cursor = None;
+            update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+        }
+    }
+}
+
+fn update_current(model: &mut Model) {
+    let buffer = &mut model.files.current.buffer;
+    let layout = &model.layout.current;
+
+    set_viewport_dimensions(&mut buffer.view_port, layout);
+    update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
 }

@@ -1,23 +1,8 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
+use yeet_buffer::model::BufferLine;
 
 use crate::model::Model;
-
-use super::set_viewport_dimensions;
-
-pub fn update_current(model: &mut Model, message: Option<&BufferMessage>) {
-    let buffer = &mut model.files.current.buffer;
-    let layout = &model.layout.current;
-
-    set_viewport_dimensions(&mut buffer.view_port, layout);
-
-    if let Some(message) = message {
-        update_buffer(&model.mode, buffer, message);
-    } else {
-        update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
-    }
-}
 
 pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
     let buffer = &model.files.current.buffer;

@@ -2,7 +2,7 @@ use yeet_buffer::model::Mode;
 
 use crate::{action::Action, model::Model};
 
-use super::current::get_current_selected_path;
+use super::selection::get_current_selected_path;
 
 pub fn open_selected(model: &Model) -> Vec<Action> {
     if model.mode != Mode::Navigation {

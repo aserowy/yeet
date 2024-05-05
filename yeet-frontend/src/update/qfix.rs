@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-use super::current::{get_current_selected_bufferline, get_current_selected_path};
+use super::selection::{get_current_selected_bufferline, get_current_selected_path};
 
 pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
     let selected = get_current_selected_path(model);

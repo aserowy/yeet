@@ -12,7 +12,7 @@ use crate::{
     task::Task,
 };
 
-use super::current::{get_current_selected_bufferline, get_current_selected_path};
+use super::selection::{get_current_selected_bufferline, get_current_selected_path};
 
 pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
     let selected = get_current_selected_path(model);

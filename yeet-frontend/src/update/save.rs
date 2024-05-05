@@ -9,7 +9,7 @@ use yeet_buffer::{
 
 use crate::{action::Action, model::Model, task::Task};
 
-use super::current::get_current_selected_bufferline;
+use super::selection::get_current_selected_bufferline;
 
 #[tracing::instrument(skip(model))]
 pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {

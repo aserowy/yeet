@@ -5,7 +5,7 @@ use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buff
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
-    update::current::get_current_selected_path,
+    update::selection::get_current_selected_path,
 };
 
 use super::{cursor::set_cursor_index_with_history, set_viewport_dimensions};

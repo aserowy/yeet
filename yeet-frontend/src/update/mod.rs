@@ -32,20 +32,19 @@ use self::{
 mod buffer;
 mod command;
 pub mod commandline;
-mod current;
 mod cursor;
 mod enumeration;
 mod junkyard;
 mod mark;
 mod navigation;
 mod open;
-mod parent;
 mod path;
 mod preview;
 mod qfix;
 mod register;
 mod save;
 mod search;
+mod selection;
 mod settings;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {

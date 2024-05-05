@@ -1,8 +1,8 @@
-use crate::{action::Action, model::Model, update::current::update_current};
+use crate::{action::Action, model::Model};
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{CommandMode, Mode, SearchDirection},
-    update::{focus_buffer, unfocus_buffer},
+    update::{focus_buffer, unfocus_buffer, update_buffer},
 };
 
 use super::{
@@ -13,6 +13,7 @@ use super::{
     preview::{set_preview_to_selected, validate_preview_viewport},
     save::persist_path_changes,
     search::search_in_buffers,
+    set_viewport_dimensions,
 };
 
 // TODO: refactor like update mod into function per Message match
@@ -52,19 +53,19 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 }
                 Mode::Insert => {
                     focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, Some(msg));
+                    update_current(model, msg);
                     vec![]
                 }
                 Mode::Navigation => {
                     // TODO: handle file operations: show pending with gray, refresh on operation success
                     // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
                     focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, Some(msg));
+                    update_current(model, msg);
                     persist_path_changes(model)
                 }
                 Mode::Normal => {
                     focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, Some(msg));
+                    update_current(model, msg);
                     vec![]
                 }
             });
@@ -90,7 +91,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 actions
             }
             Mode::Insert | Mode::Normal => {
-                update_current(model, Some(msg));
+                update_current(model, msg);
 
                 let mut actions = Vec::new();
                 if let Some(path) = set_preview_to_selected(model) {
@@ -124,9 +125,9 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                     };
 
                     let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-                    update_current(model, Some(&msg));
+                    update_current(model, &msg);
                 } else {
-                    update_current(model, Some(msg));
+                    update_current(model, msg);
                 };
 
                 let mut actions = Vec::new();
@@ -143,7 +144,7 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
         BufferMessage::MoveViewPort(_) => match model.mode {
             Mode::Command(_) => update_commandline(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                update_current(model, Some(msg));
+                update_current(model, msg);
 
                 let mut actions = Vec::new();
                 if let Some(path) = set_preview_to_selected(model) {
@@ -164,4 +165,12 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
         | BufferMessage::SetCursorToLineContent(_)
         | BufferMessage::SortContent(_) => unreachable!(),
     }
+}
+
+fn update_current(model: &mut Model, message: &BufferMessage) {
+    let buffer = &mut model.files.current.buffer;
+    let layout = &model.layout.current;
+
+    set_viewport_dimensions(&mut buffer.view_port, layout);
+    update_buffer(&model.mode, buffer, message);
 }
