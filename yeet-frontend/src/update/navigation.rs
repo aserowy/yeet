@@ -1,13 +1,18 @@
 use std::{collections::HashMap, path::Path};
 
-use yeet_buffer::{message::BufferMessage, update};
+use yeet_buffer::{message::BufferMessage, update::update_buffer};
 
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
 };
 
-use super::{current, cursor, parent, preview};
+use super::{
+    current::{get_current_selected_path, update_current},
+    cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
+    parent::update_parent,
+    preview::{set_preview_to_selected, validate_preview_viewport},
+};
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
@@ -120,15 +125,19 @@ pub fn navigate_to_path_with_selection(
     match current_contents.get(path) {
         Some(it) => {
             // TODO: check if set content and update methods can be combined for current, parent and preview
-            update::update_buffer(
+            update_buffer(
                 &model.mode,
                 &mut model.files.current.buffer,
                 &BufferMessage::SetContent(it.to_vec()),
             );
-            current::update_current(model, None);
+            update_current(model, None);
 
             if let Some(selection) = &selection {
-                cursor::set_cursor_index(&model.mode, &mut model.files.current.buffer, selection);
+                set_cursor_index_to_selection(
+                    &model.mode,
+                    &mut model.files.current.buffer,
+                    selection,
+                );
             }
         }
         None => {
@@ -136,7 +145,7 @@ pub fn navigate_to_path_with_selection(
 
             model.files.current.state = DirectoryBufferState::Loading;
             model.files.current.buffer.lines.clear();
-            current::update_current(model, None);
+            update_current(model, None);
             actions.push(Action::Load(path.to_path_buf(), selection.clone()));
         }
     }
@@ -145,19 +154,19 @@ pub fn navigate_to_path_with_selection(
     if let Some(parent) = &model.files.parent.path.clone() {
         match current_contents.get(parent) {
             Some(it) => {
-                update::update_buffer(
+                update_buffer(
                     &model.mode,
                     &mut model.files.parent.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
-                parent::update_parent(model, None);
+                update_parent(model, None);
             }
             None => {
                 tracing::trace!("loading parent: {:?}", parent);
 
                 model.files.parent.state = DirectoryBufferState::Loading;
                 model.files.parent.buffer.lines.clear();
-                parent::update_parent(model, None);
+                update_parent(model, None);
                 actions.push(Action::Load(
                     parent.to_path_buf(),
                     path.file_name().map(|it| it.to_string_lossy().to_string()),
@@ -175,26 +184,26 @@ pub fn navigate_to_path_with_selection(
                 None
             }
         }
-        None => current::get_current_selected_path(model),
+        None => get_current_selected_path(model),
     };
 
     if let Some(preview) = preview {
         model.files.preview.path = Some(preview.to_path_buf());
         match current_contents.get(&preview) {
             Some(it) => {
-                update::update_buffer(
+                update_buffer(
                     &model.mode,
                     &mut model.files.preview.buffer,
                     &BufferMessage::SetContent(it.to_vec()),
                 );
-                preview::validate_preview_viewport(model);
+                validate_preview_viewport(model);
             }
             None => {
                 tracing::trace!("loading preview: {:?}", path);
 
                 model.files.preview.buffer.lines.clear();
                 model.files.preview.state = DirectoryBufferState::Loading;
-                preview::validate_preview_viewport(model);
+                validate_preview_viewport(model);
 
                 let selection = model.history.get_selection(&preview).map(|s| s.to_owned());
                 actions.push(Action::Load(preview, selection));
@@ -202,7 +211,7 @@ pub fn navigate_to_path_with_selection(
         }
     } else {
         model.files.preview.buffer.lines.clear();
-        preview::validate_preview_viewport(model);
+        validate_preview_viewport(model);
     }
 
     model.history.add(&model.files.current.path);
@@ -232,22 +241,22 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         }
 
         model.files.preview.path = Some(model.files.current.path.clone());
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             &mut model.files.preview.buffer,
             &BufferMessage::SetContent(model.files.current.buffer.lines.drain(..).collect()),
         );
-        preview::validate_preview_viewport(model);
+        validate_preview_viewport(model);
 
         model.files.current.path = path.to_path_buf();
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.parent.buffer.lines.drain(..).collect()),
         );
-        current::update_current(model, None);
+        update_current(model, None);
 
-        cursor::set_cursor_index_with_history(
+        set_cursor_index_with_history(
             &model.mode,
             &model.history,
             &mut model.files.current.buffer,
@@ -255,7 +264,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         );
 
         model.files.parent.buffer.lines.clear();
-        parent::update_parent(model, None);
+        update_parent(model, None);
 
         actions
     } else {
@@ -265,7 +274,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
-    if let Some(selected) = current::get_current_selected_path(model) {
+    if let Some(selected) = get_current_selected_path(model) {
         if model.files.current.path == selected || !selected.is_dir() {
             return Vec::new();
         }
@@ -273,14 +282,14 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         let current_content = model.files.current.buffer.lines.drain(..).collect();
 
         model.files.current.path = selected.to_path_buf();
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetContent(model.files.preview.buffer.lines.drain(..).collect()),
         );
-        current::update_current(model, None);
+        update_current(model, None);
 
-        cursor::set_cursor_index_with_history(
+        set_cursor_index_with_history(
             &model.mode,
             &model.history,
             &mut model.files.current.buffer,
@@ -288,19 +297,19 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         );
 
         model.files.parent.path = model.files.current.path.parent().map(|p| p.to_path_buf());
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             &mut model.files.parent.buffer,
             &BufferMessage::SetContent(current_content),
         );
-        parent::update_parent(model, None);
+        update_parent(model, None);
 
         let mut actions = Vec::new();
-        if let Some(path) = preview::set_preview_to_selected(model) {
+        if let Some(path) = set_preview_to_selected(model) {
             tracing::trace!("loading preview: {:?}", path);
 
             model.files.preview.state = DirectoryBufferState::Loading;
-            preview::validate_preview_viewport(model);
+            validate_preview_viewport(model);
 
             let selection = model.history.get_selection(&path).map(|s| s.to_owned());
             actions.push(Action::Load(path, selection));

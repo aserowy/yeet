@@ -7,12 +7,17 @@ use ratatui::style::Color;
 use yeet_buffer::{
     message::BufferMessage,
     model::{BufferLine, Mode, StylePartial, StylePartialSpan},
-    update,
+    update::update_buffer,
 };
 
 use crate::{action::Action, model::Model};
 
-use super::{cursor, mark, preview, qfix};
+use super::{
+    cursor::get_selected_content_from_buffer,
+    mark::set_sign_if_marked,
+    preview::{set_preview_to_selected, validate_preview_viewport},
+    qfix::set_sign_if_qfix,
+};
 
 #[tracing::instrument(skip(model))]
 pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
@@ -36,7 +41,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
             continue;
         }
 
-        let mut selection = cursor::get_selection(buffer);
+        let mut selection = get_selected_content_from_buffer(buffer);
 
         let indexes = buffer
             .lines
@@ -56,8 +61,8 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let mut line = from(path);
-                mark::set_sign_if_marked(&model.marks, &mut line, path);
-                qfix::set_sign_if_qfix(&model.qfix, &mut line, path);
+                set_sign_if_marked(&model.marks, &mut line, path);
+                set_sign_if_qfix(&model.qfix, &mut line, path);
 
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;
@@ -76,7 +81,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         }
 
         if sort {
-            update::update_buffer(
+            update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::SortContent(super::SORT),
@@ -84,7 +89,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         }
 
         if let Some(selection) = selection {
-            update::update_buffer(
+            update_buffer(
                 &model.mode,
                 buffer,
                 &BufferMessage::SetCursorToLineContent(selection),
@@ -93,8 +98,8 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     }
 
     let mut actions = Vec::new();
-    if let Some(path) = preview::set_preview_to_selected(model) {
-        preview::validate_preview_viewport(model);
+    if let Some(path) = set_preview_to_selected(model) {
+        validate_preview_viewport(model);
 
         let selection = model.history.get_selection(&path).map(|s| s.to_owned());
         actions.push(Action::Load(path, selection));
@@ -158,15 +163,15 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {
-                    update::update_buffer(&model.mode, buffer, &BufferMessage::RemoveLine(index));
+                    update_buffer(&model.mode, buffer, &BufferMessage::RemoveLine(index));
                 }
             }
         }
     }
 
     let mut actions = Vec::new();
-    if let Some(path) = preview::set_preview_to_selected(model) {
-        preview::validate_preview_viewport(model);
+    if let Some(path) = set_preview_to_selected(model) {
+        validate_preview_viewport(model);
 
         let selection = model.history.get_selection(&path).map(|s| s.to_owned());
         actions.push(Action::Load(path, selection));

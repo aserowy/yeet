@@ -1,10 +1,6 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{
-    message::BufferMessage,
-    model::BufferLine,
-    update::{self, update_buffer},
-};
+use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
 
 use crate::{
     action::Action,
@@ -70,7 +66,7 @@ pub fn validate_preview_viewport(model: &mut Model) {
     let layout = &model.layout.preview;
 
     super::set_viewport_dimensions(&mut buffer.view_port, layout);
-    update::update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
+    update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
 
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor_line = true;

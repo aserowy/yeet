@@ -3,12 +3,12 @@ use std::path::Path;
 use yeet_buffer::{
     message::BufferMessage,
     model::{Buffer, BufferResult, Mode},
-    update::{self},
+    update::update_buffer,
 };
 
 use crate::model::history::History;
 
-pub fn get_selection(model: &Buffer) -> Option<String> {
+pub fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
     let index = match &model.cursor {
         Some(it) => it.vertical_index,
         None => return None,
@@ -17,8 +17,8 @@ pub fn get_selection(model: &Buffer) -> Option<String> {
     model.lines.get(index).map(|line| line.content.clone())
 }
 
-pub fn set_cursor_index(mode: &Mode, model: &mut Buffer, selection: &str) -> bool {
-    let result = update::update_buffer(
+pub fn set_cursor_index_to_selection(mode: &Mode, model: &mut Buffer, selection: &str) -> bool {
+    let result = update_buffer(
         mode,
         model,
         &BufferMessage::SetCursorToLineContent(selection.to_string()),
@@ -34,7 +34,7 @@ pub fn set_cursor_index_with_history(
     path: &Path,
 ) -> bool {
     if let Some(history) = history.get_selection(path) {
-        set_cursor_index(mode, buffer, history)
+        set_cursor_index_to_selection(mode, buffer, history)
     } else {
         false
     }

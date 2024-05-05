@@ -12,17 +12,17 @@ use crate::{
     task::Task,
 };
 
-use super::current;
+use super::current::{get_current_selected_bufferline, get_current_selected_path};
 
 pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
-    let selected = current::get_current_selected_path(model);
+    let selected = get_current_selected_path(model);
     if let Some(selected) = selected {
         let removed = model.marks.entries.insert(char, selected);
         if let Some(removed) = removed {
             unset_sign(model, &removed);
         }
 
-        if let Some(bl) = current::get_current_selected_bufferline(model) {
+        if let Some(bl) = get_current_selected_bufferline(model) {
             set_sign(bl);
         }
     }

@@ -4,17 +4,20 @@ use ratatui::style::Color;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan},
-    update::{self, update_buffer},
+    update::update_buffer,
 };
 use yeet_keymap::message::ContentKind;
 
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
-    update::preview::{set_preview_to_selected, validate_preview_viewport},
+    update::{
+        cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
+        mark::set_sign_if_marked,
+        preview::{set_preview_to_selected, validate_preview_viewport},
+        qfix::set_sign_if_qfix,
+    },
 };
-
-use super::{cursor, mark, qfix};
 
 #[tracing::instrument(skip(model, contents))]
 pub fn update_on_enumeration_change(
@@ -34,18 +37,18 @@ pub fn update_on_enumeration_change(
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = from_enumeration(cntnt, knd);
-                mark::set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
-                qfix::set_sign_if_qfix(&model.qfix, &mut line, &path.join(cntnt));
+                set_sign_if_marked(&model.marks, &mut line, &path.join(cntnt));
+                set_sign_if_qfix(&model.qfix, &mut line, &path.join(cntnt));
 
                 line
             })
             .collect();
 
-        update::update_buffer(&model.mode, buffer, &BufferMessage::SetContent(content));
+        update_buffer(&model.mode, buffer, &BufferMessage::SetContent(content));
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if cursor::set_cursor_index(&model.mode, buffer, selection) {
+                if set_cursor_index_to_selection(&model.mode, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                     *state = DirectoryBufferState::PartiallyLoaded;
                 }
@@ -87,7 +90,7 @@ pub fn update_on_enumeration_finished(
 
     let directories = model.files.get_mut_directories();
     if let Some((_, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
-        update::update_buffer(
+        update_buffer(
             &model.mode,
             buffer,
             &BufferMessage::SortContent(super::SORT),
@@ -102,8 +105,8 @@ pub fn update_on_enumeration_finished(
                 });
             }
 
-            if !cursor::set_cursor_index(&model.mode, buffer, selection) {
-                cursor::set_cursor_index_with_history(&model.mode, &model.history, buffer, path);
+            if !set_cursor_index_to_selection(&model.mode, buffer, selection) {
+                set_cursor_index_with_history(&model.mode, &model.history, buffer, path);
             }
         }
 
