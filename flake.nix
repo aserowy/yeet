@@ -70,6 +70,7 @@
             ];
             shellHook = ''
               export PATH=~/.cargo/bin:$PATH
+
               ${ if (!pkgs.stdenv.isDarwin) then
                   "export PATH=${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter:$PATH"
                 else

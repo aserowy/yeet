@@ -8,7 +8,7 @@ use crate::{
     update::current::get_current_selected_path,
 };
 
-use super::cursor::set_cursor_index_with_history;
+use super::{cursor::set_cursor_index_with_history, set_viewport_dimensions};
 
 #[tracing::instrument(skip(model))]
 pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
@@ -65,7 +65,7 @@ pub fn validate_preview_viewport(model: &mut Model) {
     let buffer = &mut model.files.preview.buffer;
     let layout = &model.layout.preview;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, layout);
+    set_viewport_dimensions(&mut buffer.view_port, layout);
     update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
 
     if let Some(cursor) = &mut buffer.cursor {

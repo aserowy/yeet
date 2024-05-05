@@ -45,13 +45,7 @@ pub fn load(history: &mut History) -> Result<(), AppError> {
         let mut iter = Path::new(path).components();
         if let Some(component) = iter.next() {
             if let Some(component_name) = component.as_os_str().to_str() {
-                super::add_entry(
-                    &mut history.entries,
-                    changed_at,
-                    HistoryState::Loaded,
-                    component_name,
-                    iter,
-                );
+                history.add_entry(changed_at, HistoryState::Loaded, component_name, iter);
             }
         }
     }

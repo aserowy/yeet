@@ -4,11 +4,13 @@ use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buff
 
 use crate::model::Model;
 
+use super::set_viewport_dimensions;
+
 pub fn update_current(model: &mut Model, message: Option<&BufferMessage>) {
     let buffer = &mut model.files.current.buffer;
     let layout = &model.layout.current;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, layout);
+    set_viewport_dimensions(&mut buffer.view_port, layout);
 
     if let Some(message) = message {
         update_buffer(&model.mode, buffer, message);

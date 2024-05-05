@@ -19,6 +19,7 @@ pub struct JunkYard {
     yanked: Option<FileTransaction>,
 }
 
+// TODO: move all methods to update mod as pure functions
 impl JunkYard {
     pub fn add_or_update(&mut self, path: &Path) -> Option<FileTransaction> {
         if let Some((id, file, target)) = decompose_compression_path(path) {

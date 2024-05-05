@@ -12,6 +12,8 @@ use crate::{
     update::search::{clear_search, search_in_buffers},
 };
 
+use super::set_viewport_dimensions;
+
 pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
     let command_mode = match &model.mode {
         Mode::Command(it) => it,
@@ -21,7 +23,7 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
     if let Some(message) = message {
         match command_mode {
@@ -48,7 +50,7 @@ pub fn update_commandline_on_modification(
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
@@ -115,7 +117,7 @@ pub fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
     let command_mode = match &model.mode {
         Mode::Command(it) => it,
@@ -246,7 +248,7 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
 
-    super::set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
 
     commandline.buffer.lines = content
         .iter()

@@ -16,6 +16,7 @@ pub struct Register {
     pub scopes: HashMap<RegisterScope, String>,
 }
 
+// TODO: move all methods to update mod as pure functions
 impl Register {
     pub fn get(&self, register: &char) -> Option<String> {
         match register {
@@ -38,6 +39,7 @@ impl Register {
             .find(|scope| matches!(scope, RegisterScope::Macro(_)))
     }
 
+    // TODO: consolidate with print fn from qfix and marks
     pub fn print(&self) -> Vec<String> {
         let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
 
