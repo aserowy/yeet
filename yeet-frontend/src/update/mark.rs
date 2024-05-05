@@ -46,22 +46,6 @@ pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
     }
 }
 
-pub fn print_marks(marks: &Marks) -> Vec<String> {
-    let mut marks: Vec<_> = marks
-        .entries
-        .iter()
-        .map(|(key, path)| (key, path.to_string_lossy().to_string()))
-        .map(|(key, path)| format!("{:<4} {}", key, path))
-        .collect();
-
-    marks.sort();
-
-    let mut contents = vec![":marks".to_string(), "Char Content".to_string()];
-    contents.extend(marks);
-
-    contents
-}
-
 pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
     let is_marked = marks.entries.values().any(|p| p == path);
     if !is_marked {

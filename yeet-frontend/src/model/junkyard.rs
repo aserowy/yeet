@@ -13,10 +13,10 @@ use crate::{error::AppError, event::Emitter, task::Task};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct JunkYard {
-    current: FileEntryType,
+    pub current: FileEntryType,
     pub path: PathBuf,
-    trashed: Vec<FileTransaction>,
-    yanked: Option<FileTransaction>,
+    pub trashed: Vec<FileTransaction>,
+    pub yanked: Option<FileTransaction>,
 }
 
 // TODO: move all methods to update mod as pure functions
@@ -79,23 +79,23 @@ impl JunkYard {
         }
     }
 
-    pub fn get(&self, junk: &char) -> Option<FileTransaction> {
+    pub fn get(&self, junk: &char) -> Option<&FileTransaction> {
         let transaction = match junk {
             '"' => match self.current {
-                FileEntryType::Trash => self.trashed.first().cloned(),
-                FileEntryType::Yank => self.yanked.clone(),
+                FileEntryType::Trash => self.trashed.first(),
+                FileEntryType::Yank => self.yanked.as_ref(),
                 FileEntryType::_Custom(_) => None,
             },
-            '0' => self.yanked.clone(),
-            '1' => self.trashed.first().cloned(),
-            '2' => self.trashed.get(1).cloned(),
-            '3' => self.trashed.get(2).cloned(),
-            '4' => self.trashed.get(3).cloned(),
-            '5' => self.trashed.get(4).cloned(),
-            '6' => self.trashed.get(5).cloned(),
-            '7' => self.trashed.get(6).cloned(),
-            '8' => self.trashed.get(7).cloned(),
-            '9' => self.trashed.get(8).cloned(),
+            '0' => self.yanked.as_ref(),
+            '1' => self.trashed.first(),
+            '2' => self.trashed.get(1),
+            '3' => self.trashed.get(2),
+            '4' => self.trashed.get(3),
+            '5' => self.trashed.get(4),
+            '6' => self.trashed.get(5),
+            '7' => self.trashed.get(6),
+            '8' => self.trashed.get(7),
+            '9' => self.trashed.get(8),
             // TODO: add custom junk handling
             _ => None,
         };
@@ -112,22 +112,6 @@ impl JunkYard {
         } else {
             None
         }
-    }
-
-    pub fn print(&self) -> Vec<String> {
-        let mut contents = vec![":junk".to_string(), "Name Content".to_string()];
-        if let Some(current) = &self.get(&'"') {
-            contents.push(print_content("\"\"", current));
-        }
-        if let Some(yanked) = &self.yanked {
-            contents.push(print_content("\"0", yanked));
-        }
-        for (index, entry) in self.trashed.iter().enumerate() {
-            let junk_name = format!("\"{}", index + 1);
-            contents.push(print_content(&junk_name, entry));
-        }
-
-        contents
     }
 
     pub fn remove(&mut self, path: &Path) {
@@ -370,26 +354,6 @@ async fn get_junk_path() -> Result<PathBuf, AppError> {
         fs::create_dir_all(&junk_path).await?;
     }
     Ok(junk_path)
-}
-
-fn print_content(junk: &str, transaction: &FileTransaction) -> String {
-    let is_ready = transaction
-        .entries
-        .iter()
-        .all(|entry| entry.status == FileEntryStatus::Ready);
-
-    let content = if is_ready {
-        transaction
-            .entries
-            .iter()
-            .map(|entry| entry.target.to_string_lossy().to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
-    } else {
-        "Processing".to_string()
-    };
-
-    format!("{:<4} {}", junk, content)
 }
 
 mod test {

@@ -11,7 +11,7 @@ pub struct Register {
     pub content: HashMap<char, String>,
     pub dot: Option<String>,
     pub find: Option<String>,
-    pub r#macro: Option<String>,
+    pub last_macro: Option<String>,
     pub searched: Option<(SearchDirection, String)>,
     pub scopes: HashMap<RegisterScope, String>,
 }
@@ -20,7 +20,7 @@ pub struct Register {
 impl Register {
     pub fn get(&self, register: &char) -> Option<String> {
         match register {
-            '@' => self.r#macro.clone(),
+            '@' => self.last_macro.clone(),
             '.' => self.dot.clone(),
             ';' => self.find.clone(),
             ':' => self.command.clone(),
@@ -38,36 +38,6 @@ impl Register {
             .keys()
             .find(|scope| matches!(scope, RegisterScope::Macro(_)))
     }
-
-    // TODO: consolidate with print fn from qfix and marks
-    pub fn print(&self) -> Vec<String> {
-        let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
-
-        for (key, content) in self.content.iter() {
-            contents.push(print_content(key, content));
-        }
-
-        if let Some(r#macro) = &self.r#macro {
-            contents.push(print_content(&'@', r#macro));
-        }
-        if let Some(dot) = &self.dot {
-            contents.push(print_content(&'.', dot));
-        }
-        if let Some(command) = &self.command {
-            contents.push(print_content(&':', command));
-        }
-        if let Some(find) = &self.find {
-            contents.push(print_content(&';', find));
-        }
-        if let Some(searched) = &self.searched {
-            contents.push(print_content(&'/', &searched.1));
-        }
-        contents
-    }
-}
-
-fn print_content(prefix: &char, content: &str) -> String {
-    format!("\"{:<3} {}", prefix, content)
 }
 
 #[derive(Clone, Debug, Eq)]

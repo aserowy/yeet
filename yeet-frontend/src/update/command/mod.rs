@@ -4,17 +4,19 @@ use std::{
 };
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::Message;
 
 use crate::{
     action::Action,
     model::{mark::Marks, Model},
     task::Task,
     update::{
-        mark::print_marks,
-        qfix::{clear_qfix_list, print_qfix_list},
+        command::print::{print_junkyard, print_marks, print_qfix_list, print_register},
+        qfix::clear_qfix_list,
     },
 };
+
+mod print;
 
 #[tracing::instrument(skip(model))]
 pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
@@ -64,18 +66,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         // TODO: multiple cl to enable better workflow
         ("cl", "") => {
-            let content = print_qfix_list(&model.qfix)
-                .iter()
-                .enumerate()
-                .map(|(i, cntnt)| {
-                    if i == model.qfix.current_index + 1 {
-                        PrintContent::Information(cntnt.to_string())
-                    } else {
-                        PrintContent::Default(cntnt.to_string())
-                    }
-                })
-                .collect();
-
+            let content = print_qfix_list(&model.qfix);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
         ("cn", "") => {
@@ -167,21 +158,11 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
         }
         ("junk", "") => {
-            let content = model
-                .junk
-                .print()
-                .iter()
-                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-                .collect();
-
+            let content = print_junkyard(&model.junk);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
         ("marks", "") => {
-            let content = print_marks(&model.marks)
-                .iter()
-                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-                .collect();
-
+            let content = print_marks(&model.marks);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
         ("mv", target) => {
@@ -206,13 +187,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         ])],
         ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
         ("reg", "") => {
-            let content = model
-                .register
-                .print()
-                .iter()
-                .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-                .collect();
-
+            let content = print_register(&model.register);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
         ("w", "") => vec![Action::EmitMessages(vec![

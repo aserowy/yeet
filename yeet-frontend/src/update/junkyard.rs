@@ -20,9 +20,9 @@ pub fn add_to_junkyard(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
 pub fn paste_to_junkyard(model: &mut Model, entry_id: &char) -> Vec<Action> {
     if let Some(transaction) = model.junk.get(entry_id) {
         let mut actions = Vec::new();
-        for entry in transaction.entries {
+        for entry in transaction.entries.iter() {
             actions.push(Action::Task(Task::RestorePath(
-                entry,
+                entry.clone(),
                 model.files.current.path.clone(),
             )));
         }

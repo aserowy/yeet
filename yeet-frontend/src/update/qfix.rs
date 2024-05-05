@@ -31,27 +31,6 @@ pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn print_qfix_list(qfix: &QuickFix) -> Vec<String> {
-    let max_width = (qfix.entries.len() + 1).to_string().len();
-
-    let entries: Vec<_> = qfix
-        .entries
-        .iter()
-        .enumerate()
-        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string()))
-        .map(|(i, path)| format!("{:>max_width$} {}", i, path))
-        .collect();
-
-    let mut contents = vec![":cl".to_string()];
-    if entries.is_empty() {
-        contents.push("no entries".to_string());
-    } else {
-        contents.extend(entries);
-    }
-
-    contents
-}
-
 pub fn clear_qfix_list(model: &mut Model) {
     model.qfix.entries.clear();
     model.qfix.current_index = 0;
