@@ -5,7 +5,7 @@ use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 mod commandline;
 mod statusline;
 
-pub fn view(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     // NOTE: If perf matters, call view only on relevant changed model parts
     terminal.draw(|frame| {
         let layout = model.layout.clone();

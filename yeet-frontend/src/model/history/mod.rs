@@ -37,44 +37,17 @@ impl History {
         let mut iter = path.components();
         if let Some(component) = iter.next() {
             if let Some(component_name) = component.as_os_str().to_str() {
-                self.add_entry(added_at, HistoryState::Added, component_name, iter);
+                add_entry(
+                    &mut self.entries,
+                    added_at,
+                    HistoryState::Added,
+                    component_name,
+                    iter,
+                );
             }
         }
     }
 
-    fn add_entry(
-        &mut self,
-        changed_at: u64,
-        state: HistoryState,
-        component_name: &str,
-        mut component_iter: Components<'_>,
-    ) {
-        let nodes = &mut self.entries;
-        if !nodes.contains_key(component_name) {
-            nodes.insert(
-                component_name.to_string(),
-                HistoryNode {
-                    changed_at,
-                    component: component_name.to_string(),
-                    nodes: HashMap::new(),
-                    state: state.clone(),
-                },
-            );
-        }
-
-        if let Some(current_node) = nodes.get_mut(component_name) {
-            if current_node.changed_at < changed_at {
-                current_node.changed_at = changed_at;
-                current_node.state = state.clone();
-            }
-
-            if let Some(next_component) = component_iter.next() {
-                if let Some(next_component_name) = next_component.as_os_str().to_str() {
-                    self.add_entry(changed_at, state, next_component_name, component_iter);
-                }
-            }
-        }
-    }
     pub fn get_selection<'a>(&'a self, path: &Path) -> Option<&'a str> {
         let mut current_nodes = &self.entries;
         for component in path.components() {
@@ -91,5 +64,44 @@ impl History {
             .values()
             .max_by_key(|node| node.changed_at)
             .map(|node| node.component.as_str())
+    }
+}
+
+fn add_entry(
+    nodes: &mut HashMap<String, HistoryNode>,
+    changed_at: u64,
+    state: HistoryState,
+    component_name: &str,
+    mut component_iter: Components<'_>,
+) {
+    if !nodes.contains_key(component_name) {
+        nodes.insert(
+            component_name.to_string(),
+            HistoryNode {
+                changed_at,
+                component: component_name.to_string(),
+                nodes: HashMap::new(),
+                state: state.clone(),
+            },
+        );
+    }
+
+    if let Some(current_node) = nodes.get_mut(component_name) {
+        if current_node.changed_at < changed_at {
+            current_node.changed_at = changed_at;
+            current_node.state = state.clone();
+        }
+
+        if let Some(next_component) = component_iter.next() {
+            if let Some(next_component_name) = next_component.as_os_str().to_str() {
+                add_entry(
+                    &mut current_node.nodes,
+                    changed_at,
+                    state,
+                    next_component_name,
+                    component_iter,
+                );
+            }
+        }
     }
 }

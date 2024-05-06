@@ -46,6 +46,7 @@ mod save;
 mod search;
 mod selection;
 mod settings;
+// mod sign;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
     a.content
@@ -54,7 +55,7 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 };
 
 #[tracing::instrument(skip(model))]
-pub fn update(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
+pub fn update_model(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     match &envelope.sequence {
         KeySequence::Completed(_) => model.key_sequence.clear(),
         KeySequence::Changed(sequence) => model.key_sequence = sequence.to_owned(),

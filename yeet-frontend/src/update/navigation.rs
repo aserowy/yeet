@@ -93,11 +93,16 @@ pub fn navigate_to_path_with_selection(
 
     let selection = match selection {
         Some(it) => Some(it.to_owned()),
-        None => model
-            .history
-            .get_selection(path)
-            .map(|history| history.to_owned()),
+        None => {
+            tracing::trace!("getting selection from history for path: {:?}", path);
+            model
+                .history
+                .get_selection(path)
+                .map(|history| history.to_owned())
+        }
     };
+
+    tracing::trace!("resolved selection: {:?}", selection);
 
     let mut current_contents: HashMap<_, _> = HashMap::from([(
         model.files.current.path.clone(),

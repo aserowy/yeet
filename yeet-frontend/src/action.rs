@@ -30,7 +30,7 @@ pub enum ActionResult {
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn pre(
+pub async fn exec_preview_actions(
     model: &Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
@@ -40,7 +40,7 @@ pub async fn pre(
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn post(
+pub async fn exec_postview_actions(
     model: &Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,

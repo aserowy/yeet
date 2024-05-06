@@ -8,6 +8,7 @@ use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
 
 use crate::{
+    action::{exec_postview_actions, exec_preview_actions},
     error::AppError,
     event::Emitter,
     layout::AppLayout,
@@ -17,7 +18,8 @@ use crate::{
     },
     settings::Settings,
     terminal::TerminalWrapper,
-    update::commandline,
+    update::{commandline, update_model},
+    view::render_model,
 };
 
 mod action;
@@ -91,16 +93,16 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         };
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-        let mut actions = update::update(&mut model, &envelope);
+        let mut actions = update_model(&mut model, &envelope);
         actions.extend(get_watcher_changes(&mut model));
         actions.extend(get_command_from_stack(&mut model, &actions));
 
-        let result = action::pre(&model, &mut emitter, &mut terminal, &actions).await?;
+        let result = exec_preview_actions(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
-            view::view(&mut terminal, &model)?;
+            render_model(&mut terminal, &model)?;
         }
 
-        let result = action::post(&model, &mut emitter, &mut terminal, &actions).await?;
+        let result = exec_postview_actions(&model, &mut emitter, &mut terminal, &actions).await?;
         if result == ActionResult::Quit {
             break;
         }
@@ -125,7 +127,6 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
             return path.to_path_buf();
         }
     }
-
     env::current_dir().expect("Failed to get current directory")
 }
 
