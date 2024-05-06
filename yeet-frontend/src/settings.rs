@@ -21,7 +21,7 @@ impl Default for Settings {
             },
             parent: BufferSettings::default(),
             preview: BufferSettings::default(),
-            show_mark_signs: false,
+            show_mark_signs: true,
             show_quickfix_signs: true,
             stdout_on_open: false,
             startup_path: None,

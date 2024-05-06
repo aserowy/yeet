@@ -11,7 +11,10 @@ use crate::{
     },
 };
 
-use super::selection::{get_current_selected_bufferline, get_current_selected_path};
+use super::{
+    selection::{get_current_selected_bufferline, get_current_selected_path},
+    sign::{set_sign, unset_sign},
+};
 
 pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
     let selected = get_current_selected_path(model);
@@ -19,28 +22,16 @@ pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
         if model.qfix.entries.contains(&selected) {
             model.qfix.entries.retain(|p| p != &selected);
             if let Some(bl) = get_current_selected_bufferline(model) {
-                unset_sign(bl);
+                unset_sign(bl, QFIX_SIGN_ID);
             }
         } else {
             model.qfix.entries.push(selected);
             if let Some(bl) = get_current_selected_bufferline(model) {
-                set_sign(bl);
+                set_sign(bl, generate_qfix_sign);
             }
         }
     }
     Vec::new()
-}
-
-pub fn clear_qfix_list(model: &mut Model) {
-    model.qfix.entries.clear();
-    model.qfix.current_index = 0;
-
-    let all_buffer = model.files.get_mut_directories();
-    for (_, _, buffer) in all_buffer {
-        for line in &mut buffer.lines {
-            unset_sign(line);
-        }
-    }
 }
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -49,29 +40,14 @@ pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl);
+    set_sign(bl, generate_qfix_sign);
 }
 
-// TODO: refactor with marks impl
-fn set_sign(bl: &mut BufferLine) {
-    let is_signed = bl.signs.iter().any(|s| s.id == QFIX_SIGN_ID);
-    if is_signed {
-        return;
-    }
-
-    bl.signs.push(Sign {
+fn generate_qfix_sign() -> Sign {
+    Sign {
         id: QFIX_SIGN_ID,
         content: 'c',
         priority: 0,
         style: vec![StylePartial::Foreground(Color::LightMagenta)],
-    });
-}
-
-// TODO: refactor with marks impl
-fn unset_sign(bl: &mut BufferLine) {
-    let position = bl.signs.iter().position(|s| s.id == QFIX_SIGN_ID);
-
-    if let Some(position) = position {
-        bl.signs.remove(position);
     }
 }

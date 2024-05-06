@@ -12,18 +12,21 @@ use crate::{
     task::Task,
 };
 
-use super::selection::{get_current_selected_bufferline, get_current_selected_path};
+use super::{
+    selection::{get_current_selected_bufferline, get_current_selected_path},
+    sign::{set_sign, unset_sign_for_path},
+};
 
 pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
     let selected = get_current_selected_path(model);
     if let Some(selected) = selected {
         let removed = model.marks.entries.insert(char, selected);
         if let Some(removed) = removed {
-            unset_sign(model, &removed);
+            unset_sign_for_path(model, &removed, MARK_SIGN_ID);
         }
 
         if let Some(bl) = get_current_selected_bufferline(model) {
-            set_sign(bl);
+            set_sign(bl, generate_mark_sign);
         }
     }
     Vec::new()
@@ -34,7 +37,7 @@ pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
     for mark in delete {
         let deleted = model.marks.entries.remove_entry(mark);
         if let Some((mark, path)) = deleted {
-            unset_sign(model, path.as_path());
+            unset_sign_for_path(model, path.as_path(), MARK_SIGN_ID);
             persisted.push(mark);
         }
     }
@@ -52,51 +55,14 @@ pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl);
+    set_sign(bl, generate_mark_sign);
 }
 
-fn set_sign(bl: &mut BufferLine) {
-    let is_signed = bl.signs.iter().any(|s| s.id == MARK_SIGN_ID);
-    if is_signed {
-        return;
-    }
-
-    bl.signs.push(Sign {
+fn generate_mark_sign() -> Sign {
+    Sign {
         id: MARK_SIGN_ID,
         content: 'm',
         priority: 0,
-        style: vec![StylePartial::Foreground(Color::LightMagenta)],
-    });
-}
-
-fn unset_sign(model: &mut Model, removed: &Path) {
-    let parent = match removed.parent() {
-        Some(it) => it,
-        None => return,
-    };
-
-    let lines = if parent == model.files.current.path {
-        &mut model.files.current.buffer.lines
-    } else if Some(parent) == model.files.preview.path.as_deref() {
-        &mut model.files.preview.buffer.lines
-    } else if Some(parent) == model.files.parent.path.as_deref() {
-        &mut model.files.parent.buffer.lines
-    } else {
-        return;
-    };
-
-    let file_name = match removed.file_name() {
-        Some(it) => match it.to_str() {
-            Some(it) => it,
-            None => return,
-        },
-        None => return,
-    };
-
-    if let Some(line) = lines.iter_mut().find(|bl| bl.content == file_name) {
-        let position = line.signs.iter().position(|s| s.id == MARK_SIGN_ID);
-        if let Some(position) = position {
-            line.signs.remove(position);
-        }
+        style: vec![StylePartial::Foreground(Color::LightBlue)],
     }
 }

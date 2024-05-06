@@ -8,11 +8,11 @@ use yeet_keymap::message::Message;
 
 use crate::{
     action::Action,
-    model::{mark::Marks, Model},
+    model::{mark::Marks, qfix::QFIX_SIGN_ID, Model},
     task::Task,
     update::{
         command::print::{print_junkyard, print_marks, print_qfix_list, print_register},
-        qfix::clear_qfix_list,
+        sign::unset_sign_on_all_buffers,
     },
 };
 
@@ -36,7 +36,11 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     let actions = match cmd_with_args {
         ("cclear", "") => {
-            clear_qfix_list(model);
+            model.qfix.entries.clear();
+            model.qfix.current_index = 0;
+
+            unset_sign_on_all_buffers(model, QFIX_SIGN_ID);
+
             vec![change_mode_action]
         }
         ("cdo", command) => {
