@@ -13,9 +13,8 @@ use crate::{
     model::{DirectoryBufferState, Model},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
-        mark::set_sign_if_marked,
         preview::{set_preview_to_selected, validate_preview_viewport},
-        qfix::set_sign_if_qfix,
+        sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
 

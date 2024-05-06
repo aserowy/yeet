@@ -1,15 +1,59 @@
 use std::path::Path;
 
-use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
+use ratatui::style::Color;
+use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
 
-use crate::model::Model;
+use crate::model::{
+    mark::{Marks, MARK_SIGN_ID},
+    qfix::{QuickFix, QFIX_SIGN_ID},
+    Model,
+};
 
-pub fn set_sign(bl: &mut BufferLine, sign: Sign) {
-    let is_signed = bl.signs.iter().any(|s| s.id == sign.id);
+pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
+    let is_marked = qfix.entries.iter().any(|p| p == path);
+    if !is_marked {
+        return;
+    }
+
+    set_sign(bl, QFIX_SIGN_ID);
+}
+
+pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
+    let is_marked = marks.entries.values().any(|p| p == path);
+    if !is_marked {
+        return;
+    }
+
+    set_sign(bl, MARK_SIGN_ID);
+}
+
+pub fn set_sign(bl: &mut BufferLine, sign_id: SignIdentifier) {
+    let is_signed = bl.signs.iter().any(|s| s.id == sign_id);
     if is_signed {
         return;
     }
-    bl.signs.push(sign);
+
+    if let Some(sign) = generate_sign(sign_id) {
+        bl.signs.push(sign);
+    }
+}
+
+fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
+    match sign_id {
+        QFIX_SIGN_ID => Some(Sign {
+            id: QFIX_SIGN_ID,
+            content: 'c',
+            priority: 0,
+            style: vec![StylePartial::Foreground(Color::LightMagenta)],
+        }),
+        MARK_SIGN_ID => Some(Sign {
+            id: MARK_SIGN_ID,
+            content: 'm',
+            priority: 0,
+            style: vec![StylePartial::Foreground(Color::LightBlue)],
+        }),
+        _ => None,
+    }
 }
 
 pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {

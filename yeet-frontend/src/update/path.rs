@@ -14,9 +14,8 @@ use crate::{action::Action, model::Model};
 
 use super::{
     cursor::get_selected_content_from_buffer,
-    mark::set_sign_if_marked,
     preview::{set_preview_to_selected, validate_preview_viewport},
-    qfix::set_sign_if_qfix,
+    sign::{set_sign_if_marked, set_sign_if_qfix},
 };
 
 #[tracing::instrument(skip(model))]

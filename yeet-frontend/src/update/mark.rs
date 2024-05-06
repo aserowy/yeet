@@ -1,14 +1,6 @@
-use std::path::Path;
-
-use ratatui::style::Color;
-use yeet_buffer::model::{BufferLine, Sign, StylePartial};
-
 use crate::{
     action::Action,
-    model::{
-        mark::{Marks, MARK_SIGN_ID},
-        Model,
-    },
+    model::{mark::MARK_SIGN_ID, Model},
     task::Task,
 };
 
@@ -26,7 +18,7 @@ pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
         }
 
         if let Some(bl) = get_current_selected_bufferline(model) {
-            set_sign(bl, generate_mark_sign());
+            set_sign(bl, MARK_SIGN_ID);
         }
     }
     Vec::new()
@@ -46,23 +38,5 @@ pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
         Vec::new()
     } else {
         vec![Action::Task(Task::DeleteMarks(persisted))]
-    }
-}
-
-pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
-    let is_marked = marks.entries.values().any(|p| p == path);
-    if !is_marked {
-        return;
-    }
-
-    set_sign(bl, generate_mark_sign());
-}
-
-fn generate_mark_sign() -> Sign {
-    Sign {
-        id: MARK_SIGN_ID,
-        content: 'm',
-        priority: 0,
-        style: vec![StylePartial::Foreground(Color::LightBlue)],
     }
 }
