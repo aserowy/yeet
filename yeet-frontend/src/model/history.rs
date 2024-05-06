@@ -1,14 +1,71 @@
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
-    path::{Path, PathBuf},
+    path::{Components, Path, PathBuf},
 };
 
 use crate::error::AppError;
 
-use super::{History, HistoryNode, HistoryState};
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct History {
+    pub entries: HashMap<String, HistoryNode>,
+}
 
-pub fn load(history: &mut History) -> Result<(), AppError> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HistoryNode {
+    pub changed_at: u64,
+    pub component: String,
+    pub nodes: HashMap<String, HistoryNode>,
+    pub state: HistoryState,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum HistoryState {
+    Added,
+    #[default]
+    Loaded,
+}
+
+pub fn add_history_component(
+    nodes: &mut HashMap<String, HistoryNode>,
+    changed_at: u64,
+    state: HistoryState,
+    component_name: &str,
+    mut component_iter: Components<'_>,
+) {
+    if !nodes.contains_key(component_name) {
+        nodes.insert(
+            component_name.to_string(),
+            HistoryNode {
+                changed_at,
+                component: component_name.to_string(),
+                nodes: HashMap::new(),
+                state: state.clone(),
+            },
+        );
+    }
+
+    if let Some(current_node) = nodes.get_mut(component_name) {
+        if current_node.changed_at < changed_at {
+            current_node.changed_at = changed_at;
+            current_node.state = state.clone();
+        }
+
+        if let Some(next_component) = component_iter.next() {
+            if let Some(next_component_name) = next_component.as_os_str().to_str() {
+                add_history_component(
+                    &mut current_node.nodes,
+                    changed_at,
+                    state,
+                    next_component_name,
+                    component_iter,
+                );
+            }
+        }
+    }
+}
+
+pub fn load_history_from_file(history: &mut History) -> Result<(), AppError> {
     let history_path = get_history_path()?;
     if !Path::new(&history_path).exists() {
         return Ok(());
@@ -45,7 +102,7 @@ pub fn load(history: &mut History) -> Result<(), AppError> {
         let mut iter = Path::new(path).components();
         if let Some(component) = iter.next() {
             if let Some(component_name) = component.as_os_str().to_str() {
-                super::add_entry(
+                add_history_component(
                     &mut history.entries,
                     changed_at,
                     HistoryState::Loaded,
@@ -59,15 +116,15 @@ pub fn load(history: &mut History) -> Result<(), AppError> {
     Ok(())
 }
 
-pub fn optimize() -> Result<(), AppError> {
+pub fn optimize_history_file() -> Result<(), AppError> {
     let mut history = History::default();
-    load(&mut history)?;
+    load_history_from_file(&mut history)?;
     save_filtered(&history, HistoryState::Loaded, true)?;
 
     Ok(())
 }
 
-pub fn save(history: &History) -> Result<(), AppError> {
+pub fn save_history_to_file(history: &History) -> Result<(), AppError> {
     save_filtered(history, HistoryState::Added, false)
 }
 

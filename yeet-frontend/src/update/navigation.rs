@@ -9,10 +9,12 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     model::{DirectoryBufferState, Model},
+    update::history::get_selection_from_history,
 };
 
 use super::{
     cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
+    history::add_history_entry,
     preview::{set_preview_to_selected, validate_preview_viewport},
     selection::get_current_selected_path,
     set_viewport_dimensions,
@@ -95,10 +97,7 @@ pub fn navigate_to_path_with_selection(
         Some(it) => Some(it.to_owned()),
         None => {
             tracing::trace!("getting selection from history for path: {:?}", path);
-            model
-                .history
-                .get_selection(path)
-                .map(|history| history.to_owned())
+            get_selection_from_history(&model.history, path).map(|history| history.to_owned())
         }
     };
 
@@ -214,7 +213,8 @@ pub fn navigate_to_path_with_selection(
                 model.files.preview.state = DirectoryBufferState::Loading;
                 validate_preview_viewport(model);
 
-                let selection = model.history.get_selection(&preview).map(|s| s.to_owned());
+                let selection =
+                    get_selection_from_history(&model.history, &preview).map(|s| s.to_owned());
                 actions.push(Action::Load(preview, selection));
             }
         }
@@ -223,7 +223,7 @@ pub fn navigate_to_path_with_selection(
         validate_preview_viewport(model);
     }
 
-    model.history.add(&model.files.current.path);
+    add_history_entry(&mut model.history, &model.files.current.path);
 
     actions
 }
@@ -320,11 +320,11 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             model.files.preview.state = DirectoryBufferState::Loading;
             validate_preview_viewport(model);
 
-            let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+            let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
             actions.push(Action::Load(path, selection));
         }
 
-        model.history.add(&model.files.current.path);
+        add_history_entry(&mut model.history, &model.files.current.path);
 
         actions
     } else {

@@ -8,6 +8,8 @@ use yeet_buffer::{
 
 use crate::model::history::History;
 
+use super::history::get_selection_from_history;
+
 pub fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
     let index = match &model.cursor {
         Some(it) => it.vertical_index,
@@ -33,7 +35,7 @@ pub fn set_cursor_index_with_history(
     buffer: &mut Buffer,
     path: &Path,
 ) -> bool {
-    if let Some(history) = history.get_selection(path) {
+    if let Some(history) = get_selection_from_history(history, path) {
         set_cursor_index_to_selection(mode, buffer, history)
     } else {
         false

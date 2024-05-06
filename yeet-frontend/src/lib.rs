@@ -1,26 +1,20 @@
 use std::{env, path::PathBuf};
 
-use action::{Action, ActionResult};
-use layout::CommandLineLayout;
-use model::{junkyard, mark, qfix, DirectoryBufferState};
+use action::{exec_postview_actions, exec_preview_actions, Action, ActionResult};
+use error::AppError;
+use event::Emitter;
+use layout::{AppLayout, CommandLineLayout};
+use model::{
+    history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
+    qfix::load_qfix_from_file, DirectoryBufferState, Model,
+};
+use settings::Settings;
 use task::Task;
+use terminal::TerminalWrapper;
+use update::{commandline::get_commandline_height, update_model};
+use view::render_model;
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
-
-use crate::{
-    action::{exec_postview_actions, exec_preview_actions},
-    error::AppError,
-    event::Emitter,
-    layout::AppLayout,
-    model::{
-        history::{self},
-        Model,
-    },
-    settings::Settings,
-    terminal::TerminalWrapper,
-    update::{commandline, update_model},
-    view::render_model,
-};
 
 mod action;
 pub mod error;
@@ -49,21 +43,21 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         ..Default::default()
     };
 
-    junkyard::init(&mut model.junk, &mut emitter).await?;
+    init_junkyard(&mut model.junk, &mut emitter).await?;
 
-    if history::cache::load(&mut model.history).is_err() {
+    if load_history_from_file(&mut model.history).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load history".to_string()),
         ])]));
     }
 
-    if mark::load(&mut model.marks).is_err() {
+    if load_marks_from_file(&mut model.marks).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load marks".to_string()),
         ])]));
     }
 
-    if qfix::load(&mut model.qfix).is_err() {
+    if load_qfix_from_file(&mut model.qfix).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load qfix".to_string()),
         ])]));
@@ -84,7 +78,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         }
 
         let size = terminal.size().expect("Failed to get terminal size");
-        model.layout = AppLayout::new(size, commandline::height(&model, &envelope.messages));
+        model.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
 
         let sequence_len = match &envelope.sequence {
             KeySequence::Completed(_) => 0,

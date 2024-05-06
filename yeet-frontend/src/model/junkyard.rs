@@ -250,7 +250,7 @@ pub async fn delete(entry: FileEntry) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn init(junk: &mut JunkYard, emitter: &mut Emitter) -> Result<(), AppError> {
+pub async fn init_junkyard(junk: &mut JunkYard, emitter: &mut Emitter) -> Result<(), AppError> {
     junk.path = get_junk_path().await?;
 
     let mut read_dir = fs::read_dir(&junk.path).await?;

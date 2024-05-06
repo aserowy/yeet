@@ -14,6 +14,7 @@ use crate::{action::Action, model::Model};
 
 use super::{
     cursor::get_selected_content_from_buffer,
+    history::get_selection_from_history,
     preview::{set_preview_to_selected, validate_preview_viewport},
     sign::{set_sign_if_marked, set_sign_if_qfix},
 };
@@ -100,7 +101,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     if let Some(path) = set_preview_to_selected(model) {
         validate_preview_viewport(model);
 
-        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(path, selection));
     }
 
@@ -172,7 +173,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     if let Some(path) = set_preview_to_selected(model) {
         validate_preview_viewport(model);
 
-        let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+        let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(path, selection));
     }
 

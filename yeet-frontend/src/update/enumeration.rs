@@ -13,6 +13,7 @@ use crate::{
     model::{DirectoryBufferState, Model},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
+        history::get_selection_from_history,
         preview::{set_preview_to_selected, validate_preview_viewport},
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
@@ -69,7 +70,7 @@ pub fn update_on_enumeration_change(
             model.files.preview.state = DirectoryBufferState::Loading;
             validate_preview_viewport(model);
 
-            let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+            let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
             actions.push(Action::Load(path, selection));
         }
     }

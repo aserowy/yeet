@@ -10,6 +10,7 @@ use super::{
         set_content_status, update_commandline, update_commandline_on_mode_change,
         update_commandline_on_modification,
     },
+    history::get_selection_from_history,
     preview::{set_preview_to_selected, validate_preview_viewport},
     save::persist_path_changes,
     search::search_in_buffers,
@@ -97,7 +98,8 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 if let Some(path) = set_preview_to_selected(model) {
                     validate_preview_viewport(model);
 
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    let selection =
+                        get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));
                 }
 
@@ -134,7 +136,8 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 if let Some(path) = set_preview_to_selected(model) {
                     validate_preview_viewport(model);
 
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    let selection =
+                        get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));
                 }
 
@@ -150,7 +153,8 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
                 if let Some(path) = set_preview_to_selected(model) {
                     validate_preview_viewport(model);
 
-                    let selection = model.history.get_selection(&path).map(|s| s.to_owned());
+                    let selection =
+                        get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
                     actions.push(Action::Load(path, selection));
                 }
 

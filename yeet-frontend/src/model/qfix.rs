@@ -16,7 +16,7 @@ pub struct QuickFix {
 }
 
 #[tracing::instrument]
-pub fn load(qfix: &mut QuickFix) -> Result<(), AppError> {
+pub fn load_qfix_from_file(qfix: &mut QuickFix) -> Result<(), AppError> {
     let qfix_cache_path = get_qfix_cache_path()?;
     if !Path::new(&qfix_cache_path).exists() {
         tracing::debug!("qfix file does not exist on path {}", qfix_cache_path);

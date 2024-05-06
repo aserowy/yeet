@@ -16,7 +16,7 @@ pub struct Marks {
 }
 
 #[tracing::instrument]
-pub fn load(mark: &mut Marks) -> Result<(), AppError> {
+pub fn load_marks_from_file(mark: &mut Marks) -> Result<(), AppError> {
     let mark_path = get_mark_path()?;
     if !Path::new(&mark_path).exists() {
         tracing::debug!("marks file does not exist on path {}", mark_path);
@@ -83,7 +83,7 @@ pub fn save(marks: &Marks) -> Result<(), AppError> {
     tracing::trace!("marks file opened for writing");
 
     let mut persisted = Marks::default();
-    load(&mut persisted)?;
+    load_marks_from_file(&mut persisted)?;
     persisted.entries.extend(marks.entries.clone());
 
     tracing::trace!("persisted marks loaded and merged");

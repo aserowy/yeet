@@ -320,7 +320,7 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
     actions
 }
 
-pub fn height(model: &Model, messages: &Vec<Message>) -> u16 {
+pub fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
     let lines_len = model.commandline.buffer.lines.len();
     let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
     for message in messages {

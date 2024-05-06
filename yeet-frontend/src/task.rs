@@ -17,7 +17,7 @@ use yeet_keymap::{
 use crate::{
     error::AppError,
     model::{
-        history::{self, History},
+        history::{optimize_history_file, save_history_to_file, History},
         junkyard::{self, FileEntry},
         mark::{self, Marks},
         qfix::{self, QuickFix},
@@ -149,7 +149,7 @@ impl TaskManager {
                     tracing::trace!("saving marks");
 
                     let mut current = Marks::default();
-                    if let Err(err) = mark::load(&mut current) {
+                    if let Err(err) = mark::load_marks_from_file(&mut current) {
                         emit_error(&sender, err).await;
                         return Ok(());
                     }
@@ -346,10 +346,10 @@ impl TaskManager {
             Task::SaveHistory(history) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = history::cache::save(&history) {
+                    if let Err(error) = save_history_to_file(&history) {
                         emit_error(&sender, error).await;
                     }
-                    history::cache::optimize()?;
+                    optimize_history_file()?;
 
                     Ok(())
                 })
