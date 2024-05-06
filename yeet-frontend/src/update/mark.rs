@@ -26,7 +26,7 @@ pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
         }
 
         if let Some(bl) = get_current_selected_bufferline(model) {
-            set_sign(bl, generate_mark_sign);
+            set_sign(bl, generate_mark_sign());
         }
     }
     Vec::new()
@@ -55,7 +55,7 @@ pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl, generate_mark_sign);
+    set_sign(bl, generate_mark_sign());
 }
 
 fn generate_mark_sign() -> Sign {

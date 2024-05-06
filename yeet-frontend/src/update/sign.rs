@@ -4,8 +4,7 @@ use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 
 use crate::model::Model;
 
-pub fn set_sign(bl: &mut BufferLine, generate_sign: fn() -> Sign) {
-    let sign = generate_sign();
+pub fn set_sign(bl: &mut BufferLine, sign: Sign) {
     let is_signed = bl.signs.iter().any(|s| s.id == sign.id);
     if is_signed {
         return;

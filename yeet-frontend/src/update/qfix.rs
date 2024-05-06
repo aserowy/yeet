@@ -27,7 +27,7 @@ pub fn toggle_selected_to_qfix(model: &mut Model) -> Vec<Action> {
         } else {
             model.qfix.entries.push(selected);
             if let Some(bl) = get_current_selected_bufferline(model) {
-                set_sign(bl, generate_qfix_sign);
+                set_sign(bl, generate_qfix_sign());
             }
         }
     }
@@ -40,7 +40,7 @@ pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl, generate_qfix_sign);
+    set_sign(bl, generate_qfix_sign());
 }
 
 fn generate_qfix_sign() -> Sign {
