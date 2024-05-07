@@ -16,11 +16,16 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
+    init::{
+        history::{optimize_history_file, save_history_to_file},
+        mark::{load_marks_from_file, save_marks_to_file},
+        qfix::save_qfix_to_files,
+    },
     model::{
-        history::{optimize_history_file, save_history_to_file, History},
+        history::History,
         junkyard::{self, FileEntry},
-        mark::{self, Marks},
-        qfix::{self, QuickFix},
+        mark::Marks,
+        qfix::QuickFix,
     },
 };
 
@@ -149,7 +154,7 @@ impl TaskManager {
                     tracing::trace!("saving marks");
 
                     let mut current = Marks::default();
-                    if let Err(err) = mark::load_marks_from_file(&mut current) {
+                    if let Err(err) = load_marks_from_file(&mut current) {
                         emit_error(&sender, err).await;
                         return Ok(());
                     }
@@ -158,7 +163,7 @@ impl TaskManager {
                         current.entries.remove(&mark);
                     }
 
-                    if let Err(error) = mark::save(&current) {
+                    if let Err(error) = save_marks_to_file(&current) {
                         emit_error(&sender, error).await;
                     }
 
@@ -359,7 +364,7 @@ impl TaskManager {
                 self.tasks.spawn(async move {
                     tracing::trace!("saving marks");
 
-                    if let Err(error) = mark::save(&marks) {
+                    if let Err(error) = save_marks_to_file(&marks) {
                         emit_error(&sender, error).await;
                     }
 
@@ -371,7 +376,7 @@ impl TaskManager {
                 self.tasks.spawn(async move {
                     tracing::trace!("saving qfix");
 
-                    if let Err(error) = qfix::save(&qfix) {
+                    if let Err(error) = save_qfix_to_files(&qfix) {
                         emit_error(&sender, error).await;
                     }
 

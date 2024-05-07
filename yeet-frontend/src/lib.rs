@@ -3,22 +3,24 @@ use std::{env, path::PathBuf};
 use action::{exec_postview_actions, exec_preview_actions, Action, ActionResult};
 use error::AppError;
 use event::Emitter;
-use layout::{AppLayout, CommandLineLayout};
-use model::{
-    history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
-    qfix::load_qfix_from_file, DirectoryBufferState, Model,
+use init::{
+    history::load_history_from_file, mark::load_marks_from_file, qfix::load_qfix_from_files,
 };
+use layout::{AppLayout, CommandLineLayout};
+use model::{junkyard::init_junkyard, DirectoryBufferState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
 use update::{commandline::get_commandline_height, update_model};
 use view::render_model;
+
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
 
 mod action;
 pub mod error;
 mod event;
+mod init;
 mod layout;
 mod model;
 mod open;
@@ -57,7 +59,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         ])]));
     }
 
-    if load_qfix_from_file(&mut model.qfix).is_err() {
+    if load_qfix_from_files(&mut model.qfix).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Print(vec![
             PrintContent::Error("Failed to load qfix".to_string()),
         ])]));
