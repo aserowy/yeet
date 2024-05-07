@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::VecDeque};
+use std::cmp::Ordering;
 
 use ratatui::layout::Rect;
 use yeet_buffer::model::{viewport::ViewPort, BufferLine};
@@ -8,7 +8,7 @@ use crate::{action::Action, model::Model};
 
 use self::{
     buffer::update_with_buffer_message,
-    command::execute_command,
+    command::{create_or_extend_command_stack, execute_command},
     commandline::{
         leave_commandline, print_in_commandline, set_mode_in_commandline,
         set_recording_in_commandline, update_commandline, update_commandline_on_execute,
@@ -17,14 +17,16 @@ use self::{
     junkyard::{add_to_junkyard, paste_to_junkyard, yank_to_junkyard},
     mark::{add_mark, delete_mark},
     navigation::{
-        navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_preview_path,
+        navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_path_as_preview,
         navigate_to_selected,
     },
     open::open_selected,
     path::{add_paths, remove_path},
     preview::update_preview,
     qfix::toggle_selected_to_qfix,
-    register::{finish_register_scope, get_register, start_register_scope},
+    register::{
+        finish_register_scope, replay_macro_register, replay_register, start_register_scope,
+    },
     search::clear_search,
     settings::update_with_settings,
 };
@@ -95,34 +97,13 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         Message::ExecuteCommand => update_commandline_on_execute(model),
         Message::ExecuteCommandString(command) => execute_command(command, model),
-        // TODO: refactor into own function
-        Message::ExecuteKeySequence(_) => {
-            if let Some(commands) = &mut model.command_stack {
-                commands.push_back(message.clone());
-            } else {
-                let mut stack = VecDeque::new();
-                stack.push_back(message.clone());
-                model.command_stack = Some(stack);
-            }
-            Vec::new()
-        }
-        // TODO: refactor into own function
-        Message::ExecuteRegister(register) => {
-            let key_sequence = get_register(&model.register, register);
-            match key_sequence {
-                Some(key_sequence) => {
-                    vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
-                        key_sequence,
-                    )])]
-                }
-                None => Vec::new(),
-            }
-        }
+        Message::ExecuteKeySequence(_) => create_or_extend_command_stack(model, message),
+        Message::ExecuteRegister(register) => replay_register(&mut model.register, register),
         Message::LeaveCommandMode => leave_commandline(model),
         Message::NavigateToMark(char) => navigate_to_mark(char, model),
         Message::NavigateToParent => navigate_to_parent(model),
         Message::NavigateToPath(path) => navigate_to_path(model, path),
-        Message::NavigateToPathAsPreview(path) => navigate_to_preview_path(model, path),
+        Message::NavigateToPathAsPreview(path) => navigate_to_path_as_preview(model, path),
         Message::NavigateToSelected => navigate_to_selected(model),
         Message::OpenSelected => open_selected(model),
         Message::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),
@@ -135,17 +116,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Print(content) => print_in_commandline(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
-        // TODO: refactor into own function
-        Message::ReplayMacro(char) => {
-            if let Some(content) = get_register(&model.register, char) {
-                model.register.last_macro = Some(content.to_string());
-                vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
-                    content.to_string(),
-                )])]
-            } else {
-                Vec::new()
-            }
-        }
+        Message::ReplayMacro(char) => replay_macro_register(&mut model.register, char),
         Message::SetMark(char) => add_mark(model, *char),
         Message::StartMacro(identifier) => set_recording_in_commandline(model, *identifier),
         Message::StopMacro => set_mode_in_commandline(model),

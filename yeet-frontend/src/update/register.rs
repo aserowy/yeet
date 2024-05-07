@@ -4,7 +4,10 @@ use yeet_buffer::{
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message};
 
-use crate::model::register::{Register, RegisterScope};
+use crate::{
+    action::Action,
+    model::register::{Register, RegisterScope},
+};
 
 pub fn get_register(register: &Register, register_id: &char) -> Option<String> {
     match register_id {
@@ -14,6 +17,27 @@ pub fn get_register(register: &Register, register_id: &char) -> Option<String> {
         ':' => register.command.clone(),
         '/' => register.searched.as_ref().map(|sd| sd.1.clone()),
         char => register.content.get(char).cloned(),
+    }
+}
+
+pub fn replay_register(register: &mut Register, char: &char) -> Vec<Action> {
+    if let Some(content) = get_register(register, char) {
+        vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
+            content.to_string(),
+        )])]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn replay_macro_register(register: &mut Register, char: &char) -> Vec<Action> {
+    if let Some(content) = get_register(register, char) {
+        register.last_macro = Some(content.to_string());
+        vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
+            content.to_string(),
+        )])]
+    } else {
+        Vec::new()
     }
 }
 

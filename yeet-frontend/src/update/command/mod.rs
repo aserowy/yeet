@@ -255,6 +255,17 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     }
 }
 
+pub fn create_or_extend_command_stack(model: &mut Model, message: &Message) -> Vec<Action> {
+    if let Some(commands) = &mut model.command_stack {
+        commands.push_back(message.clone());
+    } else {
+        let mut stack = VecDeque::new();
+        stack.push_back(message.clone());
+        model.command_stack = Some(stack);
+    }
+    Vec::new()
+}
+
 mod test {
     #[test]
     fn get_mode_after_command() {

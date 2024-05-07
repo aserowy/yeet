@@ -64,7 +64,7 @@ pub fn navigate_to_path(model: &mut Model, path: &Path) -> Vec<Action> {
     navigate_to_path_with_selection(model, path, &selection)
 }
 
-pub fn navigate_to_preview_path(model: &mut Model, path: &Path) -> Vec<Action> {
+pub fn navigate_to_path_as_preview(model: &mut Model, path: &Path) -> Vec<Action> {
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
