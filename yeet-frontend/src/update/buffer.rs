@@ -1,16 +1,15 @@
 use crate::{action::Action, model::Model};
+
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{CommandMode, Mode, SearchDirection},
-    update::{focus_buffer, unfocus_buffer, update_buffer},
+    update::update_buffer,
 };
 
 use super::{
-    commandline::{
-        set_content_status, update_commandline, update_commandline_on_mode_change,
-        update_commandline_on_modification,
-    },
+    commandline::{update_commandline, update_commandline_on_modification},
     history::get_selection_from_history,
+    mode::change_mode,
     preview::{set_preview_to_selected, validate_preview_viewport},
     register::{get_direction_from_search_register, get_register},
     save::persist_path_changes,
@@ -22,58 +21,7 @@ use super::{
 #[tracing::instrument(skip(model, msg))]
 pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     match msg {
-        BufferMessage::ChangeMode(from, to) => {
-            match (from, to) {
-                (Mode::Command(_), Mode::Command(_))
-                | (Mode::Insert, Mode::Insert)
-                | (Mode::Navigation, Mode::Navigation)
-                | (Mode::Normal, Mode::Normal) => return Vec::new(),
-                _ => {}
-            }
-
-            model.mode = to.clone();
-            model.mode_before = Some(from.clone());
-
-            let mut actions = vec![Action::ModeChanged];
-            actions.extend(match from {
-                Mode::Command(_) => {
-                    unfocus_buffer(&mut model.commandline.buffer);
-                    update_commandline_on_mode_change(model)
-                }
-                Mode::Insert | Mode::Navigation | Mode::Normal => {
-                    unfocus_buffer(&mut model.files.current.buffer);
-                    vec![]
-                }
-            });
-
-            set_content_status(model);
-
-            actions.extend(match to {
-                Mode::Command(_) => {
-                    focus_buffer(&mut model.commandline.buffer);
-                    update_commandline_on_mode_change(model)
-                }
-                Mode::Insert => {
-                    focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, msg);
-                    vec![]
-                }
-                Mode::Navigation => {
-                    // TODO: handle file operations: show pending with gray, refresh on operation success
-                    // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-                    focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, msg);
-                    persist_path_changes(model)
-                }
-                Mode::Normal => {
-                    focus_buffer(&mut model.files.current.buffer);
-                    update_current(model, msg);
-                    vec![]
-                }
-            });
-
-            actions
-        }
+        BufferMessage::ChangeMode(from, to) => change_mode(model, from, to),
         BufferMessage::Modification(repeat, modification) => match model.mode {
             Mode::Command(CommandMode::Command) | Mode::Command(CommandMode::PrintMultiline) => {
                 update_commandline_on_modification(model, repeat, modification)
@@ -172,7 +120,8 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
     }
 }
 
-fn update_current(model: &mut Model, message: &BufferMessage) {
+// TODO: move out of this mod to prevent cycling dep
+pub fn update_current(model: &mut Model, message: &BufferMessage) {
     let buffer = &mut model.files.current.buffer;
     let layout = &model.layout.current;
 

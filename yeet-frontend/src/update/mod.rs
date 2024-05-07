@@ -39,6 +39,7 @@ mod enumeration;
 pub mod history;
 pub mod junkyard;
 mod mark;
+mod mode;
 mod navigation;
 mod open;
 mod path;

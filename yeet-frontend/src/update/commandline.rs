@@ -348,7 +348,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     }
 }
 
-pub fn set_content_status(model: &mut Model) {
+pub fn set_commandline_content_to_mode(model: &mut Model) {
     if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(&model.register) {
         set_recording_in_commandline(model, *identifier);
     } else {
