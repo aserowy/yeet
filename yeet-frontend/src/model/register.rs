@@ -16,9 +16,6 @@ pub struct Register {
     pub scopes: HashMap<RegisterScope, String>,
 }
 
-// TODO: move all methods to update mod as pure functions
-impl Register {}
-
 #[derive(Clone, Debug, Eq)]
 pub enum RegisterScope {
     Dot,
