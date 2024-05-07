@@ -9,7 +9,7 @@ use yeet_buffer::{
 
 use crate::{action::Action, model::Model, task::Task};
 
-use super::selection::get_current_selected_bufferline;
+use super::{junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
 
 #[tracing::instrument(skip(model))]
 pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
@@ -65,7 +65,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
             }
 
             if !trashes.is_empty() {
-                let (transaction, obsolete) = model.junk.trash(trashes);
+                let (transaction, obsolete) = trash_to_junkyard(&mut model.junk, trashes);
                 for entry in transaction.entries {
                     actions.push(Action::Task(Task::TrashPath(entry)));
                 }

@@ -18,15 +18,11 @@ use crate::{
     error::AppError,
     init::{
         history::{optimize_history_file, save_history_to_file},
+        junkyard::{cache_and_compress, compress, delete, restore},
         mark::{load_marks_from_file, save_marks_to_file},
         qfix::save_qfix_to_files,
     },
-    model::{
-        history::History,
-        junkyard::{self, FileEntry},
-        mark::Marks,
-        qfix::QuickFix,
-    },
+    model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -184,7 +180,7 @@ impl TaskManager {
                 Ok(())
             }),
             Task::DeleteJunkYardEntry(entry) => self.tasks.spawn(async move {
-                if let Err(error) = junkyard::delete(entry).await {
+                if let Err(error) = delete(entry).await {
                     tracing::error!("deleting junk yard entry failed: {:?}", error);
                 }
                 Ok(())
@@ -345,7 +341,7 @@ impl TaskManager {
                 Ok(())
             }),
             Task::RestorePath(entry, path) => self.tasks.spawn(async move {
-                junkyard::restore(entry, path)?;
+                restore(entry, path)?;
                 Ok(())
             }),
             Task::SaveHistory(history) => {
@@ -386,7 +382,7 @@ impl TaskManager {
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = junkyard::cache_and_compress(entry).await {
+                    if let Err(error) = cache_and_compress(entry).await {
                         emit_error(&sender, error).await;
                     }
 
@@ -396,7 +392,7 @@ impl TaskManager {
             Task::YankPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    if let Err(error) = junkyard::compress(entry).await {
+                    if let Err(error) = compress(entry).await {
                         emit_error(&sender, error).await;
                     }
 

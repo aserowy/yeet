@@ -1,10 +1,13 @@
 use yeet_keymap::message::PrintContent;
 
-use crate::model::{
-    junkyard::{FileEntryStatus, FileTransaction, JunkYard},
-    mark::Marks,
-    qfix::QuickFix,
-    register::Register,
+use crate::{
+    model::{
+        junkyard::{FileEntryStatus, FileTransaction, JunkYard},
+        mark::Marks,
+        qfix::QuickFix,
+        register::Register,
+    },
+    update::junkyard::get_junkyard_transaction,
 };
 
 pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
@@ -59,7 +62,7 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<PrintContent> {
 
 pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {
     let mut contents = vec![":junk".to_string(), "Name Content".to_string()];
-    if let Some(current) = junkyard.get(&'"') {
+    if let Some(current) = get_junkyard_transaction(junkyard, &'"') {
         contents.push(print_junkyard_entry("\"\"", current));
     }
     if let Some(yanked) = &junkyard.yanked {

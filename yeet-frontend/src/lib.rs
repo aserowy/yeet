@@ -4,10 +4,11 @@ use action::{exec_postview_actions, exec_preview_actions, Action, ActionResult};
 use error::AppError;
 use event::Emitter;
 use init::{
-    history::load_history_from_file, mark::load_marks_from_file, qfix::load_qfix_from_files,
+    history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
+    qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::{junkyard::init_junkyard, DirectoryBufferState, Model};
+use model::{DirectoryBufferState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;

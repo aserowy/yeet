@@ -35,7 +35,7 @@ pub mod commandline;
 mod cursor;
 mod enumeration;
 pub mod history;
-mod junkyard;
+pub mod junkyard;
 mod mark;
 mod navigation;
 mod open;

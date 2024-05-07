@@ -21,7 +21,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    model::junkyard,
+    init::junkyard::get_junkyard_path,
     task::{Task, TaskManager},
 };
 
@@ -122,7 +122,7 @@ impl Emitter {
     }
 
     pub fn unwatch(&mut self, path: &Path) -> Result<(), AppError> {
-        if path != junkyard::get_junkyard_path()? {
+        if path != get_junkyard_path()? {
             Ok(self.watcher.unwatch(path)?)
         } else {
             Ok(())

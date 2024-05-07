@@ -15,6 +15,7 @@ use crate::{action::Action, model::Model};
 use super::{
     cursor::get_selected_content_from_buffer,
     history::get_selection_from_history,
+    junkyard::remove_from_junkyard,
     preview::{set_preview_to_selected, validate_preview_viewport},
     sign::{set_sign_if_marked, set_sign_if_qfix},
 };
@@ -136,7 +137,7 @@ fn from(path: &Path) -> BufferLine {
 #[tracing::instrument(skip(model))]
 pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     if path.starts_with(&model.junk.path) {
-        model.junk.remove(path);
+        remove_from_junkyard(&mut model.junk, path);
     }
 
     let mut buffer = vec![(
