@@ -4,7 +4,7 @@ use yeet_buffer::{
     update::{focus_buffer, unfocus_buffer},
 };
 
-use crate::{action::Action, model::Model, update::buffer::update_current};
+use crate::{action::Action, model::Model, update::update_current};
 
 use super::{
     commandline::{set_commandline_content_to_mode, update_commandline_on_mode_change},

@@ -1,21 +1,22 @@
 use std::cmp::Ordering;
 
-use ratatui::layout::Rect;
-use yeet_buffer::model::{viewport::ViewPort, BufferLine};
+use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{action::Action, model::Model};
 
 use self::{
-    buffer::update_with_buffer_message,
     command::{create_or_extend_command_stack, execute_command},
     commandline::{
         leave_commandline, print_in_commandline, set_mode_in_commandline,
         set_recording_in_commandline, update_commandline, update_commandline_on_execute,
     },
+    cursor::move_cursor,
     enumeration::{update_on_enumeration_change, update_on_enumeration_finished},
     junkyard::{add_to_junkyard, paste_to_junkyard, yank_to_junkyard},
     mark::{add_mark, delete_mark},
+    mode::change_mode,
+    modification::modify_buffer,
     navigation::{
         navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_path_as_preview,
         navigate_to_selected,
@@ -27,11 +28,12 @@ use self::{
     register::{
         finish_register_scope, replay_macro_register, replay_register, start_register_scope,
     },
+    save::persist_path_changes,
     search::clear_search,
     settings::update_with_settings,
+    viewport::{move_viewport, set_viewport_dimensions},
 };
 
-mod buffer;
 mod command;
 pub mod commandline;
 mod cursor;
@@ -40,6 +42,7 @@ pub mod history;
 pub mod junkyard;
 mod mark;
 mod mode;
+mod modification;
 mod navigation;
 mod open;
 mod path;
@@ -51,6 +54,7 @@ mod search;
 mod selection;
 mod settings;
 mod sign;
+mod viewport;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
     a.content
@@ -127,7 +131,29 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
     }
 }
 
-fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
-    vp.height = usize::from(rect.height);
-    vp.width = usize::from(rect.width);
+#[tracing::instrument(skip(model, msg))]
+pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
+    match msg {
+        BufferMessage::ChangeMode(from, to) => change_mode(model, from, to),
+        BufferMessage::Modification(repeat, modification) => {
+            modify_buffer(model, repeat, modification)
+        }
+        BufferMessage::MoveCursor(rpt, mtn) => move_cursor(model, rpt, mtn),
+        BufferMessage::MoveViewPort(mtn) => move_viewport(model, mtn),
+        BufferMessage::SaveBuffer => persist_path_changes(model),
+
+        BufferMessage::RemoveLine(_)
+        | BufferMessage::ResetCursor
+        | BufferMessage::SetContent(_)
+        | BufferMessage::SetCursorToLineContent(_)
+        | BufferMessage::SortContent(_) => unreachable!(),
+    }
+}
+
+pub fn update_current(model: &mut Model, message: &BufferMessage) {
+    let buffer = &mut model.files.current.buffer;
+    let layout = &model.layout.current;
+
+    set_viewport_dimensions(&mut buffer.view_port, layout);
+    update_buffer(&model.mode, buffer, message);
 }
