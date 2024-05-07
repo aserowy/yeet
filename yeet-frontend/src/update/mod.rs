@@ -24,7 +24,7 @@ use self::{
     path::{add_paths, remove_path},
     preview::update_preview,
     qfix::toggle_selected_to_qfix,
-    register::{finish_register_scope, start_register_scope},
+    register::{finish_register_scope, get_register, start_register_scope},
     search::clear_search,
     settings::update_with_settings,
 };
@@ -108,7 +108,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         }
         // TODO: refactor into own function
         Message::ExecuteRegister(register) => {
-            let key_sequence = model.register.get(register);
+            let key_sequence = get_register(&model.register, register);
             match key_sequence {
                 Some(key_sequence) => {
                     vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
@@ -137,7 +137,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
         // TODO: refactor into own function
         Message::ReplayMacro(char) => {
-            if let Some(content) = model.register.get(char) {
+            if let Some(content) = get_register(&model.register, char) {
                 model.register.last_macro = Some(content.to_string());
                 vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
                     content.to_string(),

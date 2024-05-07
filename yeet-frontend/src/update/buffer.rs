@@ -12,6 +12,7 @@ use super::{
     },
     history::get_selection_from_history,
     preview::{set_preview_to_selected, validate_preview_viewport},
+    register::{get_direction_from_search_register, get_register},
     save::persist_path_changes,
     search::search_in_buffers,
     set_viewport_dimensions,
@@ -111,10 +112,10 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
             Mode::Command(_) => update_commandline(model, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 if let CursorDirection::Search(dr) = mtn {
-                    let term = model.register.get(&'/');
+                    let term = get_register(&model.register, &'/');
                     search_in_buffers(model, term);
 
-                    let current_dr = match model.register.get_search_direction() {
+                    let current_dr = match get_direction_from_search_register(&model.register) {
                         Some(it) => it,
                         None => return Vec::new(),
                     };

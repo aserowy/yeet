@@ -17,28 +17,7 @@ pub struct Register {
 }
 
 // TODO: move all methods to update mod as pure functions
-impl Register {
-    pub fn get(&self, register: &char) -> Option<String> {
-        match register {
-            '@' => self.last_macro.clone(),
-            '.' => self.dot.clone(),
-            ';' => self.find.clone(),
-            ':' => self.command.clone(),
-            '/' => self.searched.as_ref().map(|sd| sd.1.clone()),
-            char => self.content.get(char).cloned(),
-        }
-    }
-
-    pub fn get_search_direction(&self) -> Option<&SearchDirection> {
-        self.searched.as_ref().map(|sd| &sd.0)
-    }
-
-    pub fn resolve_macro(&self) -> Option<&RegisterScope> {
-        self.scopes
-            .keys()
-            .find(|scope| matches!(scope, RegisterScope::Macro(_)))
-    }
-}
+impl Register {}
 
 #[derive(Clone, Debug, Eq)]
 pub enum RegisterScope {

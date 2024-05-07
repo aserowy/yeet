@@ -1,10 +1,32 @@
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection},
-    model::Mode,
+    model::{Mode, SearchDirection},
 };
 use yeet_keymap::message::{Envelope, KeySequence, Message};
 
 use crate::model::register::{Register, RegisterScope};
+
+pub fn get_register(register: &Register, register_id: &char) -> Option<String> {
+    match register_id {
+        '@' => register.last_macro.clone(),
+        '.' => register.dot.clone(),
+        ';' => register.find.clone(),
+        ':' => register.command.clone(),
+        '/' => register.searched.as_ref().map(|sd| sd.1.clone()),
+        char => register.content.get(char).cloned(),
+    }
+}
+
+pub fn get_direction_from_search_register(register: &Register) -> Option<&SearchDirection> {
+    register.searched.as_ref().map(|sd| &sd.0)
+}
+
+pub fn get_macro_register(register: &Register) -> Option<&RegisterScope> {
+    register
+        .scopes
+        .keys()
+        .find(|scope| matches!(scope, RegisterScope::Macro(_)))
+}
 
 #[tracing::instrument(skip(mode, register, envelope))]
 pub fn start_register_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {

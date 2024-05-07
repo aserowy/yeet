@@ -9,10 +9,13 @@ use yeet_keymap::message::{Message, PrintContent};
 use crate::{
     action::Action,
     model::{register::RegisterScope, Model},
-    update::search::{clear_search, search_in_buffers},
+    update::{
+        register::get_register,
+        search::{clear_search, search_in_buffers},
+    },
 };
 
-use super::set_viewport_dimensions;
+use super::{register::get_macro_register, set_viewport_dimensions};
 
 pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
     let command_mode = match &model.mode {
@@ -221,7 +224,7 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
 
 pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
     if matches!(model.mode, Mode::Command(CommandMode::Search(_))) {
-        let content = model.register.get(&'/');
+        let content = get_register(&model.register, &'/');
         search_in_buffers(model, content);
     }
 
@@ -346,7 +349,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 }
 
 pub fn set_content_status(model: &mut Model) {
-    if let Some(RegisterScope::Macro(identifier)) = &model.register.resolve_macro() {
+    if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(&model.register) {
         set_recording_in_commandline(model, *identifier);
     } else {
         set_mode_in_commandline(model);
