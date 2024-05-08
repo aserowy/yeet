@@ -12,7 +12,7 @@ use model::{DirectoryBufferState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
-use update::{commandline::get_commandline_height, update_model};
+use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
@@ -125,6 +125,19 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
         }
     }
     env::current_dir().expect("Failed to get current directory")
+}
+
+fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
+    let lines_len = model.commandline.buffer.lines.len();
+    let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
+    for message in messages {
+        if let Message::Print(content) = message {
+            if content.len() > 1 {
+                height = content.len() as u16 + 1;
+            }
+        }
+    }
+    height
 }
 
 #[tracing::instrument(skip(model))]

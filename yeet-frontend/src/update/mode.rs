@@ -1,14 +1,19 @@
 use yeet_buffer::{
     message::BufferMessage,
-    model::Mode,
-    update::{focus_buffer, unfocus_buffer},
+    model::{BufferLine, CommandMode, Mode, SearchDirection},
+    update::{focus_buffer, unfocus_buffer, update_buffer},
+};
+use yeet_keymap::message::PrintContent;
+
+use crate::{
+    action::Action,
+    model::{register::RegisterScope, Model},
+    update::update_current,
 };
 
-use crate::{action::Action, model::Model, update::update_current};
-
 use super::{
-    commandline::{set_commandline_content_to_mode, update_commandline_on_mode_change},
-    save::persist_path_changes,
+    commandline::print_in_commandline, register::get_macro_register, save::persist_path_changes,
+    viewport::set_viewport_dimensions,
 };
 
 pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
@@ -63,4 +68,73 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
     });
 
     actions
+}
+
+fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
+    let commandline = &mut model.commandline;
+    let buffer = &mut commandline.buffer;
+
+    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+
+    let command_mode = match &model.mode {
+        Mode::Command(it) => it,
+        Mode::Insert | Mode::Navigation | Mode::Normal => {
+            let from_command = model
+                .mode_before
+                .as_ref()
+                .is_some_and(|mode| mode.is_command());
+
+            if from_command {
+                update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+            }
+            return Vec::new();
+        }
+    };
+
+    match command_mode {
+        CommandMode::Command | CommandMode::Search(_) => {
+            update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
+
+            let prefix = match &command_mode {
+                CommandMode::Command => Some(":".to_string()),
+                CommandMode::Search(SearchDirection::Up) => Some("?".to_string()),
+                CommandMode::Search(SearchDirection::Down) => Some("/".to_string()),
+                CommandMode::PrintMultiline => unreachable!(),
+            };
+
+            let bufferline = BufferLine {
+                prefix,
+                ..Default::default()
+            };
+
+            update_buffer(
+                &model.mode,
+                buffer,
+                &BufferMessage::SetContent(vec![bufferline]),
+            );
+        }
+        CommandMode::PrintMultiline => {}
+    };
+
+    Vec::new()
+}
+
+fn set_commandline_content_to_mode(model: &mut Model) {
+    if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(&model.register) {
+        set_recording_in_commandline(model, *identifier);
+    } else {
+        set_mode_in_commandline(model);
+    };
+}
+
+pub fn set_recording_in_commandline(model: &mut Model, identifier: char) -> Vec<Action> {
+    let content = format!("recording @{}", identifier);
+    print_in_commandline(model, &[PrintContent::Default(content)]);
+    Vec::new()
+}
+
+pub fn set_mode_in_commandline(model: &mut Model) -> Vec<Action> {
+    let content = format!("--{}--", model.mode.to_string().to_uppercase());
+    print_in_commandline(model, &[PrintContent::Default(content)]);
+    Vec::new()
 }

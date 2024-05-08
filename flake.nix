@@ -5,6 +5,12 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixgl = {
+      url = "github:nix-community/nixGL";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs = {
@@ -13,7 +19,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-parts, rust-overlay, ... }@inputs:
+  outputs = { self, nixpkgs, nixgl, flake-parts, rust-overlay, ... }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.flake-parts.flakeModules.easyOverlay
@@ -23,7 +29,7 @@
 
       perSystem = { config, self', inputs', pkgs, system, lib, ... }:
         let
-          overlays = [ (import rust-overlay) ];
+          overlays = [ (import rust-overlay) nixgl.overlay ];
           pkgs = import nixpkgs {
             inherit system overlays;
           };
@@ -62,6 +68,7 @@
               pkgs.graphviz
               pkgs.nil
               pkgs.nixpkgs-fmt
+              pkgs.nixgl.nixGLIntel
               pkgs.nodejs_20
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier

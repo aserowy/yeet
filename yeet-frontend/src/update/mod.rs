@@ -1,6 +1,10 @@
 use std::cmp::Ordering;
 
-use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
+use yeet_buffer::{
+    message::BufferMessage,
+    model::{BufferLine, Mode},
+    update::update_buffer,
+};
 use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
 
 use crate::{action::Action, model::Model};
@@ -8,14 +12,14 @@ use crate::{action::Action, model::Model};
 use self::{
     command::{create_or_extend_command_stack, execute_command},
     commandline::{
-        leave_commandline, print_in_commandline, set_mode_in_commandline,
-        set_recording_in_commandline, update_commandline, update_commandline_on_execute,
+        leave_commandline, print_in_commandline, update_commandline, update_commandline_on_execute,
+        update_commandline_on_modification,
     },
     cursor::move_cursor,
     enumeration::{update_on_enumeration_change, update_on_enumeration_finished},
     junkyard::{add_to_junkyard, paste_to_junkyard, yank_to_junkyard},
     mark::{add_mark, delete_mark},
-    mode::change_mode,
+    mode::{change_mode, set_mode_in_commandline, set_recording_in_commandline},
     modification::modify_buffer,
     navigation::{
         navigate_to_mark, navigate_to_parent, navigate_to_path, navigate_to_path_as_preview,
@@ -135,11 +139,19 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
 pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
     match msg {
         BufferMessage::ChangeMode(from, to) => change_mode(model, from, to),
-        BufferMessage::Modification(repeat, modification) => {
-            modify_buffer(model, repeat, modification)
-        }
-        BufferMessage::MoveCursor(rpt, mtn) => move_cursor(model, rpt, mtn),
-        BufferMessage::MoveViewPort(mtn) => move_viewport(model, mtn),
+        BufferMessage::Modification(repeat, modification) => match model.mode {
+            Mode::Command(_) => update_commandline_on_modification(model, repeat, modification),
+            Mode::Insert | Mode::Normal => modify_buffer(model, repeat, modification),
+            Mode::Navigation => Vec::new(),
+        },
+        BufferMessage::MoveCursor(rpt, mtn) => match &model.mode {
+            Mode::Command(_) => update_commandline(model, Some(msg)),
+            Mode::Insert | Mode::Navigation | Mode::Normal => move_cursor(model, rpt, mtn),
+        },
+        BufferMessage::MoveViewPort(mtn) => match model.mode {
+            Mode::Command(_) => update_commandline(model, Some(msg)),
+            Mode::Insert | Mode::Navigation | Mode::Normal => move_viewport(model, mtn),
+        },
         BufferMessage::SaveBuffer => persist_path_changes(model),
 
         BufferMessage::RemoveLine(_)

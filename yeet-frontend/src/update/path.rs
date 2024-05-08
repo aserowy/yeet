@@ -6,14 +6,13 @@ use std::{
 use ratatui::style::Color;
 use yeet_buffer::{
     message::BufferMessage,
-    model::{BufferLine, Mode, StylePartial, StylePartialSpan},
+    model::{Buffer, BufferLine, Mode, StylePartial, StylePartialSpan},
     update::update_buffer,
 };
 
 use crate::{action::Action, model::Model};
 
 use super::{
-    cursor::get_selected_content_from_buffer,
     history::get_selection_from_history,
     junkyard::remove_from_junkyard,
     preview::{set_preview_to_selected, validate_preview_viewport},
@@ -107,6 +106,15 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     }
 
     actions
+}
+
+fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
+    let index = match &model.cursor {
+        Some(it) => it.vertical_index,
+        None => return None,
+    };
+
+    model.lines.get(index).map(|line| line.content.clone())
 }
 
 fn from(path: &Path) -> BufferLine {

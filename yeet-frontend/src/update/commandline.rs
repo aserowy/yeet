@@ -8,14 +8,14 @@ use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
     action::Action,
-    model::{register::RegisterScope, Model},
+    model::Model,
     update::{
         register::get_register,
         search::{clear_search, search_in_buffers},
     },
 };
 
-use super::{register::get_macro_register, set_viewport_dimensions};
+use super::set_viewport_dimensions;
 
 pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
     let command_mode = match &model.mode {
@@ -77,6 +77,17 @@ pub fn update_commandline_on_modification(
                 &BufferMessage::Modification(*repeat, modification.clone()),
             );
 
+            if matches!(model.mode, Mode::Command(CommandMode::Search(_))) {
+                let term = model
+                    .commandline
+                    .buffer
+                    .lines
+                    .last()
+                    .map(|bl| bl.content.clone());
+
+                search_in_buffers(model, term);
+            }
+
             actions
         }
         CommandMode::PrintMultiline => {
@@ -114,55 +125,6 @@ pub fn update_commandline_on_modification(
             messages
         }
     }
-}
-
-pub fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
-    let commandline = &mut model.commandline;
-    let buffer = &mut commandline.buffer;
-
-    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
-
-    let command_mode = match &model.mode {
-        Mode::Command(it) => it,
-        Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let from_command = model
-                .mode_before
-                .as_ref()
-                .is_some_and(|mode| mode.is_command());
-
-            if from_command {
-                update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
-            }
-            return Vec::new();
-        }
-    };
-
-    match command_mode {
-        CommandMode::Command | CommandMode::Search(_) => {
-            update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
-
-            let prefix = match &command_mode {
-                CommandMode::Command => Some(":".to_string()),
-                CommandMode::Search(SearchDirection::Up) => Some("?".to_string()),
-                CommandMode::Search(SearchDirection::Down) => Some("/".to_string()),
-                CommandMode::PrintMultiline => unreachable!(),
-            };
-
-            let bufferline = BufferLine {
-                prefix,
-                ..Default::default()
-            };
-
-            update_buffer(
-                &model.mode,
-                buffer,
-                &BufferMessage::SetContent(vec![bufferline]),
-            );
-        }
-        CommandMode::PrintMultiline => {}
-    };
-
-    Vec::new()
 }
 
 pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
@@ -323,19 +285,6 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
     actions
 }
 
-pub fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
-    let lines_len = model.commandline.buffer.lines.len();
-    let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
-    for message in messages {
-        if let Message::Print(content) = message {
-            if content.len() > 1 {
-                height = content.len() as u16 + 1;
-            }
-        }
-    }
-    height
-}
-
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     if let Some(mode) = mode_before {
         match mode {
@@ -346,24 +295,4 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     } else {
         Mode::default()
     }
-}
-
-pub fn set_commandline_content_to_mode(model: &mut Model) {
-    if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(&model.register) {
-        set_recording_in_commandline(model, *identifier);
-    } else {
-        set_mode_in_commandline(model);
-    };
-}
-
-pub fn set_recording_in_commandline(model: &mut Model, identifier: char) -> Vec<Action> {
-    let content = format!("recording @{}", identifier);
-    print_in_commandline(model, &[PrintContent::Default(content)]);
-    Vec::new()
-}
-
-pub fn set_mode_in_commandline(model: &mut Model) -> Vec<Action> {
-    let content = format!("--{}--", model.mode.to_string().to_uppercase());
-    print_in_commandline(model, &[PrintContent::Default(content)]);
-    Vec::new()
 }
