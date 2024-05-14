@@ -1,6 +1,7 @@
-use yeet_keymap::message::PrintContent;
+use yeet_keymap::message::{Message, PrintContent};
 
 use crate::{
+    action::Action,
     model::{
         junkyard::{FileEntryStatus, FileTransaction, JunkYard},
         mark::Marks,
@@ -29,7 +30,7 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
         .collect()
 }
 
-pub fn print_qfix_list(qfix: &QuickFix) -> Vec<PrintContent> {
+pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
     let max_width = (qfix.entries.len() + 1).to_string().len();
 
     let entries: Vec<_> = qfix
@@ -47,7 +48,7 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<PrintContent> {
         contents.extend(entries);
     }
 
-    contents
+    let content = contents
         .iter()
         .enumerate()
         .map(|(i, cntnt)| {
@@ -57,7 +58,9 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<PrintContent> {
                 PrintContent::Default(cntnt.to_string())
             }
         })
-        .collect()
+        .collect();
+
+    vec![Action::EmitMessages(vec![Message::Print(content)])]
 }
 
 pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {

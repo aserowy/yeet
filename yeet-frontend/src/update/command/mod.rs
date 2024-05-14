@@ -8,15 +8,20 @@ use yeet_keymap::message::Message;
 
 use crate::{
     action::Action,
-    model::{mark::Marks, qfix::QFIX_SIGN_ID, Model},
+    model::{mark::Marks, Model},
     task::Task,
-    update::{
-        command::print::{print_junkyard, print_marks, print_qfix_list, print_register},
-        sign::unset_sign_on_all_buffers,
+    update::command::{
+        print::{print_junkyard, print_marks, print_qfix_list, print_register},
+        qfix::{
+            clear_qfix_list, clear_qfix_list_in_current, do_on_each_qfix_entry,
+            invert_qfix_selection_in_current, navigate_first_qfix_entry, navigate_next_qfix_entry,
+            navigate_previous_qfix_entry,
+        },
     },
 };
 
 mod print;
+mod qfix;
 
 #[tracing::instrument(skip(model))]
 pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
@@ -34,88 +39,14 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
     tracing::debug!("executing command: {:?}", cmd_with_args);
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
-    let actions = match cmd_with_args {
-        ("cclear", "") => {
-            model.qfix.entries.clear();
-            model.qfix.current_index = 0;
-
-            unset_sign_on_all_buffers(model, QFIX_SIGN_ID);
-
-            vec![change_mode_action]
-        }
-        ("cdo", command) => {
-            let mut commands = VecDeque::new();
-            for path in &model.qfix.entries {
-                commands.push_back(Message::NavigateToPathAsPreview(path.clone()));
-                commands.push_back(Message::ExecuteCommandString(command.to_owned()));
-            }
-
-            tracing::debug!("cdo commands set: {:?}", commands);
-            model.command_stack = Some(commands);
-
-            vec![change_mode_action]
-        }
-        ("cfirst", "") => {
-            model.qfix.current_index = 0;
-
-            let path = match model.qfix.entries.first() {
-                Some(it) => it,
-                None => return vec![change_mode_action],
-            };
-
-            vec![
-                change_mode_action,
-                Action::EmitMessages(vec![Message::NavigateToPathAsPreview(path.clone())]),
-            ]
-        }
-        ("cl", "") => {
-            let content = print_qfix_list(&model.qfix);
-            vec![Action::EmitMessages(vec![Message::Print(content)])]
-        }
-        ("cn", "") => {
-            let next_index = model.qfix.current_index + 1;
-            match model.qfix.entries.get(next_index) {
-                Some(it) => {
-                    model.qfix.current_index = next_index;
-                    vec![
-                        change_mode_action,
-                        Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
-                    ]
-                }
-                None => {
-                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                        "cfirst".to_string(),
-                    )])]
-                }
-            }
-        }
-        ("cN", "") => {
-            if model.qfix.entries.is_empty() {
-                return vec![change_mode_action];
-            }
-
-            let next_index = if model.qfix.current_index > 0 {
-                model.qfix.current_index - 1
-            } else {
-                model.qfix.entries.len() - 1
-            };
-
-            model.qfix.current_index = next_index;
-
-            match model.qfix.entries.get(next_index) {
-                Some(it) => {
-                    vec![
-                        change_mode_action,
-                        Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
-                    ]
-                }
-                None => {
-                    vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                        "cN".to_string(),
-                    )])]
-                }
-            }
-        }
+    match cmd_with_args {
+        ("cdo", command) => do_on_each_qfix_entry(model, command, change_mode_action),
+        ("cfirst", "") => navigate_first_qfix_entry(model, change_mode_action),
+        ("cl", "") => print_qfix_list(&model.qfix),
+        ("clearcl", "") => clear_qfix_list_in_current(model, change_mode_action),
+        ("clearcl!", "") => clear_qfix_list(model, change_mode_action),
+        ("cn", "") => navigate_next_qfix_entry(model, change_mode_action),
+        ("cN", "") => navigate_previous_qfix_entry(model, change_mode_action),
         ("cp", target) => {
             let mut actions = vec![change_mode_action];
             if let Some(path) = &model.files.preview.path {
@@ -160,6 +91,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
         }
+        ("invertcl", "") => invert_qfix_selection_in_current(model, change_mode_action),
         ("junk", "") => {
             let content = print_junkyard(&model.junk);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
@@ -209,9 +141,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
             }
             actions
         }
-    };
-
-    actions
+    }
 }
 
 fn get_target_file_path(marks: &Marks, target: &str, path: &Path) -> Result<PathBuf, String> {
