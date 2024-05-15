@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::key::{Key, KeyCode};
 
 #[derive(Debug, Default)]
@@ -33,13 +35,13 @@ impl KeyBuffer {
     }
 }
 
-impl ToString for KeyBuffer {
-    fn to_string(&self) -> String {
+impl Display for KeyBuffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut result = String::new();
         for key in &self.buffer {
             result.push_str(&key.to_string());
         }
 
-        result
+        write!(f, "{}", result)
     }
 }

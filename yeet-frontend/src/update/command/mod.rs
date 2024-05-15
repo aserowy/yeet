@@ -13,9 +13,9 @@ use crate::{
     update::command::{
         print::{print_junkyard, print_marks, print_qfix_list, print_register},
         qfix::{
-            clear_qfix_list, clear_qfix_list_in_current, do_on_each_qfix_entry,
-            invert_qfix_selection_in_current, navigate_first_qfix_entry, navigate_next_qfix_entry,
-            navigate_previous_qfix_entry,
+            clear_qfix_list_in_current, do_on_each_qfix_entry, invert_qfix_selection_in_current,
+            navigate_first_qfix_entry, navigate_next_qfix_entry, navigate_previous_qfix_entry,
+            reset_qfix_list,
         },
     },
 };
@@ -44,7 +44,6 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("cfirst", "") => navigate_first_qfix_entry(model, change_mode_action),
         ("cl", "") => print_qfix_list(&model.qfix),
         ("clearcl", "") => clear_qfix_list_in_current(model, change_mode_action),
-        ("clearcl!", "") => clear_qfix_list(model, change_mode_action),
         ("cn", "") => navigate_next_qfix_entry(model, change_mode_action),
         ("cN", "") => navigate_previous_qfix_entry(model, change_mode_action),
         ("cp", target) => {
@@ -125,6 +124,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
             let content = print_register(&model.register);
             vec![Action::EmitMessages(vec![Message::Print(content)])]
         }
+        ("resetcl", "") => reset_qfix_list(model, change_mode_action),
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::Buffer(BufferMessage::SaveBuffer),

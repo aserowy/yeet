@@ -19,3 +19,4 @@ flate2 = "1.0.30"
 tar = "0.4.40"
 tracing = "0.1.40"
 yeet-buffer = { version = "0.0.1", path = "../yeet-buffer" }
+arboard = { version = "3.4.0", default-features = false, features = ["windows-sys", "wayland-data-control"] }

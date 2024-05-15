@@ -8,7 +8,7 @@ use crate::{
     update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
 };
 
-pub fn clear_qfix_list(model: &mut Model, additional_action: Action) -> Vec<Action> {
+pub fn reset_qfix_list(model: &mut Model, additional_action: Action) -> Vec<Action> {
     model.qfix.entries.clear();
     model.qfix.current_index = 0;
     unset_sign_on_all_buffers(model, QFIX_SIGN_ID);
@@ -54,15 +54,13 @@ pub fn do_on_each_qfix_entry(
 pub fn navigate_first_qfix_entry(model: &mut Model, additional_action: Action) -> Vec<Action> {
     model.qfix.current_index = 0;
 
-    let path = match model.qfix.entries.first() {
-        Some(it) => it,
-        None => return vec![additional_action],
-    };
-
-    vec![
-        additional_action,
-        Action::EmitMessages(vec![Message::NavigateToPathAsPreview(path.clone())]),
-    ]
+    match model.qfix.entries.first() {
+        Some(it) => vec![
+            additional_action,
+            Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
+        ],
+        None => vec![additional_action],
+    }
 }
 
 pub fn navigate_next_qfix_entry(model: &mut Model, additional_action: Action) -> Vec<Action> {

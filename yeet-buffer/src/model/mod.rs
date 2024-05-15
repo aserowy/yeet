@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ratatui::style::{Color, Modifier};
 
 use self::{
@@ -23,14 +25,16 @@ impl Mode {
     }
 }
 
-impl ToString for Mode {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let content = match self {
             Mode::Command(_) => "command".to_string(),
             Mode::Insert => "insert".to_string(),
             Mode::Navigation => "navigation".to_string(),
             Mode::Normal => "normal".to_string(),
-        }
+        };
+
+        write!(f, "{}", content)
     }
 }
 

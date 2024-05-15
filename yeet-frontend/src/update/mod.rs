@@ -70,7 +70,7 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 pub fn update_model(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     match &envelope.sequence {
         KeySequence::Completed(_) => model.key_sequence.clear(),
-        KeySequence::Changed(sequence) => model.key_sequence = sequence.to_owned(),
+        KeySequence::Changed(sequence) => sequence.clone_into(&mut model.key_sequence),
         KeySequence::None => {}
     };
     update_commandline(model, None);

@@ -18,7 +18,7 @@ pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
     }
 
     let old = model.files.preview.path.take();
-    model.files.preview.path = new.clone();
+    model.files.preview.path.clone_from(&new);
     model.files.preview.buffer.lines.clear();
 
     tracing::trace!(

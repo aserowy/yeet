@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, hash::Hash};
+use std::{collections::VecDeque, fmt::Display, hash::Hash};
 
 #[derive(Clone, Debug, Eq)]
 pub struct Key {
@@ -88,12 +88,12 @@ impl PartialEq for Key {
     }
 }
 
-impl ToString for Key {
-    fn to_string(&self) -> String {
+impl Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut modifiers = self.modifiers.clone();
         modifiers.sort();
 
-        match self.code {
+        let content = match self.code {
             KeyCode::Char(_) => {
                 if modifiers.contains(&KeyModifier::Shift) {
                     modifiers.retain(|modifier| *modifier != KeyModifier::Shift);
@@ -108,7 +108,9 @@ impl ToString for Key {
             KeyCode::Space => get_key_string(String::from(" "), modifiers, false),
             KeyCode::Tab => get_key_string(String::from("\\t"), modifiers, false),
             _ => get_key_string(self.code.to_string(), modifiers, true),
-        }
+        };
+
+        write!(f, "{}", content)
     }
 }
 
@@ -207,9 +209,9 @@ impl KeyCode {
     }
 }
 
-impl ToString for KeyCode {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for KeyCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let content = match self {
             KeyCode::Backslash => String::from("bslash"),
             KeyCode::Backspace => String::from("bs"),
             KeyCode::Bar => String::from("bar"),
@@ -234,7 +236,9 @@ impl ToString for KeyCode {
             KeyCode::Tab => String::from("tab"),
             KeyCode::Undo => String::from("undo"),
             KeyCode::Up => String::from("up"),
-        }
+        };
+
+        write!(f, "{}", content)
     }
 }
 
