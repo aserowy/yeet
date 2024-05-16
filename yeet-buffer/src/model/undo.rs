@@ -2,7 +2,6 @@ use std::time;
 
 use super::Mode;
 
-#[derive()]
 struct Transaction {
     changes: Vec<BufferChanged>,
     _timestamp: u64,

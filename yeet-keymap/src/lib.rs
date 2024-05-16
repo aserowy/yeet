@@ -29,7 +29,6 @@ enum KeyMapError {
     NoKeysRemaining,
 }
 
-#[derive()]
 pub struct MessageResolver {
     buffer: KeyBuffer,
     pub mode: Mode,

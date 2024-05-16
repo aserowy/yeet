@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use yeet_buffer::model::BufferSettings;
 
-#[derive()]
 pub struct Settings {
     pub current: BufferSettings,
     pub parent: BufferSettings,

@@ -93,7 +93,6 @@ impl Default for FileWindow {
     }
 }
 
-#[derive()]
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
