@@ -3,10 +3,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use arboard::Clipboard;
 use yeet_buffer::model::SearchDirection;
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Register {
+    pub clipboard: Clipboard,
     pub command: Option<String>,
     pub content: HashMap<char, String>,
     pub dot: Option<String>,
@@ -14,6 +15,21 @@ pub struct Register {
     pub last_macro: Option<String>,
     pub searched: Option<(SearchDirection, String)>,
     pub scopes: HashMap<RegisterScope, String>,
+}
+
+impl Default for Register {
+    fn default() -> Self {
+        Self {
+            clipboard: Clipboard::new().expect("clipboard creation failed"),
+            command: None,
+            content: Default::default(),
+            dot: None,
+            find: None,
+            last_macro: None,
+            searched: None,
+            scopes: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq)]

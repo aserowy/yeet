@@ -14,7 +14,7 @@ use crate::{
     tree::KeyTree,
 };
 
-#[derive(Debug)]
+#[derive()]
 pub struct KeyMap {
     mappings: HashMap<Mode, Vec<(Vec<Key>, Binding)>>,
 }

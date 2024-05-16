@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use super::{BufferLine, SignIdentifier};
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ViewPort {
     pub height: usize,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
@@ -52,7 +52,7 @@ impl ViewPort {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub enum LineNumber {
     _Absolute,
     #[default]

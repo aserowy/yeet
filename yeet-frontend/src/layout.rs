@@ -1,6 +1,6 @@
 use ratatui::prelude::{Constraint, Direction, Layout, Rect};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AppLayout {
     // TODO: split layout to enable file buffer related layout
     pub parent: Rect,
@@ -42,7 +42,7 @@ impl Default for AppLayout {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct CommandLineLayout {
     pub buffer: Rect,
     pub key_sequence: Rect,

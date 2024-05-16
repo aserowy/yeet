@@ -22,7 +22,7 @@ pub enum Action {
     WatchPath(PathBuf),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum ActionResult {
     Normal,
     SkipRender,

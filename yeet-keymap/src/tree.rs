@@ -4,12 +4,12 @@ use yeet_buffer::model::Mode;
 
 use crate::{key::Key, message::Binding, KeyMapError};
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct KeyTree {
     modes: HashMap<Mode, Node>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Node {
     Binding(Binding),
     ExpectsOr(Binding, HashMap<Key, Node>),

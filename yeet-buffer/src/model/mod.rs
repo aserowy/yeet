@@ -52,12 +52,12 @@ pub enum SearchDirection {
     Up,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct BufferSettings {
     pub sign_column_width: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Buffer {
     pub cursor: Option<Cursor>,
     pub lines: Vec<BufferLine>,
@@ -72,7 +72,7 @@ impl Buffer {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct Cursor {
     pub hide_cursor: bool,
     pub hide_cursor_line: bool,
@@ -80,7 +80,7 @@ pub struct Cursor {
     pub vertical_index: usize,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum CursorPosition {
     Absolute { current: usize, expanded: usize },
     End,
@@ -145,7 +145,7 @@ impl Default for StylePartial {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum BufferResult {
     Changes(Vec<BufferChanged>),
     CursorPositionChanged,

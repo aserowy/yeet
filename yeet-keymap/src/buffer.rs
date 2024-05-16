@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::key::{Key, KeyCode};
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct KeyBuffer {
     buffer: Vec<Key>,
 }

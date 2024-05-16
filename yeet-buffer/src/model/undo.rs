@@ -2,7 +2,7 @@ use std::time;
 
 use super::Mode;
 
-#[derive(Debug)]
+#[derive()]
 struct Transaction {
     changes: Vec<BufferChanged>,
     _timestamp: u64,
@@ -15,7 +15,7 @@ pub enum BufferChanged {
     LineRemoved(usize, String),
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Undo {
     current_change: Option<BufferChanged>,
     current_save_index: Option<usize>,

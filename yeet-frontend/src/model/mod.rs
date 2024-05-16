@@ -23,7 +23,7 @@ pub mod mark;
 pub mod qfix;
 pub mod register;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
     pub command_stack: Option<VecDeque<Message>>,
@@ -41,7 +41,6 @@ pub struct Model {
     pub watches: Vec<PathBuf>,
 }
 
-#[derive(Debug)]
 pub struct FileWindow {
     pub current: DirectoryBuffer<PathBuf>,
     pub parent: DirectoryBuffer<Option<PathBuf>>,
@@ -94,7 +93,7 @@ impl Default for FileWindow {
     }
 }
 
-#[derive(Debug)]
+#[derive()]
 pub struct CommandLine {
     pub buffer: Buffer,
     pub layout: CommandLineLayout,
@@ -117,7 +116,7 @@ impl Default for CommandLine {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct DirectoryBuffer<T> {
     pub buffer: Buffer,
     pub path: T,
