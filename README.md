@@ -40,6 +40,7 @@ register holds all files which got yanked and the last nine trashes.
 | h, l      | navigating the file tree                                    |
 | p         | paste " from junk yard to current path                      |
 | "p\<char> | paste register named \<char> from junk yard to current path |
+| yp        | copy current selected path to system clipboard              |
 | yy        | yank file to junk yard                                      |
 
 ### navigation and normal mode

@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
 use yeet_buffer::model::BufferLine;
+use yeet_keymap::message::Message;
 
-use crate::model::Model;
+use crate::{action::Action, model::Model};
 
 pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
     let buffer = &model.files.current.buffer;
@@ -33,4 +34,15 @@ pub fn get_current_selected_bufferline(model: &mut Model) -> Option<&mut BufferL
     let cursor = &buffer.cursor.as_ref()?;
 
     buffer.lines.get_mut(cursor.vertical_index)
+}
+
+pub fn copy_current_selected_path_to_clipboard(model: &mut Model) -> Vec<Action> {
+    if let Some(path) = get_current_selected_path(model) {
+        match model.register.clipboard.set_text(path.to_string_lossy()) {
+            Ok(_) => Vec::new(),
+            Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+        }
+    } else {
+        Vec::new()
+    }
 }

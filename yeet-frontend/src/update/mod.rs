@@ -34,6 +34,7 @@ use self::{
     },
     save::persist_path_changes,
     search::clear_search,
+    selection::copy_current_selected_path_to_clipboard,
     settings::update_with_settings,
     viewport::{move_viewport, set_viewport_dimensions},
 };
@@ -131,6 +132,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::StopMacro => set_mode_in_commandline(model),
         Message::ToggleQuickFix => toggle_selected_to_qfix(model),
         Message::Quit => vec![Action::Quit(None)],
+        Message::YankPathToClipboard => copy_current_selected_path_to_clipboard(model),
         Message::YankToJunkYard(repeat) => yank_to_junkyard(model, repeat),
     }
 }

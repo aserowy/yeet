@@ -123,6 +123,7 @@ pub enum Message {
     StopMacro,
     ToggleQuickFix,
     Quit,
+    YankPathToClipboard,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),
 }

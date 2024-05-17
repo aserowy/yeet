@@ -179,6 +179,15 @@ impl Default for KeyMap {
                 (
                     vec![
                         Key::new(KeyCode::from_char('y'), vec![]),
+                        Key::new(KeyCode::from_char('p'), vec![]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(Message::YankPathToClipboard),
+                        ..Default::default()
+                    },
+                ),(
+                    vec![
+                        Key::new(KeyCode::from_char('y'), vec![]),
                         Key::new(KeyCode::from_char('y'), vec![]),
                     ],
                     Binding {
