@@ -1,9 +1,11 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
     model::{Buffer, BufferResult, CursorPosition, Mode},
+    update::cursor::{update_cursor_by_direction, validate_cursor_position},
 };
 
 mod cursor;
+mod find;
 mod modification;
 mod viewport;
 
@@ -20,7 +22,7 @@ pub fn update_buffer(
         BufferMessage::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 model.undo.close_transaction();
-                cursor::update_by_direction(mode, model, &1, &CursorDirection::Left);
+                update_cursor_by_direction(mode, model, &1, &CursorDirection::Left);
             }
             Vec::new()
         }
@@ -32,7 +34,7 @@ pub fn update_buffer(
             Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            cursor::update_by_direction(mode, model, count, direction)
+            update_cursor_by_direction(mode, model, count, direction)
         }
         BufferMessage::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);
@@ -40,7 +42,7 @@ pub fn update_buffer(
         }
         BufferMessage::RemoveLine(index) => {
             model.lines.remove(*index);
-            cursor::validate(mode, model);
+            validate_cursor_position(mode, model);
             Vec::new()
         }
         BufferMessage::ResetCursor => {
@@ -73,7 +75,7 @@ pub fn update_buffer(
         BufferMessage::SetContent(content) => {
             // TODO: optional selection?
             model.lines = content.to_vec();
-            cursor::validate(mode, model);
+            validate_cursor_position(mode, model);
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
@@ -92,7 +94,7 @@ pub fn update_buffer(
                 cursor.vertical_index = index;
                 cursor.hide_cursor_line = false;
 
-                cursor::validate(mode, model);
+                validate_cursor_position(mode, model);
                 viewport::update_by_cursor(model);
 
                 vec![BufferResult::CursorPositionChanged]
@@ -103,7 +105,7 @@ pub fn update_buffer(
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             model.lines.sort_unstable_by(sort);
-            cursor::validate(mode, model);
+            validate_cursor_position(mode, model);
             Vec::new()
         }
     };

@@ -38,6 +38,8 @@ pub enum CursorDirection {
     Down,
     FindBackward(char),
     FindForward(char),
+    LastFindBackward,
+    LastFindForward,
     Left,
     LineEnd,
     LineStart,

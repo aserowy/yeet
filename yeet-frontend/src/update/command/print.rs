@@ -118,9 +118,6 @@ pub fn print_register(register: &Register) -> Vec<PrintContent> {
     if let Some(command) = &register.command {
         contents.push(print_content(&':', command));
     }
-    if let Some(find) = &register.find {
-        contents.push(print_content(&';', find));
-    }
     if let Some(searched) = &register.searched {
         contents.push(print_content(&'/', &searched.1));
     }

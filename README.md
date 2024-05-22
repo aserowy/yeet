@@ -74,19 +74,20 @@ current buffer. To delete the selected path completly, call command `:d!`.
 In normal mode, all register interactions target the default register (equal to
 `:reg` in nvim).
 
-| keys               | action                                                                       |
-| ------------------ | ---------------------------------------------------------------------------- |
-| h, l               | move cursor left/right                                                       |
-| 0, $               | move cursor to line start/end                                                |
-| f\<char>, F\<char> | move cursor to next char forward/backward                                    |
-| t\<char>, T\<char> | move cursor before next char forward/backward                                |
-| ;                  | repeat the last motion with f or t. Currently not valild to pair with c or d |
-| i, a               | change to insert mode                                                        |
-| c\<motion>         | delete according to motion and change to insert mode                         |
-| d\<motion>         | delete according to motion                                                   |
-| s                  | delete char on cursor and change to insert mode                              |
-| x                  | delete char on cursor                                                        |
-| .                  | repeat last modification. Key sequence is stored in '.' register             |
+| keys               | action                                                           |
+| ------------------ | ---------------------------------------------------------------- |
+| h, l               | move cursor left/right                                           |
+| 0, $               | move cursor to line start/end                                    |
+| f\<char>, F\<char> | move cursor to next char forward/backward                        |
+| t\<char>, T\<char> | move cursor before next char forward/backward                    |
+| ;                  | repeat the last motion with f or t.                              |
+| ,                  | repeat the last motion with f or t in reverse direction.         |
+| i, a               | change to insert mode                                            |
+| c\<motion>         | delete according to motion and change to insert mode             |
+| d\<motion>         | delete according to motion                                       |
+| s                  | delete char on cursor and change to insert mode                  |
+| x                  | delete char on cursor                                            |
+| .                  | repeat last modification. Key sequence is stored in '.' register |
 
 ## commands
 

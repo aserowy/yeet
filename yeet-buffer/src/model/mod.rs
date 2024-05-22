@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use ratatui::style::{Color, Modifier};
 
+use crate::message::CursorDirection;
+
 use self::{
     undo::{BufferChanged, Undo},
     viewport::ViewPort,
@@ -60,6 +62,7 @@ pub struct BufferSettings {
 #[derive(Default)]
 pub struct Buffer {
     pub cursor: Option<Cursor>,
+    pub last_find: Option<CursorDirection>,
     pub lines: Vec<BufferLine>,
     pub show_border: bool,
     pub undo: Undo,
@@ -149,5 +152,5 @@ impl Default for StylePartial {
 pub enum BufferResult {
     Changes(Vec<BufferChanged>),
     CursorPositionChanged,
-    FindScopeChanged,
+    FindScopeChanged(CursorDirection),
 }

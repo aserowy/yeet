@@ -36,7 +36,7 @@ pub fn update(
                     changes.push(BufferChanged::LineRemoved(line_index, content));
                 }
 
-                cursor::validate(mode, model);
+                cursor::validate_cursor_position(mode, model);
 
                 Some(changes)
             } else {
@@ -51,7 +51,7 @@ pub fn update(
             };
 
             for _ in 0..*count {
-                cursor::update_by_direction(mode, model, delete_count, motion);
+                cursor::update_cursor_by_direction(mode, model, delete_count, motion);
             }
 
             let post_motion_cursor = match &model.cursor {
@@ -124,7 +124,7 @@ pub fn update(
                 changes.push(changed);
             }
 
-            cursor::validate(mode, model);
+            cursor::validate_cursor_position(mode, model);
 
             Some(changes)
         }
@@ -249,6 +249,8 @@ fn is_inclusive(motion: &CursorDirection) -> bool {
         | CursorDirection::FindForward(_)
         | CursorDirection::TillBackward(_)
         | CursorDirection::TillForward(_)
+        | CursorDirection::LastFindBackward
+        | CursorDirection::LastFindForward
         | CursorDirection::LineEnd => true,
     }
 }
@@ -264,6 +266,8 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
         | CursorDirection::FindForward(_)
         | CursorDirection::TillBackward(_)
         | CursorDirection::TillForward(_)
+        | CursorDirection::LastFindBackward
+        | CursorDirection::LastFindForward
         | CursorDirection::Left
         | CursorDirection::Right
         | CursorDirection::Search(_)

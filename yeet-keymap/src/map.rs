@@ -530,10 +530,20 @@ impl Default for KeyMap {
                     },
                 ),
                 (
-                    // TODO: add support for ,
+                    vec![Key::new(KeyCode::from_char(','), vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::LastFindBackward),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char(';'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::ExecuteRegister(';')),
+                        // TODO: convert to motion
+                        // set last fFtT motion in buffer
+                        // introduce reverse as motion
+                        // set reverse motion to ,
+                        kind: BindingKind::Motion(CursorDirection::LastFindForward),
                         ..Default::default()
                     },
                 ),
