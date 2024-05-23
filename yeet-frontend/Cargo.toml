@@ -10,7 +10,7 @@ ratatui = "0.26.3"
 yeet-keymap = { path = "../yeet-keymap" }
 tokio = { version = "1.37.0", features = ["full"] }
 csv = "1.3.0"
-thiserror = "1.0.60"
+thiserror = "1.0.61"
 notify = { version = "6.1.1", default-features = false, features = ["macos_fsevent"] }
 infer = "0.15.0"
 dirs = "5.0.1"
