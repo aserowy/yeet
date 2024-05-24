@@ -1,0 +1,8 @@
+{
+  "url": "https://github.com/aserowy/yeet/releases/download/v2024.5.23/yeet-x86_64-pc-windows-msvc.zip",
+  "version": "v2025.5.23",
+  "extract_dir": "yeet-x86_64-pc-windows-msvc",
+  "bin": "yeet.exe",
+  "license": "MIT",
+  "checkver": "github"
+}
