@@ -7,7 +7,7 @@ use arboard::Clipboard;
 use yeet_buffer::model::SearchDirection;
 
 pub struct Register {
-    pub clipboard: Clipboard,
+    pub clipboard: Option<Clipboard>,
     pub command: Option<String>,
     pub content: HashMap<char, String>,
     pub dot: Option<String>,
@@ -19,7 +19,7 @@ pub struct Register {
 impl Default for Register {
     fn default() -> Self {
         Self {
-            clipboard: Clipboard::new().expect("clipboard creation failed"),
+            clipboard: Clipboard::new().ok(),
             command: None,
             content: Default::default(),
             dot: None,

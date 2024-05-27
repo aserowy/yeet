@@ -38,9 +38,15 @@ pub fn get_current_selected_bufferline(model: &mut Model) -> Option<&mut BufferL
 
 pub fn copy_current_selected_path_to_clipboard(model: &mut Model) -> Vec<Action> {
     if let Some(path) = get_current_selected_path(model) {
-        match model.register.clipboard.set_text(path.to_string_lossy()) {
-            Ok(_) => Vec::new(),
-            Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+        if let Some(clipboard) = model.register.clipboard.as_mut() {
+            match clipboard.set_text(path.to_string_lossy()) {
+                Ok(_) => Vec::new(),
+                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+            }
+        } else {
+            vec![Action::EmitMessages(vec![Message::Error(
+                "Clipboard not available".to_string(),
+            )])]
         }
     } else {
         Vec::new()
