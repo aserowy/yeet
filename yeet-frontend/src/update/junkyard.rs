@@ -120,9 +120,9 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
         if let Some((id, path_string)) = file_name.split_once('%') {
             let path = path_string
                 .replace("%002F%", "/")
-                .replace("%0025%", "%")
                 .replace("%005C%", "\\")
-                .replace("%003A%", ":");
+                .replace("%003A%", ":")
+                .replace("%0025%", "%");
 
             Some((id.to_string(), file_name.to_string(), PathBuf::from(path)))
         } else {
