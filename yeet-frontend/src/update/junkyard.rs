@@ -105,7 +105,9 @@ fn compose_compression_name(id: String, path: &Path) -> String {
     let path = path
         .to_string_lossy()
         .replace('%', "%0025%")
-        .replace('/', "%002F%");
+        .replace('/', "%002F%")
+        .replace('\\', "%005C%")
+        .replace(':', "%003A%");
 
     let file_name = format!("{}%{}", id, path);
 
@@ -116,7 +118,12 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     if let Some(file_name) = path.file_name() {
         let file_name = file_name.to_string_lossy();
         if let Some((id, path_string)) = file_name.split_once('%') {
-            let path = path_string.replace("%002F%", "/").replace("%0025%", "%");
+            let path = path_string
+                .replace("%002F%", "/")
+                .replace("%0025%", "%")
+                .replace("%005C%", "\\")
+                .replace("%003A%", ":");
+
             Some((id.to_string(), file_name.to_string(), PathBuf::from(path)))
         } else {
             None
@@ -332,8 +339,7 @@ mod test {
     }
 
     #[test]
-    fn compose_decompose_compression_name() {
-        // TODO: Check windows path format as well!
+    fn compose_decompose_compression_name_linux() {
         let id = "1708576379595".to_string();
 
         let path = std::path::Path::new("/home/U0025/sr%/y%et/%direnv");
@@ -344,6 +350,7 @@ mod test {
 
         assert_eq!(id.to_string(), dec_id);
         assert_eq!(name, dec_name);
+        assert!(!name.contains("/"));
         assert_eq!(path, dec_path);
 
         let path = std::path::Path::new("/home/user/sr%/y%et/%direnv");
@@ -354,6 +361,7 @@ mod test {
 
         assert_eq!(id.to_string(), dec_id);
         assert_eq!(name, dec_name);
+        assert!(!name.contains("/"));
         assert_eq!(path, dec_path);
 
         let path = std::path::Path::new("/home/user/src/yeet/.direnv");
@@ -364,6 +372,45 @@ mod test {
 
         assert_eq!(id.to_string(), dec_id);
         assert_eq!(name, dec_name);
+        assert!(!name.contains("/"));
+        assert_eq!(path, dec_path);
+    }
+
+    #[test]
+    fn compose_decompose_compression_name_windows() {
+        let id = "1708576379595".to_string();
+
+        let path = std::path::Path::new("c:\\home\\U0025\\sr%\\y%et\\%direnv");
+        let name = super::compose_compression_name(id.to_string(), path);
+
+        let composed = std::path::Path::new("c:\\some\\cache\\junk\\").join(name.clone());
+        let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
+
+        assert_eq!(id.to_string(), dec_id);
+        assert_eq!(name, dec_name);
+        assert!(!name.contains("\\") && !name.contains(":"));
+        assert_eq!(path, dec_path);
+
+        let path = std::path::Path::new("c:\\home\\user\\sr%\\y%et\\%direnv");
+        let name = super::compose_compression_name(id.to_string(), path);
+
+        let composed = std::path::Path::new("c:\\some\\cache\\junk\\").join(name.clone());
+        let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
+
+        assert_eq!(id.to_string(), dec_id);
+        assert_eq!(name, dec_name);
+        assert!(!name.contains("\\") && !name.contains(":"));
+        assert_eq!(path, dec_path);
+
+        let path = std::path::Path::new("c:\\home\\user\\src\\yeet\\.direnv");
+        let name = super::compose_compression_name(id.to_string(), path);
+
+        let composed = std::path::Path::new("c:\\some\\cache\\junk\\").join(name.clone());
+        let (dec_id, dec_name, dec_path) = super::decompose_compression_path(&composed).unwrap();
+
+        assert_eq!(id.to_string(), dec_id);
+        assert_eq!(name, dec_name);
+        assert!(!name.contains("\\") && !name.contains(":"));
         assert_eq!(path, dec_path);
     }
 }
