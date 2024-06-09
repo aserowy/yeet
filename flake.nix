@@ -64,15 +64,15 @@
               pkgs.asciinema
               pkgs.asciinema-agg
               pkgs.gh
-              pkgs.gephi
-              pkgs.graphviz
               pkgs.nil
               pkgs.nixpkgs-fmt
-              pkgs.nixgl.nixGLIntel
               pkgs.nodejs_20
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier
             ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
+              pkgs.gephi
+              pkgs.graphviz
+              pkgs.nixgl.nixGLIntel
               pkgs.vscode-extensions.vadimcn.vscode-lldb
             ];
             shellHook = ''
