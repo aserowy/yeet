@@ -46,7 +46,7 @@
             cargoLock.lockFile = ./Cargo.lock;
 
             buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+              with pkgs.darwin.apple_sdk.frameworks; [ AppKit Foundation ]
             );
           };
 
@@ -56,7 +56,7 @@
 
           shell = pkgs.mkShell {
             buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk.frameworks; [ Foundation ]
+              with pkgs.darwin.apple_sdk.frameworks; [ AppKit Foundation ]
             );
             nativeBuildInputs = [
               rust-stable
