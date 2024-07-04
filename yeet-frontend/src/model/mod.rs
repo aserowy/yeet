@@ -27,6 +27,7 @@ pub mod register;
 pub struct Model {
     pub commandline: CommandLine,
     pub command_stack: Option<VecDeque<Message>>,
+    pub command_current: Option<Message>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,

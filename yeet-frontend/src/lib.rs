@@ -16,7 +16,7 @@ use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{KeySequence, Message, MessageSource, PrintContent};
+use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource, PrintContent};
 
 mod action;
 pub mod error;
@@ -92,7 +92,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let mut actions = update_model(&mut model, &envelope);
         actions.extend(get_watcher_changes(&mut model));
-        actions.extend(get_command_from_stack(&mut model, &actions));
+        actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
         let result = exec_preview_actions(&model, &mut emitter, &mut terminal, &actions).await?;
         if result != ActionResult::SkipRender {
@@ -174,19 +174,31 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
 }
 
 #[tracing::instrument(skip(model, actions))]
-fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> {
-    let buffer_loading = model
-        .files
-        .get_mut_directories()
-        .iter()
-        .any(|(_, state, _)| state != &&DirectoryBufferState::Ready);
+fn get_command_from_stack(
+    model: &mut Model,
+    actions: &[Action],
+    envelope: &Envelope,
+) -> Vec<Action> {
+    if let Some(current) = &model.command_current {
+        if envelope.messages.iter().any(|msg| msg == current) {
+            model.command_current = None;
+        }
+    }
 
     if let Some(commands) = &mut model.command_stack {
+        let buffer_loading = model
+            .files
+            .get_mut_directories()
+            .iter()
+            .any(|(_, state, _)| state != &&DirectoryBufferState::Ready);
+
+        let current_command_processing = model.command_current.is_some();
+
         let contains_emit_messages = actions
             .iter()
             .any(|msg| matches!(msg, Action::EmitMessages(_)));
 
-        if buffer_loading || contains_emit_messages {
+        if buffer_loading || current_command_processing || contains_emit_messages {
             tracing::trace!(
                 "cdo commands skipped: buffer loading {:?}, emitting messages {:?}",
                 buffer_loading,
@@ -209,7 +221,7 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
                         );
                     }
                 } else {
-                    tracing::info!(
+                    tracing::trace!(
                         "removing command for non existing path: {:?}",
                         commands.pop_front()
                     );
@@ -222,7 +234,8 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         };
 
         if let Some(command) = command {
-            tracing::trace!("emitting cdo command: {:?}", command);
+            tracing::debug!("emitting cdo command: {:?}", command);
+            model.command_current = Some(command.clone());
             actions.push(Action::EmitMessages(vec![command]));
         }
 

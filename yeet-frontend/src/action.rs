@@ -131,7 +131,7 @@ async fn execute(
                 emitter.abort(&Task::EnumerateDirectory(path.clone(), None));
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {
-                    tracing::error!("emitting unwatch path failed: {:?}", error);
+                    tracing::debug!("emitting unwatch path failed: {:?}", error);
                 }
             }
             Action::WatchPath(path) => {

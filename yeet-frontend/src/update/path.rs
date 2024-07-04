@@ -148,6 +148,8 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         remove_from_junkyard(&mut model.junk, path);
     }
 
+    let current_selection = get_selected_content_from_buffer(&model.files.current.buffer);
+
     let mut buffer = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,
@@ -177,6 +179,14 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
             }
         }
     }
+
+    if let Some(selection) = current_selection {
+        update_buffer(
+            &model.mode,
+            &mut model.files.current.buffer,
+            &BufferMessage::SetCursorToLineContent(selection),
+        );
+    };
 
     let mut actions = Vec::new();
     if let Some(path) = set_preview_to_selected(model) {
