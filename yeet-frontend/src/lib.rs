@@ -210,21 +210,17 @@ fn get_command_from_stack(
 
         let mut actions = Vec::new();
         let command = if let Some(Message::NavigateToPathAsPreview(_)) = commands.front() {
-            while let Some(last) = commands.front() {
-                if let Message::NavigateToPathAsPreview(path) = last {
+            while let Some(front) = commands.front() {
+                if let Message::NavigateToPathAsPreview(path) = front {
                     if path.exists() {
                         break;
                     } else {
-                        tracing::warn!(
-                            "removing non existing cdo path: {:?}",
-                            commands.pop_front()
-                        );
+                        let command = commands.pop_front();
+                        tracing::warn!("removing non existing cdo path: {:?}", command);
                     }
                 } else {
-                    tracing::trace!(
-                        "removing command for non existing path: {:?}",
-                        commands.pop_front()
-                    );
+                    let command = commands.pop_front();
+                    tracing::trace!("removing command for non existing path: {:?}", command);
                 }
             }
 
