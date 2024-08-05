@@ -15,7 +15,7 @@ notify = { version = "6.1.1", default-features = false, features = ["macos_fseve
 infer = "0.16.0"
 dirs = "5.0.1"
 pathdiff = "0.2.0"
-flate2 = "1.0.30"
+flate2 = "1.0.31"
 tar = "0.4.41"
 tracing = "0.1.40"
 yeet-buffer = { version = "0.0.1", path = "../yeet-buffer" }
