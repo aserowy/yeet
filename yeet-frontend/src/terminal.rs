@@ -34,7 +34,8 @@ impl TerminalWrapper {
 
     pub fn size(&self) -> Result<Rect, AppError> {
         if let Some(term) = &self.inner {
-            Ok(term.size()?)
+            let size = term.size()?;
+            Ok(Rect::new(0, 0, size.width, size.height))
         } else {
             Err(AppError::TerminalNotInitialized)
         }
