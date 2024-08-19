@@ -9,7 +9,7 @@ edition = "2021"
 yeet-frontend = { path = "../yeet-frontend" }
 tokio = { version = "1.39.2", features = ["full"] }
 thiserror = "1.0.63"
-clap = "4.5.15"
+clap = "4.5.16"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
