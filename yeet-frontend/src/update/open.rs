@@ -10,7 +10,9 @@ pub fn open_selected(model: &Model) -> Vec<Action> {
     }
 
     if let Some(selected) = get_current_selected_path(model) {
-        if model.settings.stdout_on_open {
+        if model.settings.selection_to_file_on_open.is_some()
+            || model.settings.selection_to_stdout_on_open
+        {
             vec![Action::Quit(Some(selected.to_string_lossy().to_string()))]
         } else {
             vec![Action::Open(selected)]

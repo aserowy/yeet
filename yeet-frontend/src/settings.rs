@@ -6,9 +6,10 @@ pub struct Settings {
     pub current: BufferSettings,
     pub parent: BufferSettings,
     pub preview: BufferSettings,
+    pub selection_to_file_on_open: Option<PathBuf>,
+    pub selection_to_stdout_on_open: bool,
     pub show_quickfix_signs: bool,
     pub show_mark_signs: bool,
-    pub stdout_on_open: bool,
     pub startup_path: Option<PathBuf>,
 }
 
@@ -20,9 +21,10 @@ impl Default for Settings {
             },
             parent: BufferSettings::default(),
             preview: BufferSettings::default(),
+            selection_to_file_on_open: None,
+            selection_to_stdout_on_open: false,
             show_mark_signs: true,
             show_quickfix_signs: true,
-            stdout_on_open: false,
             startup_path: None,
         }
     }
