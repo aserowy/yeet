@@ -113,7 +113,13 @@ async fn execute(
             }
             Action::Quit(stdout_result) => {
                 if let Some(stdout_result) = stdout_result {
-                    stdout().lock().write_all(stdout_result.as_bytes())?;
+                    if let Some(target) = &model.settings.selection_to_file_on_open {
+                        emitter.run(Task::SaveSelection(target.clone(), stdout_result.clone()));
+                    }
+
+                    if model.settings.selection_to_stdout_on_open {
+                        stdout().lock().write_all(stdout_result.as_bytes())?;
+                    }
                 }
                 emitter.run(Task::SaveHistory(model.history.clone()));
                 emitter.run(Task::SaveMarks(model.marks.clone()));

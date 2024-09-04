@@ -40,6 +40,7 @@ pub enum Task {
     SaveHistory(History),
     SaveMarks(Marks),
     SaveQuickFix(QuickFix),
+    SaveSelection(PathBuf, String),
     TrashPath(FileEntry),
     YankPath(FileEntry),
 }
@@ -379,6 +380,18 @@ impl TaskManager {
                     Ok(())
                 })
             }
+            Task::SaveSelection(target, selection) => {
+                let sender = self.sender.clone();
+                self.tasks.spawn(async move {
+                    tracing::trace!("saving selection to file {}", target.to_string_lossy());
+
+                    if let Err(error) = tokio::fs::write(target, selection).await {
+                        emit_error(&sender, AppError::FileOperationFailed(error)).await;
+                    }
+
+                    Ok(())
+                })
+            }
             Task::TrashPath(entry) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
@@ -439,6 +452,7 @@ fn should_abort_on_finish(task: Task) -> bool {
         | Task::SaveHistory(_)
         | Task::SaveMarks(_)
         | Task::SaveQuickFix(_)
+        | Task::SaveSelection(_, _)
         | Task::TrashPath(_)
         | Task::YankPath(_) => false,
     }

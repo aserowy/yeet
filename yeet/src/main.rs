@@ -55,8 +55,13 @@ fn cli() -> Command {
                 .value_parser(value_parser!(PathBuf))
                 .help("path to open in yeet on startup"),
             // NOTE: options
-            Arg::new("stdout-on-open")
-                .long("stdout-on-open")
+            Arg::new("selection-to-file-on-open")
+                .long("selection-to-file-on-open")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(PathBuf))
+                .help("on open write selected paths to the given file path instead and close the application"),
+            Arg::new("selection-to-stdout-on-open")
+                .long("selection-to-stdout-on-open")
                 .action(ArgAction::SetTrue)
                 .default_value("false")
                 .help("on open print selected paths to stdout instead and close the application"),
@@ -98,7 +103,8 @@ fn get_logging_path() -> Result<String, Error> {
 
 fn get_settings(args: &ArgMatches) -> Settings {
     Settings {
-        stdout_on_open: args.get_flag("stdout-on-open"),
+        selection_to_file_on_open: args.get_one("selection-to-file-on-open").cloned(),
+        selection_to_stdout_on_open: args.get_flag("selection-to-stdout-on-open"),
         startup_path: args.get_one("path").cloned(),
         ..Default::default()
     }
