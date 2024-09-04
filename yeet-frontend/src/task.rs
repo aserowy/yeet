@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use ratatui::layout::Rect;
 use tokio::{
     fs,
     sync::{mpsc::Sender, Mutex},
@@ -16,6 +17,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
+    image,
     init::{
         history::{optimize_history_file, save_history_to_file},
         junkyard::{cache_and_compress, compress, delete, restore},
@@ -34,7 +36,7 @@ pub enum Task {
     DeleteJunkYardEntry(FileEntry),
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf, Option<String>),
-    LoadPreview(PathBuf),
+    LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
@@ -300,16 +302,18 @@ impl TaskManager {
                     }
                 })
             }
-            Task::LoadPreview(path) => {
+            Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
                     let content = if let Some(kind) = infer::get_from_path(path.clone())? {
                         tracing::trace!("preview kind: {:?}", kind);
 
-                        // TODO: add preview for images here
                         // TODO: add preview for archives here
-                        if kind.mime_type().starts_with("text") {
+                        let mime = kind.mime_type();
+                        if mime.starts_with("text") {
                             fs::read_to_string(path.clone()).await?
+                        } else if mime.starts_with("image") {
+                            image::load(&path, &rect)
                         } else {
                             "".to_string()
                         }

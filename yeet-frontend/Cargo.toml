@@ -20,3 +20,4 @@ tar = "0.4.41"
 tracing = "0.1.40"
 yeet-buffer = { version = "0.0.1", path = "../yeet-buffer" }
 arboard = { version = "3.4.0", default-features = false, features = ["windows-sys", "wayland-data-control"] }
+ansi-to-tui = "4.1.0"
