@@ -313,7 +313,10 @@ impl TaskManager {
                         if mime.starts_with("text") {
                             fs::read_to_string(path.clone()).await?
                         } else if mime.starts_with("image") {
-                            image::load(&path, &rect)
+                            match image::load(&path, &rect).await {
+                                Some(content) => content,
+                                None => "".to_string(),
+                            }
                         } else {
                             "".to_string()
                         }
@@ -444,7 +447,7 @@ fn to_envelope(messages: Vec<Message>) -> Envelope {
 
 fn should_abort_on_finish(task: Task) -> bool {
     match task {
-        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_) => true,
+        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _) => true,
 
         Task::AddPath(_)
         | Task::CopyPath(_, _)

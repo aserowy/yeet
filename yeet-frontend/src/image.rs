@@ -1,10 +1,9 @@
-use std::{path::Path, process::Stdio};
+use std::{path::Path, process::Stdio, str};
 
-use ansi_to_tui::IntoText;
-use ratatui::{layout::Rect, text::Line};
+use ratatui::layout::Rect;
 use tokio::process::Command;
 
-pub async fn load<'a>(path: &Path, rect: &Rect) -> Option<Vec<Line<'a>>> {
+pub async fn load<'a>(path: &Path, rect: &Rect) -> Option<String> {
     let result = Command::new("chafa")
         .args([
             "-f",
@@ -36,10 +35,9 @@ pub async fn load<'a>(path: &Path, rect: &Rect) -> Option<Vec<Line<'a>>> {
                 // TODO: log error
             }
 
-            let text = output.stdout.to_text().unwrap();
+            let text = output.stdout;
 
-            Some(text.lines)
-            None
+            str::from_utf8(&text).ok().map(|s| s.to_string())
         }
         // TODO: log error
         Err(_) => None,
