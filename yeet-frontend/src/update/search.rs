@@ -1,5 +1,5 @@
 use ratatui::style::Color;
-use yeet_buffer::model::{Buffer, StylePartial, StylePartialSpan};
+use yeet_buffer::model::Buffer;
 
 use crate::{action::Action, model::Model};
 
@@ -32,23 +32,23 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
 
 pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.parent.buffer.lines {
-        line.search = None;
+        line.search_index = None;
     }
     for line in &mut model.files.preview.buffer.lines {
-        line.search = None;
+        line.search_index = None;
     }
     for line in &mut model.files.current.buffer.lines {
-        line.search = None;
+        line.search_index = None;
     }
     Vec::new()
 }
 
 fn set_styles(buffer: &mut Buffer, search: &str) {
-    let len = search.chars().count();
+    let _len = search.chars().count();
     let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
 
     for line in &mut buffer.lines {
-        line.search = None;
+        line.search_index = None;
 
         let mut content = line.content.as_str();
 
@@ -57,22 +57,22 @@ fn set_styles(buffer: &mut Buffer, search: &str) {
             content = lower.as_str();
         };
 
-        let start = match content.find(search) {
+        let _start = match content.find(search) {
             Some(it) => content[..it].chars().count(),
             None => continue,
         };
 
-        line.search = Some(vec![
-            StylePartialSpan {
-                start,
-                end: start + len,
-                style: StylePartial::Foreground(Color::DarkGray),
-            },
-            StylePartialSpan {
-                start,
-                end: start + len,
-                style: StylePartial::Background(Color::Magenta),
-            },
-        ]);
+        // line.search_index = Some(vec![
+        //     StylePartialSpan {
+        //         start,
+        //         end: start + len,
+        //         style: StylePartial::Foreground(Color::DarkGray),
+        //     },
+        //     StylePartialSpan {
+        //         start,
+        //         end: start + len,
+        //         style: StylePartial::Background(Color::Magenta),
+        //     },
+        // ]);
     }
 }

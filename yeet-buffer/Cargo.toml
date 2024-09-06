@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ansi-to-tui = "6.0.0"
 ratatui = "0.28.1"
 tracing = "0.1.40"

@@ -3,10 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ratatui::style::Color;
 use yeet_buffer::{
     message::BufferMessage,
-    model::{Buffer, BufferLine, Mode, StylePartial, StylePartialSpan},
+    model::{Buffer, BufferLine, Mode},
     update::update_buffer,
 };
 
@@ -124,20 +123,20 @@ fn from(path: &Path) -> BufferLine {
     };
 
     // TODO: Handle transition states like adding, removing, renaming
-    let style = if path.is_dir() {
-        let length = content.chars().count();
-        vec![StylePartialSpan {
-            end: length,
-            style: StylePartial::Foreground(Color::LightBlue),
-            ..Default::default()
-        }]
-    } else {
-        vec![]
-    };
+    // let style = if path.is_dir() {
+    //     let length = content.chars().count();
+    //     vec![StylePartialSpan {
+    //         end: length,
+    //         style: StylePartial::Foreground(Color::LightBlue),
+    //         ..Default::default()
+    //     }]
+    // } else {
+    //     vec![]
+    // };
 
     BufferLine {
         content,
-        style,
+        // style,
         ..Default::default()
     }
 }

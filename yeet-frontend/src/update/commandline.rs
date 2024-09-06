@@ -1,7 +1,6 @@
-use ratatui::style::Color;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search, TextModification},
-    model::{BufferLine, CommandMode, Mode, SearchDirection, StylePartial, StylePartialSpan},
+    model::{BufferLine, CommandMode, Mode, SearchDirection},
     update::update_buffer,
 };
 use yeet_keymap::message::{Message, PrintContent};
@@ -222,11 +221,11 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
                 let cntnt_len = cntnt.chars().count();
                 BufferLine {
                     content: cntnt.to_string(),
-                    style: vec![StylePartialSpan {
-                        end: cntnt_len,
-                        style: StylePartial::Foreground(Color::Red),
-                        ..Default::default()
-                    }],
+                    // style: vec![StylePartialSpan {
+                    //     end: cntnt_len,
+                    //     style: StylePartial::Foreground(Color::Red),
+                    //     ..Default::default()
+                    // }],
                     ..Default::default()
                 }
             }
@@ -234,11 +233,11 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
                 let cntnt_len = cntnt.chars().count();
                 BufferLine {
                     content: cntnt.to_string(),
-                    style: vec![StylePartialSpan {
-                        end: cntnt_len,
-                        style: StylePartial::Foreground(Color::LightGreen),
-                        ..Default::default()
-                    }],
+                    // style: vec![StylePartialSpan {
+                    //     end: cntnt_len,
+                    //     style: StylePartial::Foreground(Color::LightGreen),
+                    //     ..Default::default()
+                    // }],
                     ..Default::default()
                 }
             }
@@ -249,11 +248,11 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
         let content = "Press ENTER or type command to continue";
         commandline.buffer.lines.push(BufferLine {
             content: content.to_string(),
-            style: vec![StylePartialSpan {
-                end: content.chars().count(),
-                style: StylePartial::Foreground(Color::LightBlue),
-                ..Default::default()
-            }],
+            // style: vec![StylePartialSpan {
+            //     end: content.chars().count(),
+            //     style: StylePartial::Foreground(Color::LightBlue),
+            //     ..Default::default()
+            // }],
             ..Default::default()
         });
 

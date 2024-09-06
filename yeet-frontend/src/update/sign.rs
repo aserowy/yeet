@@ -1,7 +1,5 @@
 use std::path::Path;
-
-use ratatui::style::Color;
-use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
+use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
@@ -42,15 +40,14 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
     match sign_id {
         QFIX_SIGN_ID => Some(Sign {
             id: QFIX_SIGN_ID,
-            content: 'c',
+            content: 'c'.to_string(),
             priority: 0,
-            style: vec![StylePartial::Foreground(Color::LightMagenta)],
+            // style: vec![StylePartial::Foreground(Color::LightMagenta)],
         }),
         MARK_SIGN_ID => Some(Sign {
             id: MARK_SIGN_ID,
-            content: 'm',
+            content: 'm'.to_string(),
             priority: 0,
-            style: vec![StylePartial::Foreground(Color::LightBlue)],
         }),
         _ => None,
     }

@@ -1,3 +1,4 @@
+use ansi_to_tui::IntoText;
 use ratatui::{
     prelude::Rect,
     style::{Color, Style},
@@ -6,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::{viewport::ViewPort, Buffer, BufferLine, Cursor, Mode, StylePartialSpan};
+use crate::model::{viewport::ViewPort, Buffer, BufferLine, Cursor, Mode};
 
 mod line;
 mod prefix;
@@ -46,7 +47,7 @@ fn get_rendered_lines(model: &Buffer) -> Vec<BufferLine> {
 
 fn get_styled_lines<'a>(
     vp: &ViewPort,
-    mode: &Mode,
+    _mode: &Mode,
     cursor: &Option<Cursor>,
     lines: Vec<BufferLine>,
 ) -> Vec<Line<'a>> {
@@ -57,46 +58,33 @@ fn get_styled_lines<'a>(
     };
 
     let mut result = Vec::new();
-    for (i, bl) in lines.iter().enumerate() {
+    for (i, mut bl) in lines.into_iter().enumerate() {
         let corrected_index = i + vp.vertical_index;
 
         let mut content = String::new();
-        content.push_str(&prefix::get_signs(vp, bl));
+        content.push_str(&prefix::get_signs(vp, &bl));
         content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
-        content.push_str(&prefix::get_custom_prefix(bl));
+        content.push_str(&prefix::get_custom_prefix(&bl));
         content.push_str(&prefix::get_border(vp));
 
         // NOTE: higher order (higher index) styles take precedence
-        let mut spans: Vec<_> = Vec::new();
-        spans.extend(prefix::get_sign_style_partials(vp, bl));
-        spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
-        spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
-        spans.extend(correct_index(&content.chars().count(), &bl.style));
+        // let mut spans: Vec<_> = Vec::new();
+        // spans.extend(prefix::get_sign_style_partials(vp, bl));
+        // spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
+        // spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
+        // spans.extend(correct_index(&content.chars().count(), &bl.style));
 
-        if let Some(search) = &bl.search {
-            spans.extend(correct_index(&content.chars().count(), search));
-        }
-
+        // if let Some(search) = &bl.search_index {
+        //     spans.extend(correct_index(&content.chars().count(), search));
+        // }
+        line::get_cursor_style_partials(vp, _mode, cursor, &i, &mut bl);
         content.push_str(&bl.content);
 
-        result.push(style::get_line(vp, content, spans));
+        let text = content.into_text().unwrap();
+        result.push(text.lines);
+
+        // result.push(style::get_line(vp, content, spans));
     }
 
-    result
-}
-
-fn correct_index(offset: &usize, style_partials: &Vec<StylePartialSpan>) -> Vec<StylePartialSpan> {
-    let mut corrected_style_partials = Vec::new();
-
-    for partial in style_partials {
-        let start = partial.start + offset;
-        let end = partial.end + offset;
-
-        corrected_style_partials.push(StylePartialSpan {
-            start,
-            end,
-            style: partial.style.clone(),
-        });
-    }
-    corrected_style_partials
+    result.into_iter().flatten().collect()
 }

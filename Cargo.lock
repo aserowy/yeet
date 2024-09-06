@@ -64,6 +64,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ansi-to-tui"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00c4af0bef1b514c9b6a32a773caf604c1390fa7913f4eaa23bfe76f251d6a42"
+dependencies = [
+ "nom",
+ "ratatui 0.28.1",
+ "simdutf8",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,6 +2045,7 @@ dependencies = [
 name = "yeet-buffer"
 version = "0.0.1"
 dependencies = [
+ "ansi-to-tui 6.0.0",
  "ratatui 0.28.1",
  "tracing",
 ]
@@ -2040,7 +2054,7 @@ dependencies = [
 name = "yeet-frontend"
 version = "0.0.1"
 dependencies = [
- "ansi-to-tui",
+ "ansi-to-tui 4.1.0",
  "arboard",
  "crossterm",
  "csv",

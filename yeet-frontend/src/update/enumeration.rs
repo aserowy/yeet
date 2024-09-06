@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
-use ratatui::style::Color;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::{BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan},
+    model::{BufferLine, Cursor, CursorPosition, Mode},
     update::update_buffer,
 };
 use yeet_keymap::message::ContentKind;
@@ -132,20 +131,20 @@ pub fn update_on_enumeration_finished(
 
 pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
     // TODO: refactor with by path
-    let style = if kind == &ContentKind::Directory {
-        let length = content.chars().count();
-        vec![StylePartialSpan {
-            end: length,
-            style: StylePartial::Foreground(Color::LightBlue),
-            ..Default::default()
-        }]
-    } else {
-        vec![]
-    };
+    // let style = if kind == &ContentKind::Directory {
+    //     let length = content.chars().count();
+    //     vec![StylePartialSpan {
+    //         end: length,
+    //         style: StylePartial::Foreground(Color::LightBlue),
+    //         ..Default::default()
+    //     }]
+    // } else {
+    //     vec![]
+    // };
 
     BufferLine {
         content: content.to_string(),
-        style,
+        // style,
         ..Default::default()
     }
 }
