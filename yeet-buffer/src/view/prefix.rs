@@ -1,8 +1,11 @@
 use std::cmp::Reverse;
 
-use crate::model::{
-    viewport::{LineNumber, ViewPort},
-    BufferLine, Cursor,
+use crate::{
+    ansi,
+    model::{
+        viewport::{LineNumber, ViewPort},
+        BufferLine, Cursor,
+    },
 };
 
 pub fn get_border(vp: &ViewPort) -> String {
@@ -74,34 +77,11 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
         .map(|s| format!("{}{}\x1b[0m", s.style, s.content))
         .collect::<String>();
 
-    format!("{:<max_sign_count$}", signs)
-}
+    let char_count = ansi::get_char_count(&signs);
 
-// pub fn get_sign_style_partials(vp: &ViewPort, bl: &BufferLine) -> Vec<StylePartialSpan> {
-//     let max_sign_count = vp.sign_column_width;
-//
-//     let mut filtered: Vec<_> = bl
-//         .signs
-//         .iter()
-//         .filter(|s| !vp.hidden_sign_ids.contains(&s.id))
-//         .collect();
-//
-//     filtered.sort_unstable_by_key(|s| Reverse(s.priority));
-//
-//     filtered
-//         .iter()
-//         .take(max_sign_count)
-//         .enumerate()
-//         .flat_map(|(i, s)| {
-//             let mut styles = Vec::new();
-//             for style in &s.style {
-//                 styles.push(StylePartialSpan {
-//                     start: i,
-//                     end: i + 1,
-//                     style: style.clone(),
-//                 });
-//             }
-//             styles
-//         })
-//         .collect()
-// }
+    if char_count < max_sign_count {
+        format!("{}{}", signs, " ".repeat(max_sign_count - char_count))
+    } else {
+        signs
+    }
+}
