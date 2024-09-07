@@ -27,7 +27,7 @@ pub fn add_cursor_styles(
 
         let mut content = line.content.clone();
         if !cursor.hide_cursor_line {
-            content = format!("\x1b[1;100m{}\x1b[0m", content);
+            content = format!("\x1b[100m{}\x1b[0m", content);
         }
 
         if cursor.hide_cursor {
