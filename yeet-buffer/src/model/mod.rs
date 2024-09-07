@@ -120,8 +120,9 @@ pub type SignIdentifier = &'static str;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sign {
     pub id: SignIdentifier,
-    pub content: String,
+    pub content: char,
     pub priority: usize,
+    pub style: String,
 }
 
 #[derive(Clone, PartialEq)]

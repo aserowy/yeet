@@ -1,15 +1,15 @@
 use crate::model::{viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode};
 
-pub fn get_cursor_style_partials(
+pub fn add_cursor_styles(
     vp: &ViewPort,
     _mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
     line: &mut BufferLine,
-) {
+) -> String {
     if let Some(cursor) = cursor {
         if cursor.vertical_index - vp.vertical_index != *index {
-            return;
+            return line.content.clone();
         }
 
         let content_width = vp.get_content_width(line);
@@ -25,17 +25,18 @@ pub fn get_cursor_style_partials(
             chars_count
         };
 
+        let mut content = line.content.clone();
         if !cursor.hide_cursor_line {
-            line.content = format!("\x1b[1;100m{}\x1b[0m", content);
+            content = format!("\x1b[1;100m{}\x1b[0m", content);
         }
 
         if cursor.hide_cursor {
-            return;
+            return content;
         }
 
         let _cursor_index = match &cursor.horizontal_index {
             CursorPosition::End => line_length - vp.horizontal_index - 1,
-            CursorPosition::None => return,
+            CursorPosition::None => return content,
             CursorPosition::Absolute {
                 current,
                 expanded: _,
@@ -48,7 +49,10 @@ pub fn get_cursor_style_partials(
         //     style: get_cursor_partial_style(mode),
         // });
         //
+
+        return content;
     }
+    return line.content.clone();
 }
 
 // fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {

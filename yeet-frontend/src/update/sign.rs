@@ -40,13 +40,14 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
     match sign_id {
         QFIX_SIGN_ID => Some(Sign {
             id: QFIX_SIGN_ID,
-            content: 'c'.to_string(),
+            content: 'c',
+            style: "\x1b[1;95m".to_string(),
             priority: 0,
-            // style: vec![StylePartial::Foreground(Color::LightMagenta)],
         }),
         MARK_SIGN_ID => Some(Sign {
             id: MARK_SIGN_ID,
-            content: 'm'.to_string(),
+            content: 'm',
+            style: "\x1b[1;96m".to_string(),
             priority: 0,
         }),
         _ => None,

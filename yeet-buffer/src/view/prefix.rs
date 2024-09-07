@@ -34,12 +34,12 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
 
     if let Some(cursor) = cursor {
         if cursor.vertical_index == index {
-            return format!("{:<width$}", number);
+            return format!("\x1b[1m{:<width$}\x1b[0m", number);
         }
     }
 
     match vp.line_number {
-        LineNumber::_Absolute => format!("{:>width$} ", number),
+        LineNumber::Absolute => format!("{:>width$} ", number),
         LineNumber::None => "".to_string(),
         LineNumber::Relative => {
             if let Some(cursor) = cursor {
@@ -49,54 +49,13 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
                     index - cursor.vertical_index
                 };
 
-                format!("{:>width$}", relative)
+                format!("\x1b[90m{:>width$}\x1b[0m", relative)
             } else {
                 format!("{:>width$}", number)
             }
         }
     }
 }
-
-// pub fn get_line_number_style_partials(
-//     vp: &ViewPort,
-//     cursor: &Option<Cursor>,
-//     index: &usize,
-// ) -> Vec<StylePartialSpan> {
-//     let start = vp.sign_column_width;
-//
-//     let end = start + vp.get_line_number_width();
-//     if start == end {
-//         return Vec::new();
-//     }
-//
-//     if let Some(cursor) = cursor {
-//         if cursor.vertical_index - vp.vertical_index == *index {
-//             vec![StylePartialSpan {
-//                 start,
-//                 end,
-//                 style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-//             }]
-//         } else {
-//             let style_partial = match vp.line_number {
-//                 LineNumber::_Absolute => LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-//                 LineNumber::None => unreachable!(),
-//                 LineNumber::Relative => LINE_NUMBER_REL_STYLE_PARTIAL.clone(),
-//             };
-//
-//             vec![StylePartialSpan {
-//                 start,
-//                 end,
-//                 style: style_partial,
-//             }]
-//         }
-//     } else {
-//         vec![StylePartialSpan {
-//             start,
-//             end,
-//             style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-//         }]
-//     }
-// }
 
 pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
     let max_sign_count = vp.sign_column_width;
@@ -112,7 +71,7 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
     let signs = filtered
         .iter()
         .take(max_sign_count)
-        .map(|s| s.content.clone())
+        .map(|s| format!("{}{}\x1b[0m", s.style, s.content))
         .collect::<String>();
 
     format!("{:<max_sign_count$}", signs)

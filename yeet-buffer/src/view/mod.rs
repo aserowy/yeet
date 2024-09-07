@@ -69,21 +69,14 @@ fn get_styled_lines<'a>(
 
         // NOTE: higher order (higher index) styles take precedence
         // let mut spans: Vec<_> = Vec::new();
-        // spans.extend(prefix::get_sign_style_partials(vp, bl));
-        // spans.extend(prefix::get_line_number_style_partials(vp, cursor, &i));
-        // spans.extend(line::get_cursor_style_partials(vp, mode, cursor, &i, bl));
         // spans.extend(correct_index(&content.chars().count(), &bl.style));
 
-        // if let Some(search) = &bl.search_index {
-        //     spans.extend(correct_index(&content.chars().count(), search));
-        // }
-        line::get_cursor_style_partials(vp, _mode, cursor, &i, &mut bl);
-        content.push_str(&bl.content);
+        let styled = line::add_cursor_styles(vp, _mode, cursor, &i, &mut bl);
+        content.push_str(&styled);
 
-        let text = content.into_text().unwrap();
-        result.push(text.lines);
-
-        // result.push(style::get_line(vp, content, spans));
+        if let Ok(text) = content.into_text() {
+            result.push(text.lines);
+        }
     }
 
     result.into_iter().flatten().collect()
