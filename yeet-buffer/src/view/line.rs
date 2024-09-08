@@ -31,7 +31,13 @@ pub fn add_cursor_styles(
 
         let mut content = line.content.clone();
         if !cursor.hide_cursor_line {
-            content = format!("\x1b[100m{}\x1b[0m", content);
+            let repeat_count = if content_width > line_length {
+                content_width - line_length
+            } else {
+                0
+            };
+
+            content = format!("\x1b[100m{}{}\x1b[0m", content, " ".repeat(repeat_count));
         }
 
         if cursor.hide_cursor {
