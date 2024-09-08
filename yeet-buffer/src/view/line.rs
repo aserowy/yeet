@@ -1,4 +1,7 @@
-use crate::model::{viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode};
+use crate::{
+    ansi,
+    model::{viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode},
+};
 
 pub fn add_cursor_styles(
     vp: &ViewPort,
@@ -14,15 +17,16 @@ pub fn add_cursor_styles(
 
         let content_width = vp.get_content_width(line);
 
+        // TODO: slice function which preserves ansi codes
         let content = &line.content[vp.horizontal_index..];
-        let chars_count = content.chars().count();
+        let char_count = ansi::get_char_count(content);
 
-        let line_length = if chars_count > content_width {
+        let line_length = if char_count > content_width {
             content_width
-        } else if chars_count == 0 {
+        } else if char_count == 0 {
             1
         } else {
-            chars_count
+            char_count
         };
 
         let mut content = line.content.clone();
@@ -43,32 +47,8 @@ pub fn add_cursor_styles(
             } => *current - vp.horizontal_index,
         };
 
-        // spans.push(StylePartialSpan {
-        //     start: offset + cursor_index,
-        //     end: offset + cursor_index + 1,
-        //     style: get_cursor_partial_style(mode),
-        // });
-        //
-
-        return content;
+        content
+    } else {
+        line.content.clone()
     }
-    return line.content.clone();
 }
-
-// fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
-//     match mode {
-//         Mode::Command(_) => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
-//         Mode::Insert => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
-//         Mode::Navigation => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
-//         Mode::Normal => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
-//     }
-// }
-//
-// fn get_cursor_partial_style(mode: &Mode) -> StylePartial {
-//     match mode {
-//         Mode::Command(_) => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
-//         Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
-//         Mode::Navigation => CURSOR_NAV_STYLE_PARTIAL.clone(),
-//         Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
-//     }
-// }
