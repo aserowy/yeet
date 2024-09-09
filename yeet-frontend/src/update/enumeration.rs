@@ -130,21 +130,13 @@ pub fn update_on_enumeration_finished(
 }
 
 pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
-    // TODO: refactor with by path
-    // let style = if kind == &ContentKind::Directory {
-    //     let length = content.chars().count();
-    //     vec![StylePartialSpan {
-    //         end: length,
-    //         style: StylePartial::Foreground(Color::LightBlue),
-    //         ..Default::default()
-    //     }]
-    // } else {
-    //     vec![]
-    // };
+    let content = match kind {
+        ContentKind::Directory => format!("\x1b[94m{}\x1b[39m", content),
+        _ => content.to_string(),
+    };
 
     BufferLine {
-        content: content.to_string(),
-        // style,
+        content,
         ..Default::default()
     }
 }

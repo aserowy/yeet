@@ -217,42 +217,21 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
                 content: cntnt.to_string(),
                 ..Default::default()
             },
-            PrintContent::Error(cntnt) => {
-                let cntnt_len = cntnt.chars().count();
-                BufferLine {
-                    content: cntnt.to_string(),
-                    // style: vec![StylePartialSpan {
-                    //     end: cntnt_len,
-                    //     style: StylePartial::Foreground(Color::Red),
-                    //     ..Default::default()
-                    // }],
-                    ..Default::default()
-                }
-            }
-            PrintContent::Information(cntnt) => {
-                let cntnt_len = cntnt.chars().count();
-                BufferLine {
-                    content: cntnt.to_string(),
-                    // style: vec![StylePartialSpan {
-                    //     end: cntnt_len,
-                    //     style: StylePartial::Foreground(Color::LightGreen),
-                    //     ..Default::default()
-                    // }],
-                    ..Default::default()
-                }
-            }
+            PrintContent::Error(cntnt) => BufferLine {
+                content: format!("\x1b31m{}\x1b39m", cntnt),
+                ..Default::default()
+            },
+            PrintContent::Information(cntnt) => BufferLine {
+                content: format!("\x1b92m{}\x1b39m", cntnt),
+                ..Default::default()
+            },
         })
         .collect();
 
     let actions = if commandline.buffer.lines.len() > 1 {
         let content = "Press ENTER or type command to continue";
         commandline.buffer.lines.push(BufferLine {
-            content: content.to_string(),
-            // style: vec![StylePartialSpan {
-            //     end: content.chars().count(),
-            //     style: StylePartial::Foreground(Color::LightBlue),
-            //     ..Default::default()
-            // }],
+            content: format!("\x1b94m{}\x1b39m", content),
             ..Default::default()
         });
 

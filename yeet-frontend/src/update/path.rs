@@ -122,21 +122,14 @@ fn from(path: &Path) -> BufferLine {
         None => "".to_string(),
     };
 
-    // TODO: Handle transition states like adding, removing, renaming
-    // let style = if path.is_dir() {
-    //     let length = content.chars().count();
-    //     vec![StylePartialSpan {
-    //         end: length,
-    //         style: StylePartial::Foreground(Color::LightBlue),
-    //         ..Default::default()
-    //     }]
-    // } else {
-    //     vec![]
-    // };
+    let content = if path.is_dir() {
+        format!("\x1b[94m{}\x1b[39m", content)
+    } else {
+        content
+    };
 
     BufferLine {
         content,
-        // style,
         ..Default::default()
     }
 }

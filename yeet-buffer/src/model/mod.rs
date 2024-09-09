@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::message::CursorDirection;
+use crate::{ansi, message::CursorDirection};
 
 use self::{
     undo::{BufferChanged, Undo},
@@ -111,7 +111,7 @@ impl BufferLine {
     }
 
     pub fn len(&self) -> usize {
-        self.content.chars().count()
+        ansi::get_char_count(&self.content)
     }
 }
 
