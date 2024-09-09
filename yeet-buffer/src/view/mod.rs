@@ -67,10 +67,6 @@ fn get_styled_lines<'a>(
         content.push_str(&prefix::get_custom_prefix(&bl));
         content.push_str(&prefix::get_border(vp));
 
-        // NOTE: higher order (higher index) styles take precedence
-        // let mut spans: Vec<_> = Vec::new();
-        // spans.extend(correct_index(&content.chars().count(), &bl.style));
-
         let styled = line::add_cursor_styles(vp, _mode, cursor, &i, &mut bl);
         content.push_str(&styled);
 

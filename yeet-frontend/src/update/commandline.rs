@@ -218,11 +218,11 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
                 ..Default::default()
             },
             PrintContent::Error(cntnt) => BufferLine {
-                content: format!("\x1b31m{}\x1b39m", cntnt),
+                content: format!("\x1b[31m{}\x1b[39m", cntnt),
                 ..Default::default()
             },
             PrintContent::Information(cntnt) => BufferLine {
-                content: format!("\x1b92m{}\x1b39m", cntnt),
+                content: format!("\x1b[92m{}\x1b[39m", cntnt),
                 ..Default::default()
             },
         })
@@ -231,7 +231,7 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
     let actions = if commandline.buffer.lines.len() > 1 {
         let content = "Press ENTER or type command to continue";
         commandline.buffer.lines.push(BufferLine {
-            content: format!("\x1b94m{}\x1b39m", content),
+            content: format!("\x1b[94m{}\x1b[39m", content),
             ..Default::default()
         });
 
