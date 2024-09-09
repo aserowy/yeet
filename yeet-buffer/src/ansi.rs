@@ -31,7 +31,7 @@ pub fn get_index_for_char(s: &str, count: usize) -> Option<usize> {
     None
 }
 
-pub fn get_ansi_escape_sequences_till_char_count(s: &str, count: usize) -> String {
+pub fn get_ansi_escape_sequences_till_char(s: &str, count: usize) -> String {
     if count == 0 {
         return String::new();
     }
@@ -149,7 +149,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_normal() {
         let s = "hello";
         let count = 2;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "");
     }
 
@@ -157,7 +157,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_start() {
         let s = "hello";
         let count = 0;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "");
     }
 
@@ -165,7 +165,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_end() {
         let s = "hello";
         let count = 5;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "");
     }
 
@@ -173,7 +173,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_out_of_bounds() {
         let s = "hello";
         let count = 10;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "");
     }
 
@@ -181,7 +181,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_with_ansi_escape_codes_at_start() {
         let s = "\x1b[31mhello\x1b[0m";
         let count = 1;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "\x1b[31m");
     }
 
@@ -189,7 +189,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_with_ansi_escape_codes() {
         let s = "\x1b[31mhello\x1b[0m";
         let count = 0;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "");
     }
 
@@ -197,7 +197,7 @@ mod tests {
     fn get_ansi_escape_sequences_till_char_count_with_ansi_escape_codes_out_of_bounds() {
         let s = "\x1b[31mhello\x1b[0m";
         let count = 10;
-        let result = get_ansi_escape_sequences_till_char_count(s, count);
+        let result = get_ansi_escape_sequences_till_char(s, count);
         assert_eq!(result, "\x1b[31m\x1b[0m");
     }
 }

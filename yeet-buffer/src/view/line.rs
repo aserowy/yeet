@@ -16,11 +16,18 @@ pub fn add_cursor_styles(
         }
 
         let content_width = vp.get_content_width(line);
+        let horizontal_index = match ansi::get_index_for_char(&line.content, vp.horizontal_index) {
+            Some(i) => i,
+            None => 0,
+        };
 
-        // TODO: slice function which preserves ansi codes
-        let content = &line.content[vp.horizontal_index..];
-        let char_count = ansi::get_char_count(content);
+        let mut content = format!(
+            "{}{}",
+            ansi::get_ansi_escape_sequences_till_char(&line.content, vp.horizontal_index),
+            &line.content[horizontal_index..]
+        );
 
+        let char_count = ansi::get_char_count(&content);
         let line_length = if char_count > content_width {
             content_width
         } else if char_count == 0 {
@@ -29,16 +36,16 @@ pub fn add_cursor_styles(
             char_count
         };
 
-        let mut content = line.content.clone();
-        if !cursor.hide_cursor_line {
-            let repeat_count = if content_width > line_length {
-                content_width - line_length
-            } else {
-                0
-            };
-
-            content = format!("\x1b[100m{}{}\x1b[0m", content, " ".repeat(repeat_count));
-        }
+        let repeat_count = if content_width > line_length {
+            content_width - line_length
+        } else {
+            0
+        };
+        content = if cursor.hide_cursor_line {
+            format!("{}{}", content, " ".repeat(repeat_count))
+        } else {
+            format!("\x1b[100m{}{}\x1b[0m", content, " ".repeat(repeat_count))
+        };
 
         if cursor.hide_cursor {
             return content;
@@ -62,13 +69,13 @@ pub fn add_cursor_styles(
         // https://github.com/ratatui/ansi-to-tui/issues/50
         let reset = format!(
             "\x1b[0m{}",
-            ansi::get_ansi_escape_sequences_till_char_count(&content, cursor_on_char_count)
+            ansi::get_ansi_escape_sequences_till_char(&content, cursor_on_char_count)
         );
 
-        let (code, reset) = if matches!(mode, Mode::Insert | Mode::Normal) {
-            ("\x1b[7m", reset.as_str())
-        } else {
-            ("", "")
+        let (code, reset) = match mode {
+            Mode::Command(_) | Mode::Normal => ("\x1b[7m", reset.as_str()),
+            Mode::Insert => ("\x1b[4m", reset.as_str()),
+            Mode::Navigation => ("", ""),
         };
 
         let content = format!(
