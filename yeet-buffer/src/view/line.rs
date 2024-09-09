@@ -42,7 +42,7 @@ pub fn add_cursor_styles(
         }
 
         let cursor_index = match &cursor.horizontal_index {
-            CursorPosition::End => line_length,
+            CursorPosition::End => line_length - 1,
             CursorPosition::None => return content,
             CursorPosition::Absolute {
                 current,

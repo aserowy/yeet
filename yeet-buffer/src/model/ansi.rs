@@ -47,48 +47,41 @@ impl Ansi {
     }
 
     pub fn skip_chars(&self, count: usize) -> Self {
-        let mut current_count = 0;
-        let mut is_ansi = false;
-        let mut content = String::new();
-        for c in self.content.chars() {
-            if c == '\x1b' {
-                is_ansi = true;
-            } else if is_ansi && c == 'm' {
-                is_ansi = false;
-            } else if !is_ansi {
-                current_count += 1;
-            }
-            if current_count > count {
-                content.push(c);
-            }
+        let index = self.count_to_index(count);
+        match self.content.get(index..) {
+            Some(content) => Self::new(content),
+            None => Ansi::new(""),
         }
-        return Self::new(&content);
     }
 
     pub fn take_chars(&self, count: usize) -> Self {
+        let index = self.count_to_index(count);
+        match self.content.get(..index) {
+            Some(content) => Self::new(content),
+            None => self.clone(),
+        }
+    }
+
+    fn count_to_index(&self, count: usize) -> usize {
         if count == 0 {
-            return Self::new("");
+            return 0;
         }
         let mut current_count = 0;
         let mut is_ansi = false;
-        let mut content = String::new();
-        for c in self.content.chars() {
+        let max_index = self.content.len() - 1;
+        for (i, c) in self.content.chars().enumerate() {
             if c == '\x1b' {
                 is_ansi = true;
-                content.push(c);
             } else if is_ansi && c == 'm' {
                 is_ansi = false;
-                content.push(c);
-            } else if is_ansi {
-                content.push(c);
             } else if !is_ansi {
                 current_count += 1;
-                if current_count <= count {
-                    content.push(c);
-                }
+            }
+            if current_count == count {
+                return i + 1;
             }
         }
-        return Self::new(&content);
+        return max_index;
     }
 
     pub fn join(&mut self, other: &Self) -> Self {
@@ -99,31 +92,27 @@ impl Ansi {
         self.content.push_str(s);
     }
 
-    pub fn insert(&mut self, index: usize, s: &str) {
-        self.content = format!(
-            "{}{}{}",
-            self.take_chars(index).to_string(),
-            s,
-            self.skip_chars(index).to_string()
-        );
+    pub fn insert(&mut self, count: usize, s: &str) {
+        let index = self.count_to_index(count);
+        self.content.insert_str(index, s);
     }
 
     pub fn prepend(&mut self, s: &str) {
         self.content.insert_str(0, s);
     }
 
-    pub fn remove(&mut self, index: usize, count: usize) {
-        self.content = self
-            .take_chars(index)
-            .join(&self.skip_chars(index + count))
-            .content;
+    pub fn remove(&mut self, count: usize, size: usize) {
+        let index_start = self.count_to_index(count);
+        let index_end = self.count_to_index(count + size);
+        for _ in 0..(index_end - index_start) {
+            self.content.remove(index_start);
+        }
     }
 
     pub fn get_ansi_escape_sequences_till_char(&self, count: usize) -> String {
         if count == 0 {
             return String::new();
         }
-
         let mut current_count = 0;
         let mut is_ansi = false;
         let mut result = String::new();
@@ -176,19 +165,39 @@ mod tests {
     #[test]
     fn test_skip_chars() {
         let ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
+        let skipped = ansi.skip_chars(5);
+        assert_eq!(skipped.content, ", \x1b[31mworld\x1b[0m!");
+
+        let ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
         let skipped = ansi.skip_chars(7);
         assert_eq!(skipped.content, "\x1b[31mworld\x1b[0m!");
+
+        let ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
+        let skipped = ansi.skip_chars(0);
+        assert_eq!(skipped.content, "Hello, \x1b[31mworld\x1b[0m!");
+
+        let ansi = Ansi::new("Hello");
+        let skipped = ansi.skip_chars(5);
+        assert_eq!(skipped.content, "");
     }
 
     #[test]
     fn test_take_chars() {
         let ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
         let taken = ansi.take_chars(5);
-        assert_eq!(taken.content, "Hello\u{1b}[31m\u{1b}[0m");
+        assert_eq!(taken.content, "Hello");
+
+        let ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
+        let taken = ansi.take_chars(8);
+        assert_eq!(taken.content, "Hello, \x1b[31mw");
 
         let ansi = Ansi::new("\x1b[12mHello, \x1b[31mworld\x1b[0m!");
         let taken = ansi.take_chars(0);
         assert_eq!(taken.content, "");
+
+        let ansi = Ansi::new("Hello");
+        let skipped = ansi.take_chars(5);
+        assert_eq!(skipped.content, "Hello");
     }
 
     #[test]
@@ -214,6 +223,12 @@ mod tests {
 
         ansi.insert(0, "\x1b[31m");
         assert_eq!(ansi.content, "\x1b[31mHello, asdf\x1b[31mworld!");
+
+        let mut ansi = Ansi::new("");
+        ansi.insert(0, "1");
+        ansi.insert(1, "2");
+        ansi.insert(2, "3");
+        assert_eq!(ansi.content, "123");
     }
 
     #[test]
@@ -227,7 +242,7 @@ mod tests {
     fn test_remove() {
         let mut ansi = Ansi::new("Hello, \x1b[31mworld\x1b[0m!");
         ansi.remove(7, 5);
-        assert_eq!(ansi.content, "Hello, \x1b[31m\x1b[0m\x1b[31m\x1b[0m!");
+        assert_eq!(ansi.content, "Hello, \x1b[0m!");
     }
 
     #[test]
