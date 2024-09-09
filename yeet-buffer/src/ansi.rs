@@ -31,6 +31,21 @@ pub fn get_index_for_char(s: &str, count: usize) -> Option<usize> {
     None
 }
 
+pub fn get_stripped(s: &str) -> String {
+    let mut is_ansi = false;
+    let mut result = String::new();
+    for c in s.chars() {
+        if c == '\x1b' {
+            is_ansi = true;
+        } else if is_ansi && c == 'm' {
+            is_ansi = false;
+        } else if !is_ansi {
+            result.push(c);
+        }
+    }
+    result
+}
+
 pub fn get_ansi_escape_sequences_till_char(s: &str, count: usize) -> String {
     if count == 0 {
         return String::new();

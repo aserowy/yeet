@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use yeet_buffer::model::BufferLine;
+use yeet_buffer::{ansi, model::BufferLine};
 use yeet_keymap::message::Message;
 
 use crate::{action::Action, model::Model};
@@ -17,7 +17,12 @@ pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
         return None;
     }
 
-    let target = model.files.current.path.join(&current.content);
+    let target = model
+        .files
+        .current
+        .path
+        .join(ansi::get_stripped(&current.content));
+
     if target.exists() {
         Some(target)
     } else {
