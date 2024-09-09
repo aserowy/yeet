@@ -47,14 +47,14 @@ pub fn add_cursor_styles(
             CursorPosition::Absolute {
                 current,
                 expanded: _,
-            } => *current + 1,
+            } => *current,
         };
 
         // FIX: reset should just use the ansi code for reset inverse (27)
         // https://github.com/ratatui/ansi-to-tui/issues/50
         let reset = format!(
             "\x1b[0m{}",
-            content.get_ansi_escape_sequences_till_char(cursor_index)
+            content.get_ansi_escape_sequences_till_char(cursor_index + 1)
         );
 
         let (code, reset) = match mode {
