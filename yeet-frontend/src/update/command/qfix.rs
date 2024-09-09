@@ -23,7 +23,7 @@ pub fn clear_qfix_list_in_current(model: &mut Model, additional_action: Action) 
             continue;
         }
 
-        let path = current_path.join(&bl.content);
+        let path = current_path.join(&bl.content.to_stripped_string());
         if model.qfix.entries.contains(&path) {
             model.qfix.entries.retain(|p| p != &path);
             unset_sign(bl, QFIX_SIGN_ID);
@@ -119,7 +119,7 @@ pub fn invert_qfix_selection_in_current(
             continue;
         }
 
-        let path = current_path.join(&bl.content);
+        let path = current_path.join(&bl.content.to_stripped_string());
         if model.qfix.entries.contains(&path) {
             model.qfix.entries.retain(|p| p != &path);
             unset_sign(bl, QFIX_SIGN_ID);

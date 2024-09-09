@@ -88,7 +88,7 @@ pub fn update_buffer(
                 .lines
                 .iter()
                 .enumerate()
-                .find(|(_, line)| &line.content == content);
+                .find(|(_, line)| &line.content.to_stripped_string() == content);
 
             if let Some((index, _)) = line {
                 cursor.vertical_index = index;

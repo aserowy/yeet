@@ -83,6 +83,7 @@ fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Opt
     }
 
     line.content
+        .to_stripped_string()
         .chars()
         .take(index)
         .collect::<Vec<_>>()
@@ -103,6 +104,7 @@ fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> 
 
     current
         .content
+        .to_stripped_string()
         .chars()
         .skip(index + 1)
         .position(|c| &c == find)

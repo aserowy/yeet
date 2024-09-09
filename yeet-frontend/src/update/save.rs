@@ -28,7 +28,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
         update_buffer(
             &model.mode,
             &mut model.files.current.buffer,
-            &BufferMessage::SetCursorToLineContent(selection),
+            &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
         );
     }
 
@@ -47,17 +47,22 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
                 match modification {
                     BufferChanged::LineAdded(_, name) => {
                         if !name.is_empty() {
-                            actions.push(Action::Task(Task::AddPath(path.join(name))))
+                            actions.push(Action::Task(Task::AddPath(
+                                path.join(name.to_stripped_string()),
+                            )))
                         }
                     }
                     BufferChanged::LineRemoved(_, name) => {
-                        trashes.push(path.join(name));
+                        trashes.push(path.join(name.to_stripped_string()));
                     }
                     BufferChanged::Content(_, old_name, new_name) => {
                         let task = if new_name.is_empty() {
-                            Task::DeletePath(path.join(old_name))
+                            Task::DeletePath(path.join(old_name.to_stripped_string()))
                         } else {
-                            Task::RenamePath(path.join(old_name), path.join(new_name))
+                            Task::RenamePath(
+                                path.join(old_name.to_stripped_string()),
+                                path.join(new_name.to_stripped_string()),
+                            )
                         };
                         actions.push(Action::Task(task));
                     }

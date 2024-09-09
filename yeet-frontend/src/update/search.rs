@@ -1,4 +1,3 @@
-use ratatui::style::Color;
 use yeet_buffer::model::Buffer;
 
 use crate::{action::Action, model::Model};
@@ -45,23 +44,23 @@ pub fn clear_search(model: &mut Model) -> Vec<Action> {
 
 fn set_styles(buffer: &mut Buffer, search: &str) {
     let _len = search.chars().count();
-    let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
+    let _smart_case = search.chars().all(|c| c.is_ascii_lowercase());
 
-    for line in &mut buffer.lines {
-        line.search_index = None;
-
-        let mut content = line.content.as_str();
-
-        let lower = content.to_lowercase();
-        if smart_case {
-            content = lower.as_str();
-        };
-
-        let _start = match content.find(search) {
-            Some(it) => content[..it].chars().count(),
-            None => continue,
-        };
-
+    for _line in &mut buffer.lines {
+        // line.search_index = None;
+        //
+        // let mut content = line.content.as_str();
+        //
+        // let lower = content.to_lowercase();
+        // if smart_case {
+        //     content = lower.as_str();
+        // };
+        //
+        // let _start = match content.find(search) {
+        //     Some(it) => content[..it].chars().count(),
+        //     None => continue,
+        // };
+        //
         // line.search_index = Some(vec![
         //     StylePartialSpan {
         //         start,

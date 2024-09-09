@@ -87,7 +87,10 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         None => return,
     };
 
-    if let Some(line) = lines.iter_mut().find(|bl| bl.content == file_name) {
+    if let Some(line) = lines
+        .iter_mut()
+        .find(|bl| bl.content.to_stripped_string() == file_name)
+    {
         unset_sign(line, sign_id);
     }
 }

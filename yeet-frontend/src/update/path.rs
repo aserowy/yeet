@@ -5,7 +5,7 @@ use std::{
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{Buffer, BufferLine, Mode},
+    model::{ansi::Ansi, Buffer, BufferLine, Mode},
     update::update_buffer,
 };
 
@@ -47,10 +47,11 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
             .iter()
             .enumerate()
             .map(|(i, bl)| {
-                let key = if bl.content.contains('/') {
-                    bl.content.split('/').collect::<Vec<_>>()[0].to_string()
+                let content = bl.content.to_stripped_string();
+                let key = if content.contains('/') {
+                    content.split('/').collect::<Vec<_>>()[0].to_string()
                 } else {
-                    bl.content.clone()
+                    content.clone()
                 };
 
                 (key, i)
@@ -113,7 +114,10 @@ fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
         None => return None,
     };
 
-    model.lines.get(index).map(|line| line.content.clone())
+    model
+        .lines
+        .get(index)
+        .map(|line| line.content.to_stripped_string())
 }
 
 fn from(path: &Path) -> BufferLine {
@@ -129,7 +133,7 @@ fn from(path: &Path) -> BufferLine {
     };
 
     BufferLine {
-        content,
+        content: Ansi::new(&content),
         ..Default::default()
     }
 }
@@ -162,7 +166,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
                     .lines
                     .iter()
                     .enumerate()
-                    .find(|(_, bl)| bl.content == basename)
+                    .find(|(_, bl)| bl.content.to_stripped_string() == basename)
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {

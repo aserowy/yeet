@@ -1,28 +1,26 @@
 use std::cmp::Reverse;
 
-use crate::{
-    ansi,
-    model::{
-        viewport::{LineNumber, ViewPort},
-        BufferLine, Cursor,
-    },
+use crate::model::{
+    ansi::Ansi,
+    viewport::{LineNumber, ViewPort},
+    BufferLine, Cursor,
 };
 
-pub fn get_border(vp: &ViewPort) -> String {
-    " ".repeat(vp.get_border_width()).to_string()
+pub fn get_border(vp: &ViewPort) -> Ansi {
+    Ansi::new(&" ".repeat(vp.get_border_width()))
 }
 
-pub fn get_custom_prefix(line: &BufferLine) -> String {
+pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     if let Some(prefix) = &line.prefix {
-        prefix.to_owned()
+        Ansi::new(prefix)
     } else {
-        "".to_string()
+        Ansi::new("")
     }
 }
 
-pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> String {
+pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> Ansi {
     if vp.line_number == LineNumber::None {
-        return "".to_string();
+        return Ansi::new("");
     }
 
     let width = vp.get_line_number_width();
@@ -37,13 +35,13 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
 
     if let Some(cursor) = cursor {
         if cursor.vertical_index == index {
-            return format!("\x1b[1m{:<width$}\x1b[0m", number);
+            return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
         }
     }
 
     match vp.line_number {
-        LineNumber::Absolute => format!("{:>width$} ", number),
-        LineNumber::None => "".to_string(),
+        LineNumber::Absolute => Ansi::new(&format!("{:>width$} ", number)),
+        LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             if let Some(cursor) = cursor {
                 let relative = if cursor.vertical_index > index {
@@ -52,15 +50,15 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
                     index - cursor.vertical_index
                 };
 
-                format!("\x1b[90m{:>width$}\x1b[0m", relative)
+                Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
             } else {
-                format!("{:>width$}", number)
+                Ansi::new(&format!("{:>width$}", number))
             }
         }
     }
 }
 
-pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
+pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> Ansi {
     let max_sign_count = vp.sign_column_width;
 
     let mut filtered: Vec<_> = bl
@@ -71,16 +69,20 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
 
     filtered.sort_unstable_by_key(|s| Reverse(s.priority));
 
-    let signs = filtered
+    let signs_string = filtered
         .iter()
         .take(max_sign_count)
         .map(|s| format!("{}{}\x1b[0m", s.style, s.content))
         .collect::<String>();
 
-    let char_count = ansi::get_char_count(&signs);
-
+    let signs = Ansi::new(&signs_string);
+    let char_count = signs.count_chars();
     if char_count < max_sign_count {
-        format!("{}{}", signs, " ".repeat(max_sign_count - char_count))
+        Ansi::new(&format!(
+            "{}{}",
+            signs.to_string(),
+            " ".repeat(max_sign_count - char_count)
+        ))
     } else {
         signs
     }

@@ -63,8 +63,9 @@ mod viewport;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
     a.content
+        .to_stripped_string()
         .to_ascii_uppercase()
-        .cmp(&b.content.to_ascii_uppercase())
+        .cmp(&b.content.to_stripped_string().to_ascii_uppercase())
 };
 
 #[tracing::instrument(skip(model))]

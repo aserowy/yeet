@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::{viewport::ViewPort, Buffer, BufferLine, Cursor, Mode};
+use crate::model::{ansi::Ansi, viewport::ViewPort, Buffer, BufferLine, Cursor, Mode};
 
 mod line;
 mod prefix;
@@ -61,16 +61,14 @@ fn get_styled_lines<'a>(
     for (i, mut bl) in lines.into_iter().enumerate() {
         let corrected_index = i + vp.vertical_index;
 
-        let mut content = String::new();
-        content.push_str(&prefix::get_signs(vp, &bl));
-        content.push_str(&prefix::get_line_number(vp, corrected_index, cursor));
-        content.push_str(&prefix::get_custom_prefix(&bl));
-        content.push_str(&prefix::get_border(vp));
+        let content = Ansi::new("")
+            .join(&prefix::get_signs(vp, &bl))
+            .join(&prefix::get_line_number(vp, corrected_index, cursor))
+            .join(&prefix::get_custom_prefix(&bl))
+            .join(&prefix::get_border(vp))
+            .join(&line::add_cursor_styles(vp, _mode, cursor, &i, &mut bl));
 
-        let styled = line::add_cursor_styles(vp, _mode, cursor, &i, &mut bl);
-        content.push_str(&styled);
-
-        if let Ok(text) = content.into_text() {
+        if let Ok(text) = content.to_string().into_text() {
             result.push(text.lines);
         }
     }

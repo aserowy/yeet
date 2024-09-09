@@ -1,6 +1,10 @@
 use std::path::PathBuf;
 
-use yeet_buffer::{message::BufferMessage, model::BufferLine, update::update_buffer};
+use yeet_buffer::{
+    message::BufferMessage,
+    model::{ansi::Ansi, BufferLine},
+    update::update_buffer,
+};
 
 use crate::{
     action::Action,
@@ -38,7 +42,7 @@ pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) -> 
         let content = content
             .iter()
             .map(|s| BufferLine {
-                content: s.to_string(),
+                content: Ansi::new(s),
                 ..Default::default()
             })
             .collect();

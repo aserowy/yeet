@@ -346,7 +346,10 @@ fn update_parent(model: &mut Model) {
             };
 
             let current_line = match current_filename {
-                Some(content) => buffer.lines.iter().position(|line| line.content == content),
+                Some(content) => buffer
+                    .lines
+                    .iter()
+                    .position(|line| line.content.to_stripped_string() == content),
                 None => None,
             };
 

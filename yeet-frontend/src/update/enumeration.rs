@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::{BufferLine, Cursor, CursorPosition, Mode},
+    model::{ansi::Ansi, BufferLine, Cursor, CursorPosition, Mode},
     update::update_buffer,
 };
 use yeet_keymap::message::ContentKind;
@@ -136,7 +136,7 @@ pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
     };
 
     BufferLine {
-        content,
+        content: Ansi::new(&content),
         ..Default::default()
     }
 }

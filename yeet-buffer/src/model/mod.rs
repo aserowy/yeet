@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use crate::{ansi, message::CursorDirection};
+use crate::message::CursorDirection;
 
 use self::{
-    undo::{BufferChanged, Undo},
-    viewport::ViewPort,
+    ansi::Ansi, undo::{BufferChanged, Undo}, viewport::ViewPort
 };
 
+pub mod ansi;
 pub mod undo;
 pub mod viewport;
 
@@ -100,7 +100,7 @@ impl Default for CursorPosition {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct BufferLine {
     pub prefix: Option<String>,
-    pub content: String,
+    pub content: Ansi,
     pub search_index: Option<Vec<usize>>,
     pub signs: Vec<Sign>,
 }
@@ -111,7 +111,7 @@ impl BufferLine {
     }
 
     pub fn len(&self) -> usize {
-        ansi::get_char_count(&self.content)
+        self.content.count_chars()
     }
 }
 

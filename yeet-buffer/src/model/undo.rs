@@ -1,6 +1,6 @@
 use std::time;
 
-use super::Mode;
+use super::{ansi::Ansi, Mode};
 
 struct Transaction {
     changes: Vec<BufferChanged>,
@@ -9,9 +9,9 @@ struct Transaction {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum BufferChanged {
-    Content(usize, String, String),
-    LineAdded(usize, String),
-    LineRemoved(usize, String),
+    Content(usize, Ansi, Ansi),
+    LineAdded(usize, Ansi),
+    LineRemoved(usize, Ansi),
 }
 
 #[derive(Default)]
@@ -141,15 +141,15 @@ fn update(
 fn update_current(
     current: &BufferChanged,
     new_line_number: &usize,
-    new_content: &str,
+    new_content: &Ansi,
 ) -> Option<BufferChanged> {
     match current {
         BufferChanged::Content(current_ln, ld, _) => {
             if current_ln == new_line_number {
                 Some(BufferChanged::Content(
                     *current_ln,
-                    ld.to_string(),
-                    new_content.to_string(),
+                    ld.clone(),
+                    new_content.clone(),
                 ))
             } else {
                 None
@@ -157,10 +157,7 @@ fn update_current(
         }
         BufferChanged::LineAdded(current_ln, _) => {
             if current_ln == new_line_number {
-                Some(BufferChanged::LineAdded(
-                    *current_ln,
-                    new_content.to_string(),
-                ))
+                Some(BufferChanged::LineAdded(*current_ln, new_content.clone()))
             } else {
                 None
             }
@@ -183,7 +180,7 @@ pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChan
                                 let corrected_vec_index = max_index - rev_index;
 
                                 consolidated_changes[corrected_vec_index] =
-                                    BufferChanged::Content(*c_i, old.to_string(), new.to_string());
+                                    BufferChanged::Content(*c_i, old.clone(), new.clone());
 
                                 continue 'changes;
                             }
@@ -194,7 +191,7 @@ pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChan
                                 let corrected_vec_index = max_index - rev_index;
 
                                 consolidated_changes[corrected_vec_index] =
-                                    BufferChanged::LineAdded(*c_i, new.to_string());
+                                    BufferChanged::LineAdded(*c_i, new.clone());
 
                                 continue 'changes;
                             } else if &index >= c_i {
@@ -257,8 +254,10 @@ pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChan
 }
 
 mod test {
+
     #[test]
     fn get_uncommited_changes() {
+        use crate::model::ansi::Ansi;
         use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
@@ -269,8 +268,8 @@ mod test {
         undo.add(
             &crate::model::Mode::Insert,
             vec![
-                BufferChanged::LineAdded(0, "a".to_string()),
-                BufferChanged::LineRemoved(4, "m".to_string()),
+                BufferChanged::LineAdded(0, Ansi::new("a")),
+                BufferChanged::LineRemoved(4, Ansi::new("m")),
             ],
         );
 
@@ -282,49 +281,49 @@ mod test {
         assert_eq!(
             changes,
             vec![
-                BufferChanged::LineAdded(0, "a".to_string()),
-                BufferChanged::LineRemoved(4, "m".to_string()),
+                BufferChanged::LineAdded(0, Ansi::new("a")),
+                BufferChanged::LineRemoved(4, Ansi::new("m")),
             ]
         );
 
         undo.add(
             &crate::model::Mode::Normal,
-            vec![BufferChanged::LineAdded(2, "h".to_string())],
+            vec![BufferChanged::LineAdded(2, Ansi::new("h"))],
         );
         let changes = undo.get_uncommited_changes();
         assert_eq!(
             changes,
             vec![
-                BufferChanged::LineAdded(0, "a".to_string()),
-                BufferChanged::LineRemoved(4, "m".to_string()),
-                BufferChanged::LineAdded(2, "h".to_string()),
+                BufferChanged::LineAdded(0, Ansi::new("a")),
+                BufferChanged::LineRemoved(4, Ansi::new("m")),
+                BufferChanged::LineAdded(2, Ansi::new("h")),
             ]
         );
 
         undo.add(
             &crate::model::Mode::Insert,
-            vec![BufferChanged::LineRemoved(5, "m".to_string())],
+            vec![BufferChanged::LineRemoved(5, Ansi::new("m"))],
         );
         let changes = undo.save();
         assert_eq!(
             changes,
             vec![
-                BufferChanged::LineAdded(0, "a".to_string()),
-                BufferChanged::LineRemoved(4, "m".to_string()),
-                BufferChanged::LineAdded(2, "h".to_string()),
-                BufferChanged::LineRemoved(5, "m".to_string()),
+                BufferChanged::LineAdded(0, Ansi::new("a")),
+                BufferChanged::LineRemoved(4, Ansi::new("m")),
+                BufferChanged::LineAdded(2, Ansi::new("h")),
+                BufferChanged::LineRemoved(5, Ansi::new("m")),
             ]
         );
 
         undo.add(
             &crate::model::Mode::Normal,
-            vec![BufferChanged::LineAdded(2, "s".to_string())],
+            vec![BufferChanged::LineAdded(2, Ansi::new("s"))],
         );
         let changes = undo.get_uncommited_changes();
-        assert_eq!(changes, vec![BufferChanged::LineAdded(2, "s".to_string()),]);
+        assert_eq!(changes, vec![BufferChanged::LineAdded(2, Ansi::new("s")),]);
 
         let changes = undo.save();
-        assert_eq!(changes, vec![BufferChanged::LineAdded(2, "s".to_string()),]);
+        assert_eq!(changes, vec![BufferChanged::LineAdded(2, Ansi::new("s")),]);
 
         let changes = undo.save();
         assert_eq!(changes, vec![]);
@@ -332,34 +331,35 @@ mod test {
 
     #[test]
     fn consolidate() {
+        use crate::model::ansi::Ansi;
         use crate::model::undo::BufferChanged;
 
         let changes = vec![
-            BufferChanged::LineAdded(0, "a".to_string()),
-            BufferChanged::Content(0, "a".to_string(), "d".to_string()),
-            BufferChanged::LineRemoved(0, "d".to_string()),
-            BufferChanged::LineAdded(0, "e".to_string()),
-            BufferChanged::LineAdded(0, "f".to_string()),
-            BufferChanged::LineRemoved(0, "e".to_string()),
-            BufferChanged::LineAdded(1, "l".to_string()),
-            BufferChanged::LineAdded(2, "g".to_string()),
-            BufferChanged::Content(2, "".to_string(), "h".to_string()),
-            BufferChanged::Content(3, "i_old".to_string(), "i".to_string()),
-            BufferChanged::LineAdded(3, "j".to_string()),
-            BufferChanged::LineRemoved(3, "j".to_string()),
-            BufferChanged::Content(3, "".to_string(), "k".to_string()),
-            BufferChanged::LineRemoved(4, "m".to_string()),
+            BufferChanged::LineAdded(0, Ansi::new("a")),
+            BufferChanged::Content(0, Ansi::new("a"), Ansi::new("d")),
+            BufferChanged::LineRemoved(0, Ansi::new("d")),
+            BufferChanged::LineAdded(0, Ansi::new("e")),
+            BufferChanged::LineAdded(0, Ansi::new("f")),
+            BufferChanged::LineRemoved(0, Ansi::new("e")),
+            BufferChanged::LineAdded(1, Ansi::new("l")),
+            BufferChanged::LineAdded(2, Ansi::new("g")),
+            BufferChanged::Content(2, Ansi::new(""), Ansi::new("h")),
+            BufferChanged::Content(3, Ansi::new("i_old"), Ansi::new("i")),
+            BufferChanged::LineAdded(3, Ansi::new("j")),
+            BufferChanged::LineRemoved(3, Ansi::new("j")),
+            BufferChanged::Content(3, Ansi::new(""), Ansi::new("k")),
+            BufferChanged::LineRemoved(4, Ansi::new("m")),
         ];
         let consolidated_changes = super::consolidate_modifications(&changes);
 
         assert_eq!(
             consolidated_changes,
             vec![
-                BufferChanged::LineAdded(0, "e".to_string()),
-                BufferChanged::LineAdded(1, "l".to_string()),
-                BufferChanged::LineAdded(2, "h".to_string()),
-                BufferChanged::Content(3, "i_old".to_string(), "k".to_string()),
-                BufferChanged::LineRemoved(4, "m".to_string()),
+                BufferChanged::LineAdded(0, Ansi::new("e")),
+                BufferChanged::LineAdded(1, Ansi::new("l")),
+                BufferChanged::LineAdded(2, Ansi::new("h")),
+                BufferChanged::Content(3, Ansi::new("i_old"), Ansi::new("k")),
+                BufferChanged::LineRemoved(4, Ansi::new("m")),
             ]
         );
     }
