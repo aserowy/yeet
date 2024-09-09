@@ -5,7 +5,7 @@ use crate::{
 
 pub fn add_cursor_styles(
     vp: &ViewPort,
-    _mode: &Mode,
+    mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
     line: &mut BufferLine,
@@ -44,14 +44,41 @@ pub fn add_cursor_styles(
             return content;
         }
 
-        let _cursor_index = match &cursor.horizontal_index {
-            CursorPosition::End => line_length - vp.horizontal_index - 1,
+        let cursor_on_char_count = match &cursor.horizontal_index {
+            CursorPosition::End => line_length,
             CursorPosition::None => return content,
             CursorPosition::Absolute {
                 current,
                 expanded: _,
-            } => *current - vp.horizontal_index,
+            } => *current + 1,
         };
+
+        let cursor_index = match ansi::get_index_for_char(&content, cursor_on_char_count) {
+            Some(i) => i,
+            None => return content,
+        };
+
+        // FIX: reset should just use the ansi code for reset inverse (27)
+        // https://github.com/ratatui/ansi-to-tui/issues/50
+        let reset = format!(
+            "\x1b[0m{}",
+            ansi::get_ansi_escape_sequences_till_char_count(&content, cursor_on_char_count)
+        );
+
+        let (code, reset) = if matches!(mode, Mode::Insert | Mode::Normal) {
+            ("\x1b[7m", reset.as_str())
+        } else {
+            ("", "")
+        };
+
+        let content = format!(
+            "{}{}{}{}{}",
+            &content[..cursor_index],
+            code,
+            &content[cursor_index..cursor_index + 1],
+            reset,
+            &content[cursor_index + 1..]
+        );
 
         content
     } else {
