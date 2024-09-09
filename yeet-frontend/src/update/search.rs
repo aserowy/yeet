@@ -31,47 +31,34 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
 
 pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.parent.buffer.lines {
-        line.search_index = None;
+        line.search_char_position = None;
     }
     for line in &mut model.files.preview.buffer.lines {
-        line.search_index = None;
+        line.search_char_position = None;
     }
     for line in &mut model.files.current.buffer.lines {
-        line.search_index = None;
+        line.search_char_position = None;
     }
     Vec::new()
 }
 
 fn set_styles(buffer: &mut Buffer, search: &str) {
-    let _len = search.chars().count();
-    let _smart_case = search.chars().all(|c| c.is_ascii_lowercase());
+    let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
 
-    for _line in &mut buffer.lines {
-        // line.search_index = None;
-        //
-        // let mut content = line.content.as_str();
-        //
-        // let lower = content.to_lowercase();
-        // if smart_case {
-        //     content = lower.as_str();
-        // };
-        //
-        // let _start = match content.find(search) {
-        //     Some(it) => content[..it].chars().count(),
-        //     None => continue,
-        // };
-        //
-        // line.search_index = Some(vec![
-        //     StylePartialSpan {
-        //         start,
-        //         end: start + len,
-        //         style: StylePartial::Foreground(Color::DarkGray),
-        //     },
-        //     StylePartialSpan {
-        //         start,
-        //         end: start + len,
-        //         style: StylePartial::Background(Color::Magenta),
-        //     },
-        // ]);
+    for line in &mut buffer.lines {
+        line.search_char_position = None;
+
+        let mut content = line.content.to_stripped_string();
+        let lower = content.to_lowercase();
+        if smart_case {
+            content = lower;
+        };
+
+        let start = match content.find(search) {
+            Some(it) => content[..it].chars().count(),
+            None => continue,
+        };
+
+        line.search_char_position = Some(vec![start]);
     }
 }

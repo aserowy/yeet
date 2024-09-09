@@ -322,39 +322,39 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     let mut enumeration: Vec<_> = lines
         .iter()
         .enumerate()
-        .filter(|(_, bl)| bl.search_index.is_some())
+        .filter(|(_, bl)| bl.search_char_position.is_some())
         .collect();
 
     enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
         sort_by_index(*current, *cmp, vertical_index, direction)
     });
 
-    // for (i, line) in enumeration {
-    //     let start = match &line.search_index {
-    //         Some(it) => match it.first() {
-    //             Some(s) => s.start,
-    //             None => continue,
-    //         },
-    //         None => continue,
-    //     };
-    //
-    //     let downward = direction == &Search::Next;
-    //     if i == vertical_index {
-    //         if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
-    //             if downward && current >= &start || !downward && current <= &start {
-    //                 continue;
-    //             }
-    //         }
-    //     }
-    //
-    //     cursor.vertical_index = i;
-    //     cursor.horizontal_index = CursorPosition::Absolute {
-    //         current: start,
-    //         expanded: start,
-    //     };
-    //
-    //     break;
-    // }
+    for (i, line) in enumeration {
+        let start = match &line.search_char_position {
+            Some(it) => match it.first() {
+                Some(s) => s,
+                None => continue,
+            },
+            None => continue,
+        };
+
+        let downward = direction == &Search::Next;
+        if i == vertical_index {
+            if let CursorPosition::Absolute { current, .. } = &cursor.horizontal_index {
+                if downward && current >= &start || !downward && current <= &start {
+                    continue;
+                }
+            }
+        }
+
+        cursor.vertical_index = i;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: *start,
+            expanded: *start,
+        };
+
+        break;
+    }
 }
 
 fn sort_by_index(current: usize, cmp: usize, index: usize, direction: &Search) -> Ordering {

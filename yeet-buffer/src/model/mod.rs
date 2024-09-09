@@ -101,7 +101,7 @@ impl Default for CursorPosition {
 pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: Ansi,
-    pub search_index: Option<Vec<usize>>,
+    pub search_char_position: Option<Vec<usize>>,
     pub signs: Vec<Sign>,
 }
 
