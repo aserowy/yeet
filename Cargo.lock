@@ -51,6 +51,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 
 [[package]]
+name = "ansi-to-tui"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba3bf628a79452df9614d933012dc500f8cb6ddad8c897ff8122ea1c0b187ff7"
+dependencies = [
+ "nom",
+ "ratatui 0.26.3",
+ "simdutf8",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
+name = "ansi-to-tui"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00c4af0bef1b514c9b6a32a773caf604c1390fa7913f4eaa23bfe76f251d6a42"
+dependencies = [
+ "nom",
+ "ratatui 0.28.1",
+ "simdutf8",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -258,6 +284,19 @@ name = "colorchoice"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
+
+[[package]]
+name = "compact_str"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f86b9c4c00838774a6d902ef931eff7470720c51d90c2e32cfe15dc304737b3f"
+dependencies = [
+ "castaway",
+ "cfg-if",
+ "itoa",
+ "ryu",
+ "static_assertions",
+]
 
 [[package]]
 name = "compact_str"
@@ -678,6 +717,15 @@ name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
+
+[[package]]
+name = "itertools"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itertools"
@@ -1123,16 +1171,35 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f44c9e68fd46eda15c646fbb85e1040b657a58cdc8c98db1d97a55930d991eef"
+dependencies = [
+ "bitflags 2.6.0",
+ "cassowary",
+ "compact_str 0.7.1",
+ "itertools 0.12.1",
+ "lru",
+ "paste",
+ "stability",
+ "strum",
+ "unicode-segmentation",
+ "unicode-truncate",
+ "unicode-width",
+]
+
+[[package]]
+name = "ratatui"
 version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fdef7f9be5c0122f890d58bdf4d964349ba6a6161f705907526d891efabba57d"
 dependencies = [
  "bitflags 2.6.0",
  "cassowary",
- "compact_str",
+ "compact_str 0.8.0",
  "crossterm",
  "instability",
- "itertools",
+ "itertools 0.13.0",
  "lru",
  "paste",
  "strum",
@@ -1309,6 +1376,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "simdutf8"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
+
+[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1331,6 +1404,16 @@ checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "stability"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d904e7009df136af5297832a3ace3370cd14ff1546a232f4f185036c2736fcac"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1593,7 +1676,7 @@ version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3644627a5af5fa321c95b9b235a72fd24cd29c648c2c379431e6628655627bf"
 dependencies = [
- "itertools",
+ "itertools 0.13.0",
  "unicode-segmentation",
  "unicode-width",
 ]
@@ -1962,7 +2045,8 @@ dependencies = [
 name = "yeet-buffer"
 version = "0.0.1"
 dependencies = [
- "ratatui",
+ "ansi-to-tui 6.0.0",
+ "ratatui 0.28.1",
  "tracing",
 ]
 
@@ -1970,6 +2054,7 @@ dependencies = [
 name = "yeet-frontend"
 version = "0.0.1"
 dependencies = [
+ "ansi-to-tui 4.1.0",
  "arboard",
  "crossterm",
  "csv",
@@ -1979,7 +2064,7 @@ dependencies = [
  "infer",
  "notify",
  "pathdiff",
- "ratatui",
+ "ratatui 0.28.1",
  "tar",
  "thiserror",
  "tokio",

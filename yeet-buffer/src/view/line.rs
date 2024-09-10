@@ -1,86 +1,104 @@
-use crate::model::{
-    viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode, StylePartial, StylePartialSpan,
-};
+use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode};
 
-use super::style::{
-    CURSORLINE_NAV_STYLE_PARTIAL, CURSORLINE_NORMAL_STYLE_PARTIAL, CURSOR_COMMAND_STYLE_PARTIAL,
-    CURSOR_INSERT_STYLE_PARTIAL, CURSOR_NAV_STYLE_PARTIAL, CURSOR_NORMAL_STYLE_PARTIAL,
-};
-
-pub fn get_cursor_style_partials(
+pub fn add_line_styles(
     vp: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
-    line: &BufferLine,
-) -> Vec<StylePartialSpan> {
+    line: &mut BufferLine,
+) -> Ansi {
+    let content_width = vp.get_content_width(line);
+    let ansi = line.content.skip_chars(vp.horizontal_index);
+
+    let ansi = add_search_styles(line, &ansi);
+    let ansi = add_cursor_styles(vp, mode, cursor, index, content_width, &ansi);
+
+    ansi
+}
+
+fn add_search_styles(line: &BufferLine, ansi: &Ansi) -> Ansi {
+    if let Some(search_char_position) = &line.search_char_position {
+        let mut content = ansi.clone();
+        for (index, length) in search_char_position.iter() {
+            let reset = format!(
+                "\x1b[0m{}",
+                content.get_ansi_escape_sequences_till_char(*index + 1)
+            );
+
+            content.insert(*index, "\x1b[41m");
+            content.insert(index + length, &reset);
+        }
+        content
+    } else {
+        ansi.clone()
+    }
+}
+
+fn add_cursor_styles(
+    vp: &ViewPort,
+    mode: &Mode,
+    cursor: &Option<Cursor>,
+    index: &usize,
+    content_width: usize,
+    ansi: &Ansi,
+) -> Ansi {
+    let mut content = ansi.clone();
     if let Some(cursor) = cursor {
         if cursor.vertical_index - vp.vertical_index != *index {
-            return Vec::new();
+            return content;
         }
 
-        let offset = vp.get_offset_width(line);
-        let content_width = vp.width - offset;
-
-        let line = &line.content[vp.horizontal_index..];
-        let chars_count = line.chars().count();
-
-        let line_length = if chars_count > content_width {
+        let char_count = content.count_chars();
+        let line_length = if char_count > content_width {
             content_width
-        } else if chars_count == 0 {
+        } else if char_count == 0 {
             1
         } else {
-            chars_count
+            char_count
         };
 
-        let mut spans = Vec::new();
-        if !cursor.hide_cursor_line {
-            spans.push(StylePartialSpan {
-                start: offset,
-                end: vp.width,
-                style: get_cursorline_partial_style(mode),
-            });
-        }
+        let repeat_count = if content_width > line_length {
+            content_width - line_length
+        } else {
+            0
+        };
+        if cursor.hide_cursor_line {
+            content.append(" ".repeat(repeat_count).as_str());
+        } else {
+            content.prepend("\x1b[100m");
+            content.append(" ".repeat(repeat_count).as_str());
+            content.append("\x1b[0m");
+        };
 
         if cursor.hide_cursor {
-            return spans;
+            return content;
         }
 
         let cursor_index = match &cursor.horizontal_index {
-            CursorPosition::End => line_length - vp.horizontal_index - 1,
-            CursorPosition::None => return spans,
+            CursorPosition::End => line_length - 1,
+            CursorPosition::None => return content,
             CursorPosition::Absolute {
                 current,
                 expanded: _,
-            } => *current - vp.horizontal_index,
+            } => *current,
         };
 
-        spans.push(StylePartialSpan {
-            start: offset + cursor_index,
-            end: offset + cursor_index + 1,
-            style: get_cursor_partial_style(mode),
-        });
+        // FIX: reset should just use the ansi code for reset inverse (27)
+        // https://github.com/ratatui/ansi-to-tui/issues/50
+        let reset = format!(
+            "\x1b[0m{}",
+            content.get_ansi_escape_sequences_till_char(cursor_index + 1)
+        );
 
-        spans
-    } else {
-        Vec::new()
-    }
-}
+        let (code, reset) = match mode {
+            Mode::Command(_) | Mode::Normal => ("\x1b[7m", reset.as_str()),
+            Mode::Insert => ("\x1b[4m", reset.as_str()),
+            Mode::Navigation => ("", ""),
+        };
 
-fn get_cursorline_partial_style(mode: &Mode) -> StylePartial {
-    match mode {
-        Mode::Command(_) => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
-        Mode::Insert => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
-        Mode::Navigation => CURSORLINE_NAV_STYLE_PARTIAL.clone(),
-        Mode::Normal => CURSORLINE_NORMAL_STYLE_PARTIAL.clone(),
+        content.insert(cursor_index, code);
+        content.insert(cursor_index + 1, reset);
     }
-}
 
-fn get_cursor_partial_style(mode: &Mode) -> StylePartial {
-    match mode {
-        Mode::Command(_) => CURSOR_COMMAND_STYLE_PARTIAL.clone(),
-        Mode::Insert => CURSOR_INSERT_STYLE_PARTIAL.clone(),
-        Mode::Navigation => CURSOR_NAV_STYLE_PARTIAL.clone(),
-        Mode::Normal => CURSOR_NORMAL_STYLE_PARTIAL.clone(),
-    }
+    content
 }

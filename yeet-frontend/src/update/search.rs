@@ -1,5 +1,4 @@
-use ratatui::style::Color;
-use yeet_buffer::model::{Buffer, StylePartial, StylePartialSpan};
+use yeet_buffer::model::Buffer;
 
 use crate::{action::Action, model::Model};
 
@@ -13,7 +12,7 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     };
 
     if model.files.parent.path.is_some() {
-        set_styles(&mut model.files.parent.buffer, search.as_str());
+        set_search_char_positions(&mut model.files.parent.buffer, search.as_str());
     }
 
     let is_preview_dir = model
@@ -24,37 +23,36 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
         .is_some_and(|p| p.is_dir());
 
     if is_preview_dir {
-        set_styles(&mut model.files.preview.buffer, search.as_str());
+        set_search_char_positions(&mut model.files.preview.buffer, search.as_str());
     }
 
-    set_styles(&mut model.files.current.buffer, search.as_str());
+    set_search_char_positions(&mut model.files.current.buffer, search.as_str());
 }
 
 pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.parent.buffer.lines {
-        line.search = None;
+        line.search_char_position = None;
     }
     for line in &mut model.files.preview.buffer.lines {
-        line.search = None;
+        line.search_char_position = None;
     }
     for line in &mut model.files.current.buffer.lines {
-        line.search = None;
+        line.search_char_position = None;
     }
     Vec::new()
 }
 
-fn set_styles(buffer: &mut Buffer, search: &str) {
-    let len = search.chars().count();
+fn set_search_char_positions(buffer: &mut Buffer, search: &str) {
     let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
+    let search_length = search.chars().count();
 
     for line in &mut buffer.lines {
-        line.search = None;
+        line.search_char_position = None;
 
-        let mut content = line.content.as_str();
-
+        let mut content = line.content.to_stripped_string();
         let lower = content.to_lowercase();
         if smart_case {
-            content = lower.as_str();
+            content = lower;
         };
 
         let start = match content.find(search) {
@@ -62,17 +60,6 @@ fn set_styles(buffer: &mut Buffer, search: &str) {
             None => continue,
         };
 
-        line.search = Some(vec![
-            StylePartialSpan {
-                start,
-                end: start + len,
-                style: StylePartial::Foreground(Color::DarkGray),
-            },
-            StylePartialSpan {
-                start,
-                end: start + len,
-                style: StylePartial::Background(Color::Magenta),
-            },
-        ]);
+        line.search_char_position = Some(vec![(start, search_length)]);
     }
 }

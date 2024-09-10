@@ -31,7 +31,7 @@ impl ViewPort {
 
     pub fn get_line_number_width(&self) -> usize {
         match self.line_number {
-            LineNumber::_Absolute => self.line_number_width,
+            LineNumber::Absolute => self.line_number_width,
             LineNumber::None => 0,
             LineNumber::Relative => self.line_number_width,
         }
@@ -54,7 +54,7 @@ impl ViewPort {
 
 #[derive(Clone, Default, PartialEq)]
 pub enum LineNumber {
-    _Absolute,
+    Absolute,
     #[default]
     None,
     Relative,

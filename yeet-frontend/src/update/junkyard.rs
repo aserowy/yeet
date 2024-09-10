@@ -157,7 +157,12 @@ pub fn yank_to_junkyard(model: &mut Model, repeat: &usize) -> Vec<Action> {
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
             if let Some(line) = current_buffer.lines.get(line_index) {
-                let target = model.files.current.path.join(&line.content);
+                let target = model
+                    .files
+                    .current
+                    .path
+                    .join(&line.content.to_stripped_string());
+
                 paths.push(target);
             }
         }

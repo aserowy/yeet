@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
-use ratatui::style::{Color, Modifier};
-
 use crate::message::CursorDirection;
 
 use self::{
+    ansi::Ansi,
     undo::{BufferChanged, Undo},
     viewport::ViewPort,
 };
 
+pub mod ansi;
 pub mod undo;
 pub mod viewport;
 
@@ -102,10 +102,9 @@ impl Default for CursorPosition {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct BufferLine {
     pub prefix: Option<String>,
-    pub content: String,
-    pub search: Option<Vec<StylePartialSpan>>,
+    pub content: Ansi,
+    pub search_char_position: Option<Vec<(usize, usize)>>,
     pub signs: Vec<Sign>,
-    pub style: Vec<StylePartialSpan>,
 }
 
 impl BufferLine {
@@ -114,7 +113,7 @@ impl BufferLine {
     }
 
     pub fn len(&self) -> usize {
-        self.content.chars().count()
+        self.content.count_chars()
     }
 }
 
@@ -125,27 +124,7 @@ pub struct Sign {
     pub id: SignIdentifier,
     pub content: char,
     pub priority: usize,
-    pub style: Vec<StylePartial>,
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct StylePartialSpan {
-    pub start: usize,
-    pub end: usize,
-    pub style: StylePartial,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum StylePartial {
-    Background(Color),
-    Foreground(Color),
-    Modifier(Modifier),
-}
-
-impl Default for StylePartial {
-    fn default() -> Self {
-        StylePartial::Foreground(Color::default())
-    }
+    pub style: String,
 }
 
 #[derive(Clone, PartialEq)]

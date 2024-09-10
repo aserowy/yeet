@@ -1,7 +1,5 @@
 use std::path::Path;
-
-use ratatui::style::Color;
-use yeet_buffer::model::{BufferLine, Sign, SignIdentifier, StylePartial};
+use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
@@ -43,14 +41,14 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
         QFIX_SIGN_ID => Some(Sign {
             id: QFIX_SIGN_ID,
             content: 'c',
+            style: "\x1b[1;95m".to_string(),
             priority: 0,
-            style: vec![StylePartial::Foreground(Color::LightMagenta)],
         }),
         MARK_SIGN_ID => Some(Sign {
             id: MARK_SIGN_ID,
             content: 'm',
+            style: "\x1b[1;96m".to_string(),
             priority: 0,
-            style: vec![StylePartial::Foreground(Color::LightBlue)],
         }),
         _ => None,
     }
@@ -89,7 +87,10 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         None => return,
     };
 
-    if let Some(line) = lines.iter_mut().find(|bl| bl.content == file_name) {
+    if let Some(line) = lines
+        .iter_mut()
+        .find(|bl| bl.content.to_stripped_string() == file_name)
+    {
         unset_sign(line, sign_id);
     }
 }

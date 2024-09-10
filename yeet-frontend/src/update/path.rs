@@ -3,10 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ratatui::style::Color;
 use yeet_buffer::{
     message::BufferMessage,
-    model::{Buffer, BufferLine, Mode, StylePartial, StylePartialSpan},
+    model::{ansi::Ansi, Buffer, BufferLine, Mode},
     update::update_buffer,
 };
 
@@ -48,10 +47,11 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
             .iter()
             .enumerate()
             .map(|(i, bl)| {
-                let key = if bl.content.contains('/') {
-                    bl.content.split('/').collect::<Vec<_>>()[0].to_string()
+                let content = bl.content.to_stripped_string();
+                let key = if content.contains('/') {
+                    content.split('/').collect::<Vec<_>>()[0].to_string()
                 } else {
-                    bl.content.clone()
+                    content.clone()
                 };
 
                 (key, i)
@@ -114,7 +114,10 @@ fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
         None => return None,
     };
 
-    model.lines.get(index).map(|line| line.content.clone())
+    model
+        .lines
+        .get(index)
+        .map(|line| line.content.to_stripped_string())
 }
 
 fn from(path: &Path) -> BufferLine {
@@ -123,21 +126,14 @@ fn from(path: &Path) -> BufferLine {
         None => "".to_string(),
     };
 
-    // TODO: Handle transition states like adding, removing, renaming
-    let style = if path.is_dir() {
-        let length = content.chars().count();
-        vec![StylePartialSpan {
-            end: length,
-            style: StylePartial::Foreground(Color::LightBlue),
-            ..Default::default()
-        }]
+    let content = if path.is_dir() {
+        format!("\x1b[94m{}\x1b[39m", content)
     } else {
-        vec![]
+        content
     };
 
     BufferLine {
-        content,
-        style,
+        content: Ansi::new(&content),
         ..Default::default()
     }
 }
@@ -170,7 +166,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
                     .lines
                     .iter()
                     .enumerate()
-                    .find(|(_, bl)| bl.content == basename)
+                    .find(|(_, bl)| bl.content.to_stripped_string() == basename)
                     .map(|(i, _)| i);
 
                 if let Some(index) = index {

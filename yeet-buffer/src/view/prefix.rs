@@ -1,28 +1,26 @@
 use std::cmp::Reverse;
 
-use crate::{
-    model::{
-        viewport::{LineNumber, ViewPort},
-        BufferLine, Cursor, StylePartialSpan,
-    },
-    view::style::{LINE_NUMBER_ABS_STYLE_PARTIAL, LINE_NUMBER_REL_STYLE_PARTIAL},
+use crate::model::{
+    ansi::Ansi,
+    viewport::{LineNumber, ViewPort},
+    BufferLine, Cursor,
 };
 
-pub fn get_border(vp: &ViewPort) -> String {
-    " ".repeat(vp.get_border_width()).to_string()
+pub fn get_border(vp: &ViewPort) -> Ansi {
+    Ansi::new(&" ".repeat(vp.get_border_width()))
 }
 
-pub fn get_custom_prefix(line: &BufferLine) -> String {
+pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     if let Some(prefix) = &line.prefix {
-        prefix.to_owned()
+        Ansi::new(prefix)
     } else {
-        "".to_string()
+        Ansi::new("")
     }
 }
 
-pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> String {
+pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> Ansi {
     if vp.line_number == LineNumber::None {
-        return "".to_string();
+        return Ansi::new("");
     }
 
     let width = vp.get_line_number_width();
@@ -37,13 +35,13 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
 
     if let Some(cursor) = cursor {
         if cursor.vertical_index == index {
-            return format!("{:<width$}", number);
+            return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
         }
     }
 
     match vp.line_number {
-        LineNumber::_Absolute => format!("{:>width$} ", number),
-        LineNumber::None => "".to_string(),
+        LineNumber::Absolute => Ansi::new(&format!("{:>width$} ", number)),
+        LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             if let Some(cursor) = cursor {
                 let relative = if cursor.vertical_index > index {
@@ -52,56 +50,15 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
                     index - cursor.vertical_index
                 };
 
-                format!("{:>width$}", relative)
+                Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
             } else {
-                format!("{:>width$}", number)
+                Ansi::new(&format!("{:>width$}", number))
             }
         }
     }
 }
 
-pub fn get_line_number_style_partials(
-    vp: &ViewPort,
-    cursor: &Option<Cursor>,
-    index: &usize,
-) -> Vec<StylePartialSpan> {
-    let start = vp.sign_column_width;
-
-    let end = start + vp.get_line_number_width();
-    if start == end {
-        return Vec::new();
-    }
-
-    if let Some(cursor) = cursor {
-        if cursor.vertical_index - vp.vertical_index == *index {
-            vec![StylePartialSpan {
-                start,
-                end,
-                style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-            }]
-        } else {
-            let style_partial = match vp.line_number {
-                LineNumber::_Absolute => LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-                LineNumber::None => unreachable!(),
-                LineNumber::Relative => LINE_NUMBER_REL_STYLE_PARTIAL.clone(),
-            };
-
-            vec![StylePartialSpan {
-                start,
-                end,
-                style: style_partial,
-            }]
-        }
-    } else {
-        vec![StylePartialSpan {
-            start,
-            end,
-            style: LINE_NUMBER_ABS_STYLE_PARTIAL.clone(),
-        }]
-    }
-}
-
-pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
+pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> Ansi {
     let max_sign_count = vp.sign_column_width;
 
     let mut filtered: Vec<_> = bl
@@ -112,40 +69,21 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> String {
 
     filtered.sort_unstable_by_key(|s| Reverse(s.priority));
 
-    let signs = filtered
+    let signs_string = filtered
         .iter()
         .take(max_sign_count)
-        .map(|s| s.content)
+        .map(|s| format!("{}{}\x1b[0m", s.style, s.content))
         .collect::<String>();
 
-    format!("{:<max_sign_count$}", signs)
-}
-
-pub fn get_sign_style_partials(vp: &ViewPort, bl: &BufferLine) -> Vec<StylePartialSpan> {
-    let max_sign_count = vp.sign_column_width;
-
-    let mut filtered: Vec<_> = bl
-        .signs
-        .iter()
-        .filter(|s| !vp.hidden_sign_ids.contains(&s.id))
-        .collect();
-
-    filtered.sort_unstable_by_key(|s| Reverse(s.priority));
-
-    filtered
-        .iter()
-        .take(max_sign_count)
-        .enumerate()
-        .flat_map(|(i, s)| {
-            let mut styles = Vec::new();
-            for style in &s.style {
-                styles.push(StylePartialSpan {
-                    start: i,
-                    end: i + 1,
-                    style: style.clone(),
-                });
-            }
-            styles
-        })
-        .collect()
+    let signs = Ansi::new(&signs_string);
+    let char_count = signs.count_chars();
+    if char_count < max_sign_count {
+        Ansi::new(&format!(
+            "{}{}",
+            signs.to_string(),
+            " ".repeat(max_sign_count - char_count)
+        ))
+    } else {
+        signs
+    }
 }

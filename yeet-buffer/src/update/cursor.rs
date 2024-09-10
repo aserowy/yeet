@@ -322,7 +322,7 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     let mut enumeration: Vec<_> = lines
         .iter()
         .enumerate()
-        .filter(|(_, bl)| bl.search.is_some())
+        .filter(|(_, bl)| bl.search_char_position.is_some())
         .collect();
 
     enumeration.sort_unstable_by(|(current, _), (cmp, _)| {
@@ -330,9 +330,9 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     });
 
     for (i, line) in enumeration {
-        let start = match &line.search {
+        let start = match &line.search_char_position {
             Some(it) => match it.first() {
-                Some(s) => s.start,
+                Some(s) => s.0,
                 None => continue,
             },
             None => continue,

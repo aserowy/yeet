@@ -17,7 +17,12 @@ pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
         return None;
     }
 
-    let target = model.files.current.path.join(&current.content);
+    let target = model
+        .files
+        .current
+        .path
+        .join(current.content.to_stripped_string());
+
     if target.exists() {
         Some(target)
     } else {

@@ -63,6 +63,7 @@
 
               pkgs.asciinema
               pkgs.asciinema-agg
+              pkgs.chafa
               pkgs.gh
               pkgs.nil
               pkgs.nixpkgs-fmt
@@ -70,9 +71,6 @@
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier
             ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
-              pkgs.gephi
-              pkgs.graphviz
-              pkgs.nixgl.nixGLIntel
               pkgs.vscode-extensions.vadimcn.vscode-lldb
             ];
             shellHook = ''

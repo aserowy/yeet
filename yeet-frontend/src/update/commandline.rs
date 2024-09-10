@@ -1,7 +1,6 @@
-use ratatui::style::Color;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search, TextModification},
-    model::{BufferLine, CommandMode, Mode, SearchDirection, StylePartial, StylePartialSpan},
+    model::{ansi::Ansi, BufferLine, CommandMode, Mode, SearchDirection},
     update::update_buffer,
 };
 use yeet_keymap::message::{Message, PrintContent};
@@ -83,7 +82,7 @@ pub fn update_commandline_on_modification(
                     .buffer
                     .lines
                     .last()
-                    .map(|bl| bl.content.clone());
+                    .map(|bl| bl.content.to_stripped_string());
 
                 search_in_buffers(model, term);
             }
@@ -137,9 +136,11 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
         CommandMode::Command => {
             if let Some(cmd) = model.commandline.buffer.lines.last() {
                 // TODO: add command history and show previous command not current (this enables g: as well)
-                model.register.command = Some(cmd.content.clone());
+                model.register.command = Some(cmd.content.to_stripped_string());
 
-                vec![Message::ExecuteCommandString(cmd.content.clone())]
+                vec![Message::ExecuteCommandString(
+                    cmd.content.to_stripped_string(),
+                )]
             } else {
                 Vec::new()
             }
@@ -156,7 +157,7 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
                 .buffer
                 .lines
                 .last()
-                .map(|bl| (direction.clone(), bl.content.clone()));
+                .map(|bl| (direction.clone(), bl.content.to_stripped_string()));
 
             if model.register.searched.is_none() {
                 clear_search(model);
@@ -215,45 +216,24 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
         .iter()
         .map(|content| match content {
             PrintContent::Default(cntnt) => BufferLine {
-                content: cntnt.to_string(),
+                content: Ansi::new(&cntnt.to_string()),
                 ..Default::default()
             },
-            PrintContent::Error(cntnt) => {
-                let cntnt_len = cntnt.chars().count();
-                BufferLine {
-                    content: cntnt.to_string(),
-                    style: vec![StylePartialSpan {
-                        end: cntnt_len,
-                        style: StylePartial::Foreground(Color::Red),
-                        ..Default::default()
-                    }],
-                    ..Default::default()
-                }
-            }
-            PrintContent::Information(cntnt) => {
-                let cntnt_len = cntnt.chars().count();
-                BufferLine {
-                    content: cntnt.to_string(),
-                    style: vec![StylePartialSpan {
-                        end: cntnt_len,
-                        style: StylePartial::Foreground(Color::LightGreen),
-                        ..Default::default()
-                    }],
-                    ..Default::default()
-                }
-            }
+            PrintContent::Error(cntnt) => BufferLine {
+                content: Ansi::new(&format!("\x1b[31m{}\x1b[39m", cntnt)),
+                ..Default::default()
+            },
+            PrintContent::Information(cntnt) => BufferLine {
+                content: Ansi::new(&format!("\x1b[92m{}\x1b[39m", cntnt)),
+                ..Default::default()
+            },
         })
         .collect();
 
     let actions = if commandline.buffer.lines.len() > 1 {
         let content = "Press ENTER or type command to continue";
         commandline.buffer.lines.push(BufferLine {
-            content: content.to_string(),
-            style: vec![StylePartialSpan {
-                end: content.chars().count(),
-                style: StylePartial::Foreground(Color::LightBlue),
-                ..Default::default()
-            }],
+            content: Ansi::new(&format!("\x1b[94m{}\x1b[39m", content)),
             ..Default::default()
         });
 

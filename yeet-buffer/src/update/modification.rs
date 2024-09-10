@@ -1,6 +1,6 @@
 use crate::{
     message::{CursorDirection, LineDirection, TextModification},
-    model::{undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode},
+    model::{ansi::Ansi, undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode},
 };
 
 use super::cursor;
@@ -24,7 +24,6 @@ pub fn update(
 
                     let line_index = cursor.vertical_index;
                     let line = model.lines.remove(line_index);
-                    let content = line.content.to_string();
 
                     let line_count = model.lines.len();
                     if line_count == 0 {
@@ -33,7 +32,7 @@ pub fn update(
                         cursor.vertical_index = line_count - 1;
                     }
 
-                    changes.push(BufferChanged::LineRemoved(line_index, content));
+                    changes.push(BufferChanged::LineRemoved(line_index, line.content));
                 }
 
                 cursor::validate_cursor_position(mode, model);
@@ -100,26 +99,16 @@ pub fn update(
                     count += 1;
                 }
 
-                let new: String = line
-                    .content
-                    .chars()
-                    .enumerate()
-                    .filter_map(|(i, c)| {
-                        if i >= index && i < index + count {
-                            None
-                        } else {
-                            Some(c)
-                        }
-                    })
-                    .collect();
+                let mut modified = line.content.clone();
+                modified.remove(index, count);
 
                 let changed = BufferChanged::Content(
                     pre_motion_cursor.vertical_index,
-                    line.content.to_string(),
-                    new.to_string(),
+                    line.content.clone(),
+                    modified.clone(),
                 );
 
-                line.content = new;
+                line.content = modified;
 
                 changes.push(changed);
             }
@@ -139,19 +128,14 @@ pub fn update(
                     expanded: next_index,
                 };
 
-                let new = format!(
-                    "{}{}{}",
-                    &line.content[..index],
-                    raw,
-                    &line.content[index..]
-                );
+                let mut new = line.content.clone();
+                new.insert(index, raw);
 
                 let changed = BufferChanged::Content(
                     cursor.vertical_index,
-                    line.content.to_string(),
-                    new.to_string(),
+                    line.content.clone(),
+                    new.clone(),
                 );
-
                 line.content = new;
 
                 Some(vec![changed])
@@ -184,7 +168,7 @@ pub fn update(
 
                 model.lines.insert(index, BufferLine::default());
 
-                Some(vec![BufferChanged::LineAdded(index, "".to_string())])
+                Some(vec![BufferChanged::LineAdded(index, Ansi::new(""))])
             } else {
                 None
             }
@@ -195,15 +179,15 @@ pub fn update(
             if let Some((cursor, line)) = line {
                 let horizontal = get_cursor_index(cursor, line);
 
-                let renamed = (line.content[..horizontal]).to_string();
-                let new = (line.content[horizontal..]).to_string();
+                let renamed = line.content.take_chars(horizontal);
+                let new = line.content.skip_chars(horizontal);
 
                 let mut changed = Vec::new();
                 if line.content != renamed {
                     changed.push(BufferChanged::Content(
                         cursor.vertical_index,
-                        line.content.to_string(),
-                        renamed.to_string(),
+                        line.content.clone(),
+                        renamed.clone(),
                     ));
                     line.content = renamed;
                 }
