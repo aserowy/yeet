@@ -332,7 +332,7 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     for (i, line) in enumeration {
         let start = match &line.search_char_position {
             Some(it) => match it.first() {
-                Some(s) => s,
+                Some(s) => s.0,
                 None => continue,
             },
             None => continue,
@@ -349,8 +349,8 @@ fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
 
         cursor.vertical_index = i;
         cursor.horizontal_index = CursorPosition::Absolute {
-            current: *start,
-            expanded: *start,
+            current: start,
+            expanded: start,
         };
 
         break;

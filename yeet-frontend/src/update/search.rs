@@ -12,7 +12,7 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     };
 
     if model.files.parent.path.is_some() {
-        set_styles(&mut model.files.parent.buffer, search.as_str());
+        set_search_char_positions(&mut model.files.parent.buffer, search.as_str());
     }
 
     let is_preview_dir = model
@@ -23,10 +23,10 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
         .is_some_and(|p| p.is_dir());
 
     if is_preview_dir {
-        set_styles(&mut model.files.preview.buffer, search.as_str());
+        set_search_char_positions(&mut model.files.preview.buffer, search.as_str());
     }
 
-    set_styles(&mut model.files.current.buffer, search.as_str());
+    set_search_char_positions(&mut model.files.current.buffer, search.as_str());
 }
 
 pub fn clear_search(model: &mut Model) -> Vec<Action> {
@@ -42,8 +42,9 @@ pub fn clear_search(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-fn set_styles(buffer: &mut Buffer, search: &str) {
+fn set_search_char_positions(buffer: &mut Buffer, search: &str) {
     let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
+    let search_length = search.chars().count();
 
     for line in &mut buffer.lines {
         line.search_char_position = None;
@@ -59,6 +60,6 @@ fn set_styles(buffer: &mut Buffer, search: &str) {
             None => continue,
         };
 
-        line.search_char_position = Some(vec![start]);
+        line.search_char_position = Some(vec![(start, search_length)]);
     }
 }

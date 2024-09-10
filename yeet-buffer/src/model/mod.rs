@@ -3,7 +3,9 @@ use std::fmt::Display;
 use crate::message::CursorDirection;
 
 use self::{
-    ansi::Ansi, undo::{BufferChanged, Undo}, viewport::ViewPort
+    ansi::Ansi,
+    undo::{BufferChanged, Undo},
+    viewport::ViewPort,
 };
 
 pub mod ansi;
@@ -101,7 +103,7 @@ impl Default for CursorPosition {
 pub struct BufferLine {
     pub prefix: Option<String>,
     pub content: Ansi,
-    pub search_char_position: Option<Vec<usize>>,
+    pub search_char_position: Option<Vec<(usize, usize)>>,
     pub signs: Vec<Sign>,
 }
 

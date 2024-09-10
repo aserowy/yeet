@@ -47,7 +47,7 @@ fn get_rendered_lines(model: &Buffer) -> Vec<BufferLine> {
 
 fn get_styled_lines<'a>(
     vp: &ViewPort,
-    _mode: &Mode,
+    mode: &Mode,
     cursor: &Option<Cursor>,
     lines: Vec<BufferLine>,
 ) -> Vec<Line<'a>> {
@@ -66,7 +66,7 @@ fn get_styled_lines<'a>(
             .join(&prefix::get_line_number(vp, corrected_index, cursor))
             .join(&prefix::get_custom_prefix(&bl))
             .join(&prefix::get_border(vp))
-            .join(&line::add_cursor_styles(vp, _mode, cursor, &i, &mut bl));
+            .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl));
 
         if let Ok(text) = content.to_string().into_text() {
             result.push(text.lines);

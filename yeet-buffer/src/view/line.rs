@@ -1,20 +1,53 @@
 use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode};
 
-pub fn add_cursor_styles(
+pub fn add_line_styles(
     vp: &ViewPort,
     mode: &Mode,
     cursor: &Option<Cursor>,
     index: &usize,
     line: &mut BufferLine,
 ) -> Ansi {
+    let content_width = vp.get_content_width(line);
+    let ansi = line.content.skip_chars(vp.horizontal_index);
+
+    let ansi = add_search_styles(line, &ansi);
+    let ansi = add_cursor_styles(vp, mode, cursor, index, content_width, &ansi);
+
+    ansi
+}
+
+fn add_search_styles(line: &BufferLine, ansi: &Ansi) -> Ansi {
+    if let Some(search_char_position) = &line.search_char_position {
+        let mut content = ansi.clone();
+        for (index, length) in search_char_position.iter() {
+            let reset = format!(
+                "\x1b[0m{}",
+                content.get_ansi_escape_sequences_till_char(*index + 1)
+            );
+
+            content.insert(*index, "\x1b[41m");
+            content.insert(index + length, &reset);
+        }
+        content
+    } else {
+        ansi.clone()
+    }
+}
+
+fn add_cursor_styles(
+    vp: &ViewPort,
+    mode: &Mode,
+    cursor: &Option<Cursor>,
+    index: &usize,
+    content_width: usize,
+    ansi: &Ansi,
+) -> Ansi {
+    let mut content = ansi.clone();
     if let Some(cursor) = cursor {
         if cursor.vertical_index - vp.vertical_index != *index {
-            return line.content.clone();
+            return content;
         }
 
-        let mut content = line.content.skip_chars(vp.horizontal_index);
-
-        let content_width = vp.get_content_width(line);
         let char_count = content.count_chars();
         let line_length = if char_count > content_width {
             content_width
@@ -65,9 +98,7 @@ pub fn add_cursor_styles(
 
         content.insert(cursor_index, code);
         content.insert(cursor_index + 1, reset);
-
-        content
-    } else {
-        line.content.clone()
     }
+
+    content
 }
