@@ -21,7 +21,6 @@ use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource, PrintC
 mod action;
 pub mod error;
 mod event;
-mod image;
 mod init;
 mod layout;
 mod model;

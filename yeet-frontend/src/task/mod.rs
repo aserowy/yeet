@@ -17,7 +17,6 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    image,
     init::{
         history::{optimize_history_file, save_history_to_file},
         junkyard::{cache_and_compress, compress, delete, restore},
@@ -26,6 +25,9 @@ use crate::{
     },
     model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
 };
+
+mod image;
+mod syntax;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Task {
@@ -55,6 +57,7 @@ pub struct TaskManager {
 }
 
 // TODO: harmonize error handling and tracing
+// TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         Self {
@@ -308,10 +311,12 @@ impl TaskManager {
                     let content = if let Some(kind) = infer::get_from_path(path.clone())? {
                         tracing::trace!("preview kind: {:?}", kind);
 
-                        // TODO: add preview for archives here
                         let mime = kind.mime_type();
                         if mime.starts_with("text") {
-                            fs::read_to_string(path.clone()).await?
+                            match syntax::highlight(&path).await {
+                                Some(content) => content,
+                                None => "".to_string(),
+                            }
                         } else if mime.starts_with("image") {
                             match image::load(&path, &rect).await {
                                 Some(content) => content,
