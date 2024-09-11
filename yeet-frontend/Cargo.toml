@@ -23,6 +23,7 @@ infer.workspace = true
 notify.workspace = true
 pathdiff.workspace = true
 ratatui.workspace = true
+syntect.workspace = true
 tar.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
