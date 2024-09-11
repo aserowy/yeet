@@ -1,12 +1,19 @@
 [package]
 name = "yeet-keymap"
-version = "0.0.1"
-edition = "2021"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
-crossterm = "0.28.1"
-dirs = "5.0.1"
-regex = "1.10.6"
-thiserror = "1.0.63"
-tracing = "0.1.40"
-yeet-buffer = { version = "0.0.1", path = "../yeet-buffer" }
+yeet-buffer = { path = "../yeet-buffer" }
+
+crossterm.workspace = true
+dirs.workspace = true
+regex.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

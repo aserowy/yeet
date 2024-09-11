@@ -1,11 +1,15 @@
 [package]
 name = "yeet-buffer"
-version = "0.0.1"
-edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
-ansi-to-tui = "6.0.0"
-ratatui = "0.28.1"
-tracing = "0.1.40"
+ansi-to-tui.workspace = true
+ratatui.workspace = true
+tracing.workspace = true
