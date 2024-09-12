@@ -18,10 +18,14 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
                 let mut highlighter = HighlightLines::new(syntax, theme);
                 let mut result = String::new();
                 for line in LinesWithEndings::from(&content) {
-                    if let Ok(ranges) = highlighter.highlight_line(line, &syntaxes) {
-                        let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
-                        result.push_str(&escaped);
-                    }
+                    let highlighted = match highlighter.highlight_line(line, &syntaxes) {
+                        Ok(ranges) => &as_24_bit_terminal_escaped(&ranges[..], false),
+                        Err(err) => {
+                            tracing::error!("unable to highlight line: {:?}", err);
+                            line
+                        }
+                    };
+                    result.push_str(highlighted);
                 }
 
                 Some(result)
