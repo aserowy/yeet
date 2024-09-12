@@ -318,7 +318,7 @@ impl TaskManager {
                 self.tasks.spawn(async move {
                     let highlighter = highlighter.lock().await;
                     let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                    let theme = &theme_set.themes["base16-ocean.dark"];
+                    let theme = &theme_set.themes["base16-eighties.dark"];
 
                     let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
                         match mime.type_() {
