@@ -19,7 +19,7 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
                 let mut result = String::new();
                 for line in LinesWithEndings::from(&content) {
                     if let Ok(ranges) = highlighter.highlight_line(line, &syntaxes) {
-                        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+                        let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
                         result.push_str(&escaped);
                     }
                 }
