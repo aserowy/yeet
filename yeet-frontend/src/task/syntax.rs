@@ -2,7 +2,7 @@ use std::path::Path;
 
 use syntect::{
     easy::HighlightLines,
-    highlighting::{Style, ThemeSet},
+    highlighting::{Style, Theme, ThemeSet},
     parsing::{SyntaxReference, SyntaxSet},
     util::{as_24_bit_terminal_escaped, LinesWithEndings},
 };
@@ -11,25 +11,23 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
 };
 
-pub async fn highlight(path: &Path) -> Option<String> {
+pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Option<String> {
     match fs::read_to_string(path).await {
         Ok(content) => {
-            // TODO: load once and cache
-            let ts = ThemeSet::load_defaults();
-            let ps = SyntaxSet::load_defaults_newlines();
-            let syntax = resolve_syntax(&ps, path).await;
+            let syntax = resolve_syntax(syntaxes, path).await;
             if let Some(syntax) = syntax {
                 tracing::debug!("syntax: {:?}", syntax.name);
-                let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
 
-                let mut sb = String::new();
+                let mut highlighter = HighlightLines::new(syntax, theme);
+                let mut result = String::new();
                 for line in LinesWithEndings::from(&content) {
-                    let ranges: Vec<(Style, &str)> = h.highlight_line(line, &ps).unwrap();
+                    let ranges: Vec<(Style, &str)> =
+                        highlighter.highlight_line(line, &syntaxes).unwrap();
                     let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
-                    sb.push_str(&escaped);
+                    result.push_str(&escaped);
                 }
 
-                Some(sb)
+                Some(result)
             } else {
                 None
             }

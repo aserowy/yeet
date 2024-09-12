@@ -5,6 +5,7 @@ use std::{
 
 use mime_guess::mime;
 use ratatui::layout::Rect;
+use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
     sync::{mpsc::Sender, Mutex},
@@ -52,6 +53,7 @@ pub enum Task {
 
 pub struct TaskManager {
     abort_handles: Vec<(Task, AbortHandle)>,
+    highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
@@ -63,6 +65,10 @@ impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         Self {
             abort_handles: Vec::new(),
+            highlighter: Arc::new(Mutex::new((
+                SyntaxSet::load_defaults_newlines(),
+                ThemeSet::load_defaults(),
+            ))),
             resolver,
             sender,
             tasks: JoinSet::new(),
@@ -308,14 +314,18 @@ impl TaskManager {
             }
             Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
+                let highlighter = Arc::clone(&self.highlighter);
                 self.tasks.spawn(async move {
+                    let highlighter = highlighter.lock().await;
+                    let (syntaxes, theme_set) = &*highlighter;
+                    let theme = &theme_set.themes["base16-ocean.dark"];
                     let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
                         match mime.type_() {
                             mime::IMAGE => match image::load(&path, &rect).await {
                                 Some(content) => content,
                                 None => "".to_string(),
                             },
-                            mime::TEXT => match syntax::highlight(&path).await {
+                            mime::TEXT => match syntax::highlight(&syntaxes, theme, &path).await {
                                 Some(content) => content,
                                 None => "".to_string(),
                             },
@@ -323,7 +333,8 @@ impl TaskManager {
                         }
                     } else {
                         tracing::warn!("unable to resolve kind for: {:?}", path);
-                        match syntax::highlight(&path).await {
+
+                        match syntax::highlight(&syntaxes, theme, &path).await {
                             Some(content) => content,
                             None => "".to_string(),
                         }
