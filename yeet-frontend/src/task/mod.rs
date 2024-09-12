@@ -3,7 +3,9 @@ use std::{
     sync::Arc,
 };
 
+use mime_guess::mime;
 use ratatui::layout::Rect;
+use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
     sync::{mpsc::Sender, Mutex},
@@ -17,7 +19,6 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    image,
     init::{
         history::{optimize_history_file, save_history_to_file},
         junkyard::{cache_and_compress, compress, delete, restore},
@@ -26,6 +27,9 @@ use crate::{
     },
     model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
 };
+
+mod image;
+mod syntax;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Task {
@@ -49,16 +53,22 @@ pub enum Task {
 
 pub struct TaskManager {
     abort_handles: Vec<(Task, AbortHandle)>,
+    highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
 }
 
 // TODO: harmonize error handling and tracing
+// TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         Self {
             abort_handles: Vec::new(),
+            highlighter: Arc::new(Mutex::new((
+                SyntaxSet::load_defaults_newlines(),
+                ThemeSet::load_defaults(),
+            ))),
             resolver,
             sender,
             tasks: JoinSet::new(),
@@ -304,25 +314,31 @@ impl TaskManager {
             }
             Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
+                let highlighter = Arc::clone(&self.highlighter);
                 self.tasks.spawn(async move {
-                    let content = if let Some(kind) = infer::get_from_path(path.clone())? {
-                        tracing::trace!("preview kind: {:?}", kind);
+                    let highlighter = highlighter.lock().await;
+                    let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
+                    let theme = &theme_set.themes["base16-eighties.dark"];
 
-                        // TODO: add preview for archives here
-                        let mime = kind.mime_type();
-                        if mime.starts_with("text") {
-                            fs::read_to_string(path.clone()).await?
-                        } else if mime.starts_with("image") {
-                            match image::load(&path, &rect).await {
+                    let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
+                        match mime.type_() {
+                            mime::IMAGE => match image::load(&path, &rect).await {
                                 Some(content) => content,
                                 None => "".to_string(),
-                            }
-                        } else {
-                            "".to_string()
+                            },
+                            mime::TEXT => match syntax::highlight(syntaxes, theme, &path).await {
+                                Some(content) => content,
+                                None => "".to_string(),
+                            },
+                            _ => "".to_string(),
                         }
                     } else {
                         tracing::warn!("unable to resolve kind for: {:?}", path);
-                        fs::read_to_string(path.clone()).await?
+
+                        match syntax::highlight(syntaxes, theme, &path).await {
+                            Some(content) => content,
+                            None => "".to_string(),
+                        }
                     };
 
                     let result = sender

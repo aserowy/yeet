@@ -3,7 +3,10 @@ use std::{path::Path, process::Stdio, str};
 use ratatui::layout::Rect;
 use tokio::process::Command;
 
+#[tracing::instrument]
 pub async fn load<'a>(path: &Path, rect: &Rect) -> Option<String> {
+    tracing::trace!("load image preview for path: {:?}", path);
+
     let result = Command::new("chafa")
         .args([
             "-f",
@@ -30,16 +33,18 @@ pub async fn load<'a>(path: &Path, rect: &Rect) -> Option<String> {
     match result {
         Ok(output) => {
             if !output.status.success() {
-                // TODO: log error
+                tracing::error!("chafa failed: {:?}", output);
             } else if output.stdout.is_empty() {
-                // TODO: log error
+                tracing::error!("chafa failed: image result is empty");
             }
 
             let text = output.stdout;
 
             str::from_utf8(&text).ok().map(|s| s.to_string())
         }
-        // TODO: log error
-        Err(_) => None,
+        Err(err) => {
+            tracing::error!("chafa failed: {:?}", err);
+            None
+        }
     }
 }
