@@ -30,6 +30,7 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
 
                 Some(result)
             } else {
+                tracing::debug!("unable to resolve syntax for: {:?}", path);
                 Some(content)
             }
         }

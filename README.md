@@ -122,6 +122,11 @@ because of the underlying architecture. Thus, it should be equally fast. E.g. re
 a directory with 500k entries takes only a couple of seconds without blocking the
 ui.
 
+### image preview stays empty
+
+Images are previewed using `chafa` to convert images to ansi. If the output stays
+empty, make sure yeet can call `chafa` to enable image rendering.
+
 ### opening files in linux does nothing
 
 yeet utilizes `xdg-open` to start files. Thus, not opening anything probably lies

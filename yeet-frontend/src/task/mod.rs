@@ -321,19 +321,24 @@ impl TaskManager {
                     let theme = &theme_set.themes["base16-eighties.dark"];
 
                     let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
-                        match mime.type_() {
-                            mime::IMAGE => match image::load(&path, &rect).await {
+                        match (mime.type_(), mime.subtype()) {
+                            (mime::IMAGE, _) => match image::load(&path, &rect).await {
                                 Some(content) => content,
                                 None => "".to_string(),
                             },
-                            mime::TEXT => match syntax::highlight(syntaxes, theme, &path).await {
-                                Some(content) => content,
-                                None => "".to_string(),
-                            },
-                            _ => "".to_string(),
+                            (mime::TEXT, _) | (mime::APPLICATION, mime::JSON) => {
+                                match syntax::highlight(syntaxes, theme, &path).await {
+                                    Some(content) => content,
+                                    None => "".to_string(),
+                                }
+                            }
+                            _ => {
+                                tracing::debug!("no preview specified for mime: {:?}", mime);
+                                "".to_string()
+                            }
                         }
                     } else {
-                        tracing::warn!("unable to resolve kind for: {:?}", path);
+                        tracing::debug!("unable to resolve kind for: {:?}", path);
 
                         match syntax::highlight(syntaxes, theme, &path).await {
                             Some(content) => content,
