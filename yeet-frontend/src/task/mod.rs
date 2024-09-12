@@ -317,15 +317,16 @@ impl TaskManager {
                 let highlighter = Arc::clone(&self.highlighter);
                 self.tasks.spawn(async move {
                     let highlighter = highlighter.lock().await;
-                    let (syntaxes, theme_set) = &*highlighter;
+                    let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
                     let theme = &theme_set.themes["base16-ocean.dark"];
+
                     let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
                         match mime.type_() {
                             mime::IMAGE => match image::load(&path, &rect).await {
                                 Some(content) => content,
                                 None => "".to_string(),
                             },
-                            mime::TEXT => match syntax::highlight(&syntaxes, theme, &path).await {
+                            mime::TEXT => match syntax::highlight(syntaxes, theme, &path).await {
                                 Some(content) => content,
                                 None => "".to_string(),
                             },
@@ -334,7 +335,7 @@ impl TaskManager {
                     } else {
                         tracing::warn!("unable to resolve kind for: {:?}", path);
 
-                        match syntax::highlight(&syntaxes, theme, &path).await {
+                        match syntax::highlight(syntaxes, theme, &path).await {
                             Some(content) => content,
                             None => "".to_string(),
                         }
