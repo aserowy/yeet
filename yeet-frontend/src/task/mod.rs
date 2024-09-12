@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use mime_guess::mime;
 use ratatui::layout::Rect;
 use tokio::{
     fs,
@@ -308,26 +309,21 @@ impl TaskManager {
             Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    let content = if let Some(kind) = infer::get_from_path(path.clone())? {
-                        tracing::trace!("preview kind: {:?}", kind);
-
-                        let mime = kind.mime_type();
-                        if mime.starts_with("text") {
-                            match syntax::highlight(&path).await {
+                    let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
+                        match mime.type_() {
+                            mime::IMAGE => match image::load(&path, &rect).await {
                                 Some(content) => content,
                                 None => "".to_string(),
-                            }
-                        } else if mime.starts_with("image") {
-                            match image::load(&path, &rect).await {
+                            },
+                            mime::TEXT => match syntax::highlight(&path).await {
                                 Some(content) => content,
                                 None => "".to_string(),
-                            }
-                        } else {
-                            "".to_string()
+                            },
+                            _ => "".to_string(),
                         }
                     } else {
                         tracing::warn!("unable to resolve kind for: {:?}", path);
-                        fs::read_to_string(path.clone()).await?
+                        "".to_string()
                     };
 
                     let result = sender
