@@ -323,7 +323,10 @@ impl TaskManager {
                         }
                     } else {
                         tracing::warn!("unable to resolve kind for: {:?}", path);
-                        "".to_string()
+                        match syntax::highlight(&path).await {
+                            Some(content) => content,
+                            None => "".to_string(),
+                        }
                     };
 
                     let result = sender
