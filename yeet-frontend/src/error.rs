@@ -9,6 +9,8 @@ pub enum AppError {
     Aggregate(Vec<AppError>),
     #[error("File operation failed")]
     FileOperationFailed(#[from] std::io::Error),
+    #[error("Invalid mime type resolved")]
+    InvalidMimeType,
     #[error("Path target is invalid")]
     InvalidTargetPath,
     #[error("Loading navigation history failed")]

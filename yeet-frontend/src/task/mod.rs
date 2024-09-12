@@ -3,7 +3,6 @@ use std::{
     sync::Arc,
 };
 
-use mime_guess::mime;
 use ratatui::layout::Rect;
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
@@ -320,30 +319,25 @@ impl TaskManager {
                     let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
                     let theme = &theme_set.themes["base16-eighties.dark"];
 
-                    let content = if let Some(mime) = mime_guess::from_path(path.clone()).first() {
-                        match (mime.type_(), mime.subtype()) {
-                            (mime::IMAGE, _) => match image::load(&path, &rect).await {
-                                Some(content) => content,
-                                None => "".to_string(),
-                            },
-                            (mime::TEXT, _) | (mime::APPLICATION, mime::JSON) => {
-                                match syntax::highlight(syntaxes, theme, &path).await {
-                                    Some(content) => content,
-                                    None => "".to_string(),
-                                }
-                            }
-                            _ => {
-                                tracing::debug!("no preview specified for mime: {:?}", mime);
-                                "".to_string()
-                            }
+                    let mime = if let Some(mime) = infer::get_from_path(&path)? {
+                        let kind = mime.mime_type().split('/').collect::<Vec<_>>();
+                        if kind.len() != 2 {
+                            return Err(AppError::InvalidMimeType);
                         }
+                        Some(kind[0].to_ascii_lowercase())
                     } else {
-                        tracing::debug!("unable to resolve kind for: {:?}", path);
+                        None
+                    };
 
-                        match syntax::highlight(syntaxes, theme, &path).await {
+                    let content = match mime.as_deref() {
+                        Some("image") => match image::load(&path, &rect).await {
                             Some(content) => content,
                             None => "".to_string(),
-                        }
+                        },
+                        _ => match syntax::highlight(syntaxes, theme, &path).await {
+                            Some(content) => content,
+                            None => "".to_string(),
+                        },
                     };
 
                     let result = sender
