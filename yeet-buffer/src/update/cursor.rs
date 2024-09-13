@@ -5,7 +5,7 @@ use crate::{
     model::{Buffer, BufferLine, BufferResult, Cursor, CursorPosition, Mode},
 };
 
-use super::find::{find_char, get_horizontal_index};
+use super::find::find_char;
 
 // TODO: refactor
 pub fn update_cursor_by_direction(
@@ -232,6 +232,38 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
+            CursorDirection::Word => {
+                let cursor = match &mut model.cursor {
+                    Some(cursor) => cursor,
+                    None => return Vec::new(),
+                };
+
+                let current = match model.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return Vec::new(),
+                };
+
+                let index = match get_horizontal_index(&cursor.horizontal_index, current) {
+                    Some(index) => index,
+                    None => return Vec::new(),
+                };
+
+                let next = current
+                    .content
+                    .to_stripped_string()
+                    .chars()
+                    .skip(index + 1)
+                    .position(|c| !c.is_alphanumeric())
+                    .map(|i| index + i + 1);
+
+                if let Some(next_index) = next {
+                    // TODO: line jump to next word
+                    cursor.horizontal_index = CursorPosition::Absolute {
+                        current: next_index,
+                        expanded: next_index,
+                    };
+                }
+            }
         }
     }
 
@@ -393,6 +425,23 @@ fn sort_by_index(current: usize, cmp: usize, index: usize, direction: &Search) -
         }
     } else {
         Ordering::Greater
+    }
+}
+
+pub fn get_horizontal_index(
+    horizontial_index: &CursorPosition,
+    line: &BufferLine,
+) -> Option<usize> {
+    match horizontial_index {
+        CursorPosition::Absolute {
+            current,
+            expanded: _,
+        } => Some(*current),
+        CursorPosition::End => {
+            let index = if line.is_empty() { 0 } else { line.len() - 1 };
+            Some(index)
+        }
+        CursorPosition::None => None,
     }
 }
 

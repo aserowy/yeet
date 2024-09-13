@@ -670,6 +670,13 @@ impl Default for KeyMap {
                         ..Default::default()
                     },
                 ),
+                (
+                    vec![Key::new(KeyCode::from_char('w'), vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::Word),
+                        ..Default::default()
+                    },
+                ),
             ],
         );
 
