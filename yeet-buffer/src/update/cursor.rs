@@ -255,8 +255,13 @@ pub fn update_cursor_by_direction(
                     .skip(index)
                     .collect::<Vec<_>>();
 
-                let predicate = if content.first().map(|c| c.is_alphanumeric()) == Some(true) {
-                    |c: &char| c != &'_' && !c.is_alphanumeric() || c.is_whitespace()
+                let is_alphanumeric = content
+                    .first()
+                    .map(|c| c.is_alphanumeric() || c == &'_')
+                    .is_some_and(|b| b);
+
+                let predicate = if is_alphanumeric {
+                    |c: &char| c != &'_' && !c.is_alphanumeric()
                 } else {
                     |c: &char| c.is_alphanumeric() || c.is_whitespace()
                 };
@@ -299,7 +304,10 @@ pub fn update_cursor_by_direction(
                     .collect::<Vec<_>>();
 
                 if content.first().is_some_and(|c| c.is_whitespace()) {
-                    let next = content.iter().position(|c| !c.is_whitespace()).map(|i| index + i);
+                    let next = content
+                        .iter()
+                        .position(|c| !c.is_whitespace())
+                        .map(|i| index + i);
 
                     if let Some(next_index) = next {
                         cursor.horizontal_index = CursorPosition::Absolute {
