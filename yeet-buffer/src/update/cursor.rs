@@ -267,54 +267,13 @@ pub fn update_cursor_by_direction(
                 };
 
                 let next = content.iter().position(|c| predicate(c)).map(|i| index + i);
-
                 if let Some(next_index) = next {
                     cursor.horizontal_index = CursorPosition::Absolute {
                         current: next_index,
                         expanded: next_index,
                     };
                 } else {
-                    let max_index = model.lines.len() - 1;
-                    if cursor.vertical_index >= max_index {
-                        cursor.vertical_index = max_index;
-                    } else {
-                        cursor.vertical_index += 1;
-                        cursor.horizontal_index = CursorPosition::Absolute {
-                            current: 0,
-                            expanded: 0,
-                        };
-                    }
-                }
-
-                let current = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return Vec::new(),
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontal_index, current) {
-                    Some(index) => index,
-                    None => return Vec::new(),
-                };
-
-                let content = current
-                    .content
-                    .to_stripped_string()
-                    .chars()
-                    .skip(index)
-                    .collect::<Vec<_>>();
-
-                if content.first().is_some_and(|c| c.is_whitespace()) {
-                    let next = content
-                        .iter()
-                        .position(|c| !c.is_whitespace())
-                        .map(|i| index + i);
-
-                    if let Some(next_index) = next {
-                        cursor.horizontal_index = CursorPosition::Absolute {
-                            current: next_index,
-                            expanded: next_index,
-                        };
-                    }
+                    jump_to_word_next_line(cursor, &model.lines);
                 }
             }
             CursorDirection::WordUpperStart => {
@@ -351,47 +310,7 @@ pub fn update_cursor_by_direction(
                         expanded: next_index,
                     };
                 } else {
-                    let max_index = model.lines.len() - 1;
-                    if cursor.vertical_index >= max_index {
-                        cursor.vertical_index = max_index;
-                    } else {
-                        cursor.vertical_index += 1;
-                        cursor.horizontal_index = CursorPosition::Absolute {
-                            current: 0,
-                            expanded: 0,
-                        };
-                    }
-                }
-
-                let current = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return Vec::new(),
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontal_index, current) {
-                    Some(index) => index,
-                    None => return Vec::new(),
-                };
-
-                let content = current
-                    .content
-                    .to_stripped_string()
-                    .chars()
-                    .skip(index)
-                    .collect::<Vec<_>>();
-
-                if content.first().is_some_and(|c| c.is_whitespace()) {
-                    let next = content
-                        .iter()
-                        .position(|c| !c.is_whitespace())
-                        .map(|i| index + i);
-
-                    if let Some(next_index) = next {
-                        cursor.horizontal_index = CursorPosition::Absolute {
-                            current: next_index,
-                            expanded: next_index,
-                        };
-                    }
+                    jump_to_word_next_line(cursor, &model.lines);
                 }
             }
         }
@@ -410,6 +329,50 @@ pub fn update_cursor_by_direction(
         vec![BufferResult::FindScopeChanged(direction.clone())]
     } else {
         Vec::new()
+    }
+}
+
+fn jump_to_word_next_line(cursor: &mut Cursor, lines: &Vec<BufferLine>) {
+    let max_index = lines.len() - 1;
+    if cursor.vertical_index >= max_index {
+        cursor.vertical_index = max_index;
+    } else {
+        cursor.vertical_index += 1;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 0,
+            expanded: 0,
+        };
+
+        let current = match lines.get(cursor.vertical_index) {
+            Some(line) => line,
+            None => return,
+        };
+
+        let index = match get_horizontal_index(&cursor.horizontal_index, current) {
+            Some(index) => index,
+            None => return,
+        };
+
+        let content = current
+            .content
+            .to_stripped_string()
+            .chars()
+            .skip(index)
+            .collect::<Vec<_>>();
+
+        if content.first().is_some_and(|c| c.is_whitespace()) {
+            let next = content
+                .iter()
+                .position(|c| !c.is_whitespace())
+                .map(|i| index + i);
+
+            if let Some(next_index) = next {
+                cursor.horizontal_index = CursorPosition::Absolute {
+                    current: next_index,
+                    expanded: next_index,
+                };
+            }
+        }
     }
 }
 
