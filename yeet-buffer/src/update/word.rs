@@ -43,7 +43,12 @@ pub fn move_cursor_to_word_start(model: &mut Buffer) {
             expanded: next_index,
         };
     } else {
-        model.cursor = Some(get_cursor_on_word_next_line(cursor, &model.lines));
+        let cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
+            Ok(crsr) => crsr,
+            Err(_) => return,
+        };
+
+        model.cursor = Some(cursor);
     }
 }
 
@@ -81,11 +86,16 @@ pub fn move_cursor_to_word_upper_start(model: &mut Buffer) {
             expanded: next_index,
         };
     } else {
-        model.cursor = Some(get_cursor_on_word_next_line(cursor, &model.lines));
+        let cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
+            Ok(crsr) => crsr,
+            Err(_) => return,
+        };
+
+        model.cursor = Some(cursor);
     }
 }
 
-pub fn move_cursor_to_word_end(model: &mut Buffer) {
+pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
     let cursor = match &mut model.cursor {
         Some(cursor) => cursor,
         None => return,
@@ -114,12 +124,15 @@ pub fn move_cursor_to_word_end(model: &mut Buffer) {
         .next();
 
     if let Some((index, _)) = index {
-        let position = get_cursor_position_on_word_end(content, index);
+        let position = get_cursor_position_on_word_end(content, index, is_upper);
         if let Ok(position) = position {
             cursor.horizontal_index = position;
         }
     } else {
-        let new_line_cursor = get_cursor_on_word_next_line(cursor, &model.lines);
+        let new_line_cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
+            Ok(crsr) => crsr,
+            Err(_) => return,
+        };
 
         let current = match model.lines.get(new_line_cursor.vertical_index) {
             Some(line) => line,
@@ -132,7 +145,7 @@ pub fn move_cursor_to_word_end(model: &mut Buffer) {
             .chars()
             .collect::<Vec<_>>();
 
-        let position = get_cursor_position_on_word_end(content, new_line_cursor.vertical_index);
+        let position = get_cursor_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
         if let Ok(position) = position {
             cursor.vertical_index = new_line_cursor.vertical_index;
             cursor.horizontal_index = position;
@@ -143,18 +156,15 @@ pub fn move_cursor_to_word_end(model: &mut Buffer) {
 fn get_cursor_position_on_word_end(
     content: Vec<char>,
     index: usize,
-) -> Result<CursorPosition, String> {
-    let char = content
-        .iter()
-        .nth(index)
-        .ok_or("char not resolved".to_string())?;
-
+    is_upper: bool,
+) -> Result<CursorPosition, ()> {
+    let char = content.iter().nth(index).ok_or(())?;
     let is_alphanumeric = char.is_alphanumeric() || char == &'_';
 
-    let predicate = if is_alphanumeric {
-        |c: &char| c != &'_' && !c.is_alphanumeric()
-    } else {
-        |c: &char| c == &'_' || c.is_alphanumeric() || c.is_whitespace()
+    let predicate = match (is_upper, is_alphanumeric) {
+        (true, _) => |c: &char| c.is_whitespace(),
+        (false, true) => |c: &char| c != &'_' && !c.is_alphanumeric(),
+        (false, false) => |c: &char| c == &'_' || c.is_alphanumeric() || c.is_whitespace(),
     };
 
     let next = content
@@ -176,16 +186,12 @@ fn get_cursor_position_on_word_end(
     }
 }
 
-pub fn move_cursor_to_word_upper_end(_model: &mut Buffer) {
-    todo!()
-}
-
-fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Cursor {
+fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Result<Cursor, ()> {
     let mut result = cursor.clone();
     let max_index = lines.len() - 1;
     if cursor.vertical_index >= max_index {
         result.vertical_index = max_index;
-        return result;
+        return Ok(result);
     }
 
     result.vertical_index += 1;
@@ -196,12 +202,12 @@ fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Cur
 
     let current = match lines.get(result.vertical_index) {
         Some(line) => line,
-        None => return cursor.clone(),
+        None => return Err(()),
     };
 
     let index = match cursor::get_horizontal_index(&result.horizontal_index, current) {
         Some(index) => index,
-        None => return cursor.clone(),
+        None => return Err(()),
     };
 
     let content = current
@@ -222,10 +228,12 @@ fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Cur
                 current: next_index,
                 expanded: next_index,
             };
+        } else {
+            return Err(());
         };
     }
 
-    result
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -251,7 +259,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -278,7 +286,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -305,7 +313,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -332,7 +340,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
@@ -359,7 +367,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
@@ -386,7 +394,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -413,7 +421,34 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer);
+        super::move_cursor_to_word_end(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 0);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hell#-worl_");
+    }
+
+    #[test]
+    fn move_cursor_to_word_end_within_upper_word() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hell#-world"),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 0,
+            expanded: 0,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "_ell#-world");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_end(&mut buffer, true);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
