@@ -80,12 +80,12 @@ In normal mode, all register interactions target the default register (equal to
 | 0, $               | move cursor to line start/end                                    |
 | f\<char>, F\<char> | move cursor to next char forward/backward                        |
 | t\<char>, T\<char> | move cursor before next char forward/backward                    |
+| ;                  | repeat the last find motion with f or t.                         |
+| ,                  | repeat the last find motion with f or t in reverse direction.    |
 | e                  | move cursor to end of next word                                  |
 | E                  | move cursor to end of next WORD                                  |
 | w                  | move cursor to next word                                         |
 | W                  | move cursor to next WORD                                         |
-| ;                  | repeat the last motion with f or t.                              |
-| ,                  | repeat the last motion with f or t in reverse direction.         |
 | i, a               | change to insert mode                                            |
 | c\<motion>         | delete according to motion and change to insert mode             |
 | d\<motion>         | delete according to motion                                       |
