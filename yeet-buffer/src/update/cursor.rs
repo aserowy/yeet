@@ -5,7 +5,7 @@ use crate::{
     model::{Buffer, BufferLine, BufferResult, Cursor, CursorPosition, Mode},
 };
 
-use super::find::find_char;
+use super::{find, word};
 
 // TODO: refactor
 pub fn update_cursor_by_direction(
@@ -59,10 +59,10 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::FindBackward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::FindForward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::LastFindBackward => {
                 if let Some(find) = model.last_find.clone() {
@@ -74,12 +74,12 @@ pub fn update_cursor_by_direction(
                         _ => unreachable!(),
                     };
 
-                    find_char(&find, model, false);
+                    find::char(&find, model, false);
                 }
             }
             CursorDirection::LastFindForward => {
                 if let Some(find) = model.last_find.clone() {
-                    find_char(&find, model, false);
+                    find::char(&find, model, false);
                 }
             }
             CursorDirection::Left => {
@@ -186,13 +186,13 @@ pub fn update_cursor_by_direction(
                     None => return Vec::new(),
                 };
 
-                select(cursor, &model.lines, direction);
+                jump_to_next_search(cursor, &model.lines, direction);
             }
             CursorDirection::TillBackward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::TillForward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::Top => {
                 let cursor = match &mut model.cursor {
@@ -232,86 +232,17 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
+            CursorDirection::WordEnd => {
+                word::move_cursor_to_word_end(model);
+            }
             CursorDirection::WordStart => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                let current = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return Vec::new(),
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontal_index, current) {
-                    Some(index) => index,
-                    None => return Vec::new(),
-                };
-
-                let content = current
-                    .content
-                    .to_stripped_string()
-                    .chars()
-                    .skip(index)
-                    .collect::<Vec<_>>();
-
-                let is_alphanumeric = content
-                    .first()
-                    .map(|c| c.is_alphanumeric() || c == &'_')
-                    .is_some_and(|b| b);
-
-                let predicate = if is_alphanumeric {
-                    |c: &char| c != &'_' && !c.is_alphanumeric()
-                } else {
-                    |c: &char| c.is_alphanumeric() || c.is_whitespace()
-                };
-
-                let next = content.iter().position(|c| predicate(c)).map(|i| index + i);
-                if let Some(next_index) = next {
-                    cursor.horizontal_index = CursorPosition::Absolute {
-                        current: next_index,
-                        expanded: next_index,
-                    };
-                } else {
-                    jump_to_word_next_line(cursor, &model.lines);
-                }
+                word::move_cursor_to_word_start(model);
+            }
+            CursorDirection::WordUpperEnd => {
+                word::move_cursor_to_word_upper_end(model);
             }
             CursorDirection::WordUpperStart => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                let current = match model.lines.get(cursor.vertical_index) {
-                    Some(line) => line,
-                    None => return Vec::new(),
-                };
-
-                let index = match get_horizontal_index(&cursor.horizontal_index, current) {
-                    Some(index) => index,
-                    None => return Vec::new(),
-                };
-
-                let content = current
-                    .content
-                    .to_stripped_string()
-                    .chars()
-                    .skip(index)
-                    .collect::<Vec<_>>();
-
-                let next = content
-                    .iter()
-                    .position(|c| c.is_whitespace())
-                    .map(|i| index + i);
-
-                if let Some(next_index) = next {
-                    cursor.horizontal_index = CursorPosition::Absolute {
-                        current: next_index,
-                        expanded: next_index,
-                    };
-                } else {
-                    jump_to_word_next_line(cursor, &model.lines);
-                }
+                word::move_cursor_to_word_upper_start(model);
             }
         }
     }
@@ -329,50 +260,6 @@ pub fn update_cursor_by_direction(
         vec![BufferResult::FindScopeChanged(direction.clone())]
     } else {
         Vec::new()
-    }
-}
-
-fn jump_to_word_next_line(cursor: &mut Cursor, lines: &Vec<BufferLine>) {
-    let max_index = lines.len() - 1;
-    if cursor.vertical_index >= max_index {
-        cursor.vertical_index = max_index;
-    } else {
-        cursor.vertical_index += 1;
-        cursor.horizontal_index = CursorPosition::Absolute {
-            current: 0,
-            expanded: 0,
-        };
-
-        let current = match lines.get(cursor.vertical_index) {
-            Some(line) => line,
-            None => return,
-        };
-
-        let index = match get_horizontal_index(&cursor.horizontal_index, current) {
-            Some(index) => index,
-            None => return,
-        };
-
-        let content = current
-            .content
-            .to_stripped_string()
-            .chars()
-            .skip(index)
-            .collect::<Vec<_>>();
-
-        if content.first().is_some_and(|c| c.is_whitespace()) {
-            let next = content
-                .iter()
-                .position(|c| !c.is_whitespace())
-                .map(|i| index + i);
-
-            if let Some(next_index) = next {
-                cursor.horizontal_index = CursorPosition::Absolute {
-                    current: next_index,
-                    expanded: next_index,
-                };
-            }
-        }
     }
 }
 
@@ -438,7 +325,7 @@ fn get_index_correction(mode: &Mode) -> usize {
     }
 }
 
-fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
+fn jump_to_next_search(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     if cursor.horizontal_index == CursorPosition::None {
         return;
     }

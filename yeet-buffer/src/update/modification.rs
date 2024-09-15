@@ -227,7 +227,9 @@ fn is_inclusive(motion: &CursorDirection) -> bool {
         | CursorDirection::Up
         | CursorDirection::Down
         | CursorDirection::Bottom
+        | CursorDirection::WordEnd
         | CursorDirection::WordStart
+        | CursorDirection::WordUpperEnd
         | CursorDirection::WordUpperStart
         | CursorDirection::Top => false,
 
@@ -258,7 +260,9 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
         | CursorDirection::Right
         | CursorDirection::Search(_)
         | CursorDirection::LineEnd
+        | CursorDirection::WordEnd
         | CursorDirection::WordStart
+        | CursorDirection::WordUpperEnd
         | CursorDirection::WordUpperStart
         | CursorDirection::LineStart => false,
     }

@@ -671,6 +671,20 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('e'), vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordEnd),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('e'), vec![KeyModifier::Shift])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordUpperEnd),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('w'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::WordStart),

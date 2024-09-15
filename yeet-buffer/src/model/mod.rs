@@ -108,6 +108,13 @@ pub struct BufferLine {
 }
 
 impl BufferLine {
+    pub fn from(content: &str) -> Self {
+        Self {
+            content: Ansi::new(content),
+            ..Default::default()
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.content.is_empty()
     }

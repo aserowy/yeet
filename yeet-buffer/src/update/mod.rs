@@ -8,6 +8,7 @@ mod cursor;
 mod find;
 mod modification;
 mod viewport;
+mod word;
 
 pub fn update_buffer(
     mode: &Mode,

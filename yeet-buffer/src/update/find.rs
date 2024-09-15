@@ -5,7 +5,7 @@ use crate::{
 
 use super::cursor;
 
-pub fn find_char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool) {
+pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool) {
     match direction {
         CursorDirection::FindBackward(find) => {
             let cursor = match &mut model.cursor {
