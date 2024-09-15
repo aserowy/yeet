@@ -5,7 +5,7 @@ use crate::{
     model::{Buffer, BufferLine, BufferResult, Cursor, CursorPosition, Mode},
 };
 
-use super::find::{find_char, get_horizontal_index};
+use super::{find, word};
 
 // TODO: refactor
 pub fn update_cursor_by_direction(
@@ -59,10 +59,10 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::FindBackward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::FindForward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::LastFindBackward => {
                 if let Some(find) = model.last_find.clone() {
@@ -74,12 +74,12 @@ pub fn update_cursor_by_direction(
                         _ => unreachable!(),
                     };
 
-                    find_char(&find, model, false);
+                    find::char(&find, model, false);
                 }
             }
             CursorDirection::LastFindForward => {
                 if let Some(find) = model.last_find.clone() {
-                    find_char(&find, model, false);
+                    find::char(&find, model, false);
                 }
             }
             CursorDirection::Left => {
@@ -186,13 +186,13 @@ pub fn update_cursor_by_direction(
                     None => return Vec::new(),
                 };
 
-                select(cursor, &model.lines, direction);
+                jump_to_next_search(cursor, &model.lines, direction);
             }
             CursorDirection::TillBackward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::TillForward(_) => {
-                find_char(direction, model, true);
+                find::char(direction, model, true);
             }
             CursorDirection::Top => {
                 let cursor = match &mut model.cursor {
@@ -232,6 +232,23 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
+            CursorDirection::WordEndForward => {
+                word::move_cursor_to_word_end(model, false);
+            }
+            CursorDirection::WordStartForward => {
+                word::move_cursor_to_word_start(model, false);
+            }
+            CursorDirection::WordUpperEndForward => {
+                word::move_cursor_to_word_end(model, true);
+            }
+            CursorDirection::WordUpperStartForward => {
+                word::move_cursor_to_word_start(model, true);
+            }
+
+            CursorDirection::WordEndBackward => todo!(),
+            CursorDirection::WordStartBackward => todo!(),
+            CursorDirection::WordUpperEndBackward => todo!(),
+            CursorDirection::WordUpperStartBackward => todo!(),
         }
     }
 
@@ -313,7 +330,7 @@ fn get_index_correction(mode: &Mode) -> usize {
     }
 }
 
-fn select(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
+fn jump_to_next_search(cursor: &mut Cursor, lines: &[BufferLine], direction: &Search) {
     if cursor.horizontal_index == CursorPosition::None {
         return;
     }
@@ -393,6 +410,23 @@ fn sort_by_index(current: usize, cmp: usize, index: usize, direction: &Search) -
         }
     } else {
         Ordering::Greater
+    }
+}
+
+pub fn get_horizontal_index(
+    horizontial_index: &CursorPosition,
+    line: &BufferLine,
+) -> Option<usize> {
+    match horizontial_index {
+        CursorPosition::Absolute {
+            current,
+            expanded: _,
+        } => Some(*current),
+        CursorPosition::End => {
+            let index = if line.is_empty() { 0 } else { line.len() - 1 };
+            Some(index)
+        }
+        CursorPosition::None => None,
     }
 }
 

@@ -4,7 +4,6 @@ use crate::model::{BufferLine, Mode};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BufferMessage {
-    // TODO: Yank & Paste in normal mode into reg
     ChangeMode(Mode, Mode),
     Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
@@ -49,6 +48,14 @@ pub enum CursorDirection {
     TillForward(char),
     Top,
     Up,
+    WordEndBackward,
+    WordEndForward,
+    WordStartBackward,
+    WordStartForward,
+    WordUpperEndBackward,
+    WordUpperEndForward,
+    WordUpperStartBackward,
+    WordUpperStartForward,
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
