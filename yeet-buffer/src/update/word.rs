@@ -102,7 +102,8 @@ pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
             .chars()
             .collect::<Vec<_>>();
 
-        let position = get_cursor_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
+        let position =
+            get_cursor_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
         if let Ok(position) = position {
             cursor.vertical_index = new_line_cursor.vertical_index;
             cursor.horizontal_index = position;
