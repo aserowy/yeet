@@ -236,13 +236,13 @@ pub fn update_cursor_by_direction(
                 word::move_cursor_to_word_end(model, false);
             }
             CursorDirection::WordStart => {
-                word::move_cursor_to_word_start(model);
+                word::move_cursor_to_word_start(model, false);
             }
             CursorDirection::WordUpperEnd => {
                 word::move_cursor_to_word_end(model, true);
             }
             CursorDirection::WordUpperStart => {
-                word::move_cursor_to_word_upper_start(model);
+                word::move_cursor_to_word_start(model, true);
             }
         }
     }

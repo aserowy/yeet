@@ -2,7 +2,7 @@ use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
 
 use super::cursor;
 
-pub fn move_cursor_to_word_start(model: &mut Buffer) {
+pub fn move_cursor_to_word_start(model: &mut Buffer, is_upper: bool) {
     let cursor = match &mut model.cursor {
         Some(cursor) => cursor,
         None => return,
@@ -30,56 +30,13 @@ pub fn move_cursor_to_word_start(model: &mut Buffer) {
         .map(|c| c.is_alphanumeric() || c == &'_')
         .is_some_and(|b| b);
 
-    let predicate = if is_alphanumeric {
-        |c: &char| c != &'_' && !c.is_alphanumeric()
-    } else {
-        |c: &char| c.is_alphanumeric() || c.is_whitespace()
+    let predicate = match (is_upper, is_alphanumeric) {
+        (true, _) => |c: &char| c.is_whitespace(),
+        (false, true) => |c: &char| c != &'_' && !c.is_alphanumeric(),
+        (false, false) => |c: &char| c == &'_' || c.is_alphanumeric() || c.is_whitespace(),
     };
 
     let next = content.iter().position(|c| predicate(c)).map(|i| index + i);
-    if let Some(next_index) = next {
-        cursor.horizontal_index = CursorPosition::Absolute {
-            current: next_index,
-            expanded: next_index,
-        };
-    } else {
-        let cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
-            Ok(crsr) => crsr,
-            Err(_) => return,
-        };
-
-        model.cursor = Some(cursor);
-    }
-}
-
-pub fn move_cursor_to_word_upper_start(model: &mut Buffer) {
-    let cursor = match &mut model.cursor {
-        Some(cursor) => cursor,
-        None => return,
-    };
-
-    let current = match model.lines.get(cursor.vertical_index) {
-        Some(line) => line,
-        None => return,
-    };
-
-    let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
-        Some(index) => index,
-        None => return,
-    };
-
-    let content = current
-        .content
-        .to_stripped_string()
-        .chars()
-        .skip(index)
-        .collect::<Vec<_>>();
-
-    let next = content
-        .iter()
-        .position(|c| c.is_whitespace())
-        .map(|i| index + i);
-
     if let Some(next_index) = next {
         cursor.horizontal_index = CursorPosition::Absolute {
             current: next_index,
