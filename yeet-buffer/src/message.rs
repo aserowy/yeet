@@ -48,10 +48,14 @@ pub enum CursorDirection {
     TillForward(char),
     Top,
     Up,
-    WordEnd,
-    WordStart,
-    WordUpperEnd,
-    WordUpperStart,
+    WordEndBackward,
+    WordEndForward,
+    WordStartBackward,
+    WordStartForward,
+    WordUpperEndBackward,
+    WordUpperEndForward,
+    WordUpperStartBackward,
+    WordUpperStartForward,
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]

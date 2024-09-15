@@ -232,18 +232,23 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
-            CursorDirection::WordEnd => {
+            CursorDirection::WordEndForward => {
                 word::move_cursor_to_word_end(model, false);
             }
-            CursorDirection::WordStart => {
+            CursorDirection::WordStartForward => {
                 word::move_cursor_to_word_start(model, false);
             }
-            CursorDirection::WordUpperEnd => {
+            CursorDirection::WordUpperEndForward => {
                 word::move_cursor_to_word_end(model, true);
             }
-            CursorDirection::WordUpperStart => {
+            CursorDirection::WordUpperStartForward => {
                 word::move_cursor_to_word_start(model, true);
             }
+
+            CursorDirection::WordEndBackward => todo!(),
+            CursorDirection::WordStartBackward => todo!(),
+            CursorDirection::WordUpperEndBackward => todo!(),
+            CursorDirection::WordUpperStartBackward => todo!(),
         }
     }
 
