@@ -2,7 +2,7 @@ use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
 
 use super::cursor;
 
-pub fn move_cursor_to_word_start(model: &mut Buffer, is_upper: bool) {
+pub fn move_cursor_to_word_start_forward(model: &mut Buffer, is_upper: bool) {
     let cursor = match &mut model.cursor {
         Some(cursor) => cursor,
         None => return,
@@ -22,22 +22,28 @@ pub fn move_cursor_to_word_start(model: &mut Buffer, is_upper: bool) {
         .content
         .to_stripped_string()
         .chars()
-        .skip(index)
         .collect::<Vec<_>>();
 
-    let is_alphanumeric = content
-        .first()
-        .map(|c| c.is_alphanumeric() || c == &'_')
-        .is_some_and(|b| b);
-
-    let predicate = match (is_upper, is_alphanumeric) {
-        (true, _) => |c: &char| c.is_whitespace(),
-        (false, true) => |c: &char| c != &'_' && !c.is_alphanumeric(),
-        (false, false) => |c: &char| c == &'_' || c.is_alphanumeric() || c.is_whitespace(),
+    let char = match content.iter().nth(index) {
+        Some(chr) => chr,
+        None => return,
     };
 
-    let next = content.iter().position(|c| predicate(c)).map(|i| index + i);
-    if let Some(next_index) = next {
+    let is_alphanumeric = char.is_alphanumeric() || char == &'_';
+    let predicate = match (is_upper, is_alphanumeric) {
+        (true, _) => |c: &char| c.is_whitespace(),
+        (false, true) => |c: &char| c == &'_' || c.is_alphanumeric(),
+        (false, false) => |c: &char| c != &'_' && !c.is_alphanumeric() && !c.is_whitespace(),
+    };
+
+    let next = content
+        .iter()
+        .enumerate()
+        .skip_while(|(i, c)| i <= &index || predicate(c))
+        .skip_while(|(_, c)| c.is_whitespace())
+        .next();
+
+    if let Some((next_index, _)) = next {
         cursor.horizontal_index = CursorPosition::Absolute {
             current: next_index,
             expanded: next_index,
@@ -52,7 +58,7 @@ pub fn move_cursor_to_word_start(model: &mut Buffer, is_upper: bool) {
     }
 }
 
-pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
+pub fn move_cursor_to_word_end_forward(model: &mut Buffer, is_upper: bool) {
     let cursor = match &mut model.cursor {
         Some(cursor) => cursor,
         None => return,
@@ -81,7 +87,7 @@ pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
         .next();
 
     if let Some((index, _)) = index {
-        let position = get_cursor_position_on_word_end(content, index, is_upper);
+        let position = get_position_on_word_end(content, index, is_upper);
         if let Ok(position) = position {
             cursor.horizontal_index = position;
         }
@@ -102,8 +108,7 @@ pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
             .chars()
             .collect::<Vec<_>>();
 
-        let position =
-            get_cursor_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
+        let position = get_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
         if let Ok(position) = position {
             cursor.vertical_index = new_line_cursor.vertical_index;
             cursor.horizontal_index = position;
@@ -111,7 +116,7 @@ pub fn move_cursor_to_word_end(model: &mut Buffer, is_upper: bool) {
     }
 }
 
-fn get_cursor_position_on_word_end(
+fn get_position_on_word_end(
     content: Vec<char>,
     index: usize,
     is_upper: bool,
@@ -194,9 +199,119 @@ fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Res
     Ok(result)
 }
 
+pub fn move_cursor_to_word_end_backward(model: &mut Buffer, is_upper: bool) {}
+
 #[cfg(test)]
 mod test {
     use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
+
+    #[test]
+    fn move_cursor_to_word_start_starting_on_word() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hello world"),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 0,
+            expanded: 0,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "_ello world");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 0);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hello _orld");
+    }
+
+    #[test]
+    fn move_cursor_to_word_start_starting_on_word_middle() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hello world"),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 1,
+            expanded: 1,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "h_llo world");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 0);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hello _orld");
+    }
+
+    #[test]
+    fn move_cursor_to_word_start_starting_on_last_word() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hello world"),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 7,
+            expanded: 7,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hello w_rld");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 1);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "_ello world");
+    }
+
+    #[test]
+    fn move_cursor_to_word_start_starting_on_last_word_with_whitespace() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hello world  "),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 7,
+            expanded: 7,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hello w_rld  ");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 1);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "_ello world  ");
+    }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_word() {
@@ -217,7 +332,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -244,7 +359,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -271,7 +386,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -298,7 +413,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
@@ -325,7 +440,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
@@ -352,7 +467,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -379,7 +494,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
@@ -406,7 +521,7 @@ mod test {
 
         buffer.cursor = Some(cursor);
 
-        super::move_cursor_to_word_end(&mut buffer, true);
+        super::move_cursor_to_word_end_forward(&mut buffer, true);
 
         let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
