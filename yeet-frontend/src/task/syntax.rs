@@ -18,7 +18,7 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
                 let mut highlighter = HighlightLines::new(syntax, theme);
                 let mut result = String::new();
                 for line in LinesWithEndings::from(&content) {
-                    let highlighted = match highlighter.highlight_line(line, &syntaxes) {
+                    let highlighted = match highlighter.highlight_line(line, syntaxes) {
                         Ok(ranges) => &as_24_bit_terminal_escaped(&ranges[..], false),
                         Err(err) => {
                             tracing::error!("unable to highlight line: {:?}", err);
@@ -64,5 +64,5 @@ async fn resolve_syntax<'a>(
         return syntax;
     }
 
-    syntaxes.find_syntax_by_first_line(&content)
+    syntaxes.find_syntax_by_first_line(content)
 }

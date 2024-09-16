@@ -161,7 +161,7 @@ pub fn yank_to_junkyard(model: &mut Model, repeat: &usize) -> Vec<Action> {
                     .files
                     .current
                     .path
-                    .join(&line.content.to_stripped_string());
+                    .join(line.content.to_stripped_string());
 
                 paths.push(target);
             }

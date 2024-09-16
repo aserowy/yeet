@@ -246,7 +246,7 @@ pub fn update_cursor_by_direction(
             }
             CursorDirection::WordEndBackward => {
                 word::move_cursor_to_word_end_backward(model, false);
-            },
+            }
             // word end invert content and next line
             CursorDirection::WordStartBackward => todo!(),
             CursorDirection::WordUpperEndBackward => todo!(),

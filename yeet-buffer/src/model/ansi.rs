@@ -1,11 +1,13 @@
+use std::fmt::Display;
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Ansi {
     content: String,
 }
 
-impl ToString for Ansi {
-    fn to_string(&self) -> String {
-        self.content.clone()
+impl Display for Ansi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.content.fmt(f)
     }
 }
 

@@ -24,7 +24,7 @@ pub fn move_cursor_to_word_start_forward(model: &mut Buffer, is_upper: bool) {
         .chars()
         .collect::<Vec<_>>();
 
-    let char = match content.iter().nth(index) {
+    let char = match content.get(index) {
         Some(chr) => chr,
         None => return,
     };
@@ -40,8 +40,7 @@ pub fn move_cursor_to_word_start_forward(model: &mut Buffer, is_upper: bool) {
         .iter()
         .enumerate()
         .skip_while(|(i, c)| i <= &index || predicate(c))
-        .skip_while(|(_, c)| c.is_whitespace())
-        .next();
+        .find(|(_, c)| !c.is_whitespace());
 
     if let Some((next_index, _)) = next {
         cursor.horizontal_index = CursorPosition::Absolute {
@@ -83,8 +82,7 @@ pub fn move_cursor_to_word_end_forward(model: &mut Buffer, is_upper: bool) {
     let index = content
         .iter()
         .enumerate()
-        .skip_while(|(i, c)| i <= &index || c.is_whitespace())
-        .next();
+        .find(|(i, c)| i > &index && !c.is_whitespace());
 
     if let Some((index, _)) = index {
         let position = get_position_on_word_end(content, index, is_upper);
@@ -121,7 +119,7 @@ fn get_position_on_word_end(
     index: usize,
     is_upper: bool,
 ) -> Result<CursorPosition, ()> {
-    let char = content.iter().nth(index).ok_or(())?;
+    let char = content.get(index).ok_or(())?;
     let is_alphanumeric = char.is_alphanumeric() || char == &'_';
 
     let predicate = match (is_upper, is_alphanumeric) {
@@ -149,7 +147,7 @@ fn get_position_on_word_end(
     }
 }
 
-fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Result<Cursor, ()> {
+fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &[BufferLine]) -> Result<Cursor, ()> {
     let mut result = cursor.clone();
     let max_index = lines.len() - 1;
     if cursor.vertical_index >= max_index {
@@ -199,7 +197,10 @@ fn get_cursor_on_word_next_line(cursor: &Cursor, lines: &Vec<BufferLine>) -> Res
     Ok(result)
 }
 
-pub fn move_cursor_to_word_end_backward(model: &mut Buffer, is_upper: bool) {}
+pub fn move_cursor_to_word_end_backward(model: &mut Buffer, is_upper: bool) {
+    let _ = model;
+    let _ = is_upper;
+}
 
 #[cfg(test)]
 mod test {
