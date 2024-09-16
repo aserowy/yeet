@@ -539,10 +539,6 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char(';'), vec![])],
                     Binding {
-                        // TODO: convert to motion
-                        // set last fFtT motion in buffer
-                        // introduce reverse as motion
-                        // set reverse motion to ,
                         kind: BindingKind::Motion(CursorDirection::LastFindForward),
                         ..Default::default()
                     },
@@ -671,6 +667,26 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('e'), vec![]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordEndBackward),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('e'), vec![KeyModifier::Shift]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordUpperEndBackward),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![Key::new(KeyCode::from_char('e'), vec![])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::WordEndForward),
@@ -681,6 +697,20 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('e'), vec![KeyModifier::Shift])],
                     Binding {
                         kind: BindingKind::Motion(CursorDirection::WordUpperEndForward),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('b'), vec![])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordEndBackward),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('b'), vec![KeyModifier::Shift])],
+                    Binding {
+                        kind: BindingKind::Motion(CursorDirection::WordUpperEndBackward),
                         ..Default::default()
                     },
                 ),
