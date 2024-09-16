@@ -314,6 +314,33 @@ mod test {
     }
 
     #[test]
+    fn move_cursor_to_word_start_changing_alphanumeric() {
+        let mut buffer = Buffer::default();
+        buffer.lines = vec![
+            BufferLine::from("hello!@#$!@#$"),
+            BufferLine::from("hello world"),
+        ];
+
+        let mut cursor = Cursor::default();
+        cursor.vertical_index = 0;
+        cursor.horizontal_index = CursorPosition::Absolute {
+            current: 1,
+            expanded: 1,
+        };
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "h_llo!@#$!@#$");
+
+        buffer.cursor = Some(cursor);
+
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
+        assert_eq!(cursor.vertical_index, 0);
+
+        assert_cursor_position_eq(&buffer.lines, &cursor.horizontal_index, "hello_@#$!@#$");
+    }
+
+    #[test]
     fn move_cursor_to_word_end_starting_on_word() {
         let mut buffer = Buffer::default();
         buffer.lines = vec![
