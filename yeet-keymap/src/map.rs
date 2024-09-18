@@ -703,14 +703,14 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('b'), vec![])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::WordEndBackward),
+                        kind: BindingKind::Motion(CursorDirection::WordStartBackward),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('b'), vec![KeyModifier::Shift])],
                     Binding {
-                        kind: BindingKind::Motion(CursorDirection::WordUpperEndBackward),
+                        kind: BindingKind::Motion(CursorDirection::WordUpperStartBackward),
                         ..Default::default()
                     },
                 ),

@@ -232,29 +232,29 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
-            CursorDirection::WordEndForward => {
-                word::move_cursor_to_word_end_forward(model, false);
-            }
-            CursorDirection::WordStartForward => {
-                word::move_cursor_to_word_start_forward(model, false);
-            }
-            CursorDirection::WordUpperEndForward => {
-                word::move_cursor_to_word_end_forward(model, true);
-            }
-            CursorDirection::WordUpperStartForward => {
-                word::move_cursor_to_word_start_forward(model, true);
-            }
             CursorDirection::WordEndBackward => {
                 word::move_cursor_to_word_end_backward(model, false);
+            }
+            CursorDirection::WordEndForward => {
+                word::move_cursor_to_word_end_forward(model, false);
             }
             CursorDirection::WordStartBackward => {
                 word::move_cursor_to_word_start_backward(model, false);
             }
+            CursorDirection::WordStartForward => {
+                word::move_cursor_to_word_start_forward(model, false);
+            }
             CursorDirection::WordUpperEndBackward => {
-                word::move_cursor_to_word_end_backward(model, false);
+                word::move_cursor_to_word_end_backward(model, true);
+            }
+            CursorDirection::WordUpperEndForward => {
+                word::move_cursor_to_word_end_forward(model, true);
             }
             CursorDirection::WordUpperStartBackward => {
                 word::move_cursor_to_word_start_backward(model, true);
+            }
+            CursorDirection::WordUpperStartForward => {
+                word::move_cursor_to_word_start_forward(model, true);
             }
         }
     }
