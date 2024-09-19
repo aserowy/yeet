@@ -164,7 +164,13 @@ pub fn move_cursor_to_word_end_forward(model: &mut Buffer, is_upper: bool) {
             .chars()
             .collect::<Vec<_>>();
 
-        let position = get_position_on_word_end(content, new_line_cursor.vertical_index, is_upper);
+        let new_line_index =
+            match cursor::get_horizontal_index(&new_line_cursor.horizontal_index, current) {
+                Some(index) => index,
+                None => return,
+            };
+
+        let position = get_position_on_word_end(content, new_line_index, is_upper);
         if let Ok(position) = position {
             cursor.vertical_index = new_line_cursor.vertical_index;
             cursor.horizontal_index = position;
@@ -926,7 +932,7 @@ mod test {
                 .get(cursor.vertical_index)
                 .unwrap()
                 .content
-                .to_string();
+                .to_stripped_string();
             current.replace_range(position..position + 1, "_");
 
             assert_eq!(current, expected);
