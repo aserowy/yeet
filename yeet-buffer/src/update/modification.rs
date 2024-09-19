@@ -86,7 +86,15 @@ pub fn update(
                 };
 
                 let pre_index = get_cursor_index(&pre_motion_cursor, line);
-                let post_index = get_cursor_index(post_motion_cursor, line);
+
+                let post_index = match pre_motion_cursor
+                    .vertical_index
+                    .cmp(&post_motion_cursor.vertical_index)
+                {
+                    std::cmp::Ordering::Greater => 0,
+                    std::cmp::Ordering::Less => line.content.count_chars() - 1,
+                    std::cmp::Ordering::Equal => get_cursor_index(post_motion_cursor, line),
+                };
 
                 let (index, mut count) = if pre_index > post_index {
                     (post_index, pre_index - post_index)
@@ -227,12 +235,8 @@ fn is_inclusive(motion: &CursorDirection) -> bool {
         | CursorDirection::Up
         | CursorDirection::Down
         | CursorDirection::Bottom
-        | CursorDirection::WordEndBackward
-        | CursorDirection::WordEndForward
         | CursorDirection::WordStartBackward
         | CursorDirection::WordStartForward
-        | CursorDirection::WordUpperEndBackward
-        | CursorDirection::WordUpperEndForward
         | CursorDirection::WordUpperStartBackward
         | CursorDirection::WordUpperStartForward
         | CursorDirection::Top => false,
@@ -243,6 +247,10 @@ fn is_inclusive(motion: &CursorDirection) -> bool {
         | CursorDirection::TillForward(_)
         | CursorDirection::LastFindBackward
         | CursorDirection::LastFindForward
+        | CursorDirection::WordEndBackward
+        | CursorDirection::WordEndForward
+        | CursorDirection::WordUpperEndBackward
+        | CursorDirection::WordUpperEndForward
         | CursorDirection::LineEnd => true,
     }
 }

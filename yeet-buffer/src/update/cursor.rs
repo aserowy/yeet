@@ -232,25 +232,30 @@ pub fn update_cursor_by_direction(
                     cursor.horizontal_index = position;
                 }
             }
+            CursorDirection::WordEndBackward => {
+                word::move_cursor_to_word_end_backward(model, false);
+            }
             CursorDirection::WordEndForward => {
-                word::move_cursor_to_word_end(model, false);
+                word::move_cursor_to_word_end_forward(model, false);
+            }
+            CursorDirection::WordStartBackward => {
+                word::move_cursor_to_word_start_backward(model, false);
             }
             CursorDirection::WordStartForward => {
-                word::move_cursor_to_word_start(model, false);
+                word::move_cursor_to_word_start_forward(model, false);
+            }
+            CursorDirection::WordUpperEndBackward => {
+                word::move_cursor_to_word_end_backward(model, true);
             }
             CursorDirection::WordUpperEndForward => {
-                word::move_cursor_to_word_end(model, true);
+                word::move_cursor_to_word_end_forward(model, true);
+            }
+            CursorDirection::WordUpperStartBackward => {
+                word::move_cursor_to_word_start_backward(model, true);
             }
             CursorDirection::WordUpperStartForward => {
-                word::move_cursor_to_word_start(model, true);
+                word::move_cursor_to_word_start_forward(model, true);
             }
-
-            // word start invert content and next line
-            CursorDirection::WordEndBackward => todo!(),
-            // word end invert content and next line
-            CursorDirection::WordStartBackward => todo!(),
-            CursorDirection::WordUpperEndBackward => todo!(),
-            CursorDirection::WordUpperStartBackward => todo!(),
         }
     }
 

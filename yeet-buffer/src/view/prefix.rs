@@ -72,15 +72,16 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> Ansi {
     let signs_string = filtered
         .iter()
         .take(max_sign_count)
-        .map(|s| format!("{}{}\x1b[0m", s.style, s.content))
-        .collect::<String>();
+        .fold("".to_string(), |acc, s| {
+            format!("{}{}{}\x1b[0m", acc, s.style, s.content)
+        });
 
     let signs = Ansi::new(&signs_string);
     let char_count = signs.count_chars();
     if char_count < max_sign_count {
         Ansi::new(&format!(
             "{}{}",
-            signs.to_string(),
+            signs,
             " ".repeat(max_sign_count - char_count)
         ))
     } else {
