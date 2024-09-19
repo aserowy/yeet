@@ -86,14 +86,15 @@ pub fn update(
                 };
 
                 let pre_index = get_cursor_index(&pre_motion_cursor, line);
-                let post_index =
-                    if pre_motion_cursor.vertical_index > post_motion_cursor.vertical_index {
-                        0
-                    } else if pre_motion_cursor.vertical_index < post_motion_cursor.vertical_index {
-                        line.content.count_chars() - 1
-                    } else {
-                        get_cursor_index(post_motion_cursor, line)
-                    };
+
+                let post_index = match pre_motion_cursor
+                    .vertical_index
+                    .cmp(&post_motion_cursor.vertical_index)
+                {
+                    std::cmp::Ordering::Greater => 0,
+                    std::cmp::Ordering::Less => line.content.count_chars() - 1,
+                    std::cmp::Ordering::Equal => get_cursor_index(post_motion_cursor, line),
+                };
 
                 let (index, mut count) = if pre_index > post_index {
                     (post_index, pre_index - post_index)
