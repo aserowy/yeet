@@ -132,8 +132,11 @@ ui.
 
 ### image preview stays empty
 
-Images are previewed using `chafa` to convert images to ansi. If the output stays
-empty, make sure yeet can call `chafa` to enable image rendering.
+Currently, only `sixel` is the supported preview protocol. If the used terminal
+does not support it the given fallback is used.
+
+As fallback, images are previewed using `chafa` to convert them to ansi. If
+the output stays empty, make sure yeet can call `chafa` to enable image rendering.
 
 ### opening files in linux does nothing
 
