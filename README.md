@@ -84,8 +84,12 @@ In normal mode, all register interactions target the default register (equal to
 | ,                  | repeat the last find motion with f or t in reverse direction.    |
 | e                  | move cursor to end of next word                                  |
 | E                  | move cursor to end of next WORD                                  |
+| ge                 | move cursor to end of next word backward                         |
+| gE                 | move cursor to end of next WORD backward                         |
 | w                  | move cursor to next word                                         |
 | W                  | move cursor to next WORD                                         |
+| b                  | move cursor to next word backward                                |
+| B                  | move cursor to next WORD backward                                |
 | i, a               | change to insert mode                                            |
 | c\<motion>         | delete according to motion and change to insert mode             |
 | d\<motion>         | delete according to motion                                       |
