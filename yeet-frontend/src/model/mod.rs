@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use emulator::Emulator;
 use ratatui::layout::Rect;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
@@ -17,6 +18,7 @@ use crate::{
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
+pub mod emulator;
 pub mod history;
 pub mod junkyard;
 pub mod mark;
@@ -28,6 +30,7 @@ pub struct Model {
     pub commandline: CommandLine,
     pub command_stack: Option<VecDeque<Message>>,
     pub command_current: Option<Message>,
+    pub emulator: Emulator,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,

@@ -24,7 +24,9 @@ use crate::{
         mark::{load_marks_from_file, save_marks_to_file},
         qfix::save_qfix_to_files,
     },
-    model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
+    model::{
+        emulator::Emulator, history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix,
+    },
 };
 
 mod image;
@@ -39,7 +41,7 @@ pub enum Task {
     DeleteJunkYardEntry(FileEntry),
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf, Option<String>),
-    LoadPreview(PathBuf, Rect),
+    LoadPreview(Emulator, PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
     SaveHistory(History),
@@ -311,7 +313,7 @@ impl TaskManager {
                     }
                 })
             }
-            Task::LoadPreview(path, rect) => {
+            Task::LoadPreview(emulator, path, rect) => {
                 let sender = self.sender.clone();
                 let highlighter = Arc::clone(&self.highlighter);
                 self.tasks.spawn(async move {
@@ -330,7 +332,7 @@ impl TaskManager {
                     };
 
                     let content = match mime.as_deref() {
-                        Some("image") => match image::load(&path, &rect).await {
+                        Some("image") => match image::load(&emulator, &path, &rect).await {
                             Some(content) => content,
                             None => "".to_string(),
                         },
@@ -462,7 +464,7 @@ fn to_envelope(messages: Vec<Message>) -> Envelope {
 
 fn should_abort_on_finish(task: Task) -> bool {
     match task {
-        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _) => true,
+        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _, _) => true,
 
         Task::AddPath(_)
         | Task::CopyPath(_, _)
