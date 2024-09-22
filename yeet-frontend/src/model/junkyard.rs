@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct JunkYard {
     pub current: FileEntryType,
     pub path: PathBuf,
@@ -8,7 +8,7 @@ pub struct JunkYard {
     pub yanked: Option<FileTransaction>,
 }
 
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum FileEntryType {
     _Custom(String),
     #[default]
@@ -16,7 +16,7 @@ pub enum FileEntryType {
     Yank,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileTransaction {
     pub id: String,
     pub entries: Vec<FileEntry>,

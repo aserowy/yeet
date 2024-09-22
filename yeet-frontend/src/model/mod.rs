@@ -45,6 +45,18 @@ pub struct Model {
     pub watches: Vec<PathBuf>,
 }
 
+impl std::fmt::Debug for Model {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Model")
+            .field("emulator", &self.emulator)
+            .field("junk", &self.junk)
+            .field("marks", &self.marks)
+            .field("qfix", &self.qfix)
+            .field("settings", &self.settings)
+            .finish()
+    }
+}
+
 pub struct FileWindow {
     pub current: DirectoryBuffer<PathBuf>,
     pub parent: DirectoryBuffer<Option<PathBuf>>,

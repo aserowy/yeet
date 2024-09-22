@@ -54,7 +54,7 @@ pub enum SearchDirection {
     Up,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct BufferSettings {
     pub sign_column_width: usize,
 }

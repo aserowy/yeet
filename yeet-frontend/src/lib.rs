@@ -66,6 +66,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         ])]));
     }
 
+    tracing::debug!("starting with model state: {:?}", model);
+
     let mut result = Vec::new();
     while let Some(envelope) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", envelope.messages);
