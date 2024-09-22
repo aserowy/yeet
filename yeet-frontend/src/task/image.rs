@@ -1,63 +1,15 @@
 use std::{path::Path, process::Stdio, str};
 
 use ratatui::layout::Rect;
-use tokio::{
-    io::{stderr, AsyncWriteExt},
-    process::Command,
-};
-
-use crate::model::emulator::Emulator;
+use tokio::process::Command;
+use yeet_keymap::message::Preview;
 
 #[tracing::instrument]
-pub async fn load<'a>(emulator: &Emulator, path: &Path, rect: &Rect) -> Option<String> {
-    match emulator {
-        // kitty
-        Emulator::Ghostty | Emulator::Kitty | Emulator::Tabby => {
-            // TODO: check for zellij and fallback to chafa
-            load_with_chafa(path, rect).await
-
-            // TODO: adding kitty protocol
-        }
-        // sixel
-        Emulator::Foot
-        | Emulator::Hyper
-        | Emulator::Iterm2
-        | Emulator::VsCode
-        | Emulator::WezTerm
-        | Emulator::WindowsTerminal => load_with_sixel(path, rect).await,
-        // chafa
-        Emulator::Alacritty | Emulator::Neovim | Emulator::Unknown | Emulator::Urxvt => {
-            load_with_chafa(path, rect).await
-        }
-    }
+pub async fn load<'a>(path: &Path, rect: &Rect) -> Preview {
+    load_with_chafa(path, rect).await
 }
 
-async fn load_with_sixel(path: &Path, rect: &Rect) -> Option<String> {
-    let _ = path;
-    let _ = rect;
-
-    let sample = "
-        \u{1b}Pq
-        \"2;1;100;200
-        #0;2;0;0;0#1;2;100;100;0#2;2;0;100;0
-        #1~~@@vv@@~~@@~~$
-        #2??}}GG}}??}}??-
-        #1!14@
-        \u{1b}\\
-    "
-    .to_string();
-
-    let write_all = stderr().write_all(sample.as_bytes()).await;
-    match write_all {
-        Ok(_) => Some("".to_string()),
-        Err(err) => {
-            tracing::error!("encoded image to stderr failed: {:?}", err);
-            None
-        }
-    }
-}
-
-async fn load_with_chafa(path: &Path, rect: &Rect) -> Option<String> {
+async fn load_with_chafa(path: &Path, rect: &Rect) -> Preview {
     tracing::trace!("load image preview for path: {:?}", path);
 
     let result = Command::new("chafa")
@@ -87,15 +39,20 @@ async fn load_with_chafa(path: &Path, rect: &Rect) -> Option<String> {
         Ok(output) => {
             if !output.status.success() {
                 tracing::error!("chafa failed: {:?}", output);
+                Preview::None
             } else if output.stdout.is_empty() {
                 tracing::warn!("chafa failed: image result is empty");
-            }
+                Preview::None
+            } else {
+                let content = str::from_utf8(&output.stdout)
+                    .map_or(vec![], |s| s.lines().map(|l| l.to_string()).collect());
 
-            str::from_utf8(&output.stdout).ok().map(|s| s.to_string())
+                Preview::Content(content)
+            }
         }
         Err(err) => {
             tracing::error!("chafa failed: {:?}", err);
-            None
+            Preview::None
         }
     }
 }

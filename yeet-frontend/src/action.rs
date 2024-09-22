@@ -84,11 +84,7 @@ async fn execute(
                 if path.is_dir() {
                     emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                 } else {
-                    emitter.run(Task::LoadPreview(
-                        model.emulator.clone(),
-                        path.clone(),
-                        model.layout.preview,
-                    ));
+                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
                 }
             }
             Action::ModeChanged => {
@@ -133,11 +129,7 @@ async fn execute(
                 terminal.resize(*x, *y)?;
 
                 if let Some(path) = &model.files.preview.path {
-                    emitter.run(Task::LoadPreview(
-                        model.emulator.clone(),
-                        path.clone(),
-                        model.layout.preview,
-                    ));
+                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
                 }
             }
             Action::Task(task) => emitter.run(task.clone()),

@@ -113,7 +113,7 @@ pub enum Message {
     PasteFromJunkYard(char),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
-    PreviewLoaded(PathBuf, Vec<String>),
+    PreviewLoaded(PathBuf, Preview),
     Print(Vec<PrintContent>),
     Rerender,
     Resize(u16, u16),
@@ -126,6 +126,12 @@ pub enum Message {
     YankPathToClipboard,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Preview {
+    Content(Vec<String>),
+    None,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

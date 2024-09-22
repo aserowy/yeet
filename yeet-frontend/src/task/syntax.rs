@@ -7,8 +7,9 @@ use syntect::{
     util::{as_24_bit_terminal_escaped, LinesWithEndings},
 };
 use tokio::fs::{self};
+use yeet_keymap::message::Preview;
 
-pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Option<String> {
+pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Preview {
     match fs::read_to_string(path).await {
         Ok(content) => {
             let syntax = resolve_syntax(syntaxes, &content, path).await;
@@ -16,7 +17,7 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
                 tracing::debug!("syntax: {:?}", syntax.name);
 
                 let mut highlighter = HighlightLines::new(syntax, theme);
-                let mut result = String::new();
+                let mut result = vec![];
                 for line in LinesWithEndings::from(&content) {
                     let highlighted = match highlighter.highlight_line(line, syntaxes) {
                         Ok(ranges) => &as_24_bit_terminal_escaped(&ranges[..], false),
@@ -25,18 +26,21 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Opti
                             line
                         }
                     };
-                    result.push_str(highlighted);
+                    result.push(highlighted.to_string());
                 }
 
-                Some(result)
+                Preview::Content(result)
             } else {
                 tracing::debug!("unable to resolve syntax for: {:?}", path);
-                Some(content)
+
+                let content: Vec<_> = content.lines().map(|l| l.to_string()).collect();
+
+                Preview::Content(content)
             }
         }
         Err(err) => {
             tracing::error!("reading file failed: {:?} {:?}", path, err);
-            None
+            Preview::None
         }
     }
 }

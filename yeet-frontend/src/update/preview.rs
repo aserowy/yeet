@@ -5,6 +5,7 @@ use yeet_buffer::{
     model::{ansi::Ansi, BufferLine},
     update::update_buffer,
 };
+use yeet_keymap::message::Preview;
 
 use crate::{
     action::Action,
@@ -35,26 +36,31 @@ pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
 }
 
 #[tracing::instrument(skip(model, content))]
-pub fn update_preview(model: &mut Model, path: &PathBuf, content: &[String]) -> Vec<Action> {
+pub fn update_preview(model: &mut Model, path: &PathBuf, content: &Preview) -> Vec<Action> {
     if Some(path) == model.files.preview.path.as_ref() {
         tracing::trace!("updating preview buffer: {:?}", path);
 
-        let content = content
-            .iter()
-            .map(|s| BufferLine {
-                content: Ansi::new(s),
-                ..Default::default()
-            })
-            .collect();
+        match content {
+            Preview::Content(content) => {
+                let content = content
+                    .iter()
+                    .map(|s| BufferLine {
+                        content: Ansi::new(s),
+                        ..Default::default()
+                    })
+                    .collect();
 
-        // FIX: why here? this should get handled with enumeration or file preview
-        model.files.preview.state = DirectoryBufferState::Ready;
-        update_buffer(
-            &model.mode,
-            &mut model.files.preview.buffer,
-            &BufferMessage::SetContent(content),
-        );
-        validate_preview_viewport(model);
+                // FIX: why here? this should get handled with enumeration or file preview
+                model.files.preview.state = DirectoryBufferState::Ready;
+                update_buffer(
+                    &model.mode,
+                    &mut model.files.preview.buffer,
+                    &BufferMessage::SetContent(content),
+                );
+                validate_preview_viewport(model);
+            }
+            Preview::None => {}
+        };
     }
 
     Vec::new()
