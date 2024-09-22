@@ -1,7 +1,10 @@
 use std::{path::Path, process::Stdio, str};
 
 use ratatui::layout::Rect;
-use tokio::process::Command;
+use tokio::{
+    io::{stderr, AsyncWriteExt},
+    process::Command,
+};
 
 use crate::model::emulator::Emulator;
 
@@ -30,7 +33,9 @@ pub async fn load<'a>(emulator: &Emulator, path: &Path, rect: &Rect) -> Option<S
 }
 
 async fn load_with_sixel(path: &Path, rect: &Rect) -> Option<String> {
-    // TODO: add sixel
+    let _ = path;
+    let _ = rect;
+
     let sample = "
         \u{1b}Pq
         \"2;1;100;200
@@ -42,7 +47,14 @@ async fn load_with_sixel(path: &Path, rect: &Rect) -> Option<String> {
     "
     .to_string();
 
-    Some(sample)
+    let write_all = stderr().write_all(sample.as_bytes()).await;
+    match write_all {
+        Ok(_) => Some("".to_string()),
+        Err(err) => {
+            tracing::error!("encoded image to stderr failed: {:?}", err);
+            None
+        }
+    }
 }
 
 async fn load_with_chafa(path: &Path, rect: &Rect) -> Option<String> {
