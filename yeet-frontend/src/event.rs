@@ -244,7 +244,7 @@ async fn handle_crossterm_event(
                 let mut resolver = resolver_mutex.lock().await;
                 let (messages, sequence) = resolver.add_key(key);
                 return Some(Envelope {
-                    messages: messages.into_iter().map(|m| Message::Keymap(m)).collect(),
+                    messages: messages.into_iter().map(Message::Keymap).collect(),
                     sequence,
                     source: MessageSource::User,
                 });

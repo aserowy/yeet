@@ -30,7 +30,13 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
     )));
-    let change_mode_action = Action::EmitMessages(vec![change_mode_message.clone()]);
+
+    let change_mode_action = Action::EmitMessages(vec![Message::Keymap(KeymapMessage::Buffer(
+        BufferMessage::ChangeMode(
+            model.mode.clone(),
+            get_mode_after_command(&model.mode_before),
+        ),
+    ))]);
 
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,

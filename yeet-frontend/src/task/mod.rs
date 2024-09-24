@@ -272,7 +272,8 @@ impl TaskManager {
                     let mut resolver = resolver.lock().await;
                     if let Some(resolved) = resolver.add_keys(keys) {
                         let messages: Vec<_> =
-                            resolved.0.into_iter().map(|m| Message::Keymap(m)).collect();
+                            resolved.0.into_iter().map(Message::Keymap).collect();
+
                         envelope.messages.extend(messages);
                         envelope.sequence = resolved.1;
                     }
@@ -502,7 +503,7 @@ fn to_envelope(messages: Vec<Message>) -> Envelope {
     }
 }
 
-fn should_abort_on_finish(task: Task) -> bool {
+fn _should_abort_on_finish(task: Task) -> bool {
     match task {
         Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _) => true,
 

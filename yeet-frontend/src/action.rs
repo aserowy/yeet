@@ -38,7 +38,7 @@ pub async fn exec_preview_actions(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<ActionResult, AppError> {
+) -> Result<(Vec<Action>, ActionResult), AppError> {
     execute(true, model, emitter, terminal, actions).await
 }
 
@@ -48,7 +48,7 @@ pub async fn exec_postview_actions(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<ActionResult, AppError> {
+) -> Result<(Vec<Action>, ActionResult), AppError> {
     execute(false, model, emitter, terminal, actions).await
 }
 
@@ -71,7 +71,7 @@ async fn execute(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<ActionResult, AppError> {
+) -> Result<(Vec<Action>, ActionResult), AppError> {
     let result = if is_preview && contains_emit(&actions) {
         ActionResult::SkipRender
     } else if !is_preview && contains_quit(&actions) {
@@ -80,8 +80,10 @@ async fn execute(
         ActionResult::Normal
     };
 
+    let mut not_handled_actions = vec![];
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
+            not_handled_actions.push(action);
             continue;
         }
 
@@ -167,7 +169,7 @@ async fn execute(
         }
     }
 
-    Ok(result)
+    Ok((not_handled_actions, result))
 }
 
 fn contains_emit(actions: &[Action]) -> bool {
