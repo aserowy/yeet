@@ -3,7 +3,7 @@ use std::collections::{HashSet, VecDeque};
 use buffer::KeyBuffer;
 use key::{Key, KeyCode};
 use map::KeyMap;
-use message::{Binding, BindingKind, Envelope, KeySequence, Message, MessageSource};
+use message::{Binding, BindingKind, KeySequence, KeymapMessage};
 use tree::KeyTree;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, TextModification},
@@ -48,10 +48,13 @@ impl Default for MessageResolver {
 }
 
 impl MessageResolver {
-    pub fn add_keys(&mut self, mut keys: VecDeque<Key>) -> Option<Envelope> {
+    pub fn add_keys(
+        &mut self,
+        mut keys: VecDeque<Key>,
+    ) -> Option<(Vec<KeymapMessage>, KeySequence)> {
         while let Some(key) = keys.pop_front() {
-            let mut envelope = self.add_key(key);
-            if matches!(envelope.sequence, KeySequence::Completed(_)) {
+            let mut result = self.add_key(key);
+            if matches!(result.1, KeySequence::Completed(_)) {
                 let remaining_sequence = keys
                     .iter()
                     .map(|key| key.to_keycode_string())
@@ -59,30 +62,29 @@ impl MessageResolver {
                     .join("");
 
                 if !remaining_sequence.is_empty() {
-                    envelope
-                        .messages
-                        .insert(0, Message::ExecuteKeySequence(remaining_sequence));
+                    result
+                        .0
+                        .insert(0, KeymapMessage::ExecuteKeySequence(remaining_sequence));
                 }
 
-                return Some(envelope);
+                return Some(result);
             }
         }
         None
     }
 
-    pub fn add_key(&mut self, key: Key) -> Envelope {
+    pub fn add_key(&mut self, key: Key) -> (Vec<KeymapMessage>, KeySequence) {
         let keys = self.buffer.get_keys();
         if key.code == KeyCode::Esc && !keys.is_empty() {
             self.buffer.clear();
-            return Envelope {
-                messages: Vec::new(),
-                sequence: KeySequence::Completed(format!(
+            return (
+                Vec::new(),
+                KeySequence::Completed(format!(
                     "{}{}",
                     self.buffer.to_keycode_string(),
                     key.to_keycode_string()
                 )),
-                source: MessageSource::User,
-            };
+            );
         }
 
         self.buffer.add_key(key);
@@ -105,7 +107,9 @@ impl MessageResolver {
             Err(_) => {
                 let messages = if get_passthrough_by_mode(&self.mode) {
                     let message = TextModification::Insert(self.buffer.to_string());
-                    vec![Message::Buffer(BufferMessage::Modification(1, message))]
+                    vec![KeymapMessage::Buffer(BufferMessage::Modification(
+                        1, message,
+                    ))]
                 } else {
                     Vec::new()
                 };
@@ -115,11 +119,7 @@ impl MessageResolver {
             }
         };
 
-        Envelope {
-            messages,
-            sequence,
-            source: MessageSource::User,
-        }
+        (messages, sequence)
     }
 }
 
@@ -244,11 +244,11 @@ fn combine(current: &Binding, next: &Binding) -> Result<BindingKind, KeyMapError
     match (&current.kind, &next.kind) {
         (BindingKind::Message(msg), BindingKind::Raw(raw)) => {
             let message = match msg {
-                Message::PasteFromJunkYard(_) => Message::PasteFromJunkYard(*raw),
-                Message::NavigateToMark(_) => Message::NavigateToMark(*raw),
-                Message::ReplayMacro(_) => Message::ReplayMacro(*raw),
-                Message::SetMark(_) => Message::SetMark(*raw),
-                Message::StartMacro(_) => Message::StartMacro(*raw),
+                KeymapMessage::PasteFromJunkYard(_) => KeymapMessage::PasteFromJunkYard(*raw),
+                KeymapMessage::NavigateToMark(_) => KeymapMessage::NavigateToMark(*raw),
+                KeymapMessage::ReplayMacro(_) => KeymapMessage::ReplayMacro(*raw),
+                KeymapMessage::SetMark(_) => KeymapMessage::SetMark(*raw),
+                KeymapMessage::StartMacro(_) => KeymapMessage::StartMacro(*raw),
                 _ => return Err(KeyMapError::NoValidBindingFound),
             };
 
@@ -308,10 +308,10 @@ fn get_repeat(current: &Binding, next: &Binding) -> Option<usize> {
     Some(repeat)
 }
 
-fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
+fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<KeymapMessage> {
     let mut messages = Vec::new();
     if let Some(md) = &binding.force {
-        messages.push(Message::Buffer(BufferMessage::ChangeMode(
+        messages.push(KeymapMessage::Buffer(BufferMessage::ChangeMode(
             mode.clone(),
             md.clone(),
         )));
@@ -320,13 +320,12 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
     let repeat = binding.repeat.unwrap_or(1);
     match &binding.kind {
         BindingKind::Message(msg) => messages.extend(get_repeated_message(repeat, msg)),
-        BindingKind::Modification(mdf) => messages.push(Message::Buffer(
+        BindingKind::Modification(mdf) => messages.push(KeymapMessage::Buffer(
             BufferMessage::Modification(repeat, mdf.clone()),
         )),
-        BindingKind::Motion(mtn) => messages.push(Message::Buffer(BufferMessage::MoveCursor(
-            repeat,
-            mtn.clone(),
-        ))),
+        BindingKind::Motion(mtn) => messages.push(KeymapMessage::Buffer(
+            BufferMessage::MoveCursor(repeat, mtn.clone()),
+        )),
         BindingKind::None => {}
         BindingKind::Raw(_) | BindingKind::Repeat | BindingKind::RepeatOrMotion(_) => {
             unreachable!()
@@ -336,10 +335,10 @@ fn get_messages_from_binding(mode: &Mode, binding: Binding) -> Vec<Message> {
     messages
 }
 
-fn get_repeated_message(repeat: usize, msg: &Message) -> Vec<Message> {
+fn get_repeated_message(repeat: usize, msg: &KeymapMessage) -> Vec<KeymapMessage> {
     let mut messages = Vec::new();
     match msg {
-        Message::YankToJunkYard(_) => messages.push(Message::YankToJunkYard(repeat)),
+        KeymapMessage::YankToJunkYard(_) => messages.push(KeymapMessage::YankToJunkYard(repeat)),
         _ => {
             for _ in 0..repeat {
                 messages.push(msg.clone());

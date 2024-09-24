@@ -1,5 +1,6 @@
 use thiserror::Error;
-use yeet_keymap::message::Envelope;
+
+use crate::event::Envelope;
 
 #[derive(Debug, Error)]
 pub enum AppError {

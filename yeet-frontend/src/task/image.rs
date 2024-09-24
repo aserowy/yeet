@@ -2,7 +2,8 @@ use std::{path::Path, process::Stdio, str};
 
 use ratatui::layout::Rect;
 use tokio::process::Command;
-use yeet_keymap::message::Preview;
+
+use crate::event::Preview;
 
 #[tracing::instrument]
 pub async fn load<'a>(path: &Path, rect: &Rect) -> Preview {
@@ -39,20 +40,20 @@ async fn load_with_chafa(path: &Path, rect: &Rect) -> Preview {
         Ok(output) => {
             if !output.status.success() {
                 tracing::error!("chafa failed: {:?}", output);
-                Preview::None
+                Preview::None(path.to_path_buf())
             } else if output.stdout.is_empty() {
                 tracing::warn!("chafa failed: image result is empty");
-                Preview::None
+                Preview::None(path.to_path_buf())
             } else {
                 let content = str::from_utf8(&output.stdout)
                     .map_or(vec![], |s| s.lines().map(|l| l.to_string()).collect());
 
-                Preview::Content(content)
+                Preview::Content(path.to_path_buf(), content)
             }
         }
         Err(err) => {
             tracing::error!("chafa failed: {:?}", err);
-            Preview::None
+            Preview::None(path.to_path_buf())
         }
     }
 }

@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use action::{exec_postview_actions, exec_preview_actions, Action, ActionResult};
 use error::AppError;
-use event::Emitter;
+use event::{Emitter, Envelope, Message, MessageSource};
 use init::{
     history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
     qfix::load_qfix_from_files,
@@ -16,7 +16,7 @@ use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{Envelope, KeySequence, Message, MessageSource, PrintContent};
+use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 
 mod action;
 pub mod error;
@@ -37,8 +37,11 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
-        Message::Buffer(BufferMessage::ChangeMode(Mode::Normal, Mode::default())),
-        Message::NavigateToPath(initial_path),
+        Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
+            Mode::Normal,
+            Mode::default(),
+        ))),
+        Message::Keymap(KeymapMessage::NavigateToPath(initial_path)),
     ]));
 
     let mut model = Model {
@@ -49,21 +52,25 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
     init_junkyard(&mut model.junk, &mut emitter).await?;
 
     if load_history_from_file(&mut model.history).is_err() {
-        emitter.run(Task::EmitMessages(vec![Message::Print(vec![
-            PrintContent::Error("Failed to load history".to_string()),
-        ])]));
+        emitter.run(Task::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::Print(vec![PrintContent::Error(
+                "Failed to load history".to_string(),
+            )]),
+        )]));
     }
 
     if load_marks_from_file(&mut model.marks).is_err() {
-        emitter.run(Task::EmitMessages(vec![Message::Print(vec![
-            PrintContent::Error("Failed to load marks".to_string()),
-        ])]));
+        emitter.run(Task::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::Print(vec![PrintContent::Error(
+                "Failed to load marks".to_string(),
+            )]),
+        )]));
     }
 
     if load_qfix_from_files(&mut model.qfix).is_err() {
-        emitter.run(Task::EmitMessages(vec![Message::Print(vec![
-            PrintContent::Error("Failed to load qfix".to_string()),
-        ])]));
+        emitter.run(Task::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::Print(vec![PrintContent::Error("Failed to load qfix".to_string())]),
+        )]));
     }
 
     tracing::debug!("starting with model state: {:?}", model);
@@ -96,12 +103,12 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         actions.extend(get_watcher_changes(&mut model));
         actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
-        let result = exec_preview_actions(&model, &mut emitter, &mut terminal, &actions).await?;
+        let result = exec_preview_actions(&model, &mut emitter, &mut terminal, actions).await?;
         if result != ActionResult::SkipRender {
             render_model(&mut terminal, &model)?;
         }
 
-        let result = exec_postview_actions(&model, &mut emitter, &mut terminal, &actions).await?;
+        let result = exec_postview_actions(&model, &mut emitter, &mut terminal, actions).await?;
         if result == ActionResult::Quit {
             break;
         }
@@ -133,7 +140,7 @@ fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
     let lines_len = model.commandline.buffer.lines.len();
     let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
     for message in messages {
-        if let Message::Print(content) = message {
+        if let Message::Keymap(KeymapMessage::Print(content)) = message {
             if content.len() > 1 {
                 height = content.len() as u16 + 1;
             }
@@ -182,7 +189,19 @@ fn get_command_from_stack(
     envelope: &Envelope,
 ) -> Vec<Action> {
     if let Some(current) = &model.command_current {
-        if envelope.messages.iter().any(|msg| msg == current) {
+        let contains_message_current_command = envelope
+            .messages
+            .iter()
+            .flat_map(|m| {
+                if let Message::Keymap(keymap) = m {
+                    Some(keymap)
+                } else {
+                    None
+                }
+            })
+            .any(|msg| msg == current);
+
+        if contains_message_current_command {
             model.command_current = None;
         }
     }
@@ -211,9 +230,9 @@ fn get_command_from_stack(
         }
 
         let mut actions = Vec::new();
-        let command = if let Some(Message::NavigateToPathAsPreview(_)) = commands.front() {
+        let command = if let Some(KeymapMessage::NavigateToPathAsPreview(_)) = commands.front() {
             while let Some(front) = commands.front() {
-                if let Message::NavigateToPathAsPreview(path) = front {
+                if let KeymapMessage::NavigateToPathAsPreview(path) = front {
                     if path.exists() {
                         break;
                     } else {
@@ -234,7 +253,7 @@ fn get_command_from_stack(
         if let Some(command) = command {
             tracing::debug!("emitting cdo command: {:?}", command);
             model.command_current = Some(command.clone());
-            actions.push(Action::EmitMessages(vec![command]));
+            actions.push(Action::EmitMessages(vec![Message::Keymap(command)]));
         }
 
         if commands.is_empty() {

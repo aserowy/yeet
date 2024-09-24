@@ -4,10 +4,11 @@ use std::{
 };
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::Message;
+use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::Action,
+    event::Message,
     model::{mark::Marks, Model},
     task::Task,
     update::command::{
@@ -25,10 +26,10 @@ mod qfix;
 
 #[tracing::instrument(skip(model))]
 pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
-    let change_mode_message = Message::Buffer(BufferMessage::ChangeMode(
+    let change_mode_message = Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
-    ));
+    )));
     let change_mode_action = Action::EmitMessages(vec![change_mode_message.clone()]);
 
     let cmd_with_args = match cmd.split_once(' ') {
@@ -78,14 +79,16 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![
                 change_mode_action,
-                Action::EmitMessages(vec![Message::DeleteMarks(marks)]),
+                Action::EmitMessages(vec![Message::Keymap(KeymapMessage::DeleteMarks(marks))]),
             ]
         }
         ("e!", "") => {
             let navigation = if let Some(path) = &model.files.preview.path {
-                Message::NavigateToPathAsPreview(path.to_path_buf())
+                Message::Keymap(KeymapMessage::NavigateToPathAsPreview(path.to_path_buf()))
             } else {
-                Message::NavigateToPath(model.files.current.path.clone())
+                Message::Keymap(KeymapMessage::NavigateToPath(
+                    model.files.current.path.clone(),
+                ))
             };
 
             vec![Action::EmitMessages(vec![change_mode_message, navigation])]
@@ -93,11 +96,15 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("invertcl", "") => invert_qfix_selection_in_current(model, change_mode_action),
         ("junk", "") => {
             let content = print_junkyard(&model.junk);
-            vec![Action::EmitMessages(vec![Message::Print(content)])]
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::Print(content),
+            )])]
         }
         ("marks", "") => {
             let content = print_marks(&model.marks);
-            vec![Action::EmitMessages(vec![Message::Print(content)])]
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::Print(content),
+            )])]
         }
         ("mv", target) => {
             let mut actions = vec![change_mode_action];
@@ -117,21 +124,25 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("noh", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
-            Message::ClearSearchHighlight,
+            Message::Keymap(KeymapMessage::ClearSearchHighlight),
         ])],
-        ("q", "") => vec![Action::EmitMessages(vec![Message::Quit])],
+        ("q", "") => vec![Action::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::Quit,
+        )])],
         ("reg", "") => {
             let content = print_register(&model.register);
-            vec![Action::EmitMessages(vec![Message::Print(content)])]
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::Print(content),
+            )])]
         }
         ("resetcl", "") => reset_qfix_list(model, change_mode_action),
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
-            Message::Buffer(BufferMessage::SaveBuffer),
+            Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
         ])],
         ("wq", "") => vec![Action::EmitMessages(vec![
-            Message::Buffer(BufferMessage::SaveBuffer),
-            Message::Quit,
+            Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
+            Message::Keymap(KeymapMessage::Quit),
         ])],
         (cmd, args) => {
             let mut actions = vec![change_mode_action];
@@ -185,7 +196,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     }
 }
 
-pub fn create_or_extend_command_stack(model: &mut Model, message: &Message) -> Vec<Action> {
+pub fn create_or_extend_command_stack(model: &mut Model, message: &KeymapMessage) -> Vec<Action> {
     if let Some(commands) = &mut model.command_stack {
         commands.push_back(message.clone());
     } else {

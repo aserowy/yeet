@@ -8,7 +8,7 @@ use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Buffer, Cursor, CursorPosition, Mode,
 };
-use yeet_keymap::message::Message;
+use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
@@ -26,8 +26,8 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub command_stack: Option<VecDeque<Message>>,
-    pub command_current: Option<Message>,
+    pub command_stack: Option<VecDeque<KeymapMessage>>,
+    pub command_current: Option<KeymapMessage>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,

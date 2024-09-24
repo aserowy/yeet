@@ -6,8 +6,9 @@ use syntect::{
     parsing::{SyntaxReference, SyntaxSet},
     util::{as_24_bit_terminal_escaped, LinesWithEndings},
 };
-use tokio::fs::{self};
-use yeet_keymap::message::Preview;
+use tokio::fs;
+
+use crate::event::Preview;
 
 pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Preview {
     match fs::read_to_string(path).await {
@@ -29,18 +30,18 @@ pub async fn highlight(syntaxes: &SyntaxSet, theme: &Theme, path: &Path) -> Prev
                     result.push(highlighted.to_string());
                 }
 
-                Preview::Content(result)
+                Preview::Content(path.to_path_buf(), result)
             } else {
                 tracing::debug!("unable to resolve syntax for: {:?}", path);
 
                 let content: Vec<_> = content.lines().map(|l| l.to_string()).collect();
 
-                Preview::Content(content)
+                Preview::Content(path.to_path_buf(), content)
             }
         }
         Err(err) => {
             tracing::error!("reading file failed: {:?} {:?}", path, err);
-            Preview::None
+            Preview::None(path.to_path_buf())
         }
     }
 }

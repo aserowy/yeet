@@ -5,10 +5,10 @@ use yeet_buffer::{
     model::{ansi::Ansi, BufferLine, Cursor, CursorPosition, Mode},
     update::update_buffer,
 };
-use yeet_keymap::message::ContentKind;
 
 use crate::{
     action::Action,
+    event::ContentKind,
     model::{DirectoryBufferState, Model},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},

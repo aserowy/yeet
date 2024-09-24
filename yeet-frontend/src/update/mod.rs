@@ -5,9 +5,13 @@ use yeet_buffer::{
     model::{BufferLine, Mode},
     update::update_buffer,
 };
-use yeet_keymap::message::{Envelope, KeySequence, Message, PrintContent};
+use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 
-use crate::{action::Action, model::Model};
+use crate::{
+    action::Action,
+    event::{Envelope, Message},
+    model::Model,
+};
 
 use self::{
     command::{create_or_extend_command_stack, execute_command},
@@ -94,9 +98,6 @@ pub fn update_model(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
 #[tracing::instrument(skip(model))]
 fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
     match message {
-        Message::Buffer(msg) => update_with_buffer_message(model, msg),
-        Message::ClearSearchHighlight => clear_search(model),
-        Message::DeleteMarks(marks) => delete_mark(model, marks),
         Message::EnumerationChanged(path, contents, selection) => {
             update_on_enumeration_change(model, path, contents, selection)
         }
@@ -106,35 +107,45 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
         Message::Error(error) => {
             print_in_commandline(model, &[PrintContent::Error(error.to_string())])
         }
-        Message::ExecuteCommand => update_commandline_on_execute(model),
-        Message::ExecuteCommandString(command) => execute_command(command, model),
-        Message::ExecuteKeySequence(_) => create_or_extend_command_stack(model, message),
-        Message::ExecuteRegister(register) => replay_register(&mut model.register, register),
-        Message::LeaveCommandMode => leave_commandline(model),
-        Message::NavigateToMark(char) => navigate_to_mark(char, model),
-        Message::NavigateToParent => navigate_to_parent(model),
-        Message::NavigateToPath(path) => navigate_to_path(model, path),
-        Message::NavigateToPathAsPreview(path) => navigate_to_path_as_preview(model, path),
-        Message::NavigateToSelected => navigate_to_selected(model),
-        Message::OpenSelected => open_selected(model),
-        Message::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),
+        Message::Keymap(msg) => update_with_keymap_message(model, msg),
         Message::PathRemoved(path) => remove_path(model, path),
         Message::PathsAdded(paths) => add_paths(model, paths)
             .into_iter()
             .chain(add_to_junkyard(model, paths).into_iter())
             .collect(),
-        Message::PreviewLoaded(path, content) => update_preview(model, path, content),
-        Message::Print(content) => print_in_commandline(model, content),
+        Message::PreviewLoaded(content) => update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
-        Message::ReplayMacro(char) => replay_macro_register(&mut model.register, char),
-        Message::SetMark(char) => add_mark(model, *char),
-        Message::StartMacro(identifier) => set_recording_in_commandline(model, *identifier),
-        Message::StopMacro => set_mode_in_commandline(model),
-        Message::ToggleQuickFix => toggle_selected_to_qfix(model),
-        Message::Quit => vec![Action::Quit(None)],
-        Message::YankPathToClipboard => copy_current_selected_path_to_clipboard(model),
-        Message::YankToJunkYard(repeat) => yank_to_junkyard(model, repeat),
+    }
+}
+
+#[tracing::instrument(skip(model, msg))]
+pub fn update_with_keymap_message(model: &mut Model, msg: &KeymapMessage) -> Vec<Action> {
+    match msg {
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(model, msg),
+        KeymapMessage::ClearSearchHighlight => clear_search(model),
+        KeymapMessage::DeleteMarks(marks) => delete_mark(model, marks),
+        KeymapMessage::ExecuteCommand => update_commandline_on_execute(model),
+        KeymapMessage::ExecuteCommandString(command) => execute_command(command, model),
+        KeymapMessage::ExecuteKeySequence(_) => create_or_extend_command_stack(model, msg),
+        KeymapMessage::ExecuteRegister(register) => replay_register(&mut model.register, register),
+        KeymapMessage::LeaveCommandMode => leave_commandline(model),
+        KeymapMessage::NavigateToMark(char) => navigate_to_mark(char, model),
+        KeymapMessage::NavigateToParent => navigate_to_parent(model),
+        KeymapMessage::NavigateToPath(path) => navigate_to_path(model, path),
+        KeymapMessage::NavigateToPathAsPreview(path) => navigate_to_path_as_preview(model, path),
+        KeymapMessage::NavigateToSelected => navigate_to_selected(model),
+        KeymapMessage::OpenSelected => open_selected(model),
+        KeymapMessage::PasteFromJunkYard(entry_id) => paste_to_junkyard(model, entry_id),
+        KeymapMessage::Print(content) => print_in_commandline(model, content),
+        KeymapMessage::ReplayMacro(char) => replay_macro_register(&mut model.register, char),
+        KeymapMessage::SetMark(char) => add_mark(model, *char),
+        KeymapMessage::StartMacro(identifier) => set_recording_in_commandline(model, *identifier),
+        KeymapMessage::StopMacro => set_mode_in_commandline(model),
+        KeymapMessage::ToggleQuickFix => toggle_selected_to_qfix(model),
+        KeymapMessage::Quit => vec![Action::Quit(None)],
+        KeymapMessage::YankPathToClipboard => copy_current_selected_path_to_clipboard(model),
+        KeymapMessage::YankToJunkYard(repeat) => yank_to_junkyard(model, repeat),
     }
 }
 

@@ -1,7 +1,8 @@
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
     action::Action,
+    event::Message,
     model::{
         junkyard::{FileEntryStatus, FileTransaction, JunkYard},
         mark::Marks,
@@ -60,7 +61,9 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
         })
         .collect();
 
-    vec![Action::EmitMessages(vec![Message::Print(content)])]
+    vec![Action::EmitMessages(vec![Message::Keymap(
+        KeymapMessage::Print(content),
+    )])]
 }
 
 pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {

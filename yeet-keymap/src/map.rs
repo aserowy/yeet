@@ -10,7 +10,7 @@ use yeet_buffer::{
 
 use crate::{
     key::{Key, KeyCode, KeyModifier},
-    message::{Binding, BindingKind, Message, NextBindingKind},
+    message::{Binding, BindingKind, KeymapMessage, NextBindingKind},
     tree::KeyTree,
 };
 
@@ -56,14 +56,14 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::ExecuteCommand),
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommand),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Esc, vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::LeaveCommandMode),
+                        kind: BindingKind::Message(KeymapMessage::LeaveCommandMode),
                         ..Default::default()
                     },
                 ),
@@ -105,14 +105,14 @@ impl Default for KeyMap {
                     ],
                     Binding {
                         expects: Some(NextBindingKind::Raw(None)),
-                        kind: BindingKind::Message(Message::PasteFromJunkYard(' ')),
+                        kind: BindingKind::Message(KeymapMessage::PasteFromJunkYard(' ')),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::Enter, vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::OpenSelected),
+                        kind: BindingKind::Message(KeymapMessage::OpenSelected),
                         ..Default::default()
                     },
                 ),
@@ -141,21 +141,21 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('h'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::NavigateToPath(get_home_path())),
+                        kind: BindingKind::Message(KeymapMessage::NavigateToPath(get_home_path())),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('h'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::NavigateToParent),
+                        kind: BindingKind::Message(KeymapMessage::NavigateToParent),
                         ..Default::default()
                     },
                 ),
                 (
                     vec![Key::new(KeyCode::from_char('l'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::NavigateToSelected),
+                        kind: BindingKind::Message(KeymapMessage::NavigateToSelected),
                         ..Default::default()
                     },
                 ),
@@ -172,7 +172,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('p'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::PasteFromJunkYard('"')),
+                        kind: BindingKind::Message(KeymapMessage::PasteFromJunkYard('"')),
                         ..Default::default()
                     },
                 ),
@@ -182,7 +182,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('p'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::YankPathToClipboard),
+                        kind: BindingKind::Message(KeymapMessage::YankPathToClipboard),
                         ..Default::default()
                     },
                 ),
@@ -192,7 +192,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('y'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::YankToJunkYard(0)),
+                        kind: BindingKind::Message(KeymapMessage::YankToJunkYard(0)),
                         ..Default::default()
                     },
                 ),
@@ -206,7 +206,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::Space, vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::ToggleQuickFix),
+                        kind: BindingKind::Message(KeymapMessage::ToggleQuickFix),
                         repeatable: false,
                         ..Default::default()
                     },
@@ -296,7 +296,7 @@ impl Default for KeyMap {
                         expects: Some(NextBindingKind::Raw(Some(
                             Regex::new("[[:alpha:]]").expect("Invalid regex"),
                         ))),
-                        kind: BindingKind::Message(Message::ReplayMacro(' ')),
+                        kind: BindingKind::Message(KeymapMessage::ReplayMacro(' ')),
                         ..Default::default()
                     },
                 ),
@@ -306,7 +306,7 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('@'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::ReplayMacro('@')),
+                        kind: BindingKind::Message(KeymapMessage::ReplayMacro('@')),
                         ..Default::default()
                     },
                 ),
@@ -314,7 +314,7 @@ impl Default for KeyMap {
                     vec![Key::new(KeyCode::from_char('\''), vec![])],
                     Binding {
                         expects: Some(NextBindingKind::Raw(None)),
-                        kind: BindingKind::Message(Message::NavigateToMark(' ')),
+                        kind: BindingKind::Message(KeymapMessage::NavigateToMark(' ')),
                         repeatable: false,
                         ..Default::default()
                     },
@@ -355,9 +355,9 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('d'), vec![KeyModifier::Ctrl])],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
-                            ViewPortDirection::HalfPageDown,
-                        ))),
+                        kind: BindingKind::Message(KeymapMessage::Buffer(
+                            BufferMessage::MoveViewPort(ViewPortDirection::HalfPageDown),
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -407,7 +407,7 @@ impl Default for KeyMap {
                         expects: Some(NextBindingKind::Raw(Some(
                             Regex::new("[[:alpha:]]").expect("Invalid regex"),
                         ))),
-                        kind: BindingKind::Message(Message::SetMark(' ')),
+                        kind: BindingKind::Message(KeymapMessage::SetMark(' ')),
                         repeatable: false,
                         ..Default::default()
                     },
@@ -452,11 +452,11 @@ impl Default for KeyMap {
                         expects: Some(NextBindingKind::Raw(Some(
                             Regex::new("[[:alpha:]]").expect("Invalid regex"),
                         ))),
-                        kind: BindingKind::Message(Message::StartMacro(' ')),
+                        kind: BindingKind::Message(KeymapMessage::StartMacro(' ')),
                         repeatable: false,
                         toggle: Some((
                             "macro-toggle".to_owned(),
-                            BindingKind::Message(Message::StopMacro),
+                            BindingKind::Message(KeymapMessage::StopMacro),
                         )),
                         ..Default::default()
                     },
@@ -464,9 +464,9 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('u'), vec![KeyModifier::Ctrl])],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
-                            ViewPortDirection::HalfPageUp,
-                        ))),
+                        kind: BindingKind::Message(KeymapMessage::Buffer(
+                            BufferMessage::MoveViewPort(ViewPortDirection::HalfPageUp),
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -476,9 +476,9 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('b'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
-                            ViewPortDirection::BottomOnCursor,
-                        ))),
+                        kind: BindingKind::Message(KeymapMessage::Buffer(
+                            BufferMessage::MoveViewPort(ViewPortDirection::BottomOnCursor),
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -488,9 +488,9 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('t'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
-                            ViewPortDirection::TopOnCursor,
-                        ))),
+                        kind: BindingKind::Message(KeymapMessage::Buffer(
+                            BufferMessage::MoveViewPort(ViewPortDirection::TopOnCursor),
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -500,9 +500,9 @@ impl Default for KeyMap {
                         Key::new(KeyCode::from_char('z'), vec![]),
                     ],
                     Binding {
-                        kind: BindingKind::Message(Message::Buffer(BufferMessage::MoveViewPort(
-                            ViewPortDirection::CenterOnCursor,
-                        ))),
+                        kind: BindingKind::Message(KeymapMessage::Buffer(
+                            BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                        )),
                         ..Default::default()
                     },
                 ),
@@ -525,7 +525,7 @@ impl Default for KeyMap {
                 (
                     vec![Key::new(KeyCode::from_char('.'), vec![])],
                     Binding {
-                        kind: BindingKind::Message(Message::ExecuteRegister('.')),
+                        kind: BindingKind::Message(KeymapMessage::ExecuteRegister('.')),
                         ..Default::default()
                     },
                 ),

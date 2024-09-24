@@ -4,49 +4,49 @@ use yeet_buffer::{
 };
 use yeet_keymap::{
     key::{Key, KeyCode, KeyModifier},
-    message::{KeySequence, Message},
+    message::{KeySequence, KeymapMessage},
     MessageResolver,
 };
 
 #[test]
 fn add_and_resolve_key_navigation_colon() {
     let mut resolver = MessageResolver::default();
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::ChangeMode(
+        Some(&KeymapMessage::Buffer(BufferMessage::ChangeMode(
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed(":".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed(":".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
 fn add_and_resolve_key_navigation_d() {
     let mut resolver = MessageResolver::default();
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(KeySequence::Changed("d".to_string()), envelope.sequence);
-    assert!(envelope.messages.is_empty());
+    assert_eq!(KeySequence::Changed("d".to_string()), result.1);
+    assert!(result.0.is_empty());
 }
 
 #[test]
 fn add_and_resolve_key_navigation_dq() {
     let mut resolver = MessageResolver::default();
     let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(KeySequence::Completed("dq".to_string()), envelope.sequence);
-    assert!(envelope.messages.is_empty());
+    assert_eq!(KeySequence::Completed("dq".to_string()), result.1);
+    assert!(result.0.is_empty());
 }
 
 #[test]
@@ -55,19 +55,19 @@ fn add_and_resolve_key_normal_dd() {
     resolver.mode = Mode::Normal;
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteLine
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("dd".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("dd".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -76,19 +76,19 @@ fn add_and_resolve_key_normal_fq() {
     resolver.mode = Mode::Normal;
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::MoveCursor(
+        Some(&KeymapMessage::Buffer(BufferMessage::MoveCursor(
             1,
             CursorDirection::FindForward('q')
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("fq".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("fq".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -98,19 +98,19 @@ fn add_and_resolve_key_normal_dfq() {
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(1, CursorDirection::FindForward('q'))
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("dfq".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("dfq".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -121,22 +121,19 @@ fn add_and_resolve_key_normal_10fq() {
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::MoveCursor(
+        Some(&KeymapMessage::Buffer(BufferMessage::MoveCursor(
             10,
             CursorDirection::FindForward('q')
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(
-        KeySequence::Completed("10fq".to_string()),
-        envelope.sequence
-    );
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("10fq".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -145,19 +142,19 @@ fn add_and_resolve_key_normal_d0() {
     resolver.mode = Mode::Normal;
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('d'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(1, CursorDirection::LineStart)
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("d0".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("d0".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -165,19 +162,19 @@ fn add_and_resolve_key_command_q() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Command(CommandMode::Command);
 
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             1,
             TextModification::Insert("q".to_string())
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("q".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("q".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -185,18 +182,15 @@ fn add_and_resolve_key_navigation_q() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Navigation;
 
-    let envelope = resolver.add_key(Key::new(
+    let result = resolver.add_key(Key::new(
         KeyCode::from_char('q'),
         vec![KeyModifier::Ctrl, KeyModifier::Shift],
     ));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(
-        KeySequence::Completed("<C-Q>".to_string()),
-        envelope.sequence
-    );
-    assert!(envelope.messages.is_empty());
+    assert_eq!(KeySequence::Completed("<C-Q>".to_string()), result.1);
+    assert!(result.0.is_empty());
 }
 
 #[test]
@@ -205,22 +199,22 @@ fn add_and_resolve_key_navigation_10h() {
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('h'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('h'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.first());
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(1));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(2));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(3));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(4));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(5));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(6));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(7));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(8));
-    assert_eq!(Some(&Message::NavigateToParent), envelope.messages.get(9));
-    assert_eq!(KeySequence::Completed("10h".to_string()), envelope.sequence);
-    assert_eq!(10, envelope.messages.len());
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.first());
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(1));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(2));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(3));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(4));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(5));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(6));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(7));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(8));
+    assert_eq!(Some(&KeymapMessage::NavigateToParent), result.0.get(9));
+    assert_eq!(KeySequence::Completed("10h".to_string()), result.1);
+    assert_eq!(10, result.0.len());
 }
 
 #[test]
@@ -228,13 +222,13 @@ fn add_and_resolve_key_navigation_yy() {
     let mut resolver = MessageResolver::default();
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(Some(&Message::YankToJunkYard(1)), envelope.messages.first());
-    assert_eq!(KeySequence::Completed("yy".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(Some(&KeymapMessage::YankToJunkYard(1)), result.0.first());
+    assert_eq!(KeySequence::Completed("yy".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -244,19 +238,13 @@ fn add_and_resolve_key_navigation_10yy() {
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('y'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(
-        Some(&Message::YankToJunkYard(10)),
-        envelope.messages.first()
-    );
-    assert_eq!(
-        KeySequence::Completed("10yy".to_string()),
-        envelope.sequence
-    );
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(Some(&KeymapMessage::YankToJunkYard(10)), result.0.first());
+    assert_eq!(KeySequence::Completed("10yy".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -264,19 +252,19 @@ fn add_and_resolve_key_normal_0() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
 
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::MoveCursor(
+        Some(&KeymapMessage::Buffer(BufferMessage::MoveCursor(
             1,
             CursorDirection::LineStart
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("0".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("0".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -288,22 +276,19 @@ fn add_and_resolve_key_normal_d10fq() {
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             1,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(
-        KeySequence::Completed("d10fq".to_string()),
-        envelope.sequence
-    );
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("d10fq".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -317,22 +302,19 @@ fn add_and_resolve_key_normal_10d10fq() {
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('f'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::Modification(
+        Some(&KeymapMessage::Buffer(BufferMessage::Modification(
             10,
             TextModification::DeleteMotion(10, CursorDirection::FindForward('q'))
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(
-        KeySequence::Completed("10d10fq".to_string()),
-        envelope.sequence
-    );
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("10d10fq".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -341,19 +323,19 @@ fn add_and_resolve_key_normal_10colon() {
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('1'), vec![]));
     let _ = resolver.add_key(Key::new(KeyCode::from_char('0'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char(':'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
     assert_eq!(
-        Some(&Message::Buffer(BufferMessage::ChangeMode(
+        Some(&KeymapMessage::Buffer(BufferMessage::ChangeMode(
             Mode::Navigation,
             Mode::Command(CommandMode::Command)
         ))),
-        envelope.messages.first()
+        result.0.first()
     );
-    assert_eq!(KeySequence::Completed("10:".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(KeySequence::Completed("10:".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }
 
 #[test]
@@ -362,19 +344,19 @@ fn add_and_resolve_key_normal_qa_and_q() {
     resolver.mode = Mode::Normal;
 
     let _ = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('a'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('a'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(Some(&Message::StartMacro('a')), envelope.messages.first());
-    assert_eq!(KeySequence::Completed("qa".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(Some(&KeymapMessage::StartMacro('a')), result.0.first());
+    assert_eq!(KeySequence::Completed("qa".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 
-    let envelope = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('q'), vec![]));
 
-    println!("{:?}", envelope);
+    println!("{:?}", result);
 
-    assert_eq!(Some(&Message::StopMacro), envelope.messages.first());
-    assert_eq!(KeySequence::Completed("q".to_string()), envelope.sequence);
-    assert_eq!(1, envelope.messages.len());
+    assert_eq!(Some(&KeymapMessage::StopMacro), result.0.first());
+    assert_eq!(KeySequence::Completed("q".to_string()), result.1);
+    assert_eq!(1, result.0.len());
 }

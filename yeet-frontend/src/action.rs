@@ -3,13 +3,16 @@ use std::{
     path::PathBuf,
 };
 
-use yeet_keymap::message::Message;
-
 use crate::{
-    error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
+    error::AppError,
+    event::{Emitter, Message},
+    model::Model,
+    open,
+    task::Task,
+    terminal::TerminalWrapper,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
     Load(PathBuf, Option<String>),
@@ -34,7 +37,7 @@ pub async fn exec_preview_actions(
     model: &Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
+    actions: Vec<Action>,
 ) -> Result<ActionResult, AppError> {
     execute(true, model, emitter, terminal, actions).await
 }
@@ -44,7 +47,7 @@ pub async fn exec_postview_actions(
     model: &Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
+    actions: Vec<Action>,
 ) -> Result<ActionResult, AppError> {
     execute(false, model, emitter, terminal, actions).await
 }
@@ -67,10 +70,18 @@ async fn execute(
     model: &Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
+    actions: Vec<Action>,
 ) -> Result<ActionResult, AppError> {
-    for action in actions {
-        if is_preview != is_preview_action(action) {
+    let result = if is_preview && contains_emit(&actions) {
+        ActionResult::SkipRender
+    } else if !is_preview && contains_quit(&actions) {
+        ActionResult::Quit
+    } else {
+        ActionResult::Normal
+    };
+
+    for action in actions.into_iter() {
+        if is_preview != is_preview_action(&action) {
             continue;
         }
 
@@ -78,7 +89,7 @@ async fn execute(
 
         match action {
             Action::EmitMessages(messages) => {
-                emitter.run(Task::EmitMessages(messages.clone()));
+                emitter.run(Task::EmitMessages(messages));
             }
             Action::Load(path, selection) => {
                 if path.is_dir() {
@@ -106,7 +117,7 @@ async fn execute(
                 terminal.suspend();
 
                 // FIX: remove flickering (alternate screen leave and cli started)
-                open::path(path).await?;
+                open::path(&path).await?;
 
                 emitter.resume();
                 terminal.resume()?;
@@ -126,15 +137,15 @@ async fn execute(
                 emitter.run(Task::SaveQuickFix(model.qfix.clone()));
             }
             Action::Resize(x, y) => {
-                terminal.resize(*x, *y)?;
+                terminal.resize(x, y)?;
 
                 if let Some(path) = &model.files.preview.path {
                     emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
                 }
             }
-            Action::Task(task) => emitter.run(task.clone()),
+            Action::Task(task) => emitter.run(task),
             Action::UnwatchPath(path) => {
-                if path == &PathBuf::default() {
+                if path == PathBuf::default() {
                     continue;
                 }
 
@@ -145,7 +156,7 @@ async fn execute(
                 }
             }
             Action::WatchPath(path) => {
-                if path == &PathBuf::default() {
+                if path == PathBuf::default() {
                     continue;
                 }
 
@@ -155,14 +166,6 @@ async fn execute(
             }
         }
     }
-
-    let result = if is_preview && contains_emit(actions) {
-        ActionResult::SkipRender
-    } else if !is_preview && contains_quit(actions) {
-        ActionResult::Quit
-    } else {
-        ActionResult::Normal
-    };
 
     Ok(result)
 }
