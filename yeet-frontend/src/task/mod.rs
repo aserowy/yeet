@@ -5,6 +5,7 @@ use std::{
 };
 
 use ratatui::layout::Rect;
+use ratatui_image::picker::Picker;
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
@@ -111,6 +112,7 @@ impl PartialEq for Task {
 pub struct TaskManager {
     abort_handles: HashMap<String, AbortHandle>,
     highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
+    image_previewer: Arc<Mutex<Option<Picker>>>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
@@ -120,12 +122,18 @@ pub struct TaskManager {
 // TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
+        let picker = Picker::from_termios().ok();
+        if let Some(mut picker) = picker {
+            picker.guess_protocol();
+        }
+
         Self {
             abort_handles: HashMap::new(),
             highlighter: Arc::new(Mutex::new((
                 SyntaxSet::load_defaults_newlines(),
                 ThemeSet::load_defaults(),
             ))),
+            image_previewer: Arc::new(Mutex::new(picker)),
             resolver,
             sender,
             tasks: JoinSet::new(),
@@ -369,11 +377,9 @@ impl TaskManager {
             Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
                 let highlighter = Arc::clone(&self.highlighter);
-                self.tasks.spawn(async move {
-                    let highlighter = highlighter.lock().await;
-                    let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                    let theme = &theme_set.themes["base16-eighties.dark"];
+                let previewer = Arc::clone(&self.image_previewer);
 
+                self.tasks.spawn(async move {
                     let mime = if let Some(mime) = infer::get_from_path(&path)? {
                         let kind = mime.mime_type().split('/').collect::<Vec<_>>();
                         if kind.len() != 2 {
@@ -385,8 +391,18 @@ impl TaskManager {
                     };
 
                     let content = match mime.as_deref() {
-                        Some("image") => image::load(&path, &rect).await,
-                        _ => syntax::highlight(syntaxes, theme, &path).await,
+                        Some("image") => {
+                            let mut picker = previewer.lock().await;
+
+                            image::load(&mut picker, &path, &rect).await
+                        }
+                        _ => {
+                            let highlighter = highlighter.lock().await;
+                            let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
+                            let theme = &theme_set.themes["base16-eighties.dark"];
+
+                            syntax::highlight(syntaxes, theme, &path).await
+                        }
                     };
 
                     let result = sender

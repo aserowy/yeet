@@ -103,12 +103,14 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         actions.extend(get_watcher_changes(&mut model));
         actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
-        let (actions, result) = exec_preview_actions(&model, &mut emitter, &mut terminal, actions).await?;
+        let (actions, result) =
+            exec_preview_actions(&model, &mut emitter, &mut terminal, actions).await?;
         if result != ActionResult::SkipRender {
             render_model(&mut terminal, &model)?;
         }
 
-        let (_, result) = exec_postview_actions(&model, &mut emitter, &mut terminal, actions).await?;
+        let (_, result) =
+            exec_postview_actions(&model, &mut emitter, &mut terminal, actions).await?;
         if result == ActionResult::Quit {
             break;
         }

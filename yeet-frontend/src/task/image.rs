@@ -1,13 +1,42 @@
 use std::{path::Path, process::Stdio, str};
 
+use image::ImageReader;
 use ratatui::layout::Rect;
+use ratatui_image::{picker::Picker, Resize};
 use tokio::process::Command;
 
-use crate::event::Preview;
+use crate::{error::AppError, event::Preview};
 
 #[tracing::instrument]
-pub async fn load<'a>(path: &Path, rect: &Rect) -> Preview {
-    load_with_chafa(path, rect).await
+pub async fn load<'a>(picker: &mut Option<Picker>, path: &Path, rect: &Rect) -> Preview {
+    let picker = match picker {
+        Some(pckr) => pckr,
+        None => return load_with_chafa(path, rect).await,
+    };
+
+    match load_with_ratatui_image(picker, path, rect).await {
+        Ok(preview) => preview,
+        Err(err) => {
+            tracing::error!("image preview failed: {:?}", err);
+            load_with_chafa(path, rect).await
+        }
+    }
+}
+
+async fn load_with_ratatui_image(
+    picker: &mut Picker,
+    path: &Path,
+    rect: &Rect,
+) -> Result<Preview, AppError> {
+    let image = ImageReader::open(path)?.decode()?;
+
+    match picker.new_protocol(image, rect.clone(), Resize::Fit(None)) {
+        Ok(prtcl) => Ok(Preview::Image(path.to_path_buf(), prtcl)),
+        Err(err) => {
+            tracing::error!("Generation of preview image protocol failed: {:?}", err);
+            Err(AppError::PreviewProtocolGenerationFailed)
+        }
+    }
 }
 
 async fn load_with_chafa(path: &Path, rect: &Rect) -> Preview {
