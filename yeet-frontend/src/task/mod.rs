@@ -124,6 +124,7 @@ impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
         let picker = Picker::from_termios().ok();
         if let Some(mut picker) = picker {
+            // NOTE: must be called after alternate screen and before first rendering
             picker.guess_protocol();
         }
 

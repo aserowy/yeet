@@ -53,18 +53,29 @@ pub fn update_preview(model: &mut Model, content: &Preview) -> Vec<Action> {
                         ..Default::default()
                     })
                     .collect();
-                model.files.preview.state = DirectoryBufferState::Ready;
+
                 update_buffer(
                     &model.mode,
                     &mut model.files.preview.buffer,
                     &BufferMessage::SetContent(content),
                 );
-                validate_preview_viewport(model);
             }
-            Preview::Image(_, _) => todo!(),
+            Preview::Image(_, _) => {
+                update_buffer(
+                    &model.mode,
+                    &mut model.files.preview.buffer,
+                    &BufferMessage::SetContent(vec![BufferLine {
+                        content: Ansi::new(""),
+                        ..Default::default()
+                    }]),
+                );
+            }
             Preview::None(_) => {}
         };
     }
+
+    model.files.preview.state = DirectoryBufferState::Ready;
+    validate_preview_viewport(model);
 
     Vec::new()
 }
