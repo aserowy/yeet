@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf};
 
-use action::{exec_postview_actions, exec_preview_actions, Action, ActionResult};
+use action::{Action, ActionResult};
 use error::AppError;
 use event::{Emitter, Envelope, Message, MessageSource};
 use init::{
@@ -104,13 +104,13 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
         let (actions, result) =
-            exec_preview_actions(&model, &mut emitter, &mut terminal, actions).await?;
+            action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;
         if result != ActionResult::SkipRender {
             render_model(&mut terminal, &model)?;
         }
 
         let (_, result) =
-            exec_postview_actions(&model, &mut emitter, &mut terminal, actions).await?;
+            action::exec_postview(&mut model, &mut emitter, &mut terminal, actions).await?;
         if result == ActionResult::Quit {
             break;
         }
@@ -155,7 +155,7 @@ fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
 fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     let current = vec![
         Some(model.files.current.path.clone()),
-        model.files.preview.path.clone(),
+        model.files.preview.resolve_path().map(|p| p.to_path_buf()),
         model.files.parent.path.clone(),
     ]
     .into_iter()

@@ -1,6 +1,10 @@
 use yeet_buffer::view;
 
-use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
+use crate::{
+    error::AppError,
+    model::{Model, PreviewContent},
+    terminal::TerminalWrapper,
+};
 
 mod commandline;
 mod statusline;
@@ -24,12 +28,14 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
             frame,
             layout.parent,
         );
-        view::view(
-            &model.mode,
-            &model.files.preview.buffer,
-            frame,
-            layout.preview,
-        );
+
+        match &model.files.preview {
+            PreviewContent::Buffer(dir) => {
+                view::view(&model.mode, &dir.buffer, frame, layout.preview);
+            }
+            PreviewContent::Image(_, _) => todo!(),
+            PreviewContent::Loading(_) | PreviewContent::None => {}
+        };
 
         statusline::view(model, frame, layout.statusline);
     })

@@ -9,11 +9,12 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{DirectoryBufferState, Model},
+    model::{DirectoryBufferState, Model, PreviewContent, WindowType},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
-        preview::{set_preview_to_selected, validate_preview_viewport},
+        preview::validate_preview_viewport,
+        selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
@@ -60,21 +61,29 @@ pub fn update_on_enumeration_change(
         path,
         model.files.current.state,
         model.files.parent.state,
-        model.files.preview.state
+        map_preview_to_state(&model.files.preview)
     );
 
     let mut actions = Vec::new();
     if model.files.current.state != DirectoryBufferState::Loading {
-        if let Some(path) = set_preview_to_selected(model) {
-            model.files.preview.state = DirectoryBufferState::Loading;
+        if let Some(path) = selection::get_current_selected_path(model) {
             validate_preview_viewport(model);
 
             let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-            actions.push(Action::Load(path, selection));
+            actions.push(Action::Load(WindowType::Preview, path, selection));
         }
     }
 
     actions
+}
+
+fn map_preview_to_state(preview: &PreviewContent) -> DirectoryBufferState {
+    match preview {
+        PreviewContent::Buffer(_) => DirectoryBufferState::Ready,
+        PreviewContent::Image(_, _) => DirectoryBufferState::Ready,
+        PreviewContent::Loading(_) => DirectoryBufferState::Loading,
+        PreviewContent::None => DirectoryBufferState::Uninitialized,
+    }
 }
 
 #[tracing::instrument(skip(model))]
@@ -117,7 +126,7 @@ pub fn update_on_enumeration_finished(
         path,
         model.files.current.state,
         model.files.parent.state,
-        model.files.preview.state
+        map_preview_to_state(&model.files.preview)
     );
 
     update_buffer(

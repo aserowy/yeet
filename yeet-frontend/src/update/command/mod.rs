@@ -55,7 +55,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("cN", "") => navigate_previous_qfix_entry(model, change_mode_action),
         ("cp", target) => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.path {
+            if let Some(path) = &model.files.preview.resolve_path() {
                 tracing::info!("copying path: {:?}", path);
                 let target = match get_target_file_path(&model.marks, target, path) {
                     Ok(it) => it,
@@ -65,15 +65,15 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
                     }
                 };
 
-                actions.push(Action::Task(Task::CopyPath(path.clone(), target)));
+                actions.push(Action::Task(Task::CopyPath(path.to_path_buf(), target)));
             }
             actions
         }
         ("d!", "") => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.path {
+            if let Some(path) = &model.files.preview.resolve_path() {
                 tracing::info!("deleting path: {:?}", path);
-                actions.push(Action::Task(Task::DeletePath(path.clone())));
+                actions.push(Action::Task(Task::DeletePath(path.to_path_buf())));
             }
             actions
         }
@@ -89,7 +89,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
             ]
         }
         ("e!", "") => {
-            let navigation = if let Some(path) = &model.files.preview.path {
+            let navigation = if let Some(path) = &model.files.preview.resolve_path() {
                 Message::Keymap(KeymapMessage::NavigateToPathAsPreview(path.to_path_buf()))
             } else {
                 Message::Keymap(KeymapMessage::NavigateToPath(
@@ -114,7 +114,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("mv", target) => {
             let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.path {
+            if let Some(path) = &model.files.preview.resolve_path() {
                 tracing::info!("renaming path: {:?}", path);
                 let target = match get_target_file_path(&model.marks, target, path) {
                     Ok(it) => it,
@@ -124,7 +124,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
                     }
                 };
 
-                actions.push(Action::Task(Task::RenamePath(path.clone(), target)));
+                actions.push(Action::Task(Task::RenamePath(path.to_path_buf(), target)));
             }
             actions
         }

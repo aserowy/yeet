@@ -31,7 +31,6 @@ use self::{
     },
     open::open_selected,
     path::{add_paths, remove_path},
-    preview::update_preview,
     qfix::toggle_selected_to_qfix,
     register::{
         finish_register_scope, replay_macro_register, replay_register, start_register_scope,
@@ -113,7 +112,7 @@ fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
             .into_iter()
             .chain(add_to_junkyard(model, paths).into_iter())
             .collect(),
-        Message::PreviewLoaded(content) => update_preview(model, content),
+        Message::PreviewLoaded(content) => preview::update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
     }

@@ -9,12 +9,16 @@ use yeet_buffer::{
     update::update_buffer,
 };
 
-use crate::{action::Action, model::Model};
+use crate::{
+    action::Action,
+    model::{Model, WindowType},
+};
 
 use super::{
     history::get_selection_from_history,
     junkyard::remove_from_junkyard,
-    preview::{set_preview_to_selected, validate_preview_viewport},
+    preview::validate_preview_viewport,
+    selection,
     sign::{set_sign_if_marked, set_sign_if_qfix},
 };
 
@@ -26,7 +30,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         model.mode == Mode::Navigation,
     )];
 
-    if let Some(preview) = &model.files.preview.path {
+    if let Some(preview) = &model.files.preview.resolve_path() {
         buffer.push((preview, &mut model.files.preview.buffer, preview.is_dir()));
     }
 
@@ -98,11 +102,11 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     }
 
     let mut actions = Vec::new();
-    if let Some(path) = set_preview_to_selected(model) {
+    if let Some(path) = selection::get_current_selected_path(model) {
         validate_preview_viewport(model);
 
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
+        actions.push(Action::Load(WindowType::Preview, path, selection));
     }
 
     actions
@@ -151,7 +155,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         &mut model.files.current.buffer,
     )];
 
-    if let Some(preview) = &model.files.preview.path {
+    if let Some(preview) = &model.files.preview.resolve_path() {
         buffer.push((preview, &mut model.files.preview.buffer));
     }
 
@@ -185,11 +189,11 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = set_preview_to_selected(model) {
+    if let Some(path) = selection::get_current_selected_path(model) {
         validate_preview_viewport(model);
 
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
+        actions.push(Action::Load(WindowType::Preview, path, selection));
     }
 
     actions

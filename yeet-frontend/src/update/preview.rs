@@ -1,92 +1,68 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, BufferLine},
+    model::{ansi::Ansi, BufferLine, Mode},
     update::update_buffer,
 };
 
 use crate::{
     action::Action,
     event::Preview,
-    model::{DirectoryBufferState, Model},
-    update::selection::get_current_selected_path,
+    model::{DirectoryBuffer, DirectoryBufferState, Model, PreviewContent},
 };
 
 use super::{cursor::set_cursor_index_with_history, set_viewport_dimensions};
 
-#[tracing::instrument(skip(model))]
-pub fn set_preview_to_selected(model: &mut Model) -> Option<PathBuf> {
-    let new = get_current_selected_path(model);
-    if model.files.preview.path == new {
-        return None;
-    }
+pub fn create_preview_content(
+    mode: &Mode,
+    path: &Path,
+    content: &Vec<BufferLine>,
+) -> PreviewContent {
+    let mut dir = DirectoryBuffer::default();
+    dir.path = path.to_path_buf();
+    dir.state = DirectoryBufferState::Ready;
 
-    let old = model.files.preview.path.take();
-    model.files.preview.path.clone_from(&new);
-    model.files.preview.buffer.lines.clear();
-
-    tracing::trace!(
-        "switching preview path: {:?} -> {:?}",
-        old,
-        model.files.preview.path
+    update_buffer(
+        mode,
+        &mut dir.buffer,
+        &BufferMessage::SetContent(content.to_vec()),
     );
-
-    new
+    PreviewContent::Buffer(dir)
 }
 
 #[tracing::instrument(skip(model, content))]
-pub fn update_preview(model: &mut Model, content: &Preview) -> Vec<Action> {
-    let path = match content {
-        Preview::Content(path, _) | Preview::Image(path, _) | Preview::None(path) => path,
+pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
+    match content {
+        Preview::Content(path, content) => {
+            tracing::trace!("updating preview buffer: {:?}", path);
+
+            let content = content
+                .iter()
+                .map(|s| BufferLine {
+                    content: Ansi::new(s),
+                    ..Default::default()
+                })
+                .collect();
+
+            model.files.preview = create_preview_content(&model.mode, &path, &content);
+            validate_preview_viewport(model);
+        }
+        Preview::Image(path, protocol) => {
+            model.files.preview = PreviewContent::Image(path, protocol)
+        }
+        Preview::None(_) => model.files.preview = PreviewContent::None,
     };
-
-    if Some(path) == model.files.preview.path.as_ref() {
-        tracing::trace!("updating preview buffer: {:?}", path);
-
-        match content {
-            Preview::Content(_, content) => {
-                let content = content
-                    .iter()
-                    .map(|s| BufferLine {
-                        content: Ansi::new(s),
-                        ..Default::default()
-                    })
-                    .collect();
-
-                update_buffer(
-                    &model.mode,
-                    &mut model.files.preview.buffer,
-                    &BufferMessage::SetContent(content),
-                );
-            }
-            Preview::Image(_, _) => {
-                update_buffer(
-                    &model.mode,
-                    &mut model.files.preview.buffer,
-                    &BufferMessage::SetContent(vec![BufferLine {
-                        content: Ansi::new(""),
-                        ..Default::default()
-                    }]),
-                );
-            }
-            Preview::None(_) => {}
-        };
-    }
-
-    model.files.preview.state = DirectoryBufferState::Ready;
-    validate_preview_viewport(model);
-
     Vec::new()
 }
 
 pub fn validate_preview_viewport(model: &mut Model) {
-    let target = match &model.files.preview.path {
+    let target = match &model.files.preview.resolve_path() {
         Some(it) => it,
         None => return,
     };
 
-    let buffer = &mut model.files.preview.buffer;
+    let buffer = &mut model.files.preview;
     let layout = &model.layout.preview;
 
     set_viewport_dimensions(&mut buffer.view_port, layout);

@@ -4,6 +4,7 @@ use std::{
 };
 
 use ratatui::layout::Rect;
+use ratatui_image::protocol::Protocol;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Buffer, Cursor, CursorPosition, Mode,
@@ -56,15 +57,21 @@ impl std::fmt::Debug for Model {
 pub struct FileWindow {
     pub current: DirectoryBuffer<PathBuf>,
     pub parent: DirectoryBuffer<Option<PathBuf>>,
-    pub preview: DirectoryBuffer<Option<PathBuf>>,
+    pub preview: PreviewContent,
 }
 
 impl FileWindow {
     pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut DirectoryBufferState, &mut Buffer)> {
+        let preview_content_ref = if let PreviewContent::Buffer(dir) = &mut self.preview {
+            dir.as_content_ref()
+        } else {
+            None
+        };
+
         vec![
             self.current.as_content_ref(),
             self.parent.as_content_ref(),
-            self.preview.as_content_ref(),
+            preview_content_ref,
         ]
         .into_iter()
         .flatten()
@@ -100,7 +107,33 @@ impl Default for FileWindow {
                 },
                 ..Default::default()
             },
-            preview: DirectoryBuffer::<Option<PathBuf>>::default(),
+            preview: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum WindowType {
+    Parent,
+    Current,
+    Preview,
+}
+
+#[derive(Default)]
+pub enum PreviewContent {
+    Buffer(DirectoryBuffer<PathBuf>),
+    Image(PathBuf, Box<dyn Protocol>),
+    Loading(PathBuf),
+    #[default]
+    None,
+}
+
+impl PreviewContent {
+    pub fn resolve_path(&self) -> Option<&Path> {
+        match self {
+            PreviewContent::Buffer(dir) => Some(&dir.path),
+            PreviewContent::Image(path, _) | PreviewContent::Loading(path) => Some(path),
+            PreviewContent::None => None,
         }
     }
 }

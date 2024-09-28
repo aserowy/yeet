@@ -6,7 +6,7 @@ use std::{
 use crate::{
     error::AppError,
     event::{Emitter, Message},
-    model::Model,
+    model::{Model, WindowType},
     open,
     task::Task,
     terminal::TerminalWrapper,
@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
-    Load(PathBuf, Option<String>),
+    Load(WindowType, PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(Option<String>),
@@ -33,8 +33,8 @@ pub enum ActionResult {
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_preview_actions(
-    model: &Model,
+pub async fn exec_preview(
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
@@ -43,8 +43,8 @@ pub async fn exec_preview_actions(
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_postview_actions(
-    model: &Model,
+pub async fn exec_postview(
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
@@ -67,7 +67,7 @@ fn is_preview_action(action: &Action) -> bool {
 
 async fn execute(
     is_preview: bool,
-    model: &Model,
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
@@ -93,7 +93,15 @@ async fn execute(
             Action::EmitMessages(messages) => {
                 emitter.run(Task::EmitMessages(messages));
             }
-            Action::Load(path, selection) => {
+            Action::Load(window_type, path, selection) => {
+                // set from outside which buffer
+                // if normal clear buffer lines, set state to Load
+                // model.files.preview.buffer.lines.clear();
+                // model.files.preview.state = DirectoryBufferState::Loading;
+                // set_viewport_dimensions(&mut buffer.view_port, layout);
+                // update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
+                // reset viewport/cursor
+                // if preview set state to load
                 if path.is_dir() {
                     emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                 } else {
@@ -141,8 +149,8 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(path) = &model.files.preview.path {
-                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
+                if let Some(path) = &model.files.preview.resolve_path() {
+                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.layout.preview));
                 }
             }
             Action::Task(task) => emitter.run(task),
