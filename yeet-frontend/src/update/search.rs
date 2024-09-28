@@ -1,6 +1,9 @@
 use yeet_buffer::model::Buffer;
 
-use crate::{action::Action, model::Model};
+use crate::{
+    action::Action,
+    model::{Model, PreviewContent},
+};
 
 pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     let search = match search {
@@ -15,29 +18,29 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
         set_search_char_positions(&mut model.files.parent.buffer, search.as_str());
     }
 
-    let is_preview_dir = model
-        .files
-        .preview
-        .path
-        .as_ref()
-        .is_some_and(|p| p.is_dir());
-
-    if is_preview_dir {
-        set_search_char_positions(&mut model.files.preview.buffer, search.as_str());
-    }
-
     set_search_char_positions(&mut model.files.current.buffer, search.as_str());
+
+    let preview = match &mut model.files.preview {
+        PreviewContent::Buffer(dir) => dir,
+        _ => return,
+    };
+
+    if preview.path.is_dir() {
+        set_search_char_positions(&mut preview.buffer, search.as_str());
+    }
 }
 
 pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.parent.buffer.lines {
         line.search_char_position = None;
     }
-    for line in &mut model.files.preview.buffer.lines {
-        line.search_char_position = None;
-    }
     for line in &mut model.files.current.buffer.lines {
         line.search_char_position = None;
+    }
+    if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+        for line in &mut dir.buffer.lines {
+            line.search_char_position = None;
+        }
     }
     Vec::new()
 }

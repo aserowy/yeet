@@ -99,9 +99,10 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         };
         model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
 
-        let mut actions = update_model(&mut model, &envelope);
+        let mut actions = update_model(&mut model, envelope);
         actions.extend(get_watcher_changes(&mut model));
-        actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
+        // TODO:
+        // actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
         let (actions, result) =
             action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;

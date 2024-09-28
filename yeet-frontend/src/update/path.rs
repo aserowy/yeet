@@ -11,7 +11,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{Model, WindowType},
+    model::{Model, PreviewContent, WindowType},
 };
 
 use super::{
@@ -30,8 +30,8 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         model.mode == Mode::Navigation,
     )];
 
-    if let Some(preview) = &model.files.preview.resolve_path() {
-        buffer.push((preview, &mut model.files.preview.buffer, preview.is_dir()));
+    if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+        buffer.push((dir.path.as_path(), &mut dir.buffer, dir.path.is_dir()));
     }
 
     if let Some(parent) = &model.files.parent.path {
@@ -155,8 +155,8 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         &mut model.files.current.buffer,
     )];
 
-    if let Some(preview) = &model.files.preview.resolve_path() {
-        buffer.push((preview, &mut model.files.preview.buffer));
+    if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+        buffer.push((dir.path.as_path(), &mut dir.buffer));
     }
 
     if let Some(parent) = &model.files.parent.path {

@@ -72,7 +72,7 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 };
 
 #[tracing::instrument(skip(model))]
-pub fn update_model(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
+pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     match &envelope.sequence {
         KeySequence::Completed(_) => model.key_sequence.clear(),
         KeySequence::Changed(sequence) => sequence.clone_into(&mut model.key_sequence),
@@ -81,40 +81,41 @@ pub fn update_model(model: &mut Model, envelope: &Envelope) -> Vec<Action> {
     update_commandline(model, None);
     update_with_settings(model);
 
-    start_register_scope(&model.mode, &mut model.register, envelope);
+    start_register_scope(&model.mode, &mut model.register, &envelope);
 
     let actions = envelope
         .messages
-        .iter()
+        .into_iter()
         .flat_map(|message| update_with_message(model, message))
         .collect();
 
-    finish_register_scope(&model.mode, &mut model.register, envelope);
+    // TODO: enable again with moved envelope
+    // finish_register_scope(&model.mode, &mut model.register, envelope);
 
     actions
 }
 
 #[tracing::instrument(skip(model))]
-fn update_with_message(model: &mut Model, message: &Message) -> Vec<Action> {
+fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            update_on_enumeration_change(model, path, contents, selection)
+            update_on_enumeration_change(model, &path, &contents, &selection)
         }
         Message::EnumerationFinished(path, selection) => {
-            update_on_enumeration_finished(model, path, selection)
+            update_on_enumeration_finished(model, &path, &selection)
         }
         Message::Error(error) => {
             print_in_commandline(model, &[PrintContent::Error(error.to_string())])
         }
-        Message::Keymap(msg) => update_with_keymap_message(model, msg),
-        Message::PathRemoved(path) => remove_path(model, path),
-        Message::PathsAdded(paths) => add_paths(model, paths)
+        Message::Keymap(msg) => update_with_keymap_message(model, &msg),
+        Message::PathRemoved(path) => remove_path(model, &path),
+        Message::PathsAdded(paths) => add_paths(model, &paths)
             .into_iter()
-            .chain(add_to_junkyard(model, paths).into_iter())
+            .chain(add_to_junkyard(model, &paths).into_iter())
             .collect(),
         Message::PreviewLoaded(content) => preview::update_preview(model, content),
         Message::Rerender => Vec::new(),
-        Message::Resize(x, y) => vec![Action::Resize(*x, *y)],
+        Message::Resize(x, y) => vec![Action::Resize(x, y)],
     }
 }
 

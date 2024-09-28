@@ -54,7 +54,7 @@ pub async fn exec_postview(
 
 fn is_preview_action(action: &Action) -> bool {
     match action {
-        Action::Load(_, _)
+        Action::Load(_, _, _)
         | Action::Open(_)
         | Action::Resize(_, _)
         | Action::Task(_)

@@ -4,7 +4,7 @@ use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
     qfix::{QuickFix, QFIX_SIGN_ID},
-    Model,
+    Model, PreviewContent,
 };
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -71,12 +71,14 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
 
     let lines = if parent == model.files.current.path {
         &mut model.files.current.buffer.lines
-    } else if Some(parent) == model.files.preview.path.as_deref() {
-        &mut model.files.preview.buffer.lines
     } else if Some(parent) == model.files.parent.path.as_deref() {
         &mut model.files.parent.buffer.lines
     } else {
-        return;
+        if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+            &mut dir.buffer.lines
+        } else {
+            return;
+        }
     };
 
     let file_name = match path.file_name() {

@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use yeet_buffer::{
     message::BufferMessage,
@@ -17,7 +17,7 @@ use super::{cursor::set_cursor_index_with_history, set_viewport_dimensions};
 pub fn create_preview_content(
     mode: &Mode,
     path: &Path,
-    content: &Vec<BufferLine>,
+    content: Vec<BufferLine>,
 ) -> PreviewContent {
     let mut dir = DirectoryBuffer::default();
     dir.path = path.to_path_buf();
@@ -45,7 +45,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            model.files.preview = create_preview_content(&model.mode, &path, &content);
+            model.files.preview = create_preview_content(&model.mode, &path, content);
             validate_preview_viewport(model);
         }
         Preview::Image(path, protocol) => {
@@ -57,12 +57,12 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
 }
 
 pub fn validate_preview_viewport(model: &mut Model) {
-    let target = match &model.files.preview.resolve_path() {
-        Some(it) => it,
-        None => return,
+    let dir = match &mut model.files.preview {
+        PreviewContent::Buffer(it) => it,
+        _ => return,
     };
 
-    let buffer = &mut model.files.preview;
+    let buffer = &mut dir.buffer;
     let layout = &model.layout.preview;
 
     set_viewport_dimensions(&mut buffer.view_port, layout);
@@ -72,7 +72,7 @@ pub fn validate_preview_viewport(model: &mut Model) {
         cursor.hide_cursor_line = true;
     }
 
-    if target.is_dir() {
-        set_cursor_index_with_history(&model.mode, &model.history, buffer, target);
+    if dir.path.is_dir() {
+        set_cursor_index_with_history(&model.mode, &model.history, buffer, dir.path.as_path());
     }
 }

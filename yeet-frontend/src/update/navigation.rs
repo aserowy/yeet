@@ -114,7 +114,7 @@ pub fn navigate_to_path_with_selection(
             .collect::<Vec<_>>(),
     )]);
 
-    if let PreviewContent::Buffer(dir) = &model.files.preview {
+    if let PreviewContent::Buffer(dir) = &mut model.files.preview {
         current_contents.insert(dir.path.to_path_buf(), dir.buffer.lines.drain(..).collect());
     } else {
         tracing::warn!(
@@ -202,7 +202,8 @@ pub fn navigate_to_path_with_selection(
     if let Some(preview) = preview {
         match current_contents.get(&preview) {
             Some(it) => {
-                model.files.preview = preview::create_preview_content(&model.mode, &preview, it);
+                model.files.preview =
+                    preview::create_preview_content(&model.mode, &preview, it.to_vec());
                 validate_preview_viewport(model);
             }
             None => {
@@ -210,13 +211,13 @@ pub fn navigate_to_path_with_selection(
 
                 actions.push(Action::Load(
                     WindowType::Preview,
-                    preview,
+                    preview.to_owned(),
                     get_selection_from_history(&model.history, &preview).map(|s| s.to_owned()),
                 ));
             }
         }
     } else {
-        model.files.preview.buffer.lines.clear();
+        model.files.preview = PreviewContent::None;
         validate_preview_viewport(model);
     }
 
@@ -246,11 +247,10 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             ));
         }
 
-        model.files.preview.path = Some(model.files.current.path.clone());
-        update_buffer(
+        model.files.preview = preview::create_preview_content(
             &model.mode,
-            &mut model.files.preview.buffer,
-            &BufferMessage::SetContent(model.files.current.buffer.lines.drain(..).collect()),
+            &model.files.current.path,
+            model.files.current.buffer.lines.drain(..).collect(),
         );
         validate_preview_viewport(model);
 
@@ -288,12 +288,15 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         let current_content = model.files.current.buffer.lines.drain(..).collect();
 
         model.files.current.path = selected.to_path_buf();
-        update_buffer(
-            &model.mode,
-            &mut model.files.current.buffer,
-            &BufferMessage::SetContent(model.files.preview.buffer.lines.drain(..).collect()),
-        );
-        update_current(model);
+
+        if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+            update_buffer(
+                &model.mode,
+                &mut model.files.current.buffer,
+                &BufferMessage::SetContent(dir.buffer.lines.drain(..).collect()),
+            );
+            update_current(model);
+        }
 
         set_cursor_index_with_history(
             &model.mode,
