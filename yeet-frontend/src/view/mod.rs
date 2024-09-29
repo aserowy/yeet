@@ -37,7 +37,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
             PreviewContent::Image(_, protocol) => {
                 frame.render_widget(Image::new(protocol.as_ref()), layout.preview);
             }
-            PreviewContent::Loading(_) | PreviewContent::None => {}
+            PreviewContent::None => {}
         };
 
         statusline::view(model, frame, layout.statusline);

@@ -123,7 +123,6 @@ pub enum WindowType {
 pub enum PreviewContent {
     Buffer(DirectoryBuffer<PathBuf>),
     Image(PathBuf, Box<dyn Protocol>),
-    Loading(PathBuf),
     #[default]
     None,
 }
@@ -132,7 +131,7 @@ impl PreviewContent {
     pub fn resolve_path(&self) -> Option<&Path> {
         match self {
             PreviewContent::Buffer(dir) => Some(&dir.path),
-            PreviewContent::Image(path, _) | PreviewContent::Loading(path) => Some(path),
+            PreviewContent::Image(path, _) => Some(path),
             PreviewContent::None => None,
         }
     }

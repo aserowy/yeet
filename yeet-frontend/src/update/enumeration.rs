@@ -9,7 +9,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{DirectoryBufferState, Model, PreviewContent, WindowType},
+    model::{DirectoryBufferState, Model, WindowType},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -27,7 +27,6 @@ pub fn update_on_enumeration_change(
     selection: &Option<String>,
 ) -> Vec<Action> {
     // TODO: handle unsaved changes
-
     let directories = model.files.get_mut_directories();
     if let Some((path, state, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
@@ -57,33 +56,32 @@ pub fn update_on_enumeration_change(
     }
 
     tracing::trace!(
-        "changed enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}, preview is {:?}",
+        "changed enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}",
         path,
         model.files.current.state,
         model.files.parent.state,
-        map_preview_to_state(&model.files.preview)
     );
 
     let mut actions = Vec::new();
-    if model.files.current.state != DirectoryBufferState::Loading {
-        if let Some(path) = selection::get_current_selected_path(model) {
-            validate_preview_viewport(model);
-
-            let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-            actions.push(Action::Load(WindowType::Preview, path, selection));
-        }
+    if model.files.current.state == DirectoryBufferState::Loading {
+        return actions;
     }
+
+    let selected_path = match selection::get_current_selected_path(model) {
+        Some(path) => path,
+        None => return actions,
+    };
+
+    if Some(selected_path.as_path()) == model.files.preview.resolve_path() {
+        return actions;
+    }
+
+    validate_preview_viewport(model);
+
+    let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    actions.push(Action::Load(WindowType::Preview, selected_path, selection));
 
     actions
-}
-
-fn map_preview_to_state(preview: &PreviewContent) -> DirectoryBufferState {
-    match preview {
-        PreviewContent::Buffer(_) => DirectoryBufferState::Ready,
-        PreviewContent::Image(_, _) => DirectoryBufferState::Ready,
-        PreviewContent::Loading(_) => DirectoryBufferState::Loading,
-        PreviewContent::None => DirectoryBufferState::Uninitialized,
-    }
 }
 
 #[tracing::instrument(skip(model))]
@@ -122,11 +120,10 @@ pub fn update_on_enumeration_finished(
     }
 
     tracing::trace!(
-        "finished enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}, preview is {:?}",
+        "finished enumeration for path {:?} with current directory states: current is {:?}, parent is {:?}",
         path,
         model.files.current.state,
         model.files.parent.state,
-        map_preview_to_state(&model.files.preview)
     );
 
     update_buffer(

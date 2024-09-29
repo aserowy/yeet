@@ -104,6 +104,7 @@ impl PartialEq for Preview {
     }
 }
 
+// TODO: replace with ansi string
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContentKind {
     Directory,

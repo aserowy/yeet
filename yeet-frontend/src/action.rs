@@ -8,11 +8,11 @@ use yeet_buffer::message::BufferMessage;
 use crate::{
     error::AppError,
     event::{Emitter, Message},
-    model::{DirectoryBufferState, Model, PreviewContent, WindowType},
+    model::{DirectoryBufferState, Model, WindowType},
     open,
     task::Task,
     terminal::TerminalWrapper,
-    update::viewport,
+    update::{preview, viewport},
 };
 
 #[derive(Debug)]
@@ -127,7 +127,8 @@ async fn execute(
                         );
                     }
                     WindowType::Preview => {
-                        model.files.preview = PreviewContent::Loading(path.to_path_buf());
+                        model.files.preview =
+                            preview::create_buffer(&model.mode, path.as_path(), vec![]);
                     }
                 };
 

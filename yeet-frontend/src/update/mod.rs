@@ -54,7 +54,7 @@ mod modification;
 mod navigation;
 mod open;
 mod path;
-mod preview;
+pub mod preview;
 mod qfix;
 mod register;
 mod save;
