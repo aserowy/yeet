@@ -14,11 +14,7 @@ use crate::{
 
 use super::{cursor::set_cursor_index_with_history, set_viewport_dimensions};
 
-pub fn create_preview_content(
-    mode: &Mode,
-    path: &Path,
-    content: Vec<BufferLine>,
-) -> PreviewContent {
+pub fn create_buffer(mode: &Mode, path: &Path, content: Vec<BufferLine>) -> PreviewContent {
     let mut dir = DirectoryBuffer::default();
     dir.path = path.to_path_buf();
     dir.state = DirectoryBufferState::Ready;
@@ -45,7 +41,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            model.files.preview = create_preview_content(&model.mode, &path, content);
+            model.files.preview = create_buffer(&model.mode, &path, content);
             validate_preview_viewport(model);
         }
         Preview::Image(path, protocol) => {

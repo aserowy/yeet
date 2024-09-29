@@ -202,8 +202,7 @@ pub fn navigate_to_path_with_selection(
     if let Some(preview) = preview {
         match current_contents.get(&preview) {
             Some(it) => {
-                model.files.preview =
-                    preview::create_preview_content(&model.mode, &preview, it.to_vec());
+                model.files.preview = preview::create_buffer(&model.mode, &preview, it.to_vec());
                 validate_preview_viewport(model);
             }
             None => {
@@ -247,7 +246,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             ));
         }
 
-        model.files.preview = preview::create_preview_content(
+        model.files.preview = preview::create_buffer(
             &model.mode,
             &model.files.current.path,
             model.files.current.buffer.lines.drain(..).collect(),

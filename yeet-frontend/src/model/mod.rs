@@ -114,8 +114,8 @@ impl Default for FileWindow {
 
 #[derive(Debug)]
 pub enum WindowType {
-    Parent,
     Current,
+    Parent,
     Preview,
 }
 

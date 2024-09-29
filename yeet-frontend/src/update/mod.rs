@@ -62,7 +62,7 @@ mod search;
 mod selection;
 mod settings;
 mod sign;
-mod viewport;
+pub mod viewport;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
     a.content

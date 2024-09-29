@@ -28,7 +28,10 @@ async fn load_with_ratatui_image(
     path: &Path,
     rect: &Rect,
 ) -> Result<Preview, AppError> {
+    tracing::debug!("load image preview for path with ratatui image: {:?}", path);
+
     let image = ImageReader::open(path)?.decode()?;
+    picker.guess_protocol();
 
     match picker.new_protocol(image, rect.clone(), Resize::Fit(None)) {
         Ok(prtcl) => Ok(Preview::Image(path.to_path_buf(), prtcl)),
@@ -40,7 +43,7 @@ async fn load_with_ratatui_image(
 }
 
 async fn load_with_chafa(path: &Path, rect: &Rect) -> Preview {
-    tracing::trace!("load image preview for path: {:?}", path);
+    tracing::debug!("load image preview for path with chafa: {:?}", path);
 
     let result = Command::new("chafa")
         .args([

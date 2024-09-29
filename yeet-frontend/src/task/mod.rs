@@ -122,19 +122,13 @@ pub struct TaskManager {
 // TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
-        let picker = Picker::from_termios().ok();
-        if let Some(mut picker) = picker {
-            // NOTE: must be called after alternate screen and before first rendering
-            picker.guess_protocol();
-        }
-
         Self {
             abort_handles: HashMap::new(),
             highlighter: Arc::new(Mutex::new((
                 SyntaxSet::load_defaults_newlines(),
                 ThemeSet::load_defaults(),
             ))),
-            image_previewer: Arc::new(Mutex::new(picker)),
+            image_previewer: Arc::new(Mutex::new(Picker::from_termios().ok())),
             resolver,
             sender,
             tasks: JoinSet::new(),

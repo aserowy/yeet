@@ -1,3 +1,4 @@
+use ratatui_image::Image;
 use yeet_buffer::view;
 
 use crate::{
@@ -33,7 +34,9 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
             PreviewContent::Buffer(dir) => {
                 view::view(&model.mode, &dir.buffer, frame, layout.preview);
             }
-            PreviewContent::Image(_, _) => todo!(),
+            PreviewContent::Image(_, protocol) => {
+                frame.render_widget(Image::new(protocol.as_ref()), layout.preview);
+            }
             PreviewContent::Loading(_) | PreviewContent::None => {}
         };
 

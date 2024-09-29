@@ -43,7 +43,6 @@ pub enum MessageSource {
     User,
 }
 
-#[derive(Debug)]
 pub enum Message {
     Keymap(KeymapMessage),
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
@@ -54,6 +53,26 @@ pub enum Message {
     PreviewLoaded(Preview),
     Rerender,
     Resize(u16, u16),
+}
+
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Message::Keymap(msg) => write!(f, "Keymap({:?})", msg),
+            Message::EnumerationChanged(path, _, opt) => {
+                write!(f, "EnumerationChanged({:?}, _, {:?})", path, opt)
+            }
+            Message::EnumerationFinished(path, opt) => {
+                write!(f, "EnumerationFinished({:?}, {:?})", path, opt)
+            }
+            Message::Error(err) => write!(f, "Error({:?})", err),
+            Message::PathRemoved(path) => write!(f, "PathRemoved({:?})", path),
+            Message::PathsAdded(paths) => write!(f, "PathsAdded({:?})", paths),
+            Message::PreviewLoaded(preview) => write!(f, "PreviewLoaded({:?})", preview),
+            Message::Rerender => write!(f, "Rerender"),
+            Message::Resize(x, y) => write!(f, "Resize({}, {})", x, y),
+        }
+    }
 }
 
 pub enum Preview {

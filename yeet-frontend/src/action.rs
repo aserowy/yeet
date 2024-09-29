@@ -3,13 +3,16 @@ use std::{
     path::PathBuf,
 };
 
+use yeet_buffer::message::BufferMessage;
+
 use crate::{
     error::AppError,
     event::{Emitter, Message},
-    model::{Model, WindowType},
+    model::{DirectoryBufferState, Model, PreviewContent, WindowType},
     open,
     task::Task,
     terminal::TerminalWrapper,
+    update::viewport,
 };
 
 #[derive(Debug)]
@@ -94,14 +97,40 @@ async fn execute(
                 emitter.run(Task::EmitMessages(messages));
             }
             Action::Load(window_type, path, selection) => {
-                // set from outside which buffer
-                // if normal clear buffer lines, set state to Load
-                // model.files.preview.buffer.lines.clear();
-                // model.files.preview.state = DirectoryBufferState::Loading;
-                // set_viewport_dimensions(&mut buffer.view_port, layout);
-                // update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
-                // reset viewport/cursor
-                // if preview set state to load
+                match window_type {
+                    WindowType::Current => {
+                        model.files.current.buffer.lines.clear();
+                        model.files.current.state = DirectoryBufferState::Loading;
+                        viewport::set_viewport_dimensions(
+                            &mut model.files.current.buffer.view_port,
+                            &model.layout.current,
+                        );
+
+                        yeet_buffer::update::update_buffer(
+                            &model.mode,
+                            &mut model.files.current.buffer,
+                            &BufferMessage::ResetCursor,
+                        );
+                    }
+                    WindowType::Parent => {
+                        model.files.parent.buffer.lines.clear();
+                        model.files.parent.state = DirectoryBufferState::Loading;
+                        viewport::set_viewport_dimensions(
+                            &mut model.files.parent.buffer.view_port,
+                            &model.layout.parent,
+                        );
+
+                        yeet_buffer::update::update_buffer(
+                            &model.mode,
+                            &mut model.files.parent.buffer,
+                            &BufferMessage::ResetCursor,
+                        );
+                    }
+                    WindowType::Preview => {
+                        model.files.preview = PreviewContent::Loading(path.to_path_buf());
+                    }
+                };
+
                 if path.is_dir() {
                     emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                 } else {
