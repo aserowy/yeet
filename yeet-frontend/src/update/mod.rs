@@ -89,7 +89,6 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
         .flat_map(|message| update_with_message(model, message))
         .collect();
 
-    // TODO: enable again with moved envelope
     // finish_register_scope(&model.mode, &mut model.register, envelope);
 
     actions

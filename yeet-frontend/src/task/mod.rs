@@ -5,7 +5,7 @@ use std::{
 };
 
 use ratatui::layout::Rect;
-use ratatui_image::picker::Picker;
+use ratatui_image::picker::{Picker, ProtocolType};
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
@@ -112,7 +112,7 @@ impl PartialEq for Task {
 pub struct TaskManager {
     abort_handles: HashMap<String, AbortHandle>,
     highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
-    image_previewer: Arc<Mutex<Option<Picker>>>,
+    image_previewer: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
@@ -122,13 +122,18 @@ pub struct TaskManager {
 // TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
+        let picker = Picker::from_termios()
+            .ok()
+            .and_then(|mut picker| Some((picker, picker.guess_protocol())));
+
+        tracing::info!("image picker configured: {:?}", picker);
         Self {
             abort_handles: HashMap::new(),
             highlighter: Arc::new(Mutex::new((
                 SyntaxSet::load_defaults_newlines(),
                 ThemeSet::load_defaults(),
             ))),
-            image_previewer: Arc::new(Mutex::new(Picker::from_termios().ok())),
+            image_previewer: Arc::new(Mutex::new(picker)),
             resolver,
             sender,
             tasks: JoinSet::new(),
@@ -387,7 +392,13 @@ impl TaskManager {
 
                     let content = match mime.as_deref() {
                         Some("image") => {
-                            let mut picker = previewer.lock().await;
+                            // NOTE: each time protocol gets used (even for debug) the picker
+                            // forgets the given protocol type
+                            let mut picker =
+                                previewer.lock().await.and_then(|(mut picker, protocol)| {
+                                    picker.protocol_type = protocol;
+                                    Some(picker)
+                                });
 
                             image::load(&mut picker, &path, &rect).await
                         }
