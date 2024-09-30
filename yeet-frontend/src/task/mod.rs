@@ -151,7 +151,7 @@ impl TaskManager {
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
         for (_identifier, abort_handle) in self.abort_handles.drain() {
-            // TODO: readd function
+            // FIX: readd function
             // if should_abort_on_finish(task) {
             abort_handle.abort();
             // }

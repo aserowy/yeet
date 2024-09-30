@@ -15,7 +15,6 @@ use crate::{
 use super::{
     cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
     history::add_history_entry,
-    preview::validate_preview_viewport,
     selection::{self, get_current_selected_path},
     set_viewport_dimensions,
 };
@@ -202,8 +201,7 @@ pub fn navigate_to_path_with_selection(
     if let Some(preview) = preview {
         match current_contents.get(&preview) {
             Some(it) => {
-                model.files.preview = preview::create_buffer(&model.mode, &preview, it.to_vec());
-                validate_preview_viewport(model);
+                model.files.preview = preview::create_buffer(model, &preview, it.to_vec());
             }
             None => {
                 tracing::trace!("loading preview: {:?}", path);
@@ -217,7 +215,6 @@ pub fn navigate_to_path_with_selection(
         }
     } else {
         model.files.preview = PreviewContent::None;
-        validate_preview_viewport(model);
     }
 
     add_history_entry(&mut model.history, &model.files.current.path);
@@ -246,12 +243,9 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             ));
         }
 
-        model.files.preview = preview::create_buffer(
-            &model.mode,
-            &model.files.current.path,
-            model.files.current.buffer.lines.drain(..).collect(),
-        );
-        validate_preview_viewport(model);
+        let content = model.files.current.buffer.lines.drain(..).collect();
+        let path = &model.files.current.path.to_path_buf();
+        model.files.preview = preview::create_buffer(model, path, content);
 
         model.files.current.path = path.to_path_buf();
         update_buffer(
@@ -315,9 +309,6 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         let mut actions = Vec::new();
         if let Some(path) = selection::get_current_selected_path(model) {
             tracing::trace!("loading preview: {:?}", path);
-
-            validate_preview_viewport(model);
-
             let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
             actions.push(Action::Load(WindowType::Preview, path, selection));
         }

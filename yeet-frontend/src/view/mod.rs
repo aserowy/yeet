@@ -11,7 +11,6 @@ mod commandline;
 mod statusline;
 
 pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
-    // NOTE: If perf matters, call view only on relevant changed model parts
     terminal.draw(|frame| {
         let layout = model.layout.clone();
 
@@ -33,6 +32,8 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         match &model.files.preview {
             PreviewContent::Buffer(dir) => {
                 view::view(&model.mode, &dir.buffer, frame, layout.preview);
+
+                tracing::warn!("{:?}, {:?}", dir.buffer, dir.path);
             }
             PreviewContent::Image(_, protocol) => {
                 frame.render_widget(Image::new(protocol.as_ref()), layout.preview);

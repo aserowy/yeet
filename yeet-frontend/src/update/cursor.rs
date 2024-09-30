@@ -13,7 +13,6 @@ use crate::{
 
 use super::{
     history::get_selection_from_history,
-    preview::validate_preview_viewport,
     register::{get_direction_from_search_register, get_register},
     search::search_in_buffers,
     selection, update_current,
@@ -68,8 +67,6 @@ pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec
 
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(model) {
-        validate_preview_viewport(model);
-
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(WindowType::Preview, path, selection));
     }

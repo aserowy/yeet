@@ -127,8 +127,7 @@ async fn execute(
                         );
                     }
                     WindowType::Preview => {
-                        model.files.preview =
-                            preview::create_buffer(&model.mode, path.as_path(), vec![]);
+                        model.files.preview = preview::create_buffer(model, path.as_path(), vec![]);
                     }
                 };
 

@@ -9,7 +9,7 @@ use crate::{
     model::{Model, WindowType},
 };
 
-use super::{history, preview, selection};
+use super::{history, selection};
 
 pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
@@ -17,8 +17,6 @@ pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Ac
 
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(model) {
-        preview::validate_preview_viewport(model);
-
         let selection =
             history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(WindowType::Preview, path, selection));

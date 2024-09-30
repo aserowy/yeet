@@ -69,13 +69,25 @@ pub struct Buffer {
     pub view_port: ViewPort,
 }
 
+impl std::fmt::Debug for Buffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Buffer")
+            .field("cursor", &self.cursor)
+            .field("last_find", &self.last_find)
+            .field("lines", &self.lines)
+            .field("show_border", &self.show_border)
+            .field("view_port", &self.view_port)
+            .finish()
+    }
+}
+
 impl Buffer {
     pub fn set(&mut self, settings: &BufferSettings) {
         self.view_port.sign_column_width = settings.sign_column_width;
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Cursor {
     pub hide_cursor: bool,
     pub hide_cursor_line: bool,
@@ -83,7 +95,7 @@ pub struct Cursor {
     pub vertical_index: usize,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CursorPosition {
     Absolute { current: usize, expanded: usize },
     End,

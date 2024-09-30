@@ -13,7 +13,6 @@ use crate::{
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
-        preview::validate_preview_viewport,
         selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
@@ -62,26 +61,7 @@ pub fn update_on_enumeration_change(
         model.files.parent.state,
     );
 
-    let mut actions = Vec::new();
-    if model.files.current.state == DirectoryBufferState::Loading {
-        return actions;
-    }
-
-    let selected_path = match selection::get_current_selected_path(model) {
-        Some(path) => path,
-        None => return actions,
-    };
-
-    if Some(selected_path.as_path()) == model.files.preview.resolve_path() {
-        return actions;
-    }
-
-    validate_preview_viewport(model);
-
-    let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-    actions.push(Action::Load(WindowType::Preview, selected_path, selection));
-
-    actions
+    Vec::new()
 }
 
 #[tracing::instrument(skip(model))]
@@ -132,9 +112,27 @@ pub fn update_on_enumeration_finished(
         &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
     );
 
-    Vec::new()
+    let mut actions = Vec::new();
+    if model.files.current.state == DirectoryBufferState::Loading {
+        return actions;
+    }
+
+    let selected_path = match selection::get_current_selected_path(model) {
+        Some(path) => path,
+        None => return actions,
+    };
+
+    if Some(selected_path.as_path()) == model.files.preview.resolve_path() {
+        return actions;
+    }
+
+    let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    actions.push(Action::Load(WindowType::Preview, selected_path, selection));
+
+    actions
 }
 
+// TODO: move to ansi before
 pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
     let content = match kind {
         ContentKind::Directory => format!("\x1b[94m{}\x1b[39m", content),
