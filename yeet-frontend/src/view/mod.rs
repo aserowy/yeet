@@ -32,8 +32,6 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         match &model.files.preview {
             PreviewContent::Buffer(dir) => {
                 view::view(&model.mode, &dir.buffer, frame, layout.preview);
-
-                tracing::warn!("{:?}, {:?}", dir.buffer, dir.path);
             }
             PreviewContent::Image(_, protocol) => {
                 frame.render_widget(Image::new(protocol.as_ref()), layout.preview);

@@ -160,7 +160,7 @@ async fn execute(
 
                 terminal.suspend();
 
-                // FIX: remove flickering (alternate screen leave and cli started)
+                // TODO: remove flickering (alternate screen leave and cli started)
                 open::path(&path).await?;
 
                 emitter.resume();

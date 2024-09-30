@@ -63,11 +63,9 @@ pub fn update_cursor_and_viewport(model: &mut Model) {
 
     let buffer = &mut dir.buffer;
     let layout = &model.layout.preview;
-
-    tracing::warn!("{:?}", &model.layout.preview);
     viewport::set_viewport_dimensions(&mut buffer.view_port, layout);
     update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
-    tracing::warn!("{:?}", &buffer);
+
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor_line = true;
     }
