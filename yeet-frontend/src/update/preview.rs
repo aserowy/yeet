@@ -15,7 +15,7 @@ use crate::{
 
 use super::cursor::set_cursor_index_with_history;
 
-pub fn create_buffer(model: &mut Model, path: &Path, content: Vec<BufferLine>) -> PreviewContent {
+pub fn set_buffer(model: &mut Model, path: &Path, content: Vec<BufferLine>) {
     let mut dir = DirectoryBuffer::default();
     dir.path = path.to_path_buf();
     dir.state = DirectoryBufferState::Ready;
@@ -26,9 +26,9 @@ pub fn create_buffer(model: &mut Model, path: &Path, content: Vec<BufferLine>) -
         &BufferMessage::SetContent(content.to_vec()),
     );
 
-    update_cursor_and_viewport(model);
+    model.files.preview = PreviewContent::Buffer(dir);
 
-    PreviewContent::Buffer(dir)
+    update_cursor_and_viewport(model);
 }
 
 #[tracing::instrument(skip(model, content))]
@@ -45,7 +45,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            model.files.preview = create_buffer(model, &path, content);
+            set_buffer(model, &path, content);
         }
         Preview::Image(path, protocol) => {
             model.files.preview = PreviewContent::Image(path, protocol)
@@ -64,9 +64,10 @@ pub fn update_cursor_and_viewport(model: &mut Model) {
     let buffer = &mut dir.buffer;
     let layout = &model.layout.preview;
 
+    tracing::warn!("{:?}", &model.layout.preview);
     viewport::set_viewport_dimensions(&mut buffer.view_port, layout);
     update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
-
+    tracing::warn!("{:?}", &buffer);
     if let Some(cursor) = &mut buffer.cursor {
         cursor.hide_cursor_line = true;
     }

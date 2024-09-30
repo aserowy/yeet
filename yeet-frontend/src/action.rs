@@ -97,6 +97,7 @@ async fn execute(
                 emitter.run(Task::EmitMessages(messages));
             }
             Action::Load(window_type, path, selection) => {
+                tracing::warn!(window_type = ?window_type, path = ?path, selection = ?selection);
                 match window_type {
                     WindowType::Current => {
                         model.files.current.buffer.lines.clear();
@@ -111,6 +112,8 @@ async fn execute(
                             &mut model.files.current.buffer,
                             &BufferMessage::ResetCursor,
                         );
+
+                        emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                     }
                     WindowType::Parent => {
                         model.files.parent.buffer.lines.clear();
@@ -125,17 +128,19 @@ async fn execute(
                             &mut model.files.parent.buffer,
                             &BufferMessage::ResetCursor,
                         );
+
+                        emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                     }
                     WindowType::Preview => {
-                        model.files.preview = preview::create_buffer(model, path.as_path(), vec![]);
+                        preview::set_buffer(model, path.as_path(), vec![]);
+
+                        if path.is_dir() {
+                            emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
+                        } else {
+                            emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
+                        }
                     }
                 };
-
-                if path.is_dir() {
-                    emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                } else {
-                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
-                }
             }
             Action::ModeChanged => {
                 emitter.set_current_mode(model.mode.clone()).await;

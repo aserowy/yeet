@@ -201,7 +201,7 @@ pub fn navigate_to_path_with_selection(
     if let Some(preview) = preview {
         match current_contents.get(&preview) {
             Some(it) => {
-                model.files.preview = preview::create_buffer(model, &preview, it.to_vec());
+                preview::set_buffer(model, &preview, it.to_vec());
             }
             None => {
                 tracing::trace!("loading preview: {:?}", path);
@@ -245,7 +245,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
 
         let content = model.files.current.buffer.lines.drain(..).collect();
         let path = &model.files.current.path.to_path_buf();
-        model.files.preview = preview::create_buffer(model, path, content);
+        preview::set_buffer(model, path, content);
 
         model.files.current.path = path.to_path_buf();
         update_buffer(
