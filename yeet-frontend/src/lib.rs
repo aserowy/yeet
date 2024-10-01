@@ -156,8 +156,8 @@ fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
 fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     let current = vec![
         Some(model.files.current.path.clone()),
+        model.files.parent.resolve_path().map(|p| p.to_path_buf()),
         model.files.preview.resolve_path().map(|p| p.to_path_buf()),
-        model.files.parent.path.clone(),
     ]
     .into_iter()
     .flatten()
@@ -210,12 +210,7 @@ fn get_command_from_stack(
     }
 
     if let Some(commands) = &mut model.command_stack {
-        let buffer_loading = model
-            .files
-            .get_mut_directories()
-            .iter()
-            .any(|(_, state, _)| state != &&DirectoryBufferState::Ready);
-
+        let buffer_loading = model.files.current.state != DirectoryBufferState::Ready;
         let current_command_processing = model.command_current.is_some();
 
         let contains_emit_messages = actions

@@ -1,16 +1,16 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{BufferLine, Mode},
+    model::{ansi::Ansi, Buffer, BufferLine, Mode},
     update::update_buffer,
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 
 use crate::{
     action::Action,
-    event::{Envelope, Message},
-    model::Model,
+    event::{Envelope, Message, Preview},
+    model::{BufferType, Model, WindowType},
 };
 
 use self::{
@@ -54,7 +54,6 @@ mod modification;
 mod navigation;
 mod open;
 mod path;
-pub mod preview;
 mod qfix;
 mod register;
 mod save;
@@ -113,7 +112,7 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
             .into_iter()
             .chain(add_to_junkyard(model, &paths).into_iter())
             .collect(),
-        Message::PreviewLoaded(content) => preview::update_preview(model, content),
+        Message::PreviewLoaded(content) => update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
     }
@@ -182,4 +181,65 @@ pub fn update_current(model: &mut Model, message: &BufferMessage) {
 
     set_viewport_dimensions(&mut buffer.view_port, layout);
     update_buffer(&model.mode, buffer, message);
+}
+
+pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
+    match content {
+        Preview::Content(path, content) => {
+            tracing::trace!("updating preview buffer: {:?}", path);
+
+            let content = content
+                .iter()
+                .map(|s| BufferLine {
+                    content: Ansi::new(s),
+                    ..Default::default()
+                })
+                .collect();
+
+            set_buffer(&WindowType::Preview, model, &path, content);
+        }
+        Preview::Image(path, protocol) => model.files.preview = BufferType::Image(path, protocol),
+        Preview::None(_) => model.files.preview = BufferType::None,
+    };
+    Vec::new()
+}
+
+// pub fn set_buffer(model: &mut Model, path: &Path, content: Vec<BufferLine>) {
+pub fn set_buffer(
+    window_type: &WindowType,
+    model: &mut Model,
+    path: &Path,
+    content: Vec<BufferLine>,
+) {
+    let mut buffer = Buffer::default();
+
+    update_buffer(
+        &model.mode,
+        &mut buffer,
+        &BufferMessage::SetContent(content.to_vec()),
+    );
+
+    let layout = match window_type {
+        WindowType::Parent => &model.layout.parent,
+        WindowType::Preview => &model.layout.preview,
+        WindowType::Current => unreachable!(),
+    };
+
+    viewport::set_viewport_dimensions(&mut buffer.view_port, layout);
+    update_buffer(&model.mode, &mut buffer, &BufferMessage::ResetCursor);
+
+    if let Some(cursor) = &mut buffer.cursor {
+        cursor.hide_cursor_line = true;
+    }
+
+    if path.is_dir() {
+        cursor::set_cursor_index_with_history(&model.mode, &model.history, &mut buffer, path);
+    }
+
+    let buffer_type = BufferType::Text(path.to_path_buf(), buffer);
+    match window_type {
+        WindowType::Parent => model.files.parent = buffer_type,
+        WindowType::Preview => model.files.preview = buffer_type,
+        WindowType::Current => unreachable!(),
+    };
 }

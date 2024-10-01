@@ -8,13 +8,12 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{Model, PreviewContent, WindowType},
-    update::{history::get_selection_from_history, preview},
+    model::{BufferType, Model, WindowType},
 };
 
 use super::{
     cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
-    history::add_history_entry,
+    history::{add_history_entry, get_selection_from_history},
     selection::{self, get_current_selected_path},
     set_viewport_dimensions,
 };
@@ -41,7 +40,7 @@ pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_path(model: &mut Model, path: &Path) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
-        tracing::warn!("path is a file, not a directory: {:?}", path);
+        tracing::info!("path is a file, not a directory: {:?}", path);
         let selection = path
             .file_name()
             .map(|oss| oss.to_string_lossy().to_string());
@@ -113,8 +112,8 @@ pub fn navigate_to_path_with_selection(
             .collect::<Vec<_>>(),
     )]);
 
-    if let PreviewContent::Buffer(dir) = &mut model.files.preview {
-        current_contents.insert(dir.path.to_path_buf(), dir.buffer.lines.drain(..).collect());
+    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+        current_contents.insert(path.to_path_buf(), buffer.lines.drain(..).collect());
     } else {
         tracing::warn!(
             "navigate_to_path_with_selection called without valid preview content for path {:?}",
@@ -122,11 +121,8 @@ pub fn navigate_to_path_with_selection(
         );
     }
 
-    if let Some(path) = &model.files.parent.path {
-        current_contents.insert(
-            path.to_path_buf(),
-            model.files.parent.buffer.lines.drain(..).collect(),
-        );
+    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+        current_contents.insert(path.to_path_buf(), buffer.lines.drain(..).collect());
     }
 
     let mut actions = Vec::new();
@@ -214,7 +210,7 @@ pub fn navigate_to_path_with_selection(
             }
         }
     } else {
-        model.files.preview = PreviewContent::None;
+        model.files.preview = BufferType::None;
     }
 
     add_history_entry(&mut model.history, &model.files.current.path);
@@ -282,7 +278,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         model.files.current.path = selected.to_path_buf();
 
-        if let PreviewContent::Buffer(dir) = &mut model.files.preview {
+        if let BufferType::Text(dir) = &mut model.files.preview {
             update_buffer(
                 &model.mode,
                 &mut model.files.current.buffer,

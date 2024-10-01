@@ -1,9 +1,10 @@
+use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
-use yeet_buffer::view;
+use yeet_buffer::{model::Mode, view};
 
 use crate::{
     error::AppError,
-    model::{Model, PreviewContent},
+    model::{BufferType, Model},
     terminal::TerminalWrapper,
 };
 
@@ -22,23 +23,22 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
             frame,
             layout.current,
         );
-        view::view(
-            &model.mode,
-            &model.files.parent.buffer,
-            frame,
-            layout.parent,
-        );
 
-        match &model.files.preview {
-            PreviewContent::Buffer(dir) => {
-                view::view(&model.mode, &dir.buffer, frame, layout.preview);
-            }
-            PreviewContent::Image(_, protocol) => {
-                frame.render_widget(Image::new(protocol.as_ref()), layout.preview);
-            }
-            PreviewContent::None => {}
-        };
+        render_buffer(&model.mode, frame, layout.parent, &model.files.parent);
+        render_buffer(&model.mode, frame, layout.preview, &model.files.preview);
 
         statusline::view(model, frame, layout.statusline);
     })
+}
+
+fn render_buffer(mode: &Mode, frame: &mut Frame, layout: Rect, buffer_type: &BufferType) {
+    match buffer_type {
+        BufferType::Text(_, buffer) => {
+            view::view(mode, &buffer, frame, layout);
+        }
+        BufferType::Image(_, protocol) => {
+            frame.render_widget(Image::new(protocol.as_ref()), layout);
+        }
+        BufferType::None => {}
+    };
 }

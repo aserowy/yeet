@@ -12,7 +12,7 @@ use crate::{
     open,
     task::Task,
     terminal::TerminalWrapper,
-    update::{preview, viewport},
+    update::{self, viewport},
 };
 
 #[derive(Debug)]
@@ -115,24 +115,8 @@ async fn execute(
 
                         emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                     }
-                    WindowType::Parent => {
-                        model.files.parent.buffer.lines.clear();
-                        model.files.parent.state = DirectoryBufferState::Loading;
-                        viewport::set_viewport_dimensions(
-                            &mut model.files.parent.buffer.view_port,
-                            &model.layout.parent,
-                        );
-
-                        yeet_buffer::update::update_buffer(
-                            &model.mode,
-                            &mut model.files.parent.buffer,
-                            &BufferMessage::ResetCursor,
-                        );
-
-                        emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                    }
-                    WindowType::Preview => {
-                        preview::set_buffer(model, path.as_path(), vec![]);
+                    WindowType::Parent | WindowType::Preview => {
+                        update::set_buffer(&window_type, model, path.as_path(), vec![]);
 
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));

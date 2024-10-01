@@ -4,7 +4,7 @@ use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
     qfix::{QuickFix, QFIX_SIGN_ID},
-    Model, PreviewContent,
+    BufferType, Model,
 };
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -55,8 +55,17 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
 }
 
 pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {
-    let all_buffer = model.files.get_mut_directories();
-    for (_, _, buffer) in all_buffer {
+    for line in &mut model.files.current.buffer.lines {
+        unset_sign(line, sign_id);
+    }
+
+    if let BufferType::Text(_, buffer) = &mut model.files.parent {
+        for line in &mut buffer.lines {
+            unset_sign(line, sign_id);
+        }
+    }
+
+    if let BufferType::Text(_, buffer) = &mut model.files.preview {
         for line in &mut buffer.lines {
             unset_sign(line, sign_id);
         }
@@ -71,14 +80,20 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
 
     let lines = if parent == model.files.current.path {
         &mut model.files.current.buffer.lines
-    } else if Some(parent) == model.files.parent.path.as_deref() {
-        &mut model.files.parent.buffer.lines
-    } else {
-        if let PreviewContent::Buffer(dir) = &mut model.files.preview {
-            &mut dir.buffer.lines
+    } else if Some(parent) == model.files.parent.resolve_path() {
+        if let BufferType::Text(_, buffer) = &mut model.files.parent {
+            &mut buffer.lines
         } else {
             return;
         }
+    } else if Some(parent) == model.files.preview.resolve_path() {
+        if let BufferType::Text(_, buffer) = &mut model.files.preview {
+            &mut buffer.lines
+        } else {
+            return;
+        }
+    } else {
+        return;
     };
 
     let file_name = match path.file_name() {

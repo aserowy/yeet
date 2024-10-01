@@ -7,7 +7,7 @@ use ratatui::layout::Rect;
 use ratatui_image::protocol::Protocol;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
-    Buffer, Cursor, CursorPosition, Mode,
+    Buffer, Cursor, Mode,
 };
 use yeet_keymap::message::KeymapMessage;
 
@@ -55,22 +55,28 @@ impl std::fmt::Debug for Model {
 }
 
 pub struct FileWindow {
-    pub current: DirectoryBuffer<PathBuf>,
-    pub parent: DirectoryBuffer<Option<PathBuf>>,
-    pub preview: PreviewContent,
+    pub current: PathBuffer,
+    pub parent: BufferType,
+    pub preview: BufferType,
 }
 
 impl FileWindow {
-    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut DirectoryBufferState, &mut Buffer)> {
-        let preview_content_ref = if let PreviewContent::Buffer(dir) = &mut self.preview {
-            dir.as_content_ref()
+    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut Buffer)> {
+        let parent_content_ref = if let BufferType::Text(path, buffer) = &mut self.parent {
+            Some((path.as_path(), buffer))
+        } else {
+            None
+        };
+
+        let preview_content_ref = if let BufferType::Text(path, buffer) = &mut self.preview {
+            Some((path.as_path(), buffer))
         } else {
             None
         };
 
         vec![
-            self.current.as_content_ref(),
-            self.parent.as_content_ref(),
+            Some((self.current.path.as_path(), &mut self.current.buffer)),
+            parent_content_ref,
             preview_content_ref,
         ]
         .into_iter()
@@ -82,7 +88,7 @@ impl FileWindow {
 impl Default for FileWindow {
     fn default() -> Self {
         Self {
-            current: DirectoryBuffer {
+            current: PathBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
                     show_border: true,
@@ -95,18 +101,19 @@ impl Default for FileWindow {
                 },
                 ..Default::default()
             },
-            parent: DirectoryBuffer::<Option<PathBuf>> {
-                buffer: Buffer {
-                    cursor: Some(Cursor {
-                        horizontal_index: CursorPosition::None,
-                        vertical_index: 0,
-                        ..Default::default()
-                    }),
-                    show_border: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            parent: Default::default(),
+            // parent: DirectoryBuffer {
+            //     buffer: Buffer {
+            //         cursor: Some(Cursor {
+            //             horizontal_index: CursorPosition::None,
+            //             vertical_index: 0,
+            //             ..Default::default()
+            //         }),
+            //         show_border: true,
+            //         ..Default::default()
+            //     },
+            //     ..Default::default()
+            // },
             preview: Default::default(),
         }
     }
@@ -120,19 +127,19 @@ pub enum WindowType {
 }
 
 #[derive(Default)]
-pub enum PreviewContent {
-    Buffer(DirectoryBuffer<PathBuf>),
+pub enum BufferType {
+    Text(PathBuf, Buffer),
     Image(PathBuf, Box<dyn Protocol>),
     #[default]
     None,
 }
 
-impl PreviewContent {
+impl BufferType {
     pub fn resolve_path(&self) -> Option<&Path> {
         match self {
-            PreviewContent::Buffer(dir) => Some(&dir.path),
-            PreviewContent::Image(path, _) => Some(path),
-            PreviewContent::None => None,
+            BufferType::Text(path, _) => Some(path),
+            BufferType::Image(path, _) => Some(path),
+            BufferType::None => None,
         }
     }
 }
@@ -160,27 +167,10 @@ impl Default for CommandLine {
 }
 
 #[derive(Default)]
-pub struct DirectoryBuffer<T> {
+pub struct PathBuffer {
     pub buffer: Buffer,
-    pub path: T,
+    pub path: PathBuf,
     pub state: DirectoryBufferState,
-}
-
-pub type DirectoryContentRef<'a> = (&'a Path, &'a mut DirectoryBufferState, &'a mut Buffer);
-
-impl DirectoryBuffer<PathBuf> {
-    pub fn as_content_ref(&mut self) -> Option<DirectoryContentRef> {
-        Some((&self.path, &mut self.state, &mut self.buffer))
-    }
-}
-
-impl DirectoryBuffer<Option<PathBuf>> {
-    pub fn as_content_ref(&mut self) -> Option<DirectoryContentRef> {
-        match &self.path {
-            Some(path) => Some((path, &mut self.state, &mut self.buffer)),
-            None => None,
-        }
-    }
 }
 
 #[derive(Debug, Default, PartialEq)]
