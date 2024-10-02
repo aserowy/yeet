@@ -101,8 +101,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let mut actions = update_model(&mut model, envelope);
         actions.extend(get_watcher_changes(&mut model));
-        // TODO:
-        // actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
+        // FIX: actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
 
         let (actions, result) =
             action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;

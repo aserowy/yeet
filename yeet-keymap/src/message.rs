@@ -70,7 +70,7 @@ pub enum BindingKind {
     Modification(TextModification),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum KeySequence {
     Completed(String),
     Changed(String),
