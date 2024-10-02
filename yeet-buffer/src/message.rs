@@ -14,6 +14,7 @@ pub enum BufferMessage {
     SetContent(Vec<BufferLine>),
     SetCursorToLineContent(String),
     SortContent(fn(&BufferLine, &BufferLine) -> Ordering),
+    UpdateViewPortByCursor,
 }
 
 impl std::fmt::Debug for BufferMessage {
@@ -47,6 +48,9 @@ impl std::fmt::Debug for BufferMessage {
                 .debug_tuple("SortContent")
                 .field(&"fn(&BufferLine, &BufferLine) -> Ordering")
                 .finish(),
+            BufferMessage::UpdateViewPortByCursor => {
+                f.debug_tuple("UpdateViewPortByCursor").finish()
+            }
         }
     }
 }

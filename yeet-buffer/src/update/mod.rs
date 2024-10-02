@@ -109,6 +109,7 @@ pub fn update_buffer(
             validate_cursor_position(mode, model);
             Vec::new()
         }
+        BufferMessage::UpdateViewPortByCursor => Vec::new(),
     };
 
     viewport::update_by_cursor(model);

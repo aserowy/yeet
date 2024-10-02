@@ -171,7 +171,8 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
         | BufferMessage::ResetCursor
         | BufferMessage::SetContent(_)
         | BufferMessage::SetCursorToLineContent(_)
-        | BufferMessage::SortContent(_) => unreachable!(),
+        | BufferMessage::SortContent(_)
+        | BufferMessage::UpdateViewPortByCursor => unreachable!(),
     }
 }
 

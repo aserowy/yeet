@@ -1,13 +1,16 @@
 use std::{mem, path::Path};
 
-use yeet_buffer::model::Buffer;
+use yeet_buffer::{
+    message::BufferMessage,
+    model::{Buffer, Mode},
+};
 
 use crate::{
     action::Action,
     model::{BufferType, Model, WindowType},
 };
 
-use super::{history, selection};
+use super::{cursor, history, selection};
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
@@ -32,6 +35,7 @@ pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
 pub fn navigate_to_path(model: &mut Model, path: &Path) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
+
         let selection = path
             .file_name()
             .map(|oss| oss.to_string_lossy().to_string());
@@ -86,7 +90,8 @@ pub fn navigate_to_path_with_selection(
         Some(it) => Some(it.to_owned()),
         None => {
             tracing::trace!("getting selection from history for path: {:?}", path);
-            history::get_selection_from_history(&model.history, path).map(|history| history.to_owned())
+            history::get_selection_from_history(&model.history, path)
+                .map(|history| history.to_owned())
         }
     };
 
@@ -140,7 +145,8 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
-        let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
+        let current_buffer =
+            mem_replace_buffer(&model.mode, &mut model.files.current.buffer, parent_buffer);
 
         model.files.preview = BufferType::Text(current_path, current_buffer);
 
@@ -166,7 +172,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         model.files.parent = BufferType::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
-            mem::replace(&mut model.files.current.buffer, preview_buffer),
+            mem_replace_buffer(&model.mode, &mut model.files.current.buffer, preview_buffer),
         );
 
         let mut actions = Vec::new();
@@ -186,3 +192,14 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         Vec::new()
     }
 }
+
+fn mem_replace_buffer(mode: &Mode, dest: &mut Buffer, src: Buffer) -> Buffer {
+    let mut result = mem::replace(dest, src);
+    mem::swap(&mut dest.view_port, &mut result.view_port);
+
+    yeet_buffer::update::update_buffer(mode, &mut result, &BufferMessage::UpdateViewPortByCursor);
+    yeet_buffer::update::update_buffer(mode, dest, &BufferMessage::UpdateViewPortByCursor);
+
+    result
+}
+
