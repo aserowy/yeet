@@ -53,6 +53,10 @@ pub fn update_on_enumeration_change(
         }
     }
 
+    if path == &model.files.current.path {
+        model.files.current.state = DirectoryBufferState::PartiallyLoaded;
+    }
+
     tracing::trace!(
         "changed enumeration for path {:?} with current directory states: current is {:?}",
         path,

@@ -97,11 +97,17 @@ async fn execute(
                 emitter.run(Task::EmitMessages(messages));
             }
             Action::Load(window_type, path, selection) => {
-                tracing::warn!(window_type = ?window_type, path = ?path, selection = ?selection);
                 match window_type {
                     WindowType::Current => {
-                        model.files.current.buffer.lines.clear();
                         model.files.current.state = DirectoryBufferState::Loading;
+                        model.files.current.path = path.clone();
+
+                        yeet_buffer::update::update_buffer(
+                            &model.mode,
+                            &mut model.files.current.buffer,
+                            &BufferMessage::SetContent(Vec::new()),
+                        );
+
                         viewport::set_viewport_dimensions(
                             &mut model.files.current.buffer.view_port,
                             &model.layout.current,
@@ -113,7 +119,7 @@ async fn execute(
                             &BufferMessage::ResetCursor,
                         );
 
-                        emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
+                        emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
                     WindowType::Parent | WindowType::Preview => {
                         update::set_buffer(&window_type, model, path.as_path(), vec![]);
