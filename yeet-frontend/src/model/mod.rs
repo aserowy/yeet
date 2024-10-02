@@ -128,10 +128,10 @@ pub enum WindowType {
 
 #[derive(Default)]
 pub enum BufferType {
-    Text(PathBuf, Buffer),
     Image(PathBuf, Box<dyn Protocol>),
     #[default]
     None,
+    Text(PathBuf, Buffer),
 }
 
 impl BufferType {

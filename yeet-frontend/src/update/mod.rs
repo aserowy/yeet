@@ -205,7 +205,6 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
     Vec::new()
 }
 
-// pub fn set_buffer(model: &mut Model, path: &Path, content: Vec<BufferLine>) {
 pub fn set_buffer(
     window_type: &WindowType,
     model: &mut Model,

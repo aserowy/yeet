@@ -36,6 +36,7 @@ pub fn update_buffer(
         }
         BufferMessage::MoveCursor(count, direction) => {
             update_cursor_by_direction(mode, model, count, direction)
+            // TODO: history::add_history_entry(&mut model.history, selected.as_path());
         }
         BufferMessage::MoveViewPort(direction) => {
             viewport::update_by_direction(model, direction);

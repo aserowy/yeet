@@ -2,7 +2,7 @@ use std::{mem, path::Path};
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{Buffer, Mode},
+    model::{Buffer, Cursor, CursorPosition, Mode},
 };
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     model::{BufferType, Model, WindowType},
 };
 
-use super::{cursor, history, selection};
+use super::{history, selection};
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_mark(char: &char, model: &mut Model) -> Vec<Action> {
@@ -175,15 +175,30 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             mem_replace_buffer(&model.mode, &mut model.files.current.buffer, preview_buffer),
         );
 
-        let mut actions = Vec::new();
+        if matches!(
+            model
+                .files
+                .current
+                .buffer
+                .cursor
+                .as_ref()
+                .map(|cursor| &cursor.horizontal_index),
+            Some(CursorPosition::End) | Some(CursorPosition::None) | None
+        ) {
+            model.files.current.buffer.cursor = Some(Cursor::default());
+        }
 
+        let mut actions = Vec::new();
         if let Some(selected) = selection::get_current_selected_path(model) {
             tracing::trace!("loading selection: {:?}", selected);
+
+            let history = history::get_selection_from_history(&model.history, selected.as_path())
+                .map(|s| s.to_string());
 
             actions.push(Action::Load(
                 WindowType::Preview,
                 selected.to_path_buf(),
-                None,
+                history,
             ));
         }
 
@@ -193,7 +208,15 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
     }
 }
 
-fn mem_replace_buffer(mode: &Mode, dest: &mut Buffer, src: Buffer) -> Buffer {
+fn mem_replace_buffer(mode: &Mode, dest: &mut Buffer, mut src: Buffer) -> Buffer {
+    if let (Some(dest_cursor), Some(src_cursor)) = (&mut dest.cursor, &mut src.cursor) {
+        mem::swap(
+            &mut dest_cursor.vertical_index,
+            &mut src_cursor.vertical_index,
+        );
+        mem::swap(dest_cursor, src_cursor);
+    }
+
     let mut result = mem::replace(dest, src);
     mem::swap(&mut dest.view_port, &mut result.view_port);
 
@@ -202,4 +225,3 @@ fn mem_replace_buffer(mode: &Mode, dest: &mut Buffer, src: Buffer) -> Buffer {
 
     result
 }
-

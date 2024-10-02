@@ -179,7 +179,7 @@ impl TaskManager {
 
     #[tracing::instrument(skip(self))]
     pub fn run(&mut self, task: Task) {
-        tracing::trace!("running task: {:?}", task);
+        tracing::debug!("running task: {:?}", task);
 
         let task_identifier = task.to_identifier_string();
         let abort_handle = match task {
@@ -322,6 +322,7 @@ impl TaskManager {
 
                                         (true, path)
                                     } else {
+                                        tracing::warn!("path does not exist: {:?}", path);
                                         (false, PathBuf::new())
                                     }
                                 }

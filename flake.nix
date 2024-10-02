@@ -63,13 +63,16 @@
 
               pkgs.asciinema
               pkgs.asciinema-agg
-              pkgs.chafa
               pkgs.gh
               pkgs.nil
               pkgs.nixpkgs-fmt
               pkgs.nodejs_20
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier
+
+              pkgs.chafa
+              pkgs.kitty
+              pkgs.wezterm
             ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
               pkgs.vscode-extensions.vadimcn.vscode-lldb
             ];
