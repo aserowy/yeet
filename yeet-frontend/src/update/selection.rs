@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
 use yeet_buffer::model::BufferLine;
-use yeet_keymap::message::Message;
 
-use crate::{action::Action, model::Model};
+use crate::{action::Action, event::Message, model::Model};
 
 pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
     let buffer = &model.files.current.buffer;

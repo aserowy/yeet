@@ -1,5 +1,6 @@
 use thiserror::Error;
-use yeet_keymap::message::Envelope;
+
+use crate::event::Envelope;
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -19,6 +20,12 @@ pub enum AppError {
     LoadMarkFailed,
     #[error("Loading quickfix failed")]
     LoadQuickFixFailed,
+    #[error("Preview picker is not set")]
+    PreviewPickerNotResolved,
+    #[error("Generating preview protocol failed")]
+    PreviewProtocolGenerationFailed,
+    #[error("Loading image failed")]
+    ImageOperationFailed(#[from] image::ImageError),
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
     #[error("Watch operation on path failed")]

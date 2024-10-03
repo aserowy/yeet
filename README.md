@@ -132,8 +132,12 @@ ui.
 
 ### image preview stays empty
 
-Images are previewed using `chafa` to convert images to ansi. If the output stays
-empty, make sure yeet can call `chafa` to enable image rendering.
+All major emulator image protocols are useable. Kitty, Sixel, iTerm2 and
+halfblocks are integrated with the awesome [ratatui_image](https://docs.rs/crate/ratatui-image/latest)!
+
+If nothing of the above protocols are working, `chafa` is used as a fallback to
+convert images to ansi. If the output stays empty, make sure yeet can call
+`chafa` to enable image rendering.
 
 ### opening files in linux does nothing
 

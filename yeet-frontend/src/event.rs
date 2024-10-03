@@ -1,10 +1,14 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use futures::{FutureExt, StreamExt};
 use notify::{
     event::{ModifyKind, RenameMode},
     RecommendedWatcher, RecursiveMode, Watcher,
 };
+use ratatui_image::protocol::Protocol;
 use tokio::{
     select,
     sync::{
@@ -15,7 +19,7 @@ use tokio::{
 use yeet_buffer::model::Mode;
 use yeet_keymap::{
     conversion,
-    message::{Envelope, KeySequence, Message, MessageSource},
+    message::{KeySequence, KeymapMessage},
     MessageResolver,
 };
 
@@ -24,6 +28,102 @@ use crate::{
     init::junkyard::get_junkyard_path,
     task::{Task, TaskManager},
 };
+
+#[derive(Debug)]
+pub struct Envelope {
+    pub messages: Vec<Message>,
+    pub sequence: KeySequence,
+    pub source: MessageSource,
+}
+impl Envelope {
+    pub fn clone_keymap_messages(&self) -> Vec<KeymapMessage> {
+        self.messages
+            .iter()
+            .flat_map(|message| {
+                if let Message::Keymap(keymap_message) = message {
+                    Some(keymap_message.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum MessageSource {
+    Filesystem,
+    Task,
+    User,
+}
+
+pub enum Message {
+    Keymap(KeymapMessage),
+    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
+    EnumerationFinished(PathBuf, Option<String>),
+    Error(String),
+    PathRemoved(PathBuf),
+    PathsAdded(Vec<PathBuf>),
+    PreviewLoaded(Preview),
+    Rerender,
+    Resize(u16, u16),
+}
+
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Message::Keymap(msg) => write!(f, "Keymap({:?})", msg),
+            Message::EnumerationChanged(path, _, opt) => {
+                write!(f, "EnumerationChanged({:?}, _, {:?})", path, opt)
+            }
+            Message::EnumerationFinished(path, opt) => {
+                write!(f, "EnumerationFinished({:?}, {:?})", path, opt)
+            }
+            Message::Error(err) => write!(f, "Error({:?})", err),
+            Message::PathRemoved(path) => write!(f, "PathRemoved({:?})", path),
+            Message::PathsAdded(paths) => write!(f, "PathsAdded({:?})", paths),
+            Message::PreviewLoaded(preview) => write!(f, "PreviewLoaded({:?})", preview),
+            Message::Rerender => write!(f, "Rerender"),
+            Message::Resize(x, y) => write!(f, "Resize({}, {})", x, y),
+        }
+    }
+}
+
+pub enum Preview {
+    Content(PathBuf, Vec<String>),
+    Image(PathBuf, Box<dyn Protocol>),
+    None(PathBuf),
+}
+
+impl std::fmt::Debug for Preview {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Preview::Content(path, _) => write!(f, "Content({:?})", path),
+            Preview::Image(path, _) => write!(f, "Image({:?})", path),
+            Preview::None(path) => write!(f, "None({:?})", path),
+        }
+    }
+}
+
+impl Eq for Preview {}
+
+impl PartialEq for Preview {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Preview::Content(p1, _), Preview::Content(p2, _)) => p1 == p2,
+            (Preview::Image(p1, _), Preview::Image(p2, _)) => p1 == p2,
+            (Preview::None(p1), Preview::None(p2)) => p1 == p2,
+            _ => false,
+        }
+    }
+}
+
+// TODO: replace with ansi string
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ContentKind {
+    Directory,
+    File,
+}
 
 pub struct Emitter {
     cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
@@ -176,8 +276,12 @@ async fn handle_crossterm_event(
         crossterm::event::Event::Key(key) => {
             if let Some(key) = conversion::to_key(&key) {
                 let mut resolver = resolver_mutex.lock().await;
-                let envelope = resolver.add_key(key);
-                return Some(envelope);
+                let (messages, sequence) = resolver.add_key(key);
+                return Some(Envelope {
+                    messages: messages.into_iter().map(Message::Keymap).collect(),
+                    sequence,
+                    source: MessageSource::User,
+                });
             }
 
             None

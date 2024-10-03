@@ -1,9 +1,11 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use ratatui::layout::Rect;
+use ratatui_image::picker::{Picker, ProtocolType};
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
@@ -12,12 +14,13 @@ use tokio::{
 };
 use yeet_keymap::{
     conversion,
-    message::{ContentKind, Envelope, KeySequence, Message, MessageSource},
+    message::{KeySequence, KeymapMessage},
     MessageResolver,
 };
 
 use crate::{
     error::AppError,
+    event::{ContentKind, Envelope, Message, MessageSource},
     init::{
         history::{optimize_history_file, save_history_to_file},
         junkyard::{cache_and_compress, compress, delete, restore},
@@ -30,7 +33,7 @@ use crate::{
 mod image;
 mod syntax;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum Task {
     AddPath(PathBuf),
     CopyPath(PathBuf, PathBuf),
@@ -50,9 +53,66 @@ pub enum Task {
     YankPath(FileEntry),
 }
 
+impl Task {
+    pub fn to_identifier_string(&self) -> String {
+        match self {
+            Task::AddPath(path) => format!("AddPath({:?})", path),
+            Task::CopyPath(src, dst) => format!("CopyPath({:?}, {:?})", src, dst),
+            Task::DeleteMarks(marks) => format!("DeleteMarks({:?})", marks),
+            Task::DeletePath(path) => format!("DeletePath({:?})", path),
+            Task::DeleteJunkYardEntry(entry) => format!("DeleteJunkYardEntry({:?})", entry),
+            Task::EmitMessages(_) => "EmitMessages".to_string(),
+            Task::EnumerateDirectory(path, _) => {
+                format!("EnumerateDirectory({:?}, _)", path)
+            }
+            Task::LoadPreview(path, rect) => format!("LoadPreview({:?}, {})", path, rect),
+            Task::RenamePath(old, new) => {
+                format!("RenamePath({:?}, {:?})", old, new)
+            }
+            Task::RestorePath(entry, path) => {
+                format!("RestorePath({:?}, {:?})", entry, path)
+            }
+            Task::SaveHistory(_) => "SaveHistory".to_string(),
+            Task::SaveMarks(_) => "SaveMarks".to_string(),
+            Task::SaveQuickFix(_) => "SaveQuickFix".to_string(),
+            Task::SaveSelection(path, _) => format!("SaveSelection({:?}, _)", path),
+            Task::TrashPath(entry) => format!("TrashPath({:?})", entry),
+            Task::YankPath(entry) => format!("YankPath({:?})", entry),
+        }
+    }
+}
+
+impl Eq for Task {}
+
+impl PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Task::AddPath(p1), Task::AddPath(p2)) => p1 == p2,
+            (Task::CopyPath(s1, t1), Task::CopyPath(s2, t2)) => s1 == s2 && t1 == t2,
+            (Task::DeleteMarks(m1), Task::DeleteMarks(m2)) => m1 == m2,
+            (Task::DeletePath(p1), Task::DeletePath(p2)) => p1 == p2,
+            (Task::DeleteJunkYardEntry(e1), Task::DeleteJunkYardEntry(e2)) => e1 == e2,
+            (Task::EnumerateDirectory(p1, s1), Task::EnumerateDirectory(p2, s2)) => {
+                p1 == p2 && s1 == s2
+            }
+            (Task::LoadPreview(p1, r1), Task::LoadPreview(p2, r2)) => p1 == p2 && r1 == r2,
+            (Task::RenamePath(o1, n1), Task::RenamePath(o2, n2)) => o1 == o2 && n1 == n2,
+            (Task::RestorePath(e1, p1), Task::RestorePath(e2, p2)) => e1 == e2 && p1 == p2,
+            (Task::SaveHistory(h1), Task::SaveHistory(h2)) => h1 == h2,
+            (Task::SaveMarks(m1), Task::SaveMarks(m2)) => m1 == m2,
+            (Task::SaveQuickFix(q1), Task::SaveQuickFix(q2)) => q1 == q2,
+            (Task::SaveSelection(p1, s1), Task::SaveSelection(p2, s2)) => p1 == p2 && s1 == s2,
+            (Task::TrashPath(e1), Task::TrashPath(e2)) => e1 == e2,
+            (Task::YankPath(e1), Task::YankPath(e2)) => e1 == e2,
+            _ => false,
+        }
+    }
+}
+
 pub struct TaskManager {
-    abort_handles: Vec<(Task, AbortHandle)>,
+    abort_handles: HashMap<String, AbortHandle>,
     highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
+    image_previewer: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: Sender<Envelope>,
     tasks: JoinSet<Result<(), AppError>>,
@@ -62,12 +122,18 @@ pub struct TaskManager {
 // TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
     pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
+        let picker = Picker::from_termios()
+            .ok()
+            .and_then(|mut picker| Some((picker, picker.guess_protocol())));
+
+        tracing::info!("image picker configured: {:?}", picker);
         Self {
-            abort_handles: Vec::new(),
+            abort_handles: HashMap::new(),
             highlighter: Arc::new(Mutex::new((
                 SyntaxSet::load_defaults_newlines(),
                 ThemeSet::load_defaults(),
             ))),
+            image_previewer: Arc::new(Mutex::new(picker)),
             resolver,
             sender,
             tasks: JoinSet::new(),
@@ -75,30 +141,20 @@ impl TaskManager {
     }
 
     pub fn abort(&mut self, task: &Task) {
-        if let Some(index) = self.get_abort_position(task) {
-            let (_, abort_handle) = self.abort_handles.remove(index);
+        let task_identifier = task.to_identifier_string();
+        if let Some(abort_handle) = self.abort_handles.remove(&task_identifier) {
             abort_handle.abort();
-        }
-    }
-
-    fn get_abort_position(&self, task: &Task) -> Option<usize> {
-        match task {
-            Task::EnumerateDirectory(path, _) => self
-                .abort_handles
-                .iter()
-                .position(|(t, _)| matches!(t, Task::EnumerateDirectory(p, _) if p == path)),
-
-            task => self.abort_handles.iter().position(|(t, _)| t == task),
         }
     }
 
     // TODO: result should handle shell code on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
-        for (task, abort_handle) in self.abort_handles.drain(..) {
-            if should_abort_on_finish(task) {
-                abort_handle.abort();
-            }
+        for (_identifier, abort_handle) in self.abort_handles.drain() {
+            // FIX: readd function
+            // if should_abort_on_finish(task) {
+            abort_handle.abort();
+            // }
         }
 
         while let Some(task) = self.tasks.join_next().await {
@@ -123,9 +179,10 @@ impl TaskManager {
 
     #[tracing::instrument(skip(self))]
     pub fn run(&mut self, task: Task) {
-        tracing::trace!("running task: {:?}", task);
+        tracing::debug!("running task: {:?}", task);
 
-        let abort_handle = match task.clone() {
+        let task_identifier = task.to_identifier_string();
+        let abort_handle = match task {
             Task::AddPath(path) => self.tasks.spawn(async move {
                 if path.exists() {
                     return Err(AppError::InvalidTargetPath);
@@ -201,16 +258,19 @@ impl TaskManager {
                 let sender = self.sender.clone();
                 let resolver = self.resolver.clone();
                 self.tasks.spawn(async move {
-                    let (execute, messages): (Vec<_>, Vec<_>) = messages
-                        .into_iter()
-                        .partition(|m| matches!(m, Message::ExecuteKeySequence(_)));
+                    let (execute, messages): (Vec<_>, Vec<_>) =
+                        messages.into_iter().partition(|m| {
+                            matches!(m, Message::Keymap(KeymapMessage::ExecuteKeySequence(_)))
+                        });
 
                     let mut envelope = to_envelope(messages);
 
                     let sequence = execute
                         .iter()
                         .map(|m| match m {
-                            Message::ExecuteKeySequence(sequence) => sequence.clone(),
+                            Message::Keymap(KeymapMessage::ExecuteKeySequence(sequence)) => {
+                                sequence.clone()
+                            }
                             _ => unreachable!(),
                         })
                         .collect::<Vec<_>>()
@@ -219,8 +279,11 @@ impl TaskManager {
                     let keys = conversion::from_keycode_string(&sequence);
                     let mut resolver = resolver.lock().await;
                     if let Some(resolved) = resolver.add_keys(keys) {
-                        envelope.messages.extend(resolved.messages);
-                        envelope.sequence = resolved.sequence;
+                        let messages: Vec<_> =
+                            resolved.0.into_iter().map(Message::Keymap).collect();
+
+                        envelope.messages.extend(messages);
+                        envelope.sequence = resolved.1;
                     }
 
                     // NOTE: important to prevent deadlock for queue size of one
@@ -259,6 +322,7 @@ impl TaskManager {
 
                                         (true, path)
                                     } else {
+                                        tracing::warn!("path does not exist: {:?}", path);
                                         (false, PathBuf::new())
                                     }
                                 }
@@ -314,11 +378,9 @@ impl TaskManager {
             Task::LoadPreview(path, rect) => {
                 let sender = self.sender.clone();
                 let highlighter = Arc::clone(&self.highlighter);
-                self.tasks.spawn(async move {
-                    let highlighter = highlighter.lock().await;
-                    let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                    let theme = &theme_set.themes["base16-eighties.dark"];
+                let previewer = Arc::clone(&self.image_previewer);
 
+                self.tasks.spawn(async move {
                     let mime = if let Some(mime) = infer::get_from_path(&path)? {
                         let kind = mime.mime_type().split('/').collect::<Vec<_>>();
                         if kind.len() != 2 {
@@ -330,21 +392,28 @@ impl TaskManager {
                     };
 
                     let content = match mime.as_deref() {
-                        Some("image") => match image::load(&path, &rect).await {
-                            Some(content) => content,
-                            None => "".to_string(),
-                        },
-                        _ => match syntax::highlight(syntaxes, theme, &path).await {
-                            Some(content) => content,
-                            None => "".to_string(),
-                        },
+                        Some("image") => {
+                            // NOTE: each time protocol gets used (even for debug) the picker
+                            // forgets the given protocol type
+                            let mut picker =
+                                previewer.lock().await.and_then(|(mut picker, protocol)| {
+                                    picker.protocol_type = protocol;
+                                    Some(picker)
+                                });
+
+                            image::load(&mut picker, &path, &rect).await
+                        }
+                        _ => {
+                            let highlighter = highlighter.lock().await;
+                            let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
+                            let theme = &theme_set.themes["base16-eighties.dark"];
+
+                            syntax::highlight(syntaxes, theme, &path).await
+                        }
                     };
 
                     let result = sender
-                        .send(to_envelope(vec![Message::PreviewLoaded(
-                            path.clone(),
-                            content.lines().map(|s| s.to_string()).collect(),
-                        )]))
+                        .send(to_envelope(vec![Message::PreviewLoaded(content)]))
                         .await;
 
                     if let Err(error) = result {
@@ -436,12 +505,9 @@ impl TaskManager {
             }
         };
 
-        if let Some(index) = self.abort_handles.iter().position(|(t, _)| t == &task) {
-            let (_, abort_handle) = self.abort_handles.remove(index);
+        if let Some(abort_handle) = self.abort_handles.insert(task_identifier, abort_handle) {
             abort_handle.abort();
         }
-
-        self.abort_handles.push((task, abort_handle));
     }
 }
 
@@ -460,7 +526,7 @@ fn to_envelope(messages: Vec<Message>) -> Envelope {
     }
 }
 
-fn should_abort_on_finish(task: Task) -> bool {
+fn _should_abort_on_finish(task: Task) -> bool {
     match task {
         Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _) => true,
 

@@ -8,15 +8,14 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, Model},
+    model::{history::History, Model, WindowType},
 };
 
 use super::{
     history::get_selection_from_history,
-    preview::{set_preview_to_selected, validate_preview_viewport},
     register::{get_direction_from_search_register, get_register},
     search::search_in_buffers,
-    update_current,
+    selection, update_current,
 };
 
 pub fn set_cursor_index_to_selection(mode: &Mode, model: &mut Buffer, selection: &str) -> bool {
@@ -67,11 +66,9 @@ pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = set_preview_to_selected(model) {
-        validate_preview_viewport(model);
-
+    if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
+        actions.push(Action::Load(WindowType::Preview, path, selection));
     }
 
     actions

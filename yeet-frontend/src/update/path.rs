@@ -9,32 +9,35 @@ use yeet_buffer::{
     update::update_buffer,
 };
 
-use crate::{action::Action, model::Model};
+use crate::{
+    action::Action,
+    model::{BufferType, Model, WindowType},
+};
 
 use super::{
     history::get_selection_from_history,
     junkyard::remove_from_junkyard,
-    preview::{set_preview_to_selected, validate_preview_viewport},
+    selection,
     sign::{set_sign_if_marked, set_sign_if_qfix},
 };
 
 #[tracing::instrument(skip(model))]
 pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
-    let mut buffer = vec![(
+    let mut buffer_contents = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,
         model.mode == Mode::Navigation,
     )];
 
-    if let Some(preview) = &model.files.preview.path {
-        buffer.push((preview, &mut model.files.preview.buffer, preview.is_dir()));
+    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+        buffer_contents.push((path.as_path(), buffer, path.is_dir()));
     }
 
-    if let Some(parent) = &model.files.parent.path {
-        buffer.push((parent, &mut model.files.parent.buffer, true));
+    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+        buffer_contents.push((path.as_path(), buffer, path.is_dir()));
     }
 
-    for (path, buffer, sort) in buffer {
+    for (path, buffer, sort) in buffer_contents {
         let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
         if paths_for_buffer.is_empty() {
             continue;
@@ -98,11 +101,9 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     }
 
     let mut actions = Vec::new();
-    if let Some(path) = set_preview_to_selected(model) {
-        validate_preview_viewport(model);
-
+    if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
+        actions.push(Action::Load(WindowType::Preview, path, selection));
     }
 
     actions
@@ -146,21 +147,21 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
 
     let current_selection = get_selected_content_from_buffer(&model.files.current.buffer);
 
-    let mut buffer = vec![(
+    let mut buffer_contents = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current.buffer,
     )];
 
-    if let Some(preview) = &model.files.preview.path {
-        buffer.push((preview, &mut model.files.preview.buffer));
+    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+        buffer_contents.push((path.as_path(), buffer));
     }
 
-    if let Some(parent) = &model.files.parent.path {
-        buffer.push((parent, &mut model.files.parent.buffer));
+    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+        buffer_contents.push((path.as_path(), buffer));
     }
 
     if let Some(parent) = path.parent() {
-        if let Some((_, buffer)) = buffer.into_iter().find(|(p, _)| p == &parent) {
+        if let Some((_, buffer)) = buffer_contents.into_iter().find(|(p, _)| p == &parent) {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let index = buffer
                     .lines
@@ -185,11 +186,9 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = set_preview_to_selected(model) {
-        validate_preview_viewport(model);
-
+    if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
+        actions.push(Action::Load(WindowType::Preview, path, selection));
     }
 
     actions

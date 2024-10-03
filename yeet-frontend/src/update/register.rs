@@ -2,10 +2,11 @@ use yeet_buffer::{
     message::BufferMessage,
     model::{Mode, SearchDirection},
 };
-use yeet_keymap::message::{Envelope, KeySequence, Message};
+use yeet_keymap::message::{KeySequence, KeymapMessage};
 
 use crate::{
     action::Action,
+    event::Message,
     model::register::{Register, RegisterScope},
 };
 
@@ -21,8 +22,8 @@ pub fn get_register(register: &Register, register_id: &char) -> Option<String> {
 
 pub fn replay_register(register: &mut Register, char: &char) -> Vec<Action> {
     if let Some(content) = get_register(register, char) {
-        vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
-            content.to_string(),
+        vec![Action::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::ExecuteKeySequence(content.to_string()),
         )])]
     } else {
         Vec::new()
@@ -32,8 +33,8 @@ pub fn replay_register(register: &mut Register, char: &char) -> Vec<Action> {
 pub fn replay_macro_register(register: &mut Register, char: &char) -> Vec<Action> {
     if let Some(content) = get_register(register, char) {
         register.last_macro = Some(content.to_string());
-        vec![Action::EmitMessages(vec![Message::ExecuteKeySequence(
-            content.to_string(),
+        vec![Action::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::ExecuteKeySequence(content.to_string()),
         )])]
     } else {
         Vec::new()
@@ -51,9 +52,9 @@ pub fn get_macro_register(register: &Register) -> Option<&RegisterScope> {
         .find(|scope| matches!(scope, RegisterScope::Macro(_)))
 }
 
-#[tracing::instrument(skip(mode, register, envelope))]
-pub fn start_register_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    if let Some(scope) = resolve_register_scope(mode, &envelope.messages) {
+#[tracing::instrument(skip(mode, register))]
+pub fn start_register_scope(mode: &Mode, register: &mut Register, messages: &[KeymapMessage]) {
+    if let Some(scope) = resolve_register_scope(mode, messages) {
         tracing::trace!("starting scope: {:?}", scope);
 
         register
@@ -63,7 +64,7 @@ pub fn start_register_scope(mode: &Mode, register: &mut Register, envelope: &Env
     }
 }
 
-fn resolve_register_scope(mode: &Mode, messages: &[Message]) -> Option<RegisterScope> {
+fn resolve_register_scope(mode: &Mode, messages: &[KeymapMessage]) -> Option<RegisterScope> {
     if is_dot_scope(mode, messages) {
         Some(RegisterScope::Dot)
     } else {
@@ -71,7 +72,7 @@ fn resolve_register_scope(mode: &Mode, messages: &[Message]) -> Option<RegisterS
     }
 }
 
-fn is_dot_scope(mode: &Mode, messages: &[Message]) -> bool {
+fn is_dot_scope(mode: &Mode, messages: &[KeymapMessage]) -> bool {
     if mode.is_command() {
         return false;
     }
@@ -79,27 +80,32 @@ fn is_dot_scope(mode: &Mode, messages: &[Message]) -> bool {
     messages.iter().any(|message| {
         matches!(
             message,
-            Message::Buffer(BufferMessage::ChangeMode(_, Mode::Insert))
-                | Message::Buffer(BufferMessage::Modification(..))
+            KeymapMessage::Buffer(BufferMessage::ChangeMode(_, Mode::Insert))
+                | KeymapMessage::Buffer(BufferMessage::Modification(..))
         )
     })
 }
 
-fn resolve_macro_register(messages: &[Message]) -> Option<char> {
+fn resolve_macro_register(messages: &[KeymapMessage]) -> Option<char> {
     let message = messages
         .iter()
-        .find(|m| matches!(m, Message::StartMacro(_)));
+        .find(|m| matches!(m, KeymapMessage::StartMacro(_)));
 
-    if let Some(Message::StartMacro(identifier)) = message {
+    if let Some(KeymapMessage::StartMacro(identifier)) = message {
         Some(*identifier)
     } else {
         None
     }
 }
 
-#[tracing::instrument(skip(mode, register, envelope))]
-pub fn finish_register_scope(mode: &Mode, register: &mut Register, envelope: &Envelope) {
-    let sequence = match &envelope.sequence {
+#[tracing::instrument(skip(mode, register))]
+pub fn finish_register_scope(
+    mode: &Mode,
+    register: &mut Register,
+    key_sequence: &KeySequence,
+    keymap_messages: &Vec<KeymapMessage>,
+) {
+    let sequence = match key_sequence {
         KeySequence::Completed(sequence) => sequence.as_str(),
         KeySequence::Changed(_) | KeySequence::None => return,
     };
@@ -115,10 +121,14 @@ pub fn finish_register_scope(mode: &Mode, register: &mut Register, envelope: &En
                 content.push_str(sequence);
             }
             RegisterScope::Macro(_) => {
-                let is_macro_start = resolve_macro_register(&envelope.messages).is_some();
+                let is_macro_start = resolve_macro_register(keymap_messages).is_some();
+                let is_macro_stop = keymap_messages
+                    .iter()
+                    .any(|m| m == &KeymapMessage::StopMacro);
+
                 if is_macro_start {
                     continue;
-                } else if envelope.messages.iter().any(|m| m == &Message::StopMacro) {
+                } else if is_macro_stop {
                     to_close.push(scope.clone());
                 } else {
                     content.push_str(sequence);

@@ -3,10 +3,11 @@ use yeet_buffer::{
     model::{ansi::Ansi, BufferLine, CommandMode, Mode, SearchDirection},
     update::update_buffer,
 };
-use yeet_keymap::message::{Message, PrintContent};
+use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
     action::Action,
+    event::Message,
     model::Model,
     update::{
         register::get_register,
@@ -60,11 +61,11 @@ pub fn update_commandline_on_modification(
             if let &TextModification::DeleteMotion(_, CursorDirection::Left) = modification {
                 if let Some(line) = buffer.lines.last() {
                     if line.content.is_empty() {
-                        actions.push(Action::EmitMessages(vec![Message::Buffer(
-                            BufferMessage::ChangeMode(
+                        actions.push(Action::EmitMessages(vec![Message::Keymap(
+                            KeymapMessage::Buffer(BufferMessage::ChangeMode(
                                 model.mode.clone(),
                                 get_mode_after_command(&model.mode_before),
-                            ),
+                            )),
                         )]));
                     }
                 }
@@ -112,10 +113,10 @@ pub fn update_commandline_on_modification(
                 } else {
                     update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
 
-                    Message::Buffer(BufferMessage::ChangeMode(
+                    Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
                         model.mode.clone(),
                         get_mode_after_command(&model.mode_before),
-                    ))
+                    )))
                 };
 
                 messages.push(Action::EmitMessages(vec![action]));
@@ -138,17 +139,19 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
                 // TODO: add command history and show previous command not current (this enables g: as well)
                 model.register.command = Some(cmd.content.to_stripped_string());
 
-                vec![Message::ExecuteCommandString(
+                vec![Message::Keymap(KeymapMessage::ExecuteCommandString(
                     cmd.content.to_stripped_string(),
-                )]
+                ))]
             } else {
                 Vec::new()
             }
         }
         CommandMode::PrintMultiline => {
-            vec![Message::Buffer(BufferMessage::ChangeMode(
-                model.mode.clone(),
-                get_mode_after_command(&model.mode_before),
+            vec![Message::Keymap(KeymapMessage::Buffer(
+                BufferMessage::ChangeMode(
+                    model.mode.clone(),
+                    get_mode_after_command(&model.mode_before),
+                ),
             ))]
         }
         CommandMode::Search(direction) => {
@@ -164,14 +167,14 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
             }
 
             vec![
-                Message::Buffer(BufferMessage::ChangeMode(
+                Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
                     model.mode.clone(),
                     get_mode_after_command(&model.mode_before),
-                )),
-                Message::Buffer(BufferMessage::MoveCursor(
+                ))),
+                Message::Keymap(KeymapMessage::Buffer(BufferMessage::MoveCursor(
                     1,
                     CursorDirection::Search(Search::Next),
-                )),
+                ))),
             ]
         }
     };
@@ -197,11 +200,11 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
         &BufferMessage::SetContent(vec![]),
     );
 
-    vec![Action::EmitMessages(vec![Message::Buffer(
-        BufferMessage::ChangeMode(
+    vec![Action::EmitMessages(vec![Message::Keymap(
+        KeymapMessage::Buffer(BufferMessage::ChangeMode(
             model.mode.clone(),
             get_mode_after_command(&model.mode_before),
-        ),
+        )),
     )])]
 }
 
@@ -241,11 +244,11 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
             model.mode = Mode::Command(CommandMode::PrintMultiline);
         }
 
-        vec![Action::EmitMessages(vec![Message::Buffer(
-            BufferMessage::ChangeMode(
+        vec![Action::EmitMessages(vec![Message::Keymap(
+            KeymapMessage::Buffer(BufferMessage::ChangeMode(
                 model.mode.clone(),
                 Mode::Command(CommandMode::PrintMultiline),
-            ),
+            )),
         )])]
     } else {
         Vec::new()

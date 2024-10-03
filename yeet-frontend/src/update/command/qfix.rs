@@ -1,9 +1,10 @@
 use std::collections::VecDeque;
 
-use yeet_keymap::message::Message;
+use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::Action,
+    event::Message,
     model::{qfix::QFIX_SIGN_ID, Model},
     update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
 };
@@ -40,8 +41,8 @@ pub fn do_on_each_qfix_entry(
 ) -> Vec<Action> {
     let mut commands = VecDeque::new();
     for path in &model.qfix.entries {
-        commands.push_back(Message::NavigateToPathAsPreview(path.clone()));
-        commands.push_back(Message::ExecuteCommandString(command.to_owned()));
+        commands.push_back(KeymapMessage::NavigateToPathAsPreview(path.clone()));
+        commands.push_back(KeymapMessage::ExecuteCommandString(command.to_owned()));
     }
 
     tracing::debug!("cdo commands set: {:?}", commands);
@@ -57,7 +58,9 @@ pub fn navigate_first_qfix_entry(model: &mut Model, additional_action: Action) -
     match model.qfix.entries.first() {
         Some(it) => vec![
             additional_action,
-            Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
+            Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::NavigateToPathAsPreview(it.clone()),
+            )]),
         ],
         None => vec![additional_action],
     }
@@ -70,12 +73,14 @@ pub fn navigate_next_qfix_entry(model: &mut Model, additional_action: Action) ->
             model.qfix.current_index = next_index;
             vec![
                 additional_action,
-                Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
+                Action::EmitMessages(vec![Message::Keymap(
+                    KeymapMessage::NavigateToPathAsPreview(it.clone()),
+                )]),
             ]
         }
         None => {
-            vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                "cfirst".to_string(),
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::ExecuteCommandString("cfirst".to_string()),
             )])]
         }
     }
@@ -98,12 +103,14 @@ pub fn navigate_previous_qfix_entry(model: &mut Model, additional_action: Action
         Some(it) => {
             vec![
                 additional_action,
-                Action::EmitMessages(vec![Message::NavigateToPathAsPreview(it.clone())]),
+                Action::EmitMessages(vec![Message::Keymap(
+                    KeymapMessage::NavigateToPathAsPreview(it.clone()),
+                )]),
             ]
         }
         None => {
-            vec![Action::EmitMessages(vec![Message::ExecuteCommandString(
-                "cN".to_string(),
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::ExecuteCommandString("cN".to_string()),
             )])]
         }
     }

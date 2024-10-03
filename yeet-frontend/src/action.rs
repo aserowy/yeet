@@ -3,16 +3,22 @@ use std::{
     path::PathBuf,
 };
 
-use yeet_keymap::message::Message;
+use yeet_buffer::message::BufferMessage;
 
 use crate::{
-    error::AppError, event::Emitter, model::Model, open, task::Task, terminal::TerminalWrapper,
+    error::AppError,
+    event::{Emitter, Message},
+    model::{DirectoryBufferState, Model, WindowType},
+    open,
+    task::Task,
+    terminal::TerminalWrapper,
+    update::{self, viewport},
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
-    Load(PathBuf, Option<String>),
+    Load(WindowType, PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(Option<String>),
@@ -30,47 +36,56 @@ pub enum ActionResult {
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_preview_actions(
-    model: &Model,
+pub async fn exec_preview(
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
-) -> Result<ActionResult, AppError> {
+    actions: Vec<Action>,
+) -> Result<(Vec<Action>, ActionResult), AppError> {
     execute(true, model, emitter, terminal, actions).await
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_postview_actions(
-    model: &Model,
+pub async fn exec_postview(
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
-) -> Result<ActionResult, AppError> {
+    actions: Vec<Action>,
+) -> Result<(Vec<Action>, ActionResult), AppError> {
     execute(false, model, emitter, terminal, actions).await
 }
 
 fn is_preview_action(action: &Action) -> bool {
     match action {
-        Action::Load(_, _)
-        | Action::Open(_)
-        | Action::Resize(_, _)
-        | Action::Task(_)
-        | Action::UnwatchPath(_)
-        | Action::WatchPath(_) => true,
+        Action::Load(_, _, _) | Action::Open(_) | Action::Resize(_, _) | Action::Task(_) => true,
 
-        Action::EmitMessages(_) | Action::ModeChanged | Action::Quit(_) => false,
+        Action::EmitMessages(_)
+        | Action::ModeChanged
+        | Action::Quit(_)
+        | Action::UnwatchPath(_)
+        | Action::WatchPath(_) => false,
     }
 }
 
 async fn execute(
     is_preview: bool,
-    model: &Model,
+    model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
-    actions: &[Action],
-) -> Result<ActionResult, AppError> {
-    for action in actions {
-        if is_preview != is_preview_action(action) {
+    actions: Vec<Action>,
+) -> Result<(Vec<Action>, ActionResult), AppError> {
+    let result = if is_preview && contains_emit(&actions) {
+        ActionResult::SkipRender
+    } else if !is_preview && contains_quit(&actions) {
+        ActionResult::Quit
+    } else {
+        ActionResult::Normal
+    };
+
+    let mut not_handled_actions = vec![];
+    for action in actions.into_iter() {
+        if is_preview != is_preview_action(&action) {
+            not_handled_actions.push(action);
             continue;
         }
 
@@ -78,14 +93,43 @@ async fn execute(
 
         match action {
             Action::EmitMessages(messages) => {
-                emitter.run(Task::EmitMessages(messages.clone()));
+                emitter.run(Task::EmitMessages(messages));
             }
-            Action::Load(path, selection) => {
-                if path.is_dir() {
-                    emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                } else {
-                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
-                }
+            Action::Load(window_type, path, selection) => {
+                match window_type {
+                    WindowType::Current => {
+                        model.files.current.state = DirectoryBufferState::Loading;
+                        model.files.current.path = path.clone();
+
+                        yeet_buffer::update::update_buffer(
+                            &model.mode,
+                            &mut model.files.current.buffer,
+                            &BufferMessage::SetContent(Vec::new()),
+                        );
+
+                        viewport::set_viewport_dimensions(
+                            &mut model.files.current.buffer.view_port,
+                            &model.layout.current,
+                        );
+
+                        yeet_buffer::update::update_buffer(
+                            &model.mode,
+                            &mut model.files.current.buffer,
+                            &BufferMessage::ResetCursor,
+                        );
+
+                        emitter.run(Task::EnumerateDirectory(path, selection.clone()));
+                    }
+                    WindowType::Parent | WindowType::Preview => {
+                        update::set_buffer(&window_type, model, path.as_path(), vec![]);
+
+                        if path.is_dir() {
+                            emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
+                        } else {
+                            emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
+                        }
+                    }
+                };
             }
             Action::ModeChanged => {
                 emitter.set_current_mode(model.mode.clone()).await;
@@ -105,8 +149,8 @@ async fn execute(
 
                 terminal.suspend();
 
-                // FIX: remove flickering (alternate screen leave and cli started)
-                open::path(path).await?;
+                // TODO: remove flickering (alternate screen leave and cli started)
+                open::path(&path).await?;
 
                 emitter.resume();
                 terminal.resume()?;
@@ -126,15 +170,15 @@ async fn execute(
                 emitter.run(Task::SaveQuickFix(model.qfix.clone()));
             }
             Action::Resize(x, y) => {
-                terminal.resize(*x, *y)?;
+                terminal.resize(x, y)?;
 
-                if let Some(path) = &model.files.preview.path {
-                    emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
+                if let Some(path) = &model.files.preview.resolve_path() {
+                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.layout.preview));
                 }
             }
-            Action::Task(task) => emitter.run(task.clone()),
+            Action::Task(task) => emitter.run(task),
             Action::UnwatchPath(path) => {
-                if path == &PathBuf::default() {
+                if path == PathBuf::default() {
                     continue;
                 }
 
@@ -145,7 +189,7 @@ async fn execute(
                 }
             }
             Action::WatchPath(path) => {
-                if path == &PathBuf::default() {
+                if path == PathBuf::default() {
                     continue;
                 }
 
@@ -156,15 +200,7 @@ async fn execute(
         }
     }
 
-    let result = if is_preview && contains_emit(actions) {
-        ActionResult::SkipRender
-    } else if !is_preview && contains_quit(actions) {
-        ActionResult::Quit
-    } else {
-        ActionResult::Normal
-    };
-
-    Ok(result)
+    Ok((not_handled_actions, result))
 }
 
 fn contains_emit(actions: &[Action]) -> bool {

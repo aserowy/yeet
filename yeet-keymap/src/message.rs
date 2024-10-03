@@ -60,7 +60,7 @@ impl PartialEq for NextBindingKind {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum BindingKind {
-    Message(Message),
+    Message(KeymapMessage),
     Motion(CursorDirection),
     #[default]
     None,
@@ -71,34 +71,26 @@ pub enum BindingKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Envelope {
-    pub messages: Vec<Message>,
-    pub sequence: KeySequence,
-    pub source: MessageSource,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum KeySequence {
     Completed(String),
     Changed(String),
     None,
 }
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MessageSource {
-    Filesystem,
-    Task,
-    User,
+impl KeySequence {
+    pub fn len_or_default(&self, default: usize) -> u16 {
+        match self {
+            KeySequence::Completed(_) => 0,
+            KeySequence::Changed(sequence) => sequence.chars().count() as u16,
+            KeySequence::None => default as u16,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Message {
+pub enum KeymapMessage {
     Buffer(BufferMessage),
     ClearSearchHighlight,
     DeleteMarks(Vec<char>),
-    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
-    EnumerationFinished(PathBuf, Option<String>),
-    Error(String),
     ExecuteCommand,
     ExecuteCommandString(String),
     ExecuteKeySequence(String),
@@ -111,12 +103,7 @@ pub enum Message {
     NavigateToSelected,
     OpenSelected,
     PasteFromJunkYard(char),
-    PathRemoved(PathBuf),
-    PathsAdded(Vec<PathBuf>),
-    PreviewLoaded(PathBuf, Vec<String>),
     Print(Vec<PrintContent>),
-    Rerender,
-    Resize(u16, u16),
     ReplayMacro(char),
     SetMark(char),
     StartMacro(char),
@@ -126,12 +113,6 @@ pub enum Message {
     YankPathToClipboard,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ContentKind {
-    Directory,
-    File,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
