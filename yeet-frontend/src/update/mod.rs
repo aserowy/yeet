@@ -81,19 +81,8 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     update_commandline(model, None);
     update_with_settings(model);
 
-    let keymap_messages: Vec<_> = envelope
-        .messages
-        .iter()
-        .flat_map(|message| {
-            if let Message::Keymap(keymap_message) = message {
-                Some(keymap_message.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    start_register_scope(&model.mode, &mut model.register, &keymap_messages);
+    let keymaps: Vec<_> = envelope.clone_keymap_messages();
+    start_register_scope(&model.mode, &mut model.register, &keymaps);
 
     let sequence = envelope.sequence.clone();
 
@@ -107,7 +96,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
         &model.mode,
         &mut model.register,
         &sequence,
-        &keymap_messages,
+        &keymaps,
     );
 
     actions

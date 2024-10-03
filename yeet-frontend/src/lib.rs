@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use action::{Action, ActionResult};
 use error::AppError;
-use event::{Emitter, Envelope, Message, MessageSource};
+use event::{Emitter, Message, MessageSource};
 use init::{
     history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
     qfix::load_qfix_from_files,
@@ -16,7 +16,7 @@ use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
+use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 mod action;
 pub mod error;
@@ -91,17 +91,15 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let size = terminal.size().expect("Failed to get terminal size");
         model.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
+        model.commandline.layout = CommandLineLayout::new(
+            model.layout.commandline,
+            envelope.sequence.len_or_default(model.key_sequence.chars().count()),
+        );
 
-        let sequence_len = match &envelope.sequence {
-            KeySequence::Completed(_) => 0,
-            KeySequence::Changed(sequence) => sequence.chars().count() as u16,
-            KeySequence::None => model.key_sequence.chars().count() as u16,
-        };
-        model.commandline.layout = CommandLineLayout::new(model.layout.commandline, sequence_len);
-
+        let messages = envelope.clone_keymap_messages();
         let mut actions = update_model(&mut model, envelope);
         actions.extend(get_watcher_changes(&mut model));
-        // FIX: actions.extend(get_command_from_stack(&mut model, &actions, &envelope));
+        actions.extend(get_command_from_stack(&mut model, &actions, &messages));
 
         let (actions, result) =
             action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;
@@ -188,22 +186,10 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
 fn get_command_from_stack(
     model: &mut Model,
     actions: &[Action],
-    envelope: &Envelope,
+    messages: &[KeymapMessage],
 ) -> Vec<Action> {
     if let Some(current) = &model.command_current {
-        let contains_message_current_command = envelope
-            .messages
-            .iter()
-            .flat_map(|m| {
-                if let Message::Keymap(keymap) = m {
-                    Some(keymap)
-                } else {
-                    None
-                }
-            })
-            .any(|msg| msg == current);
-
-        if contains_message_current_command {
+        if messages.iter().any(|msg| msg == current) {
             model.command_current = None;
         }
     }

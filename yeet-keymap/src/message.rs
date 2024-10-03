@@ -76,6 +76,15 @@ pub enum KeySequence {
     Changed(String),
     None,
 }
+impl KeySequence {
+    pub fn len_or_default(&self, default: usize) -> u16 {
+         match self {
+            KeySequence::Completed(_) => 0,
+            KeySequence::Changed(sequence) => sequence.chars().count() as u16,
+            KeySequence::None => default as u16,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum KeymapMessage {

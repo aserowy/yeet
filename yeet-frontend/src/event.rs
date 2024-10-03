@@ -35,6 +35,20 @@ pub struct Envelope {
     pub sequence: KeySequence,
     pub source: MessageSource,
 }
+impl Envelope {
+    pub fn clone_keymap_messages(&self) -> Vec<KeymapMessage> {
+        self.messages
+            .iter()
+            .flat_map(|message| {
+                if let Message::Keymap(keymap_message) = message {
+                    Some(keymap_message.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum MessageSource {
