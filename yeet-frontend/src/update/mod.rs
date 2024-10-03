@@ -92,12 +92,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
         .flat_map(|message| update_with_message(model, message))
         .collect();
 
-    finish_register_scope(
-        &model.mode,
-        &mut model.register,
-        &sequence,
-        &keymaps,
-    );
+    finish_register_scope(&model.mode, &mut model.register, &sequence, &keymaps);
 
     actions
 }

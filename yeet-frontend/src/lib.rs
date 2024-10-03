@@ -93,7 +93,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         model.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
         model.commandline.layout = CommandLineLayout::new(
             model.layout.commandline,
-            envelope.sequence.len_or_default(model.key_sequence.chars().count()),
+            envelope
+                .sequence
+                .len_or_default(model.key_sequence.chars().count()),
         );
 
         let messages = envelope.clone_keymap_messages();
