@@ -132,11 +132,12 @@ ui.
 
 ### image preview stays empty
 
-Currently, only `sixel` is the supported preview protocol. If the used terminal
-does not support it the given fallback is used.
+All major emulator image protocols are useable. Kitty, Sixel, iTerm2 and
+halfblocks are integrated with the awesome [ratatui_image](https://docs.rs/crate/ratatui-image/latest)!
 
-As fallback, images are previewed using `chafa` to convert them to ansi. If
-the output stays empty, make sure yeet can call `chafa` to enable image rendering.
+If nothing of the above protocols are working, `chafa` is used as a fallback to
+convert images to ansi. If the output stays empty, make sure yeet can call
+`chafa` to enable image rendering.
 
 ### opening files in linux does nothing
 
