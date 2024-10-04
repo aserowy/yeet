@@ -201,7 +201,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            set_buffer(&WindowType::Preview, model, &path, content);
+            buffer_type(&WindowType::Preview, model, &path, content);
         }
         Preview::Image(path, protocol) => model.files.preview = BufferType::Image(path, protocol),
         Preview::None(_) => model.files.preview = BufferType::None,
@@ -209,7 +209,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn set_buffer(
+pub fn buffer_type(
     window_type: &WindowType,
     model: &mut Model,
     path: &Path,

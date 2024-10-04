@@ -1,7 +1,4 @@
-use std::{
-    collections::VecDeque,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::KeymapMessage;

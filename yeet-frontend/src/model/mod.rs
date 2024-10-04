@@ -1,7 +1,4 @@
-use std::{
-    collections::VecDeque,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
@@ -60,6 +57,7 @@ pub struct FileWindow {
     pub current: PathBuffer,
     pub parent: BufferType,
     pub preview: BufferType,
+    pub show_border: bool,
 }
 
 impl FileWindow {
@@ -93,7 +91,6 @@ impl Default for FileWindow {
             current: PathBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
-                    show_border: true,
                     view_port: ViewPort {
                         line_number: LineNumber::Relative,
                         line_number_width: 3,
@@ -104,19 +101,8 @@ impl Default for FileWindow {
                 ..Default::default()
             },
             parent: Default::default(),
-            // parent: DirectoryBuffer {
-            //     buffer: Buffer {
-            //         cursor: Some(Cursor {
-            //             horizontal_index: CursorPosition::None,
-            //             vertical_index: 0,
-            //             ..Default::default()
-            //         }),
-            //         show_border: true,
-            //         ..Default::default()
-            //     },
-            //     ..Default::default()
-            // },
             preview: Default::default(),
+            show_border: true,
         }
     }
 }

@@ -64,7 +64,6 @@ pub struct Buffer {
     pub cursor: Option<Cursor>,
     pub last_find: Option<CursorDirection>,
     pub lines: Vec<BufferLine>,
-    pub show_border: bool,
     pub undo: Undo,
     pub view_port: ViewPort,
 }
@@ -75,7 +74,6 @@ impl std::fmt::Debug for Buffer {
             .field("cursor", &self.cursor)
             .field("last_find", &self.last_find)
             .field("lines", &self.lines)
-            .field("show_border", &self.show_border)
             .field("view_port", &self.view_port)
             .finish()
     }

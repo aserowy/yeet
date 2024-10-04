@@ -9,6 +9,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
     view::view(
         &model.mode,
         &commandline.buffer,
+        &false,
         frame,
         commandline.layout.buffer,
     );

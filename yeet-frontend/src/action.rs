@@ -126,7 +126,7 @@ async fn execute(
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
                     WindowType::Parent | WindowType::Preview => {
-                        update::set_buffer(&window_type, model, path.as_path(), vec![]);
+                        update::buffer_type(&window_type, model, path.as_path(), vec![]);
 
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
