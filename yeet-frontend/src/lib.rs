@@ -204,10 +204,6 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         return Vec::new();
     }
 
-    // FIX: marks werden nicht gespeichert..
-    // FIX: border nicht konsistent
-    // FIX: viewport motion deletes cursor in preview
-
     // Task Start/end Messages Model keeps track
     // Enables :Tasks for overview
     // Enables all Tasks finished

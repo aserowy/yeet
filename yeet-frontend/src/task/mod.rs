@@ -150,12 +150,13 @@ impl TaskManager {
     // TODO: result should handle shell code on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
-        for (_identifier, abort_handle) in self.abort_handles.drain() {
-            // FIX: readd function
-            // if should_abort_on_finish(task) {
-            abort_handle.abort();
-            // }
-        }
+
+        // TODO: Task handling in frontend with user response to really close open tasks
+        // for (identifier, abort_handle) in self.abort_handles.drain() {
+        //     if should_abort_on_finish(identifier) {
+        //         abort_handle.abort();
+        //     }
+        // }
 
         while let Some(task) = self.tasks.join_next().await {
             match task {
@@ -523,25 +524,5 @@ fn to_envelope(messages: Vec<Message>) -> Envelope {
         messages,
         sequence: KeySequence::None,
         source: MessageSource::Task,
-    }
-}
-
-fn _should_abort_on_finish(task: Task) -> bool {
-    match task {
-        Task::EmitMessages(_) | Task::EnumerateDirectory(_, _) | Task::LoadPreview(_, _) => true,
-
-        Task::AddPath(_)
-        | Task::CopyPath(_, _)
-        | Task::DeleteMarks(_)
-        | Task::DeletePath(_)
-        | Task::DeleteJunkYardEntry(_)
-        | Task::RenamePath(_, _)
-        | Task::RestorePath(_, _)
-        | Task::SaveHistory(_)
-        | Task::SaveMarks(_)
-        | Task::SaveQuickFix(_)
-        | Task::SaveSelection(_, _)
-        | Task::TrashPath(_)
-        | Task::YankPath(_) => false,
     }
 }
