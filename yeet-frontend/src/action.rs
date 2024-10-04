@@ -41,7 +41,7 @@ pub struct ExecResult {
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_preview(
+pub async fn preview(
     model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
@@ -51,7 +51,7 @@ pub async fn exec_preview(
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_postview(
+pub async fn postview(
     model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,

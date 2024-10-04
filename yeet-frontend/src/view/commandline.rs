@@ -14,7 +14,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
     );
 
     frame.render_widget(
-        Paragraph::new(model.key_sequence.clone()),
+        Paragraph::new(model.current_key_sequence.clone()),
         commandline.layout.key_sequence,
     );
 }

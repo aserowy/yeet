@@ -72,8 +72,8 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 #[tracing::instrument(skip(model))]
 pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     match &envelope.sequence {
-        KeySequence::Completed(_) => model.key_sequence.clear(),
-        KeySequence::Changed(sequence) => sequence.clone_into(&mut model.key_sequence),
+        KeySequence::Completed(_) => model.current_key_sequence.clear(),
+        KeySequence::Changed(sequence) => sequence.clone_into(&mut model.current_key_sequence),
         KeySequence::None => {}
     };
 

@@ -95,27 +95,31 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             model.layout.commandline,
             envelope
                 .sequence
-                .len_or_default(model.key_sequence.chars().count()),
+                .len_or_default(model.current_key_sequence.chars().count()),
         );
 
         let mut actions = update_model(&mut model, envelope);
         actions.extend(get_watcher_changes(&mut model));
-        actions.extend(get_command_from_stack(&mut model, &actions));
 
-        let exec = action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;
-        if exec.result != ActionResult::SkipRender {
+        let mut preview = action::preview(&mut model, &mut emitter, &mut terminal, actions).await?;
+        if preview.result != ActionResult::SkipRender {
             render_model(&mut terminal, &model)?;
         }
 
-        let exec = action::exec_postview(
+        preview.remaining_actions.extend(get_command_from_stack(
+            &mut model,
+            &preview.remaining_actions,
+        ));
+
+        let postview = action::postview(
             &mut model,
             &mut emitter,
             &mut terminal,
-            exec.remaining_actions,
+            preview.remaining_actions,
         )
         .await?;
 
-        if exec.result == ActionResult::Quit {
+        if postview.result == ActionResult::Quit {
             break;
         }
     }
@@ -194,20 +198,30 @@ fn set_remaining_keysequence(model: &mut Model, key_sequence: &str) -> Vec<Actio
     Vec::new()
 }
 
-#[tracing::instrument(skip(model, actions))]
+#[tracing::instrument(skip(model))]
 fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> {
     // Task Start/end Messages Model keeps track
     // Enables :Tasks for overview
     // Enables all Tasks finished
 
     // Wenn noch Tasks, die relevant sind (mittels flag), aktiv
-    if !actions.is_empty() || model.files.current.state != DirectoryBufferState::Ready {
+    if actions.iter().any(is_message_queueing) {
+        tracing::debug!("execution canceled: actions not empty > {:?}", actions);
+        return Vec::new();
+    }
+
+    if model.files.current.state != DirectoryBufferState::Ready {
+        tracing::debug!(
+            "execution canceled: current buffer state is {:?} != ready",
+            model.files.current.state
+        );
         return Vec::new();
     }
 
     // Wenn key sequence noch vorhanden, requeue
     if let Some(key_sequence) = model.remaining_keysequence.take() {
         let actions = if key_sequence.is_empty() {
+            tracing::debug!("execution canceled: key_sequence is empty",);
             model.remaining_keysequence = None;
             Vec::new()
         } else {
@@ -222,4 +236,19 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
     // Führe cdo aus
 
     Vec::new()
+}
+
+fn is_message_queueing(action: &Action) -> bool {
+    match action {
+        Action::EmitMessages(_) => true,
+
+        Action::Load(_, _, _)
+        | Action::Open(_)
+        | Action::Resize(_, _)
+        | Action::Task(_)
+        | Action::ModeChanged
+        | Action::Quit(_)
+        | Action::UnwatchPath(_)
+        | Action::WatchPath(_) => false,
+    }
 }

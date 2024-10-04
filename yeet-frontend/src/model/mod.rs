@@ -29,7 +29,7 @@ pub struct Model {
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
-    pub key_sequence: String,
+    pub current_key_sequence: String,
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,
