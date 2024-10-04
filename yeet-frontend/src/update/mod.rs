@@ -117,6 +117,8 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
         Message::PreviewLoaded(content) => update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
+        Message::TaskStarted(identifier) => add_current_task(model, identifier),
+        Message::TaskEnded(identifier) => remove_current_task(model, identifier),
     }
 }
 
@@ -246,4 +248,14 @@ pub fn buffer_type(
         WindowType::Preview => model.files.preview = buffer_type,
         WindowType::Current => unreachable!(),
     };
+}
+
+fn add_current_task(model: &mut Model, identifier: String) -> Vec<Action> {
+    model.current_tasks.insert(identifier);
+    Vec::new()
+}
+
+fn remove_current_task(model: &mut Model, identifier: String) -> Vec<Action> {
+    model.current_tasks.remove(&identifier);
+    Vec::new()
 }

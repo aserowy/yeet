@@ -127,6 +127,7 @@ impl TaskManager {
             .and_then(|mut picker| Some((picker, picker.guess_protocol())));
 
         tracing::info!("image picker configured: {:?}", picker);
+
         Self {
             abort_handles: HashMap::new(),
             highlighter: Arc::new(Mutex::new((
@@ -150,13 +151,6 @@ impl TaskManager {
     // TODO: result should handle shell code on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
         let mut errors = Vec::new();
-
-        // TODO: Task handling in frontend with user response to really close open tasks
-        // for (identifier, abort_handle) in self.abort_handles.drain() {
-        //     if should_abort_on_finish(identifier) {
-        //         abort_handle.abort();
-        //     }
-        // }
 
         while let Some(task) = self.tasks.join_next().await {
             match task {
@@ -182,83 +176,119 @@ impl TaskManager {
     pub fn run(&mut self, task: Task) {
         tracing::debug!("running task: {:?}", task);
 
-        let task_identifier = task.to_identifier_string();
+        let identifier = task.to_identifier_string();
+
+        let task_sender = self.sender.clone();
+        let task_identifier = identifier.clone();
+
         let abort_handle = match task {
             Task::AddPath(path) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
                 if path.exists() {
+                    send_task_finished(&task_sender, &task_identifier).await;
                     return Err(AppError::InvalidTargetPath);
                 }
 
                 if let Some(path_str) = path.to_str() {
                     if path_str.ends_with('/') {
-                        fs::create_dir_all(path).await?;
+                        if let Err(err) = fs::create_dir_all(path).await {
+                            send_task_finished(&task_sender, &task_identifier).await;
+                            return Err(AppError::from(err));
+                        };
                     } else {
                         let parent = match Path::new(&path).parent() {
                             Some(path) => path,
-                            None => return Err(AppError::InvalidTargetPath),
+                            None => {
+                                send_task_finished(&task_sender, &task_identifier).await;
+                                return Err(AppError::InvalidTargetPath);
+                            }
                         };
 
-                        fs::create_dir_all(parent).await?;
-                        fs::write(path, "").await?;
+                        if let Err(err) = fs::create_dir_all(parent).await {
+                            send_task_finished(&task_sender, &task_identifier).await;
+                            return Err(AppError::from(err));
+                        };
+                        if let Err(err) = fs::write(path, "").await {
+                            send_task_finished(&task_sender, &task_identifier).await;
+                            return Err(AppError::from(err));
+                        };
                     }
                 }
+
+                send_task_finished(&task_sender, &task_identifier).await;
 
                 Ok(())
             }),
             Task::CopyPath(source, target) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
                 if !source.exists() || target.exists() {
+                    send_task_finished(&task_sender, &task_identifier).await;
                     return Err(AppError::InvalidTargetPath);
                 }
 
-                fs::copy(source, target).await?;
+                let result = fs::copy(source, target).await;
 
-                Ok(())
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                result.map(|_| ()).map_err(AppError::from)
             }),
-            Task::DeleteMarks(marks) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    tracing::trace!("saving marks");
+            Task::DeleteMarks(marks) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
 
-                    let mut current = Marks::default();
-                    if let Err(err) = load_marks_from_file(&mut current) {
-                        emit_error(&sender, err).await;
-                        return Ok(());
-                    }
+                tracing::trace!("saving marks");
 
+                let mut current = Marks::default();
+                if let Err(err) = load_marks_from_file(&mut current) {
+                    emit_error(&task_sender, err).await;
+                } else {
                     for mark in marks {
                         current.entries.remove(&mark);
                     }
 
                     if let Err(error) = save_marks_to_file(&current) {
-                        emit_error(&sender, error).await;
+                        emit_error(&task_sender, error).await;
                     }
-
-                    Ok(())
-                })
-            }
-            Task::DeletePath(path) => self.tasks.spawn(async move {
-                if !path.exists() {
-                    return Err(AppError::InvalidTargetPath);
                 }
 
-                if path.is_file() {
-                    fs::remove_file(&path).await?;
-                } else if path.is_dir() {
-                    fs::remove_dir_all(&path).await?;
-                };
+                send_task_finished(&task_sender, &task_identifier).await;
 
                 Ok(())
             }),
+            Task::DeletePath(path) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
+                let result = if !path.exists() {
+                    Err(AppError::InvalidTargetPath)
+                } else if path.is_file() {
+                    fs::remove_file(&path).await.map_err(AppError::from)
+                } else if path.is_dir() {
+                    fs::remove_dir_all(&path).await.map_err(AppError::from)
+                } else {
+                    Ok(())
+                };
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                result
+            }),
             Task::DeleteJunkYardEntry(entry) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
                 if let Err(error) = delete(entry).await {
                     tracing::error!("deleting junk yard entry failed: {:?}", error);
                 }
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
                 Ok(())
             }),
             Task::EmitMessages(messages) => {
-                let sender = self.sender.clone();
                 let resolver = self.resolver.clone();
                 self.tasks.spawn(async move {
+                    send_task_started(&task_sender, &task_identifier).await;
+
                     let (execute, messages): (Vec<_>, Vec<_>) =
                         messages.into_iter().partition(|m| {
                             matches!(m, Message::Keymap(KeymapMessage::ExecuteKeySequence(_)))
@@ -290,101 +320,119 @@ impl TaskManager {
                     // NOTE: important to prevent deadlock for queue size of one
                     drop(resolver);
 
-                    if let Err(error) = sender.send(envelope).await {
-                        emit_error(&sender, AppError::ActionSendFailed(error)).await;
+                    if let Err(error) = task_sender.send(envelope).await {
+                        emit_error(&task_sender, AppError::ActionSendFailed(error)).await;
                     }
+
+                    send_task_finished(&task_sender, &task_identifier).await;
+
                     Ok(())
                 })
             }
-            Task::EnumerateDirectory(path, selection) => {
-                let internal_sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    if !path.exists() {
-                        return Err(AppError::InvalidTargetPath);
-                    }
+            Task::EnumerateDirectory(path, selection) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
 
-                    let read_dir = tokio::fs::read_dir(path.clone()).await;
-                    let mut cache = Vec::new();
-                    match read_dir {
-                        Ok(mut rd) => {
-                            let mut cache_size = 100;
+                if !path.exists() {
+                    send_task_finished(&task_sender, &task_identifier).await;
+                    return Err(AppError::InvalidTargetPath);
+                }
 
-                            let (is_selection, selection_path) = match &selection {
-                                Some(selection) => {
-                                    let path = path.join(selection);
-                                    if path.exists() {
-                                        let kind = if path.is_dir() {
-                                            ContentKind::Directory
-                                        } else {
-                                            ContentKind::File
-                                        };
+                let read_dir = tokio::fs::read_dir(path.clone()).await;
+                let mut cache = Vec::new();
+                match read_dir {
+                    Ok(mut rd) => {
+                        let mut cache_size = 100;
 
-                                        cache.push((kind, selection.clone()));
-
-                                        (true, path)
+                        let (is_selection, selection_path) = match &selection {
+                            Some(selection) => {
+                                let path = path.join(selection);
+                                if path.exists() {
+                                    let kind = if path.is_dir() {
+                                        ContentKind::Directory
                                     } else {
-                                        tracing::warn!("path does not exist: {:?}", path);
-                                        (false, PathBuf::new())
-                                    }
-                                }
-                                None => (false, PathBuf::new()),
-                            };
+                                        ContentKind::File
+                                    };
 
-                            while let Some(entry) = rd.next_entry().await? {
-                                let kind = if entry.path().is_dir() {
-                                    ContentKind::Directory
+                                    cache.push((kind, selection.clone()));
+
+                                    (true, path)
                                 } else {
-                                    ContentKind::File
-                                };
-
-                                let content = match entry.path().file_name() {
-                                    Some(content) => content.to_str().unwrap_or("").to_string(),
-                                    None => "".to_string(),
-                                };
-
-                                if !is_selection || entry.path() != selection_path {
-                                    cache.push((kind, content));
-                                }
-
-                                if cache.len() >= cache_size {
-                                    let _ = internal_sender
-                                        .send(to_envelope(vec![Message::EnumerationChanged(
-                                            path.clone(),
-                                            cache.clone(),
-                                            selection.clone(),
-                                        )]))
-                                        .await;
-
-                                    cache_size *= 2;
+                                    tracing::warn!("path does not exist: {:?}", path);
+                                    (false, PathBuf::new())
                                 }
                             }
+                            None => (false, PathBuf::new()),
+                        };
 
-                            let _ = internal_sender
-                                .send(to_envelope(vec![
-                                    Message::EnumerationChanged(
+                        while let Ok(Some(entry)) = rd.next_entry().await {
+                            let kind = if entry.path().is_dir() {
+                                ContentKind::Directory
+                            } else {
+                                ContentKind::File
+                            };
+
+                            let content = match entry.path().file_name() {
+                                Some(content) => content.to_str().unwrap_or("").to_string(),
+                                None => "".to_string(),
+                            };
+
+                            if !is_selection || entry.path() != selection_path {
+                                cache.push((kind, content));
+                            }
+
+                            if cache.len() >= cache_size {
+                                let _ = task_sender
+                                    .send(to_envelope(vec![Message::EnumerationChanged(
                                         path.clone(),
                                         cache.clone(),
                                         selection.clone(),
-                                    ),
-                                    Message::EnumerationFinished(path, selection),
-                                ]))
-                                .await;
+                                    )]))
+                                    .await;
 
-                            Ok(())
+                                cache_size *= 2;
+                            }
                         }
-                        Err(error) => Err(AppError::FileOperationFailed(error)),
+
+                        let _ = task_sender
+                            .send(to_envelope(vec![
+                                Message::EnumerationChanged(
+                                    path.clone(),
+                                    cache.clone(),
+                                    selection.clone(),
+                                ),
+                                Message::EnumerationFinished(path, selection),
+                            ]))
+                            .await;
+
+                        send_task_finished(&task_sender, &task_identifier).await;
+
+                        Ok(())
                     }
-                })
-            }
+                    Err(error) => {
+                        send_task_finished(&task_sender, &task_identifier).await;
+                        Err(AppError::FileOperationFailed(error))
+                    }
+                }
+            }),
             Task::LoadPreview(path, rect) => {
-                let sender = self.sender.clone();
                 let highlighter = Arc::clone(&self.highlighter);
                 let previewer = Arc::clone(&self.image_previewer);
 
                 self.tasks.spawn(async move {
-                    let mime = if let Some(mime) = infer::get_from_path(&path)? {
+                    send_task_started(&task_sender, &task_identifier).await;
+
+                    let infer = match infer::get_from_path(&path) {
+                        Ok(option) => option,
+                        Err(err) => {
+                            send_task_finished(&task_sender, &task_identifier).await;
+                            return Err(AppError::from(err));
+                        }
+                    };
+
+                    let mime = if let Some(mime) = infer {
                         let kind = mime.mime_type().split('/').collect::<Vec<_>>();
                         if kind.len() != 2 {
+                            send_task_finished(&task_sender, &task_identifier).await;
                             return Err(AppError::InvalidMimeType);
                         }
                         Some(kind[0].to_ascii_lowercase())
@@ -413,103 +461,134 @@ impl TaskManager {
                         }
                     };
 
-                    let result = sender
+                    let result = task_sender
                         .send(to_envelope(vec![Message::PreviewLoaded(content)]))
                         .await;
 
                     if let Err(error) = result {
-                        emit_error(&sender, AppError::ActionSendFailed(error)).await;
+                        emit_error(&task_sender, AppError::ActionSendFailed(error)).await;
                     }
+
+                    send_task_finished(&task_sender, &task_identifier).await;
 
                     Ok(())
                 })
             }
             Task::RenamePath(old, new) => self.tasks.spawn(async move {
-                if !old.exists() || new.exists() {
-                    return Err(AppError::InvalidTargetPath);
-                }
+                send_task_started(&task_sender, &task_identifier).await;
 
-                fs::rename(old, new).await?;
+                let result = if !old.exists() || new.exists() {
+                    Err(AppError::InvalidTargetPath)
+                } else {
+                    fs::rename(old, new).await.map_err(AppError::from)
+                };
 
-                Ok(())
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                result.map(|_| ())
             }),
             Task::RestorePath(entry, path) => self.tasks.spawn(async move {
-                restore(entry, path)?;
+                send_task_started(&task_sender, &task_identifier).await;
+
+                let result = restore(entry, path);
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                result.map(|_| ()).map_err(AppError::from)
+            }),
+            Task::SaveHistory(history) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
+                if let Err(error) = save_history_to_file(&history) {
+                    emit_error(&task_sender, error).await;
+                }
+                let result = optimize_history_file();
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                result.map(|_| ()).map_err(AppError::from)
+            }),
+            Task::SaveMarks(marks) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
+                tracing::trace!("saving marks");
+
+                if let Err(error) = save_marks_to_file(&marks) {
+                    emit_error(&task_sender, error).await;
+                }
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
                 Ok(())
             }),
-            Task::SaveHistory(history) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    if let Err(error) = save_history_to_file(&history) {
-                        emit_error(&sender, error).await;
-                    }
-                    optimize_history_file()?;
+            Task::SaveQuickFix(qfix) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
 
-                    Ok(())
-                })
-            }
-            Task::SaveMarks(marks) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    tracing::trace!("saving marks");
+                tracing::trace!("saving qfix");
 
-                    if let Err(error) = save_marks_to_file(&marks) {
-                        emit_error(&sender, error).await;
-                    }
+                if let Err(error) = save_qfix_to_files(&qfix) {
+                    emit_error(&task_sender, error).await;
+                }
 
-                    Ok(())
-                })
-            }
-            Task::SaveQuickFix(qfix) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    tracing::trace!("saving qfix");
+                send_task_finished(&task_sender, &task_identifier).await;
 
-                    if let Err(error) = save_qfix_to_files(&qfix) {
-                        emit_error(&sender, error).await;
-                    }
+                Ok(())
+            }),
+            Task::SaveSelection(target, selection) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
 
-                    Ok(())
-                })
-            }
-            Task::SaveSelection(target, selection) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    tracing::trace!("saving selection to file {}", target.to_string_lossy());
+                tracing::trace!("saving selection to file {}", target.to_string_lossy());
 
-                    if let Err(error) = tokio::fs::write(target, selection).await {
-                        emit_error(&sender, AppError::FileOperationFailed(error)).await;
-                    }
+                if let Err(error) = tokio::fs::write(target, selection).await {
+                    emit_error(&task_sender, AppError::FileOperationFailed(error)).await;
+                }
 
-                    Ok(())
-                })
-            }
-            Task::TrashPath(entry) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    if let Err(error) = cache_and_compress(entry).await {
-                        emit_error(&sender, error).await;
-                    }
+                send_task_finished(&task_sender, &task_identifier).await;
 
-                    Ok(())
-                })
-            }
-            Task::YankPath(entry) => {
-                let sender = self.sender.clone();
-                self.tasks.spawn(async move {
-                    if let Err(error) = compress(entry).await {
-                        emit_error(&sender, error).await;
-                    }
+                Ok(())
+            }),
+            Task::TrashPath(entry) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
 
-                    Ok(())
-                })
-            }
+                if let Err(error) = cache_and_compress(entry).await {
+                    emit_error(&task_sender, error).await;
+                }
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                Ok(())
+            }),
+            Task::YankPath(entry) => self.tasks.spawn(async move {
+                send_task_started(&task_sender, &task_identifier).await;
+
+                if let Err(error) = compress(entry).await {
+                    emit_error(&task_sender, error).await;
+                }
+
+                send_task_finished(&task_sender, &task_identifier).await;
+
+                Ok(())
+            }),
         };
 
-        if let Some(abort_handle) = self.abort_handles.insert(task_identifier, abort_handle) {
+        if let Some(abort_handle) = self.abort_handles.insert(identifier, abort_handle) {
             abort_handle.abort();
         }
     }
+}
+
+async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
+    let _ = sender
+        .send(to_envelope(vec![Message::TaskStarted(
+            identifier.to_owned(),
+        )]))
+        .await;
+}
+
+async fn send_task_finished(sender: &Sender<Envelope>, identifier: &str) {
+    let _ = sender
+        .send(to_envelope(vec![Message::TaskEnded(identifier.to_owned())]))
+        .await;
 }
 
 async fn emit_error(sender: &Sender<Envelope>, error: AppError) {

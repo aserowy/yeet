@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
@@ -22,11 +25,12 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
+    pub current_key_sequence: String,
+    pub current_tasks: HashSet<String>,
     pub do_command: Option<DoCommand>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
-    pub current_key_sequence: String,
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,

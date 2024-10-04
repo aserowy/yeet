@@ -67,6 +67,8 @@ pub enum Message {
     PreviewLoaded(Preview),
     Rerender,
     Resize(u16, u16),
+    TaskStarted(String),
+    TaskEnded(String),
 }
 
 impl std::fmt::Debug for Message {
@@ -85,6 +87,8 @@ impl std::fmt::Debug for Message {
             Message::PreviewLoaded(preview) => write!(f, "PreviewLoaded({:?})", preview),
             Message::Rerender => write!(f, "Rerender"),
             Message::Resize(x, y) => write!(f, "Resize({}, {})", x, y),
+            Message::TaskStarted(identifier) => write!(f, "TaskStarted({})", identifier),
+            Message::TaskEnded(identifier) => write!(f, "TaskEnded({})", identifier),
         }
     }
 }

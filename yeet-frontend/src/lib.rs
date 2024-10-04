@@ -204,13 +204,18 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         return Vec::new();
     }
 
-    // Task Start/end Messages Model keeps track
     // Enables :Tasks for overview
-    // Enables all Tasks finished
 
-    // Wenn noch Tasks, die relevant sind (mittels flag), aktiv
     if actions.iter().any(is_message_queueing) {
         tracing::debug!("execution canceled: actions not empty > {:?}", actions);
+        return Vec::new();
+    }
+
+    if !model.current_tasks.is_empty() {
+        tracing::debug!(
+            "execution canceled: not all tasks finished > {:?}",
+            model.current_tasks
+        );
         return Vec::new();
     }
 
@@ -222,18 +227,14 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         return Vec::new();
     }
 
-    // Wenn key sequence noch vorhanden, requeue
     if let Some(key_sequence) = model.remaining_keysequence.take() {
-        let actions = if key_sequence.is_empty() {
-            tracing::debug!("execution canceled: key_sequence is empty",);
+        if key_sequence.is_empty() {
             model.remaining_keysequence = None;
-            Vec::new()
         } else {
-            vec![Action::EmitMessages(vec![Message::Keymap(
+            return vec![Action::EmitMessages(vec![Message::Keymap(
                 KeymapMessage::ExecuteKeySequence(key_sequence.to_string()),
-            )])]
+            )])];
         };
-        return actions;
     }
 
     // Wenn key sequence none und cdo command gefüllt cnext und warte bis current geladen
