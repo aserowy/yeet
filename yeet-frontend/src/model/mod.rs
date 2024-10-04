@@ -3,17 +3,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::{
+    layout::{AppLayout, CommandLineLayout},
+    settings::Settings,
+};
 use ratatui::layout::Rect;
 use ratatui_image::protocol::Protocol;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Buffer, Cursor, Mode,
-};
-use yeet_keymap::message::KeymapMessage;
-
-use crate::{
-    layout::{AppLayout, CommandLineLayout},
-    settings::Settings,
 };
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
@@ -27,8 +25,7 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub command_stack: Option<VecDeque<KeymapMessage>>,
-    pub command_current: Option<KeymapMessage>,
+    pub do_command: Option<DoCommand>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
@@ -39,6 +36,7 @@ pub struct Model {
     pub mode_before: Option<Mode>,
     pub qfix: QuickFix,
     pub register: Register,
+    pub remaining_keysequence: Option<String>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
 }
@@ -52,6 +50,10 @@ impl std::fmt::Debug for Model {
             .field("settings", &self.settings)
             .finish()
     }
+}
+
+pub enum DoCommand {
+    Cdo(String),
 }
 
 pub struct FileWindow {

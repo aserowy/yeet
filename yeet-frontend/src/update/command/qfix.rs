@@ -1,11 +1,9 @@
-use std::collections::VecDeque;
-
 use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::Action,
     event::Message,
-    model::{qfix::QFIX_SIGN_ID, Model},
+    model::{qfix::QFIX_SIGN_ID, DoCommand, Model},
     update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
 };
 
@@ -34,20 +32,11 @@ pub fn clear_qfix_list_in_current(model: &mut Model, additional_action: Action) 
     vec![additional_action]
 }
 
-pub fn do_on_each_qfix_entry(
-    model: &mut Model,
-    command: &str,
-    additional_action: Action,
-) -> Vec<Action> {
-    let mut commands = VecDeque::new();
-    for path in &model.qfix.entries {
-        commands.push_back(KeymapMessage::NavigateToPathAsPreview(path.clone()));
-        commands.push_back(KeymapMessage::ExecuteCommandString(command.to_owned()));
-    }
+pub fn cdo(model: &mut Model, command: &str, additional_action: Action) -> Vec<Action> {
+    tracing::debug!("cdo command set: {:?}", command);
 
-    tracing::debug!("cdo commands set: {:?}", commands);
-
-    model.command_stack = Some(commands);
+    model.qfix.current_index = 0;
+    model.do_command = Some(DoCommand::Cdo(command.to_owned()));
 
     vec![additional_action]
 }

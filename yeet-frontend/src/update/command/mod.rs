@@ -14,7 +14,7 @@ use crate::{
     update::command::{
         print::{print_junkyard, print_marks, print_qfix_list, print_register},
         qfix::{
-            clear_qfix_list_in_current, do_on_each_qfix_entry, invert_qfix_selection_in_current,
+            clear_qfix_list_in_current, invert_qfix_selection_in_current,
             navigate_first_qfix_entry, navigate_next_qfix_entry, navigate_previous_qfix_entry,
             reset_qfix_list,
         },
@@ -25,7 +25,7 @@ mod print;
 mod qfix;
 
 #[tracing::instrument(skip(model))]
-pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
+pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let change_mode_message = Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
         model.mode.clone(),
         get_mode_after_command(&model.mode_before),
@@ -47,7 +47,7 @@ pub fn execute_command(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     match cmd_with_args {
-        ("cdo", command) => do_on_each_qfix_entry(model, command, change_mode_action),
+        ("cdo", command) => qfix::cdo(model, command, change_mode_action),
         ("cfirst", "") => navigate_first_qfix_entry(model, change_mode_action),
         ("cl", "") => print_qfix_list(&model.qfix),
         ("clearcl", "") => clear_qfix_list_in_current(model, change_mode_action),
@@ -200,17 +200,6 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
     } else {
         Mode::default()
     }
-}
-
-pub fn create_or_extend_command_stack(model: &mut Model, message: &KeymapMessage) -> Vec<Action> {
-    if let Some(commands) = &mut model.command_stack {
-        commands.push_back(message.clone());
-    } else {
-        let mut stack = VecDeque::new();
-        stack.push_back(message.clone());
-        model.command_stack = Some(stack);
-    }
-    Vec::new()
 }
 
 mod test {

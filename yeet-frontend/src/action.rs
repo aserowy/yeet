@@ -35,13 +35,18 @@ pub enum ActionResult {
     Quit,
 }
 
+pub struct ExecResult {
+    pub result: ActionResult,
+    pub remaining_actions: Vec<Action>,
+}
+
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
 pub async fn exec_preview(
     model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     execute(true, model, emitter, terminal, actions).await
 }
 
@@ -51,7 +56,7 @@ pub async fn exec_postview(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     execute(false, model, emitter, terminal, actions).await
 }
 
@@ -73,7 +78,7 @@ async fn execute(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     let result = if is_preview && contains_emit(&actions) {
         ActionResult::SkipRender
     } else if !is_preview && contains_quit(&actions) {
@@ -82,10 +87,10 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let mut not_handled_actions = vec![];
+    let mut remaining_actions = vec![];
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
-            not_handled_actions.push(action);
+            remaining_actions.push(action);
             continue;
         }
 
@@ -200,7 +205,10 @@ async fn execute(
         }
     }
 
-    Ok((not_handled_actions, result))
+    Ok(ExecResult {
+        result,
+        remaining_actions,
+    })
 }
 
 fn contains_emit(actions: &[Action]) -> bool {

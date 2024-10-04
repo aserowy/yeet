@@ -1,2 +1,3 @@
-## Empty to enforce all defaults.
-## Overrides configuration from parent directory, home directory, and global config directory.
+# after options got available on stable
+# group_imports = "StdExternalCrate"
+# imports_granularity = "Crate"

@@ -14,7 +14,6 @@ use crate::{
 };
 
 use self::{
-    command::{create_or_extend_command_stack, execute_command},
     commandline::{
         leave_commandline, print_in_commandline, update_commandline, update_commandline_on_execute,
         update_commandline_on_modification,
@@ -128,8 +127,10 @@ pub fn update_with_keymap_message(model: &mut Model, msg: &KeymapMessage) -> Vec
         KeymapMessage::ClearSearchHighlight => clear_search(model),
         KeymapMessage::DeleteMarks(marks) => delete_mark(model, marks),
         KeymapMessage::ExecuteCommand => update_commandline_on_execute(model),
-        KeymapMessage::ExecuteCommandString(command) => execute_command(command, model),
-        KeymapMessage::ExecuteKeySequence(_) => create_or_extend_command_stack(model, msg),
+        KeymapMessage::ExecuteCommandString(command) => command::execute(command, model),
+        KeymapMessage::ExecuteKeySequence(key_sequence) => {
+            super::set_remaining_keysequence(model, key_sequence)
+        }
         KeymapMessage::ExecuteRegister(register) => replay_register(&mut model.register, register),
         KeymapMessage::LeaveCommandMode => leave_commandline(model),
         KeymapMessage::NavigateToMark(char) => navigate_to_mark(char, model),
