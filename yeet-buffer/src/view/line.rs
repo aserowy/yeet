@@ -9,7 +9,6 @@ pub fn add_line_styles(
 ) -> Ansi {
     let content_width = vp.get_content_width(line);
     let ansi = line.content.skip_chars(vp.horizontal_index);
-
     let ansi = add_search_styles(line, &ansi);
 
     add_cursor_styles(vp, mode, cursor, index, content_width, &ansi)

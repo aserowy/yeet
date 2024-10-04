@@ -204,8 +204,6 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         return Vec::new();
     }
 
-    // Enables :Tasks for overview
-
     if actions.iter().any(is_message_queueing) {
         tracing::debug!("execution canceled: actions not empty > {:?}", actions);
         return Vec::new();
