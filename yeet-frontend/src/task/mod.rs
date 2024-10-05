@@ -147,14 +147,12 @@ impl TaskManager {
                     let id = task.to_identifier_string();
                     send_task_started(&sender.clone(), id.as_str()).await;
 
-                    // TODO: handle result and remove emit messages inside actions
                     if let Err(err) =
                         run_task(&sender.clone(), resolver, highlighter, picker, task).await
                     {
                         tracing::error!("handling task failed: {:?}", err);
                     };
 
-                    tracing::info!("sending finish");
                     send_task_finished(&sender, id.as_str()).await;
                 });
             }
@@ -459,7 +457,7 @@ async fn run_task(
 }
 
 async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
-    tracing::error!("task started: {:?}", identifier);
+    tracing::trace!("task started: {:?}", identifier);
 
     if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskStarted(
@@ -472,7 +470,7 @@ async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
 }
 
 async fn send_task_finished(sender: &Sender<Envelope>, identifier: &str) {
-    tracing::error!("task ended: {:?}", identifier);
+    tracing::trace!("task ended: {:?}", identifier);
 
     if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskEnded(identifier.to_owned())]))
