@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, path::Path};
 
+use tokio_util::sync::CancellationToken;
 use yeet_buffer::{
     message::BufferMessage,
     model::{ansi::Ansi, Buffer, BufferLine, Mode},
@@ -11,7 +12,6 @@ use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
     model::{BufferType, Model, WindowType},
-    task::Task,
 };
 
 use self::{
@@ -118,7 +118,9 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
         Message::PreviewLoaded(content) => update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
-        Message::TaskStarted(identifier) => add_current_task(model, identifier),
+        Message::TaskStarted(identifier, cancellation) => {
+            add_current_task(model, identifier, cancellation)
+        }
         Message::TaskEnded(identifier) => remove_current_task(model, identifier),
     }
 }
@@ -251,10 +253,14 @@ pub fn buffer_type(
     };
 }
 
-fn add_current_task(model: &mut Model, identifier: String) -> Vec<Action> {
-    if identifier != Task::EmitMessages(Vec::new()).to_identifier_string() {
-        model.current_tasks.insert(identifier);
-    };
+fn add_current_task(
+    model: &mut Model,
+    identifier: String,
+    cancellation: CancellationToken,
+) -> Vec<Action> {
+    if let Some(cancellation) = model.current_tasks.insert(identifier, cancellation) {
+        cancellation.cancel();
+    }
     Vec::new()
 }
 

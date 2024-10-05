@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     path::{Path, PathBuf},
 };
 
@@ -9,6 +9,7 @@ use crate::{
 };
 use ratatui::layout::Rect;
 use ratatui_image::protocol::Protocol;
+use tokio_util::sync::CancellationToken;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Buffer, Cursor, Mode,
@@ -26,7 +27,7 @@ pub mod register;
 pub struct Model {
     pub commandline: CommandLine,
     pub current_key_sequence: String,
-    pub current_tasks: HashSet<String>,
+    pub current_tasks: HashMap<String, CancellationToken>,
     pub do_command: Option<DoCommand>,
     pub files: FileWindow,
     pub history: History,

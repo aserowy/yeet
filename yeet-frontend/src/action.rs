@@ -141,17 +141,7 @@ async fn execute(
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
-                match emitter.suspend().await {
-                    Ok(result) => {
-                        if !result {
-                            continue;
-                        }
-                    }
-                    Err(error) => {
-                        tracing::error!("emitter suspend failed: {:?}", error);
-                    }
-                }
-
+                emitter.suspend();
                 terminal.suspend();
 
                 // TODO: remove flickering (alternate screen leave and cli started)
@@ -187,7 +177,12 @@ async fn execute(
                     continue;
                 }
 
-                emitter.abort(&Task::EnumerateDirectory(path.clone(), None));
+                if let Some(cancellation) = model
+                    .current_tasks
+                    .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
+                {
+                    cancellation.cancel();
+                };
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {
                     tracing::debug!("emitting unwatch path failed: {:?}", error);

@@ -13,9 +13,10 @@ use tokio::{
     select,
     sync::{
         mpsc::{self, Receiver},
-        oneshot, Mutex,
+        Mutex,
     },
 };
+use tokio_util::sync::CancellationToken;
 use yeet_buffer::model::Mode;
 use yeet_keymap::{
     conversion,
@@ -67,7 +68,7 @@ pub enum Message {
     PreviewLoaded(Preview),
     Rerender,
     Resize(u16, u16),
-    TaskStarted(String),
+    TaskStarted(String, CancellationToken),
     TaskEnded(String),
 }
 
@@ -87,7 +88,7 @@ impl std::fmt::Debug for Message {
             Message::PreviewLoaded(preview) => write!(f, "PreviewLoaded({:?})", preview),
             Message::Rerender => write!(f, "Rerender"),
             Message::Resize(x, y) => write!(f, "Resize({}, {})", x, y),
-            Message::TaskStarted(identifier) => write!(f, "TaskStarted({})", identifier),
+            Message::TaskStarted(identifier, _) => write!(f, "TaskStarted({})", identifier),
             Message::TaskEnded(identifier) => write!(f, "TaskEnded({})", identifier),
         }
     }
@@ -130,16 +131,17 @@ pub enum ContentKind {
 }
 
 pub struct Emitter {
-    cancellation: Option<oneshot::Sender<oneshot::Sender<bool>>>,
-    tasks: TaskManager,
+    cancellation: CancellationToken,
+    crossterm_cancellation: CancellationToken,
     pub receiver: Receiver<Envelope>,
     resolver: Arc<Mutex<MessageResolver>>,
     sender: mpsc::Sender<Envelope>,
+    tasks: TaskManager,
     watcher: RecommendedWatcher,
 }
 
 impl Emitter {
-    pub fn start() -> Self {
+    pub fn start(cancellation: CancellationToken) -> Self {
         let (sender, receiver) = mpsc::channel(1);
         let internal_sender = sender.clone();
 
@@ -154,7 +156,8 @@ impl Emitter {
         let resolver = Arc::new(Mutex::new(MessageResolver::default()));
 
         let (task_sender, mut task_receiver) = mpsc::channel(1);
-        let tasks = TaskManager::new(task_sender, resolver.clone());
+        let tasks = TaskManager::new(task_sender, resolver.clone(), cancellation.child_token());
+
         tokio::spawn(async move {
             loop {
                 let notify_event = notify_receiver.recv().fuse();
@@ -179,11 +182,16 @@ impl Emitter {
             }
         });
 
-        let (cancellation, cancellation_receiver) = oneshot::channel();
-        start_crossterm_listener(cancellation_receiver, resolver.clone(), sender.clone());
+        let crossterm_cancellation = cancellation.child_token();
+        start_crossterm_listener(
+            crossterm_cancellation.clone(),
+            resolver.clone(),
+            sender.clone(),
+        );
 
         Self {
-            cancellation: Some(cancellation),
+            cancellation,
+            crossterm_cancellation,
             sender,
             tasks,
             receiver,
@@ -192,32 +200,22 @@ impl Emitter {
         }
     }
 
-    pub async fn suspend(&mut self) -> Result<bool, oneshot::error::RecvError> {
-        if let Some(cancellation) = self.cancellation.take() {
-            let (sender, receiver) = oneshot::channel();
-            if let Err(error) = cancellation.send(sender) {
-                tracing::error!("sending cancellation failed: {:?}", error);
-            }
-
-            receiver.await
-        } else {
-            Ok(false)
-        }
+    pub fn suspend(&mut self) {
+        self.crossterm_cancellation.cancel();
     }
 
     pub fn resume(&mut self) {
-        let (cancellation, cancellation_receiver) = oneshot::channel();
-        self.cancellation = Some(cancellation);
+        self.crossterm_cancellation = self.cancellation.child_token();
 
         start_crossterm_listener(
-            cancellation_receiver,
+            self.crossterm_cancellation.clone(),
             self.resolver.clone(),
             self.sender.clone(),
         );
     }
 
-    pub async fn shutdown(&mut self) -> Result<(), AppError> {
-        self.tasks.finishing().await
+    pub fn shutdown(&mut self) {
+        self.cancellation.cancel();
     }
 
     pub async fn set_current_mode(&mut self, mode: Mode) {
@@ -243,14 +241,10 @@ impl Emitter {
             Err(err) => tracing::error!("failed to send task: {:?}", err),
         };
     }
-
-    pub fn abort(&mut self, task: &Task) {
-        self.tasks.abort(task);
-    }
 }
 
 fn start_crossterm_listener(
-    mut cancellation_receiver: oneshot::Receiver<oneshot::Sender<bool>>,
+    cancellation: CancellationToken,
     resolver_mutex: Arc<Mutex<MessageResolver>>,
     sender: mpsc::Sender<Envelope>,
 ) {
@@ -261,10 +255,7 @@ fn start_crossterm_listener(
             let crossterm_event = reader.next().fuse();
 
             select! {
-                Ok(sender) = &mut cancellation_receiver => {
-                    sender.send(true).expect("Failed to send cancellation signal");
-                    break
-                }
+                _ = cancellation.cancelled() => break,
                 Some(Ok(event)) = crossterm_event => {
                     if let Some(envelope) = handle_crossterm_event(&resolver_mutex, event).await {
                         let _ = sender.send(envelope).await;

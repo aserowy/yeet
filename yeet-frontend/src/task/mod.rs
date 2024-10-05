@@ -1,4 +1,5 @@
 use std::{
+    fmt::{Debug, Display},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -13,6 +14,7 @@ use tokio::{
         Mutex,
     },
 };
+use tokio_util::sync::CancellationToken;
 use yeet_keymap::{
     conversion,
     message::{KeySequence, KeymapMessage},
@@ -24,7 +26,7 @@ use crate::{
     event::{ContentKind, Envelope, Message, MessageSource},
     init::{
         history::{optimize_history_file, save_history_to_file},
-        junkyard::{self, cache_and_compress, compress, delete, restore},
+        junkyard::{self, cache_and_compress, compress, restore},
         mark::{load_marks_from_file, save_marks_to_file},
         qfix::save_qfix_to_files,
     },
@@ -34,7 +36,6 @@ use crate::{
 mod image;
 mod syntax;
 
-#[derive(Debug)]
 pub enum Task {
     AddPath(PathBuf),
     CopyPath(PathBuf, PathBuf),
@@ -55,31 +56,37 @@ pub enum Task {
 }
 
 impl Task {
-    pub fn to_identifier_string(&self) -> String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Task::AddPath(path) => format!("AddPath({:?})", path),
-            Task::CopyPath(src, dst) => format!("CopyPath({:?}, {:?})", src, dst),
-            Task::DeleteMarks(marks) => format!("DeleteMarks({:?})", marks),
-            Task::DeletePath(path) => format!("DeletePath({:?})", path),
-            Task::DeleteJunkYardEntry(entry) => format!("DeleteJunkYardEntry({:?})", entry),
-            Task::EmitMessages(_) => "EmitMessages".to_string(),
-            Task::EnumerateDirectory(path, _) => {
-                format!("EnumerateDirectory({:?}, _)", path)
-            }
-            Task::LoadPreview(path, rect) => format!("LoadPreview({:?}, {})", path, rect),
-            Task::RenamePath(old, new) => {
-                format!("RenamePath({:?}, {:?})", old, new)
-            }
-            Task::RestorePath(entry, path) => {
-                format!("RestorePath({:?}, {:?})", entry, path)
-            }
-            Task::SaveHistory(_) => "SaveHistory".to_string(),
-            Task::SaveMarks(_) => "SaveMarks".to_string(),
-            Task::SaveQuickFix(_) => "SaveQuickFix".to_string(),
-            Task::SaveSelection(path, _) => format!("SaveSelection({:?}, _)", path),
-            Task::TrashPath(entry) => format!("TrashPath({:?})", entry),
-            Task::YankPath(entry) => format!("YankPath({:?})", entry),
+            Task::AddPath(path) => write!(f, "AddPath({:?})", path),
+            Task::CopyPath(src, dst) => write!(f, "CopyPath({:?}, {:?})", src, dst),
+            Task::DeleteMarks(marks) => write!(f, "DeleteMarks({:?})", marks),
+            Task::DeletePath(path) => write!(f, "DeletePath({:?})", path),
+            Task::DeleteJunkYardEntry(entry) => write!(f, "DeleteJunkYardEntry({:?})", entry),
+            Task::EmitMessages(_) => write!(f, "EmitMessages"),
+            Task::EnumerateDirectory(path, _) => write!(f, "EnumerateDirectory({:?}, _)", path),
+            Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
+            Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
+            Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
+            Task::SaveHistory(_) => write!(f, "SaveHistory"),
+            Task::SaveMarks(_) => write!(f, "SaveMarks"),
+            Task::SaveQuickFix(_) => write!(f, "SaveQuickFix"),
+            Task::SaveSelection(path, _) => write!(f, "SaveSelection({:?}, _)", path),
+            Task::TrashPath(entry) => write!(f, "TrashPath({:?})", entry),
+            Task::YankPath(entry) => write!(f, "YankPath({:?})", entry),
         }
+    }
+}
+
+impl Debug for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
+impl Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
     }
 }
 
@@ -117,17 +124,17 @@ pub struct TaskManager {
 // TODO: harmonize error handling and tracing
 // TODO: look into structured async to prevent arc mutexes all together
 impl TaskManager {
-    pub fn new(sender: Sender<Envelope>, resolver: Arc<Mutex<MessageResolver>>) -> Self {
+    pub fn new(
+        sender: Sender<Envelope>,
+        resolver: Arc<Mutex<MessageResolver>>,
+        cancellation: CancellationToken,
+    ) -> Self {
         let picker = Picker::from_termios()
             .ok()
             .and_then(|mut picker| Some((picker, picker.guess_protocol())));
 
         tracing::info!("image picker configured: {:?}", picker);
 
-        // cancelation token
-        // cancelation token per spawn mit task id
-        //   ermoeglicht abort mit id
-        // inkl cancelation token
         let resolver = resolver.clone();
         let (task_sender, mut task_receiver) = mpsc::unbounded_channel::<Task>();
         tokio::spawn(async move {
@@ -136,62 +143,49 @@ impl TaskManager {
                 ThemeSet::load_defaults(),
             )));
             let picker = Arc::new(Mutex::new(picker));
-            while let Some(task) = task_receiver.recv().await {
-                tracing::debug!("handling task: {:?}", task);
+            loop {
+                let child_token = cancellation.child_token();
+                tokio::select! {
+                    _ = cancellation.cancelled() => break,
+                    task = task_receiver.recv() => {
+                        let task = match task {
+                            Some(it) => it,
+                            None => return,
+                        };
 
-                let sender = sender.clone();
-                let resolver = resolver.clone();
-                let highlighter = highlighter.clone();
-                let picker = picker.clone();
-                tokio::spawn(async move {
-                    let id = task.to_identifier_string();
-                    send_task_started(&sender.clone(), id.as_str()).await;
+                        tracing::debug!("handling task: {:?}", task.to_string());
 
-                    if let Err(err) =
-                        run_task(&sender.clone(), resolver, highlighter, picker, task).await
-                    {
-                        tracing::error!("handling task failed: {:?}", err);
-                    };
+                        let sender = sender.clone();
+                        let resolver = resolver.clone();
+                        let highlighter = highlighter.clone();
+                        let picker = picker.clone();
 
-                    send_task_finished(&sender, id.as_str()).await;
-                });
+                        tokio::spawn(async move {
+                            let id = task.to_string();
+                            send_task_started(&sender.clone(), id.as_str(), child_token.clone()).await;
+
+                            if let Err(err) = run_task(
+                                &sender.clone(),
+                                resolver,
+                                highlighter,
+                                picker,
+                                task,
+                                child_token
+                            ).await
+                            {
+                                tracing::error!("handling task failed: {:?}", err);
+                            };
+
+                            send_task_finished(&sender, id.as_str()).await;
+                        });
+                    }
+                }
             }
         });
 
         Self {
             sender: task_sender,
         }
-    }
-
-    pub fn abort(&mut self, task: &Task) {
-        //         let task_identifier = task.to_identifier_string();
-        //         if let Some(abort_handle) = self.abort_handles.remove(&task_identifier) {
-        //             abort_handle.abort();
-        //         }
-    }
-
-    // TODO: result should handle shell code on exit
-    pub async fn finishing(&mut self) -> Result<(), AppError> {
-        //         let mut errors = Vec::new();
-        //
-        //         while let Some(task) = self.tasks.join_next().await {
-        //             match task {
-        //                 Ok(Ok(())) => (),
-        //                 Ok(Err(error)) => {
-        //                     tracing::error!("task result returned error: {:?}", error);
-        //                     errors.push(error)
-        //                 }
-        //                 Err(error) => {
-        //                     tracing::error!("task failed: {:?}", error);
-        //                 }
-        //             };
-        //         }
-        //
-        //         if errors.is_empty() {
-        Ok(())
-        //         } else {
-        //             Err(AppError::Aggregate(errors))
-        //         }
     }
 }
 
@@ -201,6 +195,7 @@ async fn run_task(
     highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
     picker: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
     task: Task,
+    cancellation: CancellationToken,
 ) -> Result<(), AppError> {
     match task {
         Task::AddPath(path) => {
@@ -327,6 +322,10 @@ async fn run_task(
                     };
 
                     while let Ok(Some(entry)) = rd.next_entry().await {
+                        if cancellation.is_cancelled() {
+                            break;
+                        }
+
                         let kind = if entry.path().is_dir() {
                             ContentKind::Directory
                         } else {
@@ -353,6 +352,10 @@ async fn run_task(
 
                             cache_size *= 2;
                         }
+                    }
+
+                    if cancellation.is_cancelled() {
+                        return Ok(());
                     }
 
                     let _ = sender
@@ -456,12 +459,21 @@ async fn run_task(
     Ok(())
 }
 
-async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
+async fn send_task_started(
+    sender: &Sender<Envelope>,
+    identifier: &str,
+    cancellation: CancellationToken,
+) {
     tracing::trace!("task started: {:?}", identifier);
+
+    if identifier == Task::EmitMessages(Vec::new()).to_string() {
+        return;
+    }
 
     if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskStarted(
             identifier.to_owned(),
+            cancellation,
         )]))
         .await
     {
@@ -471,6 +483,10 @@ async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
 
 async fn send_task_finished(sender: &Sender<Envelope>, identifier: &str) {
     tracing::trace!("task ended: {:?}", identifier);
+
+    if identifier == Task::EmitMessages(Vec::new()).to_string() {
+        return;
+    }
 
     if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskEnded(identifier.to_owned())]))

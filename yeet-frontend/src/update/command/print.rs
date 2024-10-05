@@ -1,5 +1,6 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
+use tokio_util::sync::CancellationToken;
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
@@ -33,9 +34,9 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
         .collect()
 }
 
-pub fn tasks(tasks: &HashSet<String>) -> Vec<PrintContent> {
+pub fn tasks(tasks: &HashMap<String, CancellationToken>) -> Vec<PrintContent> {
     let mut contents = vec![":tasks", "Id"];
-    let tasks = tasks.iter().map(|id| id.as_str());
+    let tasks = tasks.keys().map(|id| id.as_str());
     contents.extend(tasks);
 
     contents

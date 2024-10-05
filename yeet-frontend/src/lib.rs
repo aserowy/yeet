@@ -12,6 +12,7 @@ use model::{DirectoryBufferState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
+use tokio_util::sync::CancellationToken;
 use update::update_model;
 use view::render_model;
 
@@ -32,8 +33,9 @@ mod update;
 mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
+    let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
-    let mut emitter = Emitter::start();
+    let mut emitter = Emitter::start(cancellation.child_token());
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
@@ -75,7 +77,6 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     tracing::debug!("starting with model state: {:?}", model);
 
-    let mut result = Vec::new();
     while let Some(envelope) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", envelope.messages);
 
@@ -124,17 +125,10 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         }
     }
 
-    if let Err(error) = emitter.shutdown().await {
-        result.push(error);
-    }
-
+    emitter.shutdown();
     terminal.shutdown()?;
 
-    if result.is_empty() {
-        Ok(())
-    } else {
-        Err(AppError::Aggregate(result))
-    }
+    Ok(())
 }
 
 fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
