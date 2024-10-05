@@ -238,7 +238,10 @@ impl Emitter {
     }
 
     pub fn run(&mut self, task: Task) {
-        self.tasks.run(task);
+        match self.tasks.sender.send(task) {
+            Ok(_) => {}
+            Err(err) => tracing::error!("failed to send task: {:?}", err),
+        };
     }
 
     pub fn abort(&mut self, task: &Task) {

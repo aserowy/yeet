@@ -139,6 +139,12 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             )])]
         }
         ("resetcl", "") => reset_qfix_list(model, change_mode_action),
+        ("tasks", "") => {
+            let content = print::tasks(&model.current_tasks);
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::Print(content),
+            )])]
+        }
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,
             Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),

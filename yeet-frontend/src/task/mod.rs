@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -9,8 +8,10 @@ use ratatui_image::picker::{Picker, ProtocolType};
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
-    sync::{mpsc::Sender, Mutex},
-    task::{AbortHandle, JoinSet},
+    sync::{
+        mpsc::{self, Sender},
+        Mutex,
+    },
 };
 use yeet_keymap::{
     conversion,
@@ -23,7 +24,7 @@ use crate::{
     event::{ContentKind, Envelope, Message, MessageSource},
     init::{
         history::{optimize_history_file, save_history_to_file},
-        junkyard::{cache_and_compress, compress, delete, restore},
+        junkyard::{self, cache_and_compress, compress, delete, restore},
         mark::{load_marks_from_file, save_marks_to_file},
         qfix::save_qfix_to_files,
     },
@@ -110,12 +111,7 @@ impl PartialEq for Task {
 }
 
 pub struct TaskManager {
-    abort_handles: HashMap<String, AbortHandle>,
-    highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
-    image_previewer: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
-    resolver: Arc<Mutex<MessageResolver>>,
-    sender: Sender<Envelope>,
-    tasks: JoinSet<Result<(), AppError>>,
+    pub sender: mpsc::UnboundedSender<Task>,
 }
 
 // TODO: harmonize error handling and tracing
@@ -128,467 +124,362 @@ impl TaskManager {
 
         tracing::info!("image picker configured: {:?}", picker);
 
-        Self {
-            abort_handles: HashMap::new(),
-            highlighter: Arc::new(Mutex::new((
+        // cancelation token
+        // cancelation token per spawn mit task id
+        //   ermoeglicht abort mit id
+        // inkl cancelation token
+        let resolver = resolver.clone();
+        let (task_sender, mut task_receiver) = mpsc::unbounded_channel::<Task>();
+        tokio::spawn(async move {
+            let highlighter = Arc::new(Mutex::new((
                 SyntaxSet::load_defaults_newlines(),
                 ThemeSet::load_defaults(),
-            ))),
-            image_previewer: Arc::new(Mutex::new(picker)),
-            resolver,
-            sender,
-            tasks: JoinSet::new(),
+            )));
+            let picker = Arc::new(Mutex::new(picker));
+            while let Some(task) = task_receiver.recv().await {
+                tracing::debug!("handling task: {:?}", task);
+
+                let sender = sender.clone();
+                let resolver = resolver.clone();
+                let highlighter = highlighter.clone();
+                let picker = picker.clone();
+                tokio::spawn(async move {
+                    let id = task.to_identifier_string();
+                    send_task_started(&sender.clone(), id.as_str()).await;
+
+                    // TODO: handle result and remove emit messages inside actions
+                    if let Err(err) =
+                        run_task(&sender.clone(), resolver, highlighter, picker, task).await
+                    {
+                        tracing::error!("handling task failed: {:?}", err);
+                    };
+
+                    tracing::info!("sending finish");
+                    send_task_finished(&sender, id.as_str()).await;
+                });
+            }
+        });
+
+        Self {
+            sender: task_sender,
         }
     }
 
     pub fn abort(&mut self, task: &Task) {
-        let task_identifier = task.to_identifier_string();
-        if let Some(abort_handle) = self.abort_handles.remove(&task_identifier) {
-            abort_handle.abort();
-        }
+        //         let task_identifier = task.to_identifier_string();
+        //         if let Some(abort_handle) = self.abort_handles.remove(&task_identifier) {
+        //             abort_handle.abort();
+        //         }
     }
 
     // TODO: result should handle shell code on exit
     pub async fn finishing(&mut self) -> Result<(), AppError> {
-        let mut errors = Vec::new();
-
-        while let Some(task) = self.tasks.join_next().await {
-            match task {
-                Ok(Ok(())) => (),
-                Ok(Err(error)) => {
-                    tracing::error!("task result returned error: {:?}", error);
-                    errors.push(error)
-                }
-                Err(error) => {
-                    tracing::error!("task failed: {:?}", error);
-                }
-            };
-        }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(AppError::Aggregate(errors))
-        }
+        //         let mut errors = Vec::new();
+        //
+        //         while let Some(task) = self.tasks.join_next().await {
+        //             match task {
+        //                 Ok(Ok(())) => (),
+        //                 Ok(Err(error)) => {
+        //                     tracing::error!("task result returned error: {:?}", error);
+        //                     errors.push(error)
+        //                 }
+        //                 Err(error) => {
+        //                     tracing::error!("task failed: {:?}", error);
+        //                 }
+        //             };
+        //         }
+        //
+        //         if errors.is_empty() {
+        Ok(())
+        //         } else {
+        //             Err(AppError::Aggregate(errors))
+        //         }
     }
+}
 
-    #[tracing::instrument(skip(self))]
-    pub fn run(&mut self, task: Task) {
-        tracing::debug!("running task: {:?}", task);
-
-        let identifier = task.to_identifier_string();
-
-        let task_sender = self.sender.clone();
-        let task_identifier = identifier.clone();
-
-        let abort_handle = match task {
-            Task::AddPath(path) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if path.exists() {
-                    send_task_finished(&task_sender, &task_identifier).await;
-                    return Err(AppError::InvalidTargetPath);
-                }
-
-                if let Some(path_str) = path.to_str() {
-                    if path_str.ends_with('/') {
-                        if let Err(err) = fs::create_dir_all(path).await {
-                            send_task_finished(&task_sender, &task_identifier).await;
-                            return Err(AppError::from(err));
-                        };
-                    } else {
-                        let parent = match Path::new(&path).parent() {
-                            Some(path) => path,
-                            None => {
-                                send_task_finished(&task_sender, &task_identifier).await;
-                                return Err(AppError::InvalidTargetPath);
-                            }
-                        };
-
-                        if let Err(err) = fs::create_dir_all(parent).await {
-                            send_task_finished(&task_sender, &task_identifier).await;
-                            return Err(AppError::from(err));
-                        };
-                        if let Err(err) = fs::write(path, "").await {
-                            send_task_finished(&task_sender, &task_identifier).await;
-                            return Err(AppError::from(err));
-                        };
-                    }
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::CopyPath(source, target) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if !source.exists() || target.exists() {
-                    send_task_finished(&task_sender, &task_identifier).await;
-                    return Err(AppError::InvalidTargetPath);
-                }
-
-                let result = fs::copy(source, target).await;
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                result.map(|_| ()).map_err(AppError::from)
-            }),
-            Task::DeleteMarks(marks) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                tracing::trace!("saving marks");
-
-                let mut current = Marks::default();
-                if let Err(err) = load_marks_from_file(&mut current) {
-                    emit_error(&task_sender, err).await;
-                } else {
-                    for mark in marks {
-                        current.entries.remove(&mark);
-                    }
-
-                    if let Err(error) = save_marks_to_file(&current) {
-                        emit_error(&task_sender, error).await;
-                    }
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::DeletePath(path) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                let result = if !path.exists() {
-                    Err(AppError::InvalidTargetPath)
-                } else if path.is_file() {
-                    fs::remove_file(&path).await.map_err(AppError::from)
-                } else if path.is_dir() {
-                    fs::remove_dir_all(&path).await.map_err(AppError::from)
-                } else {
-                    Ok(())
-                };
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                result
-            }),
-            Task::DeleteJunkYardEntry(entry) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if let Err(error) = delete(entry).await {
-                    tracing::error!("deleting junk yard entry failed: {:?}", error);
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::EmitMessages(messages) => {
-                let resolver = self.resolver.clone();
-                self.tasks.spawn(async move {
-                    send_task_started(&task_sender, &task_identifier).await;
-
-                    let (execute, messages): (Vec<_>, Vec<_>) =
-                        messages.into_iter().partition(|m| {
-                            matches!(m, Message::Keymap(KeymapMessage::ExecuteKeySequence(_)))
-                        });
-
-                    let mut envelope = to_envelope(messages);
-
-                    let sequence = execute
-                        .iter()
-                        .map(|m| match m {
-                            Message::Keymap(KeymapMessage::ExecuteKeySequence(sequence)) => {
-                                sequence.clone()
-                            }
-                            _ => unreachable!(),
-                        })
-                        .collect::<Vec<_>>()
-                        .join("");
-
-                    let keys = conversion::from_keycode_string(&sequence);
-                    let mut resolver = resolver.lock().await;
-                    if let Some(resolved) = resolver.add_keys(keys) {
-                        let messages: Vec<_> =
-                            resolved.0.into_iter().map(Message::Keymap).collect();
-
-                        envelope.messages.extend(messages);
-                        envelope.sequence = resolved.1;
-                    }
-
-                    // NOTE: important to prevent deadlock for queue size of one
-                    drop(resolver);
-
-                    if let Err(error) = task_sender.send(envelope).await {
-                        emit_error(&task_sender, AppError::ActionSendFailed(error)).await;
-                    }
-
-                    send_task_finished(&task_sender, &task_identifier).await;
-
-                    Ok(())
-                })
+async fn run_task(
+    sender: &Sender<Envelope>,
+    resolver: Arc<Mutex<MessageResolver>>,
+    highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
+    picker: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
+    task: Task,
+) -> Result<(), AppError> {
+    match task {
+        Task::AddPath(path) => {
+            if path.exists() {
+                return Err(AppError::InvalidTargetPath);
             }
-            Task::EnumerateDirectory(path, selection) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
 
-                if !path.exists() {
-                    send_task_finished(&task_sender, &task_identifier).await;
-                    return Err(AppError::InvalidTargetPath);
+            if let Some(path_str) = path.to_str() {
+                if path_str.ends_with('/') {
+                    fs::create_dir_all(path).await?;
+                } else {
+                    let parent = match Path::new(&path).parent() {
+                        Some(path) => path,
+                        None => {
+                            return Err(AppError::InvalidTargetPath);
+                        }
+                    };
+
+                    fs::create_dir_all(parent).await?;
+                    fs::write(path, "").await?;
+                }
+            }
+        }
+        Task::CopyPath(source, target) => {
+            if !source.exists() || target.exists() {
+                return Err(AppError::InvalidTargetPath);
+            }
+
+            fs::copy(source, target).await?;
+        }
+        Task::DeleteMarks(marks) => {
+            let mut current = Marks::default();
+            if let Err(err) = load_marks_from_file(&mut current) {
+                emit_error(&sender, err).await;
+            } else {
+                for mark in marks {
+                    current.entries.remove(&mark);
                 }
 
-                let read_dir = tokio::fs::read_dir(path.clone()).await;
-                let mut cache = Vec::new();
-                match read_dir {
-                    Ok(mut rd) => {
-                        let mut cache_size = 100;
+                if let Err(error) = save_marks_to_file(&current) {
+                    emit_error(&sender, error).await;
+                }
+            }
+        }
+        Task::DeletePath(path) => {
+            if !path.exists() {
+                return Err(AppError::InvalidTargetPath);
+            };
 
-                        let (is_selection, selection_path) = match &selection {
-                            Some(selection) => {
-                                let path = path.join(selection);
-                                if path.exists() {
-                                    let kind = if path.is_dir() {
-                                        ContentKind::Directory
-                                    } else {
-                                        ContentKind::File
-                                    };
+            if path.is_file() {
+                fs::remove_file(&path).await?;
+            } else if path.is_dir() {
+                fs::remove_dir_all(&path).await?;
+            }
+        }
+        Task::DeleteJunkYardEntry(entry) => {
+            if let Err(error) = junkyard::delete(entry).await {
+                tracing::error!("deleting junk yard entry failed: {:?}", error);
+            }
+        }
+        Task::EmitMessages(messages) => {
+            let (execute, messages): (Vec<_>, Vec<_>) = messages
+                .into_iter()
+                .partition(|m| matches!(m, Message::Keymap(KeymapMessage::ExecuteKeySequence(_))));
 
-                                    cache.push((kind, selection.clone()));
+            let mut envelope = to_envelope(messages);
 
-                                    (true, path)
+            let sequence = execute
+                .iter()
+                .map(|m| match m {
+                    Message::Keymap(KeymapMessage::ExecuteKeySequence(sequence)) => {
+                        sequence.clone()
+                    }
+                    _ => unreachable!(),
+                })
+                .collect::<Vec<_>>()
+                .join("");
+
+            let keys = conversion::from_keycode_string(&sequence);
+            if let Some(resolved) = resolver.lock().await.add_keys(keys) {
+                let messages: Vec<_> = resolved.0.into_iter().map(Message::Keymap).collect();
+
+                envelope.messages.extend(messages);
+                envelope.sequence = resolved.1;
+            }
+
+            // NOTE: important to prevent deadlock for queue size of one
+            drop(resolver);
+
+            if let Err(error) = sender.send(envelope).await {
+                emit_error(&sender, AppError::ActionSendFailed(error)).await;
+            }
+        }
+        Task::EnumerateDirectory(path, selection) => {
+            if !path.exists() {
+                return Err(AppError::InvalidTargetPath);
+            }
+
+            let read_dir = fs::read_dir(path.clone()).await;
+            let mut cache = Vec::new();
+            match read_dir {
+                Ok(mut rd) => {
+                    let mut cache_size = 100;
+
+                    let (is_selection, selection_path) = match &selection {
+                        Some(selection) => {
+                            let path = path.join(selection);
+                            if path.exists() {
+                                let kind = if path.is_dir() {
+                                    ContentKind::Directory
                                 } else {
-                                    tracing::warn!("path does not exist: {:?}", path);
-                                    (false, PathBuf::new())
-                                }
-                            }
-                            None => (false, PathBuf::new()),
-                        };
+                                    ContentKind::File
+                                };
 
-                        while let Ok(Some(entry)) = rd.next_entry().await {
-                            let kind = if entry.path().is_dir() {
-                                ContentKind::Directory
+                                cache.push((kind, selection.clone()));
+
+                                (true, path)
                             } else {
-                                ContentKind::File
-                            };
-
-                            let content = match entry.path().file_name() {
-                                Some(content) => content.to_str().unwrap_or("").to_string(),
-                                None => "".to_string(),
-                            };
-
-                            if !is_selection || entry.path() != selection_path {
-                                cache.push((kind, content));
-                            }
-
-                            if cache.len() >= cache_size {
-                                let _ = task_sender
-                                    .send(to_envelope(vec![Message::EnumerationChanged(
-                                        path.clone(),
-                                        cache.clone(),
-                                        selection.clone(),
-                                    )]))
-                                    .await;
-
-                                cache_size *= 2;
+                                tracing::warn!("path does not exist: {:?}", path);
+                                (false, PathBuf::new())
                             }
                         }
+                        None => (false, PathBuf::new()),
+                    };
 
-                        let _ = task_sender
-                            .send(to_envelope(vec![
-                                Message::EnumerationChanged(
+                    while let Ok(Some(entry)) = rd.next_entry().await {
+                        let kind = if entry.path().is_dir() {
+                            ContentKind::Directory
+                        } else {
+                            ContentKind::File
+                        };
+
+                        let content = match entry.path().file_name() {
+                            Some(content) => content.to_str().unwrap_or("").to_string(),
+                            None => "".to_string(),
+                        };
+
+                        if !is_selection || entry.path() != selection_path {
+                            cache.push((kind, content));
+                        }
+
+                        if cache.len() >= cache_size {
+                            let _ = sender
+                                .send(to_envelope(vec![Message::EnumerationChanged(
                                     path.clone(),
                                     cache.clone(),
                                     selection.clone(),
-                                ),
-                                Message::EnumerationFinished(path, selection),
-                            ]))
-                            .await;
+                                )]))
+                                .await;
 
-                        send_task_finished(&task_sender, &task_identifier).await;
-
-                        Ok(())
+                            cache_size *= 2;
+                        }
                     }
-                    Err(error) => {
-                        send_task_finished(&task_sender, &task_identifier).await;
-                        Err(AppError::FileOperationFailed(error))
-                    }
-                }
-            }),
-            Task::LoadPreview(path, rect) => {
-                let highlighter = Arc::clone(&self.highlighter);
-                let previewer = Arc::clone(&self.image_previewer);
 
-                self.tasks.spawn(async move {
-                    send_task_started(&task_sender, &task_identifier).await;
-
-                    let infer = match infer::get_from_path(&path) {
-                        Ok(option) => option,
-                        Err(err) => {
-                            send_task_finished(&task_sender, &task_identifier).await;
-                            return Err(AppError::from(err));
-                        }
-                    };
-
-                    let mime = if let Some(mime) = infer {
-                        let kind = mime.mime_type().split('/').collect::<Vec<_>>();
-                        if kind.len() != 2 {
-                            send_task_finished(&task_sender, &task_identifier).await;
-                            return Err(AppError::InvalidMimeType);
-                        }
-                        Some(kind[0].to_ascii_lowercase())
-                    } else {
-                        None
-                    };
-
-                    let content = match mime.as_deref() {
-                        Some("image") => {
-                            // NOTE: each time protocol gets used (even for debug) the picker
-                            // forgets the given protocol type
-                            let mut picker =
-                                previewer.lock().await.and_then(|(mut picker, protocol)| {
-                                    picker.protocol_type = protocol;
-                                    Some(picker)
-                                });
-
-                            image::load(&mut picker, &path, &rect).await
-                        }
-                        _ => {
-                            let highlighter = highlighter.lock().await;
-                            let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                            let theme = &theme_set.themes["base16-eighties.dark"];
-
-                            syntax::highlight(syntaxes, theme, &path).await
-                        }
-                    };
-
-                    let result = task_sender
-                        .send(to_envelope(vec![Message::PreviewLoaded(content)]))
+                    let _ = sender
+                        .send(to_envelope(vec![
+                            Message::EnumerationChanged(
+                                path.clone(),
+                                cache.clone(),
+                                selection.clone(),
+                            ),
+                            Message::EnumerationFinished(path, selection),
+                        ]))
                         .await;
-
-                    if let Err(error) = result {
-                        emit_error(&task_sender, AppError::ActionSendFailed(error)).await;
-                    }
-
-                    send_task_finished(&task_sender, &task_identifier).await;
-
-                    Ok(())
-                })
+                }
+                Err(error) => {
+                    return Err(AppError::FileOperationFailed(error));
+                }
             }
-            Task::RenamePath(old, new) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                let result = if !old.exists() || new.exists() {
-                    Err(AppError::InvalidTargetPath)
-                } else {
-                    fs::rename(old, new).await.map_err(AppError::from)
-                };
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                result.map(|_| ())
-            }),
-            Task::RestorePath(entry, path) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                let result = restore(entry, path);
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                result.map(|_| ()).map_err(AppError::from)
-            }),
-            Task::SaveHistory(history) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if let Err(error) = save_history_to_file(&history) {
-                    emit_error(&task_sender, error).await;
-                }
-                let result = optimize_history_file();
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                result.map(|_| ()).map_err(AppError::from)
-            }),
-            Task::SaveMarks(marks) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                tracing::trace!("saving marks");
-
-                if let Err(error) = save_marks_to_file(&marks) {
-                    emit_error(&task_sender, error).await;
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::SaveQuickFix(qfix) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                tracing::trace!("saving qfix");
-
-                if let Err(error) = save_qfix_to_files(&qfix) {
-                    emit_error(&task_sender, error).await;
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::SaveSelection(target, selection) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                tracing::trace!("saving selection to file {}", target.to_string_lossy());
-
-                if let Err(error) = tokio::fs::write(target, selection).await {
-                    emit_error(&task_sender, AppError::FileOperationFailed(error)).await;
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::TrashPath(entry) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if let Err(error) = cache_and_compress(entry).await {
-                    emit_error(&task_sender, error).await;
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-            Task::YankPath(entry) => self.tasks.spawn(async move {
-                send_task_started(&task_sender, &task_identifier).await;
-
-                if let Err(error) = compress(entry).await {
-                    emit_error(&task_sender, error).await;
-                }
-
-                send_task_finished(&task_sender, &task_identifier).await;
-
-                Ok(())
-            }),
-        };
-
-        if let Some(abort_handle) = self.abort_handles.insert(identifier, abort_handle) {
-            abort_handle.abort();
         }
-    }
+        Task::LoadPreview(path, rect) => {
+            let mime = if let Some(mime) = infer::get_from_path(&path)? {
+                let kind = mime.mime_type().split('/').collect::<Vec<_>>();
+                if kind.len() != 2 {
+                    return Err(AppError::InvalidMimeType);
+                }
+                Some(kind[0].to_ascii_lowercase())
+            } else {
+                None
+            };
+
+            let content = match mime.as_deref() {
+                Some("image") => {
+                    // NOTE: each time protocol gets used (even for debug) the picker
+                    // forgets the given protocol type
+                    let mut picker = picker.lock().await.and_then(|(mut picker, protocol)| {
+                        picker.protocol_type = protocol;
+                        Some(picker)
+                    });
+
+                    image::load(&mut picker, &path, &rect).await
+                }
+                _ => {
+                    let highlighter = highlighter.lock().await;
+                    let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
+                    let theme = &theme_set.themes["base16-eighties.dark"];
+
+                    syntax::highlight(syntaxes, theme, &path).await
+                }
+            };
+
+            let result = sender
+                .send(to_envelope(vec![Message::PreviewLoaded(content)]))
+                .await;
+
+            if let Err(error) = result {
+                emit_error(sender, AppError::ActionSendFailed(error)).await;
+            }
+        }
+        Task::RenamePath(old, new) => {
+            if !old.exists() || new.exists() {
+                return Err(AppError::InvalidTargetPath);
+            }
+
+            fs::rename(old, new).await?;
+        }
+        Task::RestorePath(entry, path) => {
+            restore(entry, path)?;
+        }
+        Task::SaveHistory(history) => {
+            if let Err(error) = save_history_to_file(&history) {
+                emit_error(&sender, error).await;
+            }
+            optimize_history_file()?;
+        }
+        Task::SaveMarks(marks) => {
+            if let Err(error) = save_marks_to_file(&marks) {
+                emit_error(&sender, error).await;
+            }
+        }
+        Task::SaveQuickFix(qfix) => {
+            if let Err(error) = save_qfix_to_files(&qfix) {
+                emit_error(&sender, error).await;
+            }
+        }
+        Task::SaveSelection(target, selection) => {
+            if let Err(error) = fs::write(target, selection).await {
+                emit_error(&sender, AppError::FileOperationFailed(error)).await;
+            }
+        }
+        Task::TrashPath(entry) => {
+            if let Err(error) = cache_and_compress(entry).await {
+                emit_error(&sender, error).await;
+            }
+        }
+        Task::YankPath(entry) => {
+            if let Err(error) = compress(entry).await {
+                emit_error(&sender, error).await;
+            }
+        }
+    };
+
+    Ok(())
 }
 
 async fn send_task_started(sender: &Sender<Envelope>, identifier: &str) {
-    let _ = sender
+    tracing::error!("task started: {:?}", identifier);
+
+    if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskStarted(
             identifier.to_owned(),
         )]))
-        .await;
+        .await
+    {
+        tracing::error!("task started send failed: {:?}", err);
+    };
 }
 
 async fn send_task_finished(sender: &Sender<Envelope>, identifier: &str) {
-    let _ = sender
+    tracing::error!("task ended: {:?}", identifier);
+
+    if let Err(err) = sender
         .send(to_envelope(vec![Message::TaskEnded(identifier.to_owned())]))
-        .await;
+        .await
+    {
+        tracing::error!("task ended send failed: {:?}", err);
+    };
 }
 
 async fn emit_error(sender: &Sender<Envelope>, error: AppError) {

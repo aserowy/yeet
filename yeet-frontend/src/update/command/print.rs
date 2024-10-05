@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
@@ -24,6 +26,17 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
 
     let mut contents = vec![":marks".to_string(), "Char Content".to_string()];
     contents.extend(marks);
+
+    contents
+        .iter()
+        .map(|cntnt| PrintContent::Default(cntnt.to_string()))
+        .collect()
+}
+
+pub fn tasks(tasks: &HashSet<String>) -> Vec<PrintContent> {
+    let tasks = tasks.iter().map(|id| id.as_str());
+    let mut contents = vec![":tasks", "Id"];
+    contents.extend(tasks);
 
     contents
         .iter()
