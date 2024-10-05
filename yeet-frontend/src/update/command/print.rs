@@ -34,8 +34,8 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
 }
 
 pub fn tasks(tasks: &HashSet<String>) -> Vec<PrintContent> {
-    let tasks = tasks.iter().map(|id| id.as_str());
     let mut contents = vec![":tasks", "Id"];
+    let tasks = tasks.iter().map(|id| id.as_str());
     contents.extend(tasks);
 
     contents

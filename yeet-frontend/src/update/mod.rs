@@ -11,6 +11,7 @@ use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
     model::{BufferType, Model, WindowType},
+    task::Task,
 };
 
 use self::{
@@ -251,7 +252,9 @@ pub fn buffer_type(
 }
 
 fn add_current_task(model: &mut Model, identifier: String) -> Vec<Action> {
-    model.current_tasks.insert(identifier);
+    if identifier != Task::EmitMessages(Vec::new()).to_identifier_string() {
+        model.current_tasks.insert(identifier);
+    };
     Vec::new()
 }
 
