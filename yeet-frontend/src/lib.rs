@@ -220,15 +220,6 @@ fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Actio
         return Vec::new();
     }
 
-    // FIX: checking for tasks, might make this obsolete?
-    // if model.files.current.state != DirectoryBufferState::Ready {
-    //     tracing::debug!(
-    //         "execution canceled: current buffer state is {:?} != ready",
-    //         model.files.current.state
-    //     );
-    //     return Vec::new();
-    // }
-
     if let Some(key_sequence) = model.remaining_keysequence.take() {
         if key_sequence.is_empty() {
             tracing::debug!("remaining key sequence is empty");
