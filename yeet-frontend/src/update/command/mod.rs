@@ -4,7 +4,7 @@ use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::KeymapMessage;
 
 use crate::{
-    action::Action,
+    action::{self, Action},
     event::Message,
     model::{mark::Marks, Model},
     task::Task,
@@ -28,12 +28,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         get_mode_after_command(&model.mode_before),
     )));
 
-    let change_mode_action = Action::EmitMessages(vec![Message::Keymap(KeymapMessage::Buffer(
-        BufferMessage::ChangeMode(
-            model.mode.clone(),
-            get_mode_after_command(&model.mode_before),
-        ),
-    ))]);
+    let change_mode_action = action::emit_keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
+        model.mode.clone(),
+        get_mode_after_command(&model.mode_before),
+    )));
 
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
@@ -82,7 +80,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             vec![
                 change_mode_action,
-                Action::EmitMessages(vec![Message::Keymap(KeymapMessage::DeleteMarks(marks))]),
+                action::emit_keymap(KeymapMessage::DeleteMarks(marks)),
             ]
         }
         ("e!", "") => {
@@ -99,15 +97,11 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         ("invertcl", "") => invert_qfix_selection_in_current(model, change_mode_action),
         ("junk", "") => {
             let content = print_junkyard(&model.junk);
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::Print(content),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::Print(content))]
         }
         ("marks", "") => {
             let content = print_marks(&model.marks);
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::Print(content),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::Print(content))]
         }
         ("mv", target) => {
             let mut actions = vec![change_mode_action];
@@ -129,21 +123,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             change_mode_message,
             Message::Keymap(KeymapMessage::ClearSearchHighlight),
         ])],
-        ("q", "") => vec![Action::EmitMessages(vec![Message::Keymap(
-            KeymapMessage::Quit,
-        )])],
+        ("q", "") => vec![action::emit_keymap(KeymapMessage::Quit)],
         ("reg", "") => {
             let content = print_register(&model.register);
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::Print(content),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::Print(content))]
         }
         ("resetcl", "") => reset_qfix_list(model, change_mode_action),
         ("tasks", "") => {
             let content = print::tasks(&model.current_tasks);
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::Print(content),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::Print(content))]
         }
         ("w", "") => vec![Action::EmitMessages(vec![
             change_mode_message,

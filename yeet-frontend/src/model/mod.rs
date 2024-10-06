@@ -28,7 +28,7 @@ pub struct Model {
     pub commandline: CommandLine,
     pub current_key_sequence: String,
     pub current_tasks: HashMap<String, CancellationToken>,
-    pub do_command: Option<DoCommand>,
+    pub do_command: Option<String>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
@@ -52,10 +52,6 @@ impl std::fmt::Debug for Model {
             .field("settings", &self.settings)
             .finish()
     }
-}
-
-pub enum DoCommand {
-    Cdo(String),
 }
 
 pub struct FileWindow {

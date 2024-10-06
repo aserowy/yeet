@@ -5,8 +5,7 @@ use yeet_buffer::{
 use yeet_keymap::message::{KeySequence, KeymapMessage};
 
 use crate::{
-    action::Action,
-    event::Message,
+    action::{self, Action},
     model::register::{Register, RegisterScope},
 };
 
@@ -22,9 +21,9 @@ pub fn get_register(register: &Register, register_id: &char) -> Option<String> {
 
 pub fn replay_register(register: &mut Register, char: &char) -> Vec<Action> {
     if let Some(content) = get_register(register, char) {
-        vec![Action::EmitMessages(vec![Message::Keymap(
-            KeymapMessage::ExecuteKeySequence(content.to_string()),
-        )])]
+        vec![action::emit_keymap(KeymapMessage::ExecuteKeySequence(
+            content.to_string(),
+        ))]
     } else {
         Vec::new()
     }
@@ -33,9 +32,9 @@ pub fn replay_register(register: &mut Register, char: &char) -> Vec<Action> {
 pub fn replay_macro_register(register: &mut Register, char: &char) -> Vec<Action> {
     if let Some(content) = get_register(register, char) {
         register.last_macro = Some(content.to_string());
-        vec![Action::EmitMessages(vec![Message::Keymap(
-            KeymapMessage::ExecuteKeySequence(content.to_string()),
-        )])]
+        vec![action::emit_keymap(KeymapMessage::ExecuteKeySequence(
+            content.to_string(),
+        ))]
     } else {
         Vec::new()
     }

@@ -4,6 +4,7 @@ use std::{
 };
 
 use yeet_buffer::message::BufferMessage;
+use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     error::AppError,
@@ -26,6 +27,10 @@ pub enum Action {
     Task(Task),
     UnwatchPath(PathBuf),
     WatchPath(PathBuf),
+}
+
+pub fn emit_keymap(message: KeymapMessage) -> Action {
+    Action::EmitMessages(vec![Message::Keymap(message)])
 }
 
 #[derive(PartialEq)]

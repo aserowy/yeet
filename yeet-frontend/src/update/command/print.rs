@@ -4,8 +4,7 @@ use tokio_util::sync::CancellationToken;
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
-    action::Action,
-    event::Message,
+    action::{self, Action},
     model::{
         junkyard::{FileEntryStatus, FileTransaction, JunkYard},
         mark::Marks,
@@ -75,9 +74,7 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
         })
         .collect();
 
-    vec![Action::EmitMessages(vec![Message::Keymap(
-        KeymapMessage::Print(content),
-    )])]
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
 pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {

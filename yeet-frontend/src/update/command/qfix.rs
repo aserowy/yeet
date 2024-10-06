@@ -1,9 +1,8 @@
-use yeet_keymap::message::KeymapMessage;
+use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
-    action::Action,
-    event::Message,
-    model::{qfix::QFIX_SIGN_ID, DoCommand, Model},
+    action::{self, Action},
+    model::{qfix::QFIX_SIGN_ID, Model},
     update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
 };
 
@@ -35,10 +34,12 @@ pub fn clear_qfix_list_in_current(model: &mut Model, additional_action: Action) 
 pub fn cdo(model: &mut Model, command: &str, additional_action: Action) -> Vec<Action> {
     tracing::debug!("cdo command set: {:?}", command);
 
-    model.qfix.current_index = 0;
-    model.do_command = Some(DoCommand::Cdo(command.to_owned()));
+    model.do_command = Some(command.to_owned());
 
-    vec![additional_action]
+    vec![
+        additional_action,
+        action::emit_keymap(KeymapMessage::ExecuteCommandString("cfirst".to_string())),
+    ]
 }
 
 pub fn navigate_first_qfix_entry(model: &mut Model, additional_action: Action) -> Vec<Action> {
@@ -47,9 +48,7 @@ pub fn navigate_first_qfix_entry(model: &mut Model, additional_action: Action) -
     match model.qfix.entries.first() {
         Some(it) => vec![
             additional_action,
-            Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::NavigateToPathAsPreview(it.clone()),
-            )]),
+            action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
         ],
         None => vec![additional_action],
     }
@@ -62,15 +61,13 @@ pub fn navigate_next_qfix_entry(model: &mut Model, additional_action: Action) ->
             model.qfix.current_index = next_index;
             vec![
                 additional_action,
-                Action::EmitMessages(vec![Message::Keymap(
-                    KeymapMessage::NavigateToPathAsPreview(it.clone()),
-                )]),
+                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
             ]
         }
         None => {
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::ExecuteCommandString("cfirst".to_string()),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::Print(vec![
+                PrintContent::Error("no more items".to_owned()),
+            ]))]
         }
     }
 }
@@ -92,15 +89,13 @@ pub fn navigate_previous_qfix_entry(model: &mut Model, additional_action: Action
         Some(it) => {
             vec![
                 additional_action,
-                Action::EmitMessages(vec![Message::Keymap(
-                    KeymapMessage::NavigateToPathAsPreview(it.clone()),
-                )]),
+                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
             ]
         }
         None => {
-            vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::ExecuteCommandString("cN".to_string()),
-            )])]
+            vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+                "cN".to_string(),
+            ))]
         }
     }
 }

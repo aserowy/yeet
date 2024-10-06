@@ -8,7 +8,7 @@ use init::{
     qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::{DirectoryBufferState, Model};
+use model::Model;
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
@@ -211,28 +211,41 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         return Vec::new();
     }
 
-    if model.files.current.state != DirectoryBufferState::Ready {
-        tracing::debug!(
-            "execution canceled: current buffer state is {:?} != ready",
-            model.files.current.state
-        );
-        return Vec::new();
-    }
+    // FIX: checking for tasks, might make this obsolete?
+    // if model.files.current.state != DirectoryBufferState::Ready {
+    //     tracing::debug!(
+    //         "execution canceled: current buffer state is {:?} != ready",
+    //         model.files.current.state
+    //     );
+    //     return Vec::new();
+    // }
 
     if let Some(key_sequence) = model.remaining_keysequence.take() {
         if key_sequence.is_empty() {
             model.remaining_keysequence = None;
         } else {
-            return vec![Action::EmitMessages(vec![Message::Keymap(
-                KeymapMessage::ExecuteKeySequence(key_sequence.to_string()),
-            )])];
+            return vec![action::emit_keymap(KeymapMessage::ExecuteKeySequence(
+                key_sequence.to_string(),
+            ))];
         };
     }
 
-    // Wenn key sequence none und cdo command gefüllt cnext und warte bis current geladen
-    // Führe cdo aus
+    let do_command = match &model.do_command {
+        Some(it) => it,
+        None => return Vec::new(),
+    };
 
-    Vec::new()
+    // wenn command ausgefuehrt wurde, dann cn
+    let next_command = if true {
+        do_command.to_owned()
+    } else {
+        // wenn am Ende, dann do_command auf None und kein Command mehr
+        "cn".to_owned()
+    };
+
+    vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+        next_command,
+    ))]
 }
 
 fn is_message_queueing(action: &Action) -> bool {
