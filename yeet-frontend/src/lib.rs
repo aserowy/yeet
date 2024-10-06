@@ -96,7 +96,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             model.layout.commandline,
             envelope
                 .sequence
-                .len_or_default(model.current_key_sequence.chars().count()),
+                .len_or_default(model.commandline.key_sequence.chars().count()),
         );
 
         let mut actions = update_model(&mut model, envelope);
@@ -194,7 +194,7 @@ fn set_remaining_keysequence(model: &mut Model, key_sequence: &str) -> Vec<Actio
 
 #[tracing::instrument(skip(model))]
 fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> {
-    if model.remaining_keysequence.is_none() && model.do_command.is_none() {
+    if model.remaining_keysequence.is_none() && model.qfix.cdo.is_none() {
         return Vec::new();
     }
 
@@ -230,7 +230,7 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
         };
     }
 
-    let do_command = match &model.do_command {
+    let do_command = match &model.qfix.cdo {
         Some(it) => it,
         None => return Vec::new(),
     };

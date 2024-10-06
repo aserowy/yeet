@@ -26,9 +26,7 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub current_key_sequence: String,
     pub current_tasks: HashMap<String, CancellationToken>,
-    pub do_command: Option<String>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
@@ -135,6 +133,7 @@ impl BufferType {
 
 pub struct CommandLine {
     pub buffer: Buffer,
+    pub key_sequence: String,
     pub layout: CommandLineLayout,
 }
 
@@ -150,6 +149,7 @@ impl Default for CommandLine {
                 }),
                 ..Default::default()
             },
+            key_sequence: "".to_owned(),
             layout: CommandLineLayout::new(Rect::default(), 0),
         }
     }

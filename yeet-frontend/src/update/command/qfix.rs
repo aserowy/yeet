@@ -34,7 +34,7 @@ pub fn clear_qfix_list_in_current(model: &mut Model, additional_action: Action) 
 pub fn cdo(model: &mut Model, command: &str, additional_action: Action) -> Vec<Action> {
     tracing::debug!("cdo command set: {:?}", command);
 
-    model.do_command = Some(command.to_owned());
+    model.qfix.cdo = Some(command.to_owned());
 
     vec![
         additional_action,
