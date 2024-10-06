@@ -121,17 +121,15 @@ pub struct TaskManager {
     pub sender: mpsc::UnboundedSender<Task>,
 }
 
-// TODO: harmonize error handling and tracing
 // TODO: look into structured async to prevent arc mutexes all together
+// TODO: harmonize error handling and tracing
 impl TaskManager {
     pub fn new(
         sender: Sender<Envelope>,
         resolver: Arc<Mutex<MessageResolver>>,
         cancellation: CancellationToken,
     ) -> Self {
-        let picker = Picker::from_termios()
-            .ok()
-            .and_then(|mut picker| Some((picker, picker.guess_protocol())));
+        let picker = resolve_picker();
 
         tracing::info!("image picker configured: {:?}", picker);
 
@@ -187,6 +185,18 @@ impl TaskManager {
             sender: task_sender,
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_picker() -> Option<(Picker, ProtocolType)> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn resolve_picker() -> Option<(Picker, ProtocolType)> {
+    Picker::from_termios()
+        .ok()
+        .and_then(|mut picker| Some((picker, picker.guess_protocol())))
 }
 
 async fn run_task(
