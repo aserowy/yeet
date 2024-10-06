@@ -93,8 +93,8 @@ pub fn navigate_previous_qfix_entry(model: &mut Model, additional_action: Action
         .qfix
         .entries
         .iter()
-        .rev()
         .enumerate()
+        .rev()
         .filter_map(|(i, p)| {
             if i < model.qfix.current_index && p.exists() {
                 Some((i, p))
