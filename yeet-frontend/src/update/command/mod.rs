@@ -69,6 +69,8 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             if let Some(path) = &model.files.preview.resolve_path() {
                 tracing::info!("deleting path: {:?}", path);
                 actions.push(Action::Task(Task::DeletePath(path.to_path_buf())));
+            } else {
+                tracing::warn!("deleting path failed: no path in preview set");
             }
             actions
         }

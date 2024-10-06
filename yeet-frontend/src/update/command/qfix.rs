@@ -2,7 +2,10 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
     action::{self, Action},
-    model::{qfix::QFIX_SIGN_ID, Model},
+    model::{
+        qfix::{CdoState, QFIX_SIGN_ID},
+        Model,
+    },
     update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
 };
 
@@ -34,7 +37,7 @@ pub fn clear_qfix_list_in_current(model: &mut Model, additional_action: Action) 
 pub fn cdo(model: &mut Model, command: &str, additional_action: Action) -> Vec<Action> {
     tracing::debug!("cdo command set: {:?}", command);
 
-    model.qfix.cdo = Some(command.to_owned());
+    model.qfix.cdo = CdoState::Cdo(None, command.to_owned());
 
     vec![
         additional_action,

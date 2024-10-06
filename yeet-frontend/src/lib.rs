@@ -8,7 +8,7 @@ use init::{
     qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::Model;
+use model::{qfix::CdoState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
@@ -109,6 +109,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         preview.remaining_actions.extend(get_command_from_stack(
             &mut model,
+            &emitter,
             &preview.remaining_actions,
         ));
 
@@ -192,9 +193,17 @@ fn set_remaining_keysequence(model: &mut Model, key_sequence: &str) -> Vec<Actio
     Vec::new()
 }
 
-#[tracing::instrument(skip(model))]
-fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> {
-    if model.remaining_keysequence.is_none() && model.qfix.cdo.is_none() {
+#[tracing::instrument(skip(model, emitter))]
+fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Action]) -> Vec<Action> {
+    if model.remaining_keysequence.is_none() && model.qfix.cdo == CdoState::None {
+        return Vec::new();
+    }
+
+    if !emitter.receiver.is_empty() {
+        tracing::debug!(
+            "execution canceled: current queued message count is {:?}",
+            emitter.receiver.len()
+        );
         return Vec::new();
     }
 
@@ -222,30 +231,45 @@ fn get_command_from_stack(model: &mut Model, actions: &[Action]) -> Vec<Action> 
 
     if let Some(key_sequence) = model.remaining_keysequence.take() {
         if key_sequence.is_empty() {
+            tracing::debug!("remaining key sequence is empty");
+
             model.remaining_keysequence = None;
         } else {
+            tracing::debug!("executing remaining key sequence: {:?}", key_sequence);
+
             return vec![action::emit_keymap(KeymapMessage::ExecuteKeySequence(
                 key_sequence.to_string(),
             ))];
         };
     }
 
-    let do_command = match &model.qfix.cdo {
-        Some(it) => it,
-        None => return Vec::new(),
+    let (next_state, actions) = match &model.qfix.cdo {
+        CdoState::Cnext(command) => (
+            CdoState::Cdo(Some(model.qfix.current_index), command.to_owned()),
+            vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+                "cn".to_owned(),
+            ))],
+        ),
+        CdoState::Cdo(old_index, command) => {
+            if old_index.is_some_and(|index| index >= model.qfix.current_index) {
+                (CdoState::None, Vec::new())
+            } else {
+                (
+                    CdoState::Cnext(command.to_owned()),
+                    vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+                        command.to_owned(),
+                    ))],
+                )
+            }
+        }
+        CdoState::None => (CdoState::None, Vec::new()),
     };
 
-    // wenn command ausgefuehrt wurde, dann cn
-    let next_command = if true {
-        do_command.to_owned()
-    } else {
-        // wenn am Ende, dann do_command auf None und kein Command mehr
-        "cn".to_owned()
-    };
+    tracing::info!("cdo state change: {:?} -> {:?}", model.qfix.cdo, next_state);
 
-    vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
-        next_command,
-    ))]
+    model.qfix.cdo = next_state;
+
+    actions
 }
 
 fn is_message_queueing(action: &Action) -> bool {
