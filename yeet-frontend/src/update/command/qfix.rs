@@ -49,22 +49,35 @@ pub fn navigate_first_qfix_entry(model: &mut Model, additional_action: Action) -
     model.qfix.current_index = 0;
 
     match model.qfix.entries.first() {
-        Some(it) => vec![
-            additional_action,
-            action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
-        ],
+        Some(it) => {
+            if it.exists() {
+                vec![
+                    additional_action,
+                    action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
+                ]
+            } else {
+                navigate_next_qfix_entry(model, additional_action)
+            }
+        }
         None => vec![additional_action],
     }
 }
 
 pub fn navigate_next_qfix_entry(model: &mut Model, additional_action: Action) -> Vec<Action> {
-    let next_index = model.qfix.current_index + 1;
-    match model.qfix.entries.get(next_index) {
-        Some(it) => {
-            model.qfix.current_index = next_index;
+    let mut entry = model.qfix.entries.iter().enumerate().filter_map(|(i, p)| {
+        if i > model.qfix.current_index && p.exists() {
+            Some((i, p))
+        } else {
+            None
+        }
+    });
+
+    match entry.next() {
+        Some((i, p)) => {
+            model.qfix.current_index = i;
             vec![
                 additional_action,
-                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
+                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(p.clone())),
             ]
         }
         None => {
@@ -76,29 +89,32 @@ pub fn navigate_next_qfix_entry(model: &mut Model, additional_action: Action) ->
 }
 
 pub fn navigate_previous_qfix_entry(model: &mut Model, additional_action: Action) -> Vec<Action> {
-    if model.qfix.entries.is_empty() {
-        return vec![additional_action];
-    }
+    let mut entry = model
+        .qfix
+        .entries
+        .iter()
+        .rev()
+        .enumerate()
+        .filter_map(|(i, p)| {
+            if i < model.qfix.current_index && p.exists() {
+                Some((i, p))
+            } else {
+                None
+            }
+        });
 
-    let next_index = if model.qfix.current_index > 0 {
-        model.qfix.current_index - 1
-    } else {
-        model.qfix.entries.len() - 1
-    };
-
-    model.qfix.current_index = next_index;
-
-    match model.qfix.entries.get(next_index) {
-        Some(it) => {
+    match entry.next() {
+        Some((i, p)) => {
+            model.qfix.current_index = i;
             vec![
                 additional_action,
-                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(it.clone())),
+                action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(p.clone())),
             ]
         }
         None => {
-            vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
-                "cN".to_string(),
-            ))]
+            vec![action::emit_keymap(KeymapMessage::Print(vec![
+                PrintContent::Error("no more items".to_owned()),
+            ]))]
         }
     }
 }
