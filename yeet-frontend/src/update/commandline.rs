@@ -6,7 +6,7 @@ use yeet_buffer::{
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
-    action::Action,
+    action::{self, Action},
     event::Message,
     model::Model,
     update::{
@@ -61,12 +61,12 @@ pub fn update_commandline_on_modification(
             if let &TextModification::DeleteMotion(_, CursorDirection::Left) = modification {
                 if let Some(line) = buffer.lines.last() {
                     if line.content.is_empty() {
-                        actions.push(Action::EmitMessages(vec![Message::Keymap(
-                            KeymapMessage::Buffer(BufferMessage::ChangeMode(
+                        actions.push(action::emit_keymap(KeymapMessage::Buffer(
+                            BufferMessage::ChangeMode(
                                 model.mode.clone(),
                                 get_mode_after_command(&model.mode_before),
-                            )),
-                        )]));
+                            ),
+                        )));
                     }
                 }
             };
@@ -200,12 +200,12 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
         &BufferMessage::SetContent(vec![]),
     );
 
-    vec![Action::EmitMessages(vec![Message::Keymap(
-        KeymapMessage::Buffer(BufferMessage::ChangeMode(
+    vec![action::emit_keymap(KeymapMessage::Buffer(
+        BufferMessage::ChangeMode(
             model.mode.clone(),
             get_mode_after_command(&model.mode_before),
-        )),
-    )])]
+        ),
+    ))]
 }
 
 // TODO: buffer messages till command mode left
@@ -244,12 +244,12 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
             model.mode = Mode::Command(CommandMode::PrintMultiline);
         }
 
-        vec![Action::EmitMessages(vec![Message::Keymap(
-            KeymapMessage::Buffer(BufferMessage::ChangeMode(
+        vec![action::emit_keymap(KeymapMessage::Buffer(
+            BufferMessage::ChangeMode(
                 model.mode.clone(),
                 Mode::Command(CommandMode::PrintMultiline),
-            )),
-        )])]
+            ),
+        ))]
     } else {
         Vec::new()
     };

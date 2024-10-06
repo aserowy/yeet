@@ -118,6 +118,7 @@ In normal mode, all register interactions target the default register (equal to
 | q                      | quit yeet                                                                                                                                                                                                              |
 | reg                    | print all register entries                                                                                                                                                                                             |
 | resetcl                | clears the current quick fix list without creating a new one                                                                                                                                                           |
+| tasks                  | list all currently running tasks                                                                                                                                                                                       |
 | w                      | write changes without changing mode                                                                                                                                                                                    |
 | wq                     | write changes and quit yeet                                                                                                                                                                                            |
 

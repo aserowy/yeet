@@ -8,10 +8,11 @@ use init::{
     qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::{DirectoryBufferState, Model};
+use model::{qfix::CdoState, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
+use tokio_util::sync::CancellationToken;
 use update::update_model;
 use view::render_model;
 
@@ -32,8 +33,9 @@ mod update;
 mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
+    let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
-    let mut emitter = Emitter::start();
+    let mut emitter = Emitter::start(cancellation.child_token());
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
@@ -75,12 +77,11 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
     tracing::debug!("starting with model state: {:?}", model);
 
-    let mut result = Vec::new();
     while let Some(envelope) = emitter.receiver.recv().await {
         tracing::debug!("received messages: {:?}", envelope.messages);
 
         // TODO: C-c should interrupt (clear) cdo commands
-        if model.command_stack.is_some() && envelope.source == MessageSource::User {
+        if model.remaining_keysequence.is_some() && envelope.source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
                 envelope.messages
@@ -95,38 +96,40 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             model.layout.commandline,
             envelope
                 .sequence
-                .len_or_default(model.key_sequence.chars().count()),
+                .len_or_default(model.commandline.key_sequence.chars().count()),
         );
 
-        let messages = envelope.clone_keymap_messages();
         let mut actions = update_model(&mut model, envelope);
         actions.extend(get_watcher_changes(&mut model));
-        actions.extend(get_command_from_stack(&mut model, &actions, &messages));
 
-        let (actions, result) =
-            action::exec_preview(&mut model, &mut emitter, &mut terminal, actions).await?;
-        if result != ActionResult::SkipRender {
+        let mut preview = action::preview(&mut model, &mut emitter, &mut terminal, actions).await?;
+        if preview.result != ActionResult::SkipRender {
             render_model(&mut terminal, &model)?;
         }
 
-        let (_, result) =
-            action::exec_postview(&mut model, &mut emitter, &mut terminal, actions).await?;
-        if result == ActionResult::Quit {
+        preview.remaining_actions.extend(get_command_from_stack(
+            &mut model,
+            &emitter,
+            &preview.remaining_actions,
+        ));
+
+        let postview = action::postview(
+            &mut model,
+            &mut emitter,
+            &mut terminal,
+            preview.remaining_actions,
+        )
+        .await?;
+
+        if postview.result == ActionResult::Quit {
             break;
         }
     }
 
-    if let Err(error) = emitter.shutdown().await {
-        result.push(error);
-    }
-
+    emitter.shutdown();
     terminal.shutdown()?;
 
-    if result.is_empty() {
-        Ok(())
-    } else {
-        Err(AppError::Aggregate(result))
-    }
+    Ok(())
 }
 
 fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
@@ -184,69 +187,93 @@ fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
     actions
 }
 
-#[tracing::instrument(skip(model, actions))]
-fn get_command_from_stack(
-    model: &mut Model,
-    actions: &[Action],
-    messages: &[KeymapMessage],
-) -> Vec<Action> {
-    if let Some(current) = &model.command_current {
-        if messages.iter().any(|msg| msg == current) {
-            model.command_current = None;
-        }
+fn set_remaining_keysequence(model: &mut Model, key_sequence: &str) -> Vec<Action> {
+    model.remaining_keysequence = Some(key_sequence.to_owned());
+
+    Vec::new()
+}
+
+#[tracing::instrument(skip(model, emitter))]
+fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Action]) -> Vec<Action> {
+    if model.remaining_keysequence.is_none() && model.qfix.cdo == CdoState::None {
+        return Vec::new();
     }
 
-    if let Some(commands) = &mut model.command_stack {
-        let buffer_loading = model.files.current.state != DirectoryBufferState::Ready;
-        let current_command_processing = model.command_current.is_some();
+    if !emitter.receiver.is_empty() {
+        tracing::debug!(
+            "execution canceled: current queued message count is {:?}",
+            emitter.receiver.len()
+        );
+        return Vec::new();
+    }
 
-        let contains_emit_messages = actions
-            .iter()
-            .any(|msg| matches!(msg, Action::EmitMessages(_)));
+    if actions.iter().any(is_message_queueing) {
+        tracing::debug!("execution canceled: actions not empty > {:?}", actions);
+        return Vec::new();
+    }
 
-        if buffer_loading || current_command_processing || contains_emit_messages {
-            tracing::trace!(
-                "cdo commands skipped: buffer loading {:?}, emitting messages {:?}",
-                buffer_loading,
-                contains_emit_messages
-            );
+    if !model.current_tasks.is_empty() {
+        tracing::debug!(
+            "execution canceled: not all tasks finished > {:?}",
+            model.current_tasks
+        );
+        return Vec::new();
+    }
 
-            return Vec::new();
-        }
+    if let Some(key_sequence) = model.remaining_keysequence.take() {
+        if key_sequence.is_empty() {
+            tracing::debug!("remaining key sequence is empty");
 
-        let mut actions = Vec::new();
-        let command = if let Some(KeymapMessage::NavigateToPathAsPreview(_)) = commands.front() {
-            while let Some(front) = commands.front() {
-                if let KeymapMessage::NavigateToPathAsPreview(path) = front {
-                    if path.exists() {
-                        break;
-                    } else {
-                        let command = commands.pop_front();
-                        tracing::warn!("removing non existing cdo path: {:?}", command);
-                    }
-                } else {
-                    let command = commands.pop_front();
-                    tracing::trace!("removing command for non existing path: {:?}", command);
-                }
-            }
-
-            commands.pop_front()
+            model.remaining_keysequence = None;
         } else {
-            commands.pop_front()
+            tracing::debug!("executing remaining key sequence: {:?}", key_sequence);
+
+            return vec![action::emit_keymap(KeymapMessage::ExecuteKeySequence(
+                key_sequence.to_string(),
+            ))];
         };
+    }
 
-        if let Some(command) = command {
-            tracing::debug!("emitting cdo command: {:?}", command);
-            model.command_current = Some(command.clone());
-            actions.push(Action::EmitMessages(vec![Message::Keymap(command)]));
+    let (next_state, actions) = match &model.qfix.cdo {
+        CdoState::Cnext(command) => (
+            CdoState::Cdo(Some(model.qfix.current_index), command.to_owned()),
+            vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+                "cn".to_owned(),
+            ))],
+        ),
+        CdoState::Cdo(old_index, command) => {
+            if old_index.is_some_and(|index| index >= model.qfix.current_index) {
+                (CdoState::None, Vec::new())
+            } else {
+                (
+                    CdoState::Cnext(command.to_owned()),
+                    vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
+                        command.to_owned(),
+                    ))],
+                )
+            }
         }
+        CdoState::None => (CdoState::None, Vec::new()),
+    };
 
-        if commands.is_empty() {
-            tracing::trace!("cdo commands finished");
-            model.command_stack = None;
-        }
-        actions
-    } else {
-        Vec::new()
+    tracing::info!("cdo state change: {:?} -> {:?}", model.qfix.cdo, next_state);
+
+    model.qfix.cdo = next_state;
+
+    actions
+}
+
+fn is_message_queueing(action: &Action) -> bool {
+    match action {
+        Action::EmitMessages(_) => true,
+
+        Action::Load(_, _, _)
+        | Action::Open(_)
+        | Action::Resize(_, _)
+        | Action::Task(_)
+        | Action::ModeChanged
+        | Action::Quit(_)
+        | Action::UnwatchPath(_)
+        | Action::WatchPath(_) => false,
     }
 }

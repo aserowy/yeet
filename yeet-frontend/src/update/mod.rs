@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, path::Path};
 
+use tokio_util::sync::CancellationToken;
 use yeet_buffer::{
     message::BufferMessage,
     model::{ansi::Ansi, Buffer, BufferLine, Mode},
@@ -14,7 +15,6 @@ use crate::{
 };
 
 use self::{
-    command::{create_or_extend_command_stack, execute_command},
     commandline::{
         leave_commandline, print_in_commandline, update_commandline, update_commandline_on_execute,
         update_commandline_on_modification,
@@ -73,8 +73,8 @@ const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
 #[tracing::instrument(skip(model))]
 pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     match &envelope.sequence {
-        KeySequence::Completed(_) => model.key_sequence.clear(),
-        KeySequence::Changed(sequence) => sequence.clone_into(&mut model.key_sequence),
+        KeySequence::Completed(_) => model.commandline.key_sequence.clear(),
+        KeySequence::Changed(sequence) => sequence.clone_into(&mut model.commandline.key_sequence),
         KeySequence::None => {}
     };
 
@@ -118,6 +118,10 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
         Message::PreviewLoaded(content) => update_preview(model, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
+        Message::TaskStarted(identifier, cancellation) => {
+            add_current_task(model, identifier, cancellation)
+        }
+        Message::TaskEnded(identifier) => remove_current_task(model, identifier),
     }
 }
 
@@ -128,8 +132,10 @@ pub fn update_with_keymap_message(model: &mut Model, msg: &KeymapMessage) -> Vec
         KeymapMessage::ClearSearchHighlight => clear_search(model),
         KeymapMessage::DeleteMarks(marks) => delete_mark(model, marks),
         KeymapMessage::ExecuteCommand => update_commandline_on_execute(model),
-        KeymapMessage::ExecuteCommandString(command) => execute_command(command, model),
-        KeymapMessage::ExecuteKeySequence(_) => create_or_extend_command_stack(model, msg),
+        KeymapMessage::ExecuteCommandString(command) => command::execute(command, model),
+        KeymapMessage::ExecuteKeySequence(key_sequence) => {
+            super::set_remaining_keysequence(model, key_sequence)
+        }
         KeymapMessage::ExecuteRegister(register) => replay_register(&mut model.register, register),
         KeymapMessage::LeaveCommandMode => leave_commandline(model),
         KeymapMessage::NavigateToMark(char) => navigate_to_mark(char, model),
@@ -200,7 +206,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            set_buffer(&WindowType::Preview, model, &path, content);
+            buffer_type(&WindowType::Preview, model, &path, content);
         }
         Preview::Image(path, protocol) => model.files.preview = BufferType::Image(path, protocol),
         Preview::None(_) => model.files.preview = BufferType::None,
@@ -208,7 +214,7 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn set_buffer(
+pub fn buffer_type(
     window_type: &WindowType,
     model: &mut Model,
     path: &Path,
@@ -245,4 +251,20 @@ pub fn set_buffer(
         WindowType::Preview => model.files.preview = buffer_type,
         WindowType::Current => unreachable!(),
     };
+}
+
+fn add_current_task(
+    model: &mut Model,
+    identifier: String,
+    cancellation: CancellationToken,
+) -> Vec<Action> {
+    if let Some(cancellation) = model.current_tasks.insert(identifier, cancellation) {
+        cancellation.cancel();
+    }
+    Vec::new()
+}
+
+fn remove_current_task(model: &mut Model, identifier: String) -> Vec<Action> {
+    model.current_tasks.remove(&identifier);
+    Vec::new()
 }

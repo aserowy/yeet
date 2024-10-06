@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
+use tokio_util::sync::CancellationToken;
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
-    action::Action,
-    event::Message,
+    action::{self, Action},
     model::{
         junkyard::{FileEntryStatus, FileTransaction, JunkYard},
         mark::Marks,
@@ -24,6 +26,17 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
 
     let mut contents = vec![":marks".to_string(), "Char Content".to_string()];
     contents.extend(marks);
+
+    contents
+        .iter()
+        .map(|cntnt| PrintContent::Default(cntnt.to_string()))
+        .collect()
+}
+
+pub fn tasks(tasks: &HashMap<String, CancellationToken>) -> Vec<PrintContent> {
+    let mut contents = vec![":tasks", "Id"];
+    let tasks = tasks.keys().map(|id| id.as_str());
+    contents.extend(tasks);
 
     contents
         .iter()
@@ -61,9 +74,7 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
         })
         .collect();
 
-    vec![Action::EmitMessages(vec![Message::Keymap(
-        KeymapMessage::Print(content),
-    )])]
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
 pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {

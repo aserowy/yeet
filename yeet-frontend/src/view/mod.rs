@@ -20,21 +20,40 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         view::view(
             &model.mode,
             &model.files.current.buffer,
+            &model.files.show_border,
             frame,
             layout.current,
         );
 
-        render_buffer(&model.mode, frame, layout.parent, &model.files.parent);
-        render_buffer(&model.mode, frame, layout.preview, &model.files.preview);
+        render_buffer(
+            &model.mode,
+            frame,
+            layout.parent,
+            &model.files.parent,
+            &model.files.show_border,
+        );
+        render_buffer(
+            &model.mode,
+            frame,
+            layout.preview,
+            &model.files.preview,
+            &false,
+        );
 
         statusline::view(model, frame, layout.statusline);
     })
 }
 
-fn render_buffer(mode: &Mode, frame: &mut Frame, layout: Rect, buffer_type: &BufferType) {
+fn render_buffer(
+    mode: &Mode,
+    frame: &mut Frame,
+    layout: Rect,
+    buffer_type: &BufferType,
+    show_border: &bool,
+) {
     match buffer_type {
         BufferType::Text(_, buffer) => {
-            view::view(mode, &buffer, frame, layout);
+            view::view(mode, &buffer, show_border, frame, layout);
         }
         BufferType::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol.as_ref()), layout);

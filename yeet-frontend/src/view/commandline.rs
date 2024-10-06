@@ -9,12 +9,13 @@ pub fn view(model: &Model, frame: &mut Frame) {
     view::view(
         &model.mode,
         &commandline.buffer,
+        &false,
         frame,
         commandline.layout.buffer,
     );
 
     frame.render_widget(
-        Paragraph::new(model.key_sequence.clone()),
+        Paragraph::new(model.commandline.key_sequence.clone()),
         commandline.layout.key_sequence,
     );
 }

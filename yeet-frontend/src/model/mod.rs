@@ -1,19 +1,18 @@
 use std::{
-    collections::VecDeque,
+    collections::HashMap,
     path::{Path, PathBuf},
 };
-
-use ratatui::layout::Rect;
-use ratatui_image::protocol::Protocol;
-use yeet_buffer::model::{
-    viewport::{LineNumber, ViewPort},
-    Buffer, Cursor, Mode,
-};
-use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     layout::{AppLayout, CommandLineLayout},
     settings::Settings,
+};
+use ratatui::layout::Rect;
+use ratatui_image::protocol::Protocol;
+use tokio_util::sync::CancellationToken;
+use yeet_buffer::model::{
+    viewport::{LineNumber, ViewPort},
+    Buffer, Cursor, Mode,
 };
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
@@ -27,18 +26,17 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub command_stack: Option<VecDeque<KeymapMessage>>,
-    pub command_current: Option<KeymapMessage>,
+    pub current_tasks: HashMap<String, CancellationToken>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
-    pub key_sequence: String,
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,
     pub mode_before: Option<Mode>,
     pub qfix: QuickFix,
     pub register: Register,
+    pub remaining_keysequence: Option<String>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
 }
@@ -58,6 +56,7 @@ pub struct FileWindow {
     pub current: PathBuffer,
     pub parent: BufferType,
     pub preview: BufferType,
+    pub show_border: bool,
 }
 
 impl FileWindow {
@@ -91,7 +90,6 @@ impl Default for FileWindow {
             current: PathBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
-                    show_border: true,
                     view_port: ViewPort {
                         line_number: LineNumber::Relative,
                         line_number_width: 3,
@@ -102,19 +100,8 @@ impl Default for FileWindow {
                 ..Default::default()
             },
             parent: Default::default(),
-            // parent: DirectoryBuffer {
-            //     buffer: Buffer {
-            //         cursor: Some(Cursor {
-            //             horizontal_index: CursorPosition::None,
-            //             vertical_index: 0,
-            //             ..Default::default()
-            //         }),
-            //         show_border: true,
-            //         ..Default::default()
-            //     },
-            //     ..Default::default()
-            // },
             preview: Default::default(),
+            show_border: true,
         }
     }
 }
@@ -146,6 +133,7 @@ impl BufferType {
 
 pub struct CommandLine {
     pub buffer: Buffer,
+    pub key_sequence: String,
     pub layout: CommandLineLayout,
 }
 
@@ -161,6 +149,7 @@ impl Default for CommandLine {
                 }),
                 ..Default::default()
             },
+            key_sequence: "".to_owned(),
             layout: CommandLineLayout::new(Rect::default(), 0),
         }
     }

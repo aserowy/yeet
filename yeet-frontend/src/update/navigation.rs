@@ -165,9 +165,22 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         history::add_history_entry(&mut model.history, selected.as_path());
 
+        let mut actions = Vec::new();
         let preview_buffer = match mem::replace(&mut model.files.preview, BufferType::None) {
             BufferType::Text(_, buffer) => buffer,
-            BufferType::Image(_, _) | BufferType::None => Buffer::default(),
+            BufferType::Image(_, _) | BufferType::None => {
+                let history =
+                    history::get_selection_from_history(&model.history, selected.as_path())
+                        .map(|s| s.to_string());
+
+                actions.push(Action::Load(
+                    WindowType::Current,
+                    selected.to_path_buf(),
+                    history,
+                ));
+
+                Buffer::default()
+            }
         };
 
         model.files.parent = BufferType::Text(
@@ -188,7 +201,6 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             model.files.current.buffer.cursor = Some(Cursor::default());
         }
 
-        let mut actions = Vec::new();
         if let Some(selected) = selection::get_current_selected_path(model) {
             tracing::trace!("loading selection: {:?}", selected);
 
@@ -218,7 +230,13 @@ fn mem_replace_buffer(mode: &Mode, dest: &mut Buffer, mut src: Buffer) -> Buffer
     }
 
     let mut result = mem::replace(dest, src);
+
+    // NOTE: swap back to let properties stay except vertical index
     mem::swap(&mut dest.view_port, &mut result.view_port);
+    mem::swap(
+        &mut dest.view_port.vertical_index,
+        &mut result.view_port.vertical_index,
+    );
 
     yeet_buffer::update::update_buffer(mode, &mut result, &BufferMessage::UpdateViewPortByCursor);
     yeet_buffer::update::update_buffer(mode, dest, &BufferMessage::UpdateViewPortByCursor);

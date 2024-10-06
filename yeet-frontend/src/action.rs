@@ -4,6 +4,7 @@ use std::{
 };
 
 use yeet_buffer::message::BufferMessage;
+use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     error::AppError,
@@ -28,6 +29,10 @@ pub enum Action {
     WatchPath(PathBuf),
 }
 
+pub fn emit_keymap(message: KeymapMessage) -> Action {
+    Action::EmitMessages(vec![Message::Keymap(message)])
+}
+
 #[derive(PartialEq)]
 pub enum ActionResult {
     Normal,
@@ -35,23 +40,28 @@ pub enum ActionResult {
     Quit,
 }
 
+pub struct ExecResult {
+    pub result: ActionResult,
+    pub remaining_actions: Vec<Action>,
+}
+
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_preview(
+pub async fn preview(
     model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     execute(true, model, emitter, terminal, actions).await
 }
 
 #[tracing::instrument(skip(model, emitter, terminal, actions))]
-pub async fn exec_postview(
+pub async fn postview(
     model: &mut Model,
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     execute(false, model, emitter, terminal, actions).await
 }
 
@@ -73,7 +83,7 @@ async fn execute(
     emitter: &mut Emitter,
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
-) -> Result<(Vec<Action>, ActionResult), AppError> {
+) -> Result<ExecResult, AppError> {
     let result = if is_preview && contains_emit(&actions) {
         ActionResult::SkipRender
     } else if !is_preview && contains_quit(&actions) {
@@ -82,10 +92,10 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let mut not_handled_actions = vec![];
+    let mut remaining_actions = vec![];
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
-            not_handled_actions.push(action);
+            remaining_actions.push(action);
             continue;
         }
 
@@ -121,7 +131,7 @@ async fn execute(
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
                     WindowType::Parent | WindowType::Preview => {
-                        update::set_buffer(&window_type, model, path.as_path(), vec![]);
+                        update::buffer_type(&window_type, model, path.as_path(), vec![]);
 
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
@@ -136,17 +146,7 @@ async fn execute(
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
-                match emitter.suspend().await {
-                    Ok(result) => {
-                        if !result {
-                            continue;
-                        }
-                    }
-                    Err(error) => {
-                        tracing::error!("emitter suspend failed: {:?}", error);
-                    }
-                }
-
+                emitter.suspend();
                 terminal.suspend();
 
                 // TODO: remove flickering (alternate screen leave and cli started)
@@ -182,7 +182,12 @@ async fn execute(
                     continue;
                 }
 
-                emitter.abort(&Task::EnumerateDirectory(path.clone(), None));
+                if let Some(cancellation) = model
+                    .current_tasks
+                    .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
+                {
+                    cancellation.cancel();
+                };
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {
                     tracing::debug!("emitting unwatch path failed: {:?}", error);
@@ -200,7 +205,10 @@ async fn execute(
         }
     }
 
-    Ok((not_handled_actions, result))
+    Ok(ExecResult {
+        result,
+        remaining_actions,
+    })
 }
 
 fn contains_emit(actions: &[Action]) -> bool {
