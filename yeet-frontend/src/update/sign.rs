@@ -4,7 +4,7 @@ use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
     qfix::{QuickFix, QFIX_SIGN_ID},
-    BufferType, Model,
+    Model,
 };
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -89,21 +89,12 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
 }
 
 pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {
-    for line in &mut model.files.current.buffer.lines {
-        unset(line, sign_id);
-    }
-
-    if let BufferType::Text(_, buffer) = &mut model.files.parent {
-        for line in &mut buffer.lines {
-            unset(line, sign_id);
-        }
-    }
-
-    if let BufferType::Text(_, buffer) = &mut model.files.preview {
-        for line in &mut buffer.lines {
-            unset(line, sign_id);
-        }
-    }
+    model
+        .files
+        .get_mut_directories()
+        .into_iter()
+        .flat_map(|(_, b)| &mut b.lines)
+        .for_each(|l| unset(l, sign_id));
 }
 
 pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier) {
