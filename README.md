@@ -99,6 +99,9 @@ In normal mode, all register interactions target the default register (equal to
 
 ## commands
 
+> [!NOTE]
+> all paths for path arguments can be absulute or relative to the current path shown!
+
 | :                           | action                                                                                                                                                                                                                 |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | cfirst                      | navigates to first entry in quick fix list                                                                                                                                                                             |
