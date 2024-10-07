@@ -42,6 +42,7 @@ register holds all files which got yanked and the last nine trashes.
 | "p\<char> | paste register named \<char> from junk yard to current path |
 | yp        | copy current selected path to system clipboard              |
 | yy        | yank file to junk yard                                      |
+| C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
 
 ### navigation and normal mode
 

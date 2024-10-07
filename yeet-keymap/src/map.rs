@@ -99,6 +99,24 @@ impl Default for KeyMap {
             vec![Mode::Navigation],
             vec![
                 (
+                    vec![Key::new(KeyCode::from_char('n'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "cn".to_owned(),
+                        )),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('p'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "cN".to_owned(),
+                        )),
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![
                         Key::new(KeyCode::from_char('"'), vec![]),
                         Key::new(KeyCode::from_char('p'), vec![]),
@@ -819,6 +837,7 @@ fn add_mapping(
 }
 
 fn get_home_path() -> PathBuf {
+    // TODO: custom keymap message to remove dirs dependency in keymap
     dirs::home_dir()
         .expect("Failed to get home directory")
         .to_path_buf()
