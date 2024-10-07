@@ -63,6 +63,7 @@ pub enum Message {
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
     EnumerationFinished(PathBuf, Option<String>),
     Error(String),
+    FdResult(Vec<PathBuf>),
     PathRemoved(PathBuf),
     PathsAdded(Vec<PathBuf>),
     PreviewLoaded(Preview),
@@ -83,6 +84,7 @@ impl std::fmt::Debug for Message {
                 write!(f, "EnumerationFinished({:?}, {:?})", path, opt)
             }
             Message::Error(err) => write!(f, "Error({:?})", err),
+            Message::FdResult(paths) => write!(f, "FdResult({:?})", paths),
             Message::PathRemoved(path) => write!(f, "PathRemoved({:?})", path),
             Message::PathsAdded(paths) => write!(f, "PathsAdded({:?})", paths),
             Message::PreviewLoaded(preview) => write!(f, "PreviewLoaded({:?})", preview),

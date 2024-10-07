@@ -5,6 +5,7 @@ use crate::{
     action::{self, Action},
     event::Message,
     model::Model,
+    task::Task,
 };
 
 mod file;
@@ -47,6 +48,14 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             )
         }
         ("e!", "") => add_change_mode(mode_before, mode, file::refresh(model)),
+        ("fd", params) => add_change_mode(
+            mode_before,
+            mode,
+            vec![Action::Task(Task::ExecuteFd(
+                model.files.current.path.clone(),
+                params.to_owned(),
+            ))],
+        ),
         ("invertcl", "") => add_change_mode(mode_before, mode, qfix::invert_in_current(model)),
         ("junk", "") => print::junkyard(&model.junk),
         ("marks", "") => print::marks(&model.marks),

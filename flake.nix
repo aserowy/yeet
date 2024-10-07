@@ -71,6 +71,7 @@
               pkgs.nodePackages.prettier
 
               pkgs.chafa
+              pkgs.fd
               pkgs.kitty
               pkgs.wezterm
             ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
