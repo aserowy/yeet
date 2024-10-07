@@ -63,7 +63,9 @@ pub fn select_first(model: &mut Model) -> Vec<Action> {
                 next(model)
             }
         }
-        None => Vec::new(),
+        None => vec![action::emit_keymap(KeymapMessage::Print(vec![
+            PrintContent::Error("no more items".to_owned()),
+        ]))],
     }
 }
 
