@@ -80,7 +80,17 @@ fn get_target_file_path(marks: &Marks, target: &str, path: &Path) -> Result<Path
             return Err(format!("mark '{}' not found", mark));
         }
     } else {
-        PathBuf::from(target)
+        if path.is_relative() {
+            let current = match path.parent() {
+                Some(it) => it,
+                None => return Err(format!("could not resolve parent from path {:?}", path)),
+            };
+
+            let path = Path::new(path);
+            current.join(path)
+        } else {
+            PathBuf::from(path)
+        }
     };
 
     let target_file = target.join(file_name);
