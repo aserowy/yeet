@@ -1,38 +1,18 @@
-use std::path::{Path, PathBuf};
-
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{mark::Marks, Model},
-    task::Task,
-    update::command::{
-        print::{print_junkyard, print_marks, print_qfix_list, print_register},
-        qfix::{
-            clear_qfix_list_in_current, invert_qfix_selection_in_current,
-            navigate_first_qfix_entry, navigate_next_qfix_entry, navigate_previous_qfix_entry,
-            reset_qfix_list,
-        },
-    },
+    model::Model,
 };
 
+mod file;
 mod print;
 mod qfix;
 
 #[tracing::instrument(skip(model))]
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
-    let change_mode_message = Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
-        model.mode.clone(),
-        get_mode_after_command(&model.mode_before),
-    )));
-
-    let change_mode_action = action::emit_keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
-        model.mode.clone(),
-        get_mode_after_command(&model.mode_before),
-    )));
-
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),
@@ -40,147 +20,93 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     tracing::debug!("executing command: {:?}", cmd_with_args);
 
+    let mode_before = model.mode.clone();
+    let mode = get_mode_after_command(&model.mode_before);
+
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     match cmd_with_args {
-        ("cdo", command) => qfix::cdo(model, command, change_mode_action),
-        ("cfirst", "") => navigate_first_qfix_entry(model, change_mode_action),
-        ("cl", "") => print_qfix_list(&model.qfix),
-        ("clearcl", "") => clear_qfix_list_in_current(model, change_mode_action),
-        ("cn", "") => navigate_next_qfix_entry(model, change_mode_action),
-        ("cN", "") => navigate_previous_qfix_entry(model, change_mode_action),
-        ("cp", target) => {
-            let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.resolve_path() {
-                tracing::info!("copying path: {:?}", path);
-                let target = match get_target_file_path(&model.marks, target, path) {
-                    Ok(it) => it,
-                    Err(err) => {
-                        actions.push(Action::EmitMessages(vec![Message::Error(err)]));
-                        return actions;
-                    }
-                };
-
-                actions.push(Action::Task(Task::CopyPath(path.to_path_buf(), target)));
-            }
-            actions
-        }
-        ("d!", "") => {
-            let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.resolve_path() {
-                tracing::info!("deleting path: {:?}", path);
-                actions.push(Action::Task(Task::DeletePath(path.to_path_buf())));
-            } else {
-                tracing::warn!("deleting path failed: no path in preview set");
-            }
-            actions
-        }
+        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(model, command)),
+        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(model)),
+        ("cl", "") => print::qfix(&model.qfix),
+        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(model)),
+        ("clearcl", path) => add_change_mode(mode_before, mode, qfix::clear_in(model, path)),
+        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(model)),
+        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(model)),
+        ("cp", target) => add_change_mode(mode_before, mode, file::copy(model, target)),
+        ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(model)),
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
             for mark in args.chars().filter(|c| c != &' ') {
                 marks.push(mark);
             }
 
-            vec![
-                change_mode_action,
-                action::emit_keymap(KeymapMessage::DeleteMarks(marks)),
-            ]
+            add_change_mode(
+                mode_before,
+                mode,
+                vec![action::emit_keymap(KeymapMessage::DeleteMarks(marks))],
+            )
         }
-        ("e!", "") => {
-            let navigation = if let Some(path) = &model.files.preview.resolve_path() {
-                Message::Keymap(KeymapMessage::NavigateToPathAsPreview(path.to_path_buf()))
-            } else {
-                Message::Keymap(KeymapMessage::NavigateToPath(
-                    model.files.current.path.clone(),
-                ))
-            };
-
-            vec![Action::EmitMessages(vec![change_mode_message, navigation])]
-        }
-        ("invertcl", "") => invert_qfix_selection_in_current(model, change_mode_action),
-        ("junk", "") => {
-            let content = print_junkyard(&model.junk);
-            vec![action::emit_keymap(KeymapMessage::Print(content))]
-        }
-        ("marks", "") => {
-            let content = print_marks(&model.marks);
-            vec![action::emit_keymap(KeymapMessage::Print(content))]
-        }
-        ("mv", target) => {
-            let mut actions = vec![change_mode_action];
-            if let Some(path) = &model.files.preview.resolve_path() {
-                tracing::info!("renaming path: {:?}", path);
-                let target = match get_target_file_path(&model.marks, target, path) {
-                    Ok(it) => it,
-                    Err(err) => {
-                        actions.push(Action::EmitMessages(vec![Message::Error(err)]));
-                        return actions;
-                    }
-                };
-
-                actions.push(Action::Task(Task::RenamePath(path.to_path_buf(), target)));
-            }
-            actions
-        }
-        ("noh", "") => vec![Action::EmitMessages(vec![
-            change_mode_message,
-            Message::Keymap(KeymapMessage::ClearSearchHighlight),
-        ])],
+        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(model)),
+        ("invertcl", "") => add_change_mode(mode_before, mode, qfix::invert_in_current(model)),
+        ("junk", "") => print::junkyard(&model.junk),
+        ("marks", "") => print::marks(&model.marks),
+        ("mv", target) => add_change_mode(mode_before, mode, file::rename_selection(model, target)),
+        ("noh", "") => add_change_mode(
+            mode_before,
+            mode,
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::ClearSearchHighlight,
+            )])],
+        ),
         ("q", "") => vec![action::emit_keymap(KeymapMessage::Quit)],
-        ("reg", "") => {
-            let content = print_register(&model.register);
-            vec![action::emit_keymap(KeymapMessage::Print(content))]
-        }
-        ("resetcl", "") => reset_qfix_list(model, change_mode_action),
-        ("tasks", "") => {
-            let content = print::tasks(&model.current_tasks);
-            vec![action::emit_keymap(KeymapMessage::Print(content))]
-        }
-        ("w", "") => vec![Action::EmitMessages(vec![
-            change_mode_message,
-            Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
-        ])],
-        ("wq", "") => vec![Action::EmitMessages(vec![
-            Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
-            Message::Keymap(KeymapMessage::Quit),
-        ])],
+        ("reg", "") => print::register(&model.register),
+        ("tl", "") => print::tasks(&model.current_tasks),
+        ("w", "") => add_change_mode(
+            mode_before,
+            mode,
+            vec![Action::EmitMessages(vec![Message::Keymap(
+                KeymapMessage::Buffer(BufferMessage::SaveBuffer),
+            )])],
+        ),
+        ("wq", "") => add_change_mode(
+            mode_before,
+            mode,
+            vec![Action::EmitMessages(vec![
+                Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
+                Message::Keymap(KeymapMessage::Quit),
+            ])],
+        ),
         (cmd, args) => {
-            let mut actions = vec![change_mode_action];
+            let mut actions = Vec::new();
             if !args.is_empty() {
                 let err = format!("command '{} {}' is not valid", cmd, args);
                 actions.push(Action::EmitMessages(vec![Message::Error(err)]));
             }
-            actions
+            add_change_mode(mode_before, mode, actions)
         }
     }
 }
 
-fn get_target_file_path(marks: &Marks, target: &str, path: &Path) -> Result<PathBuf, String> {
-    let file_name = match path.file_name() {
-        Some(it) => it,
-        None => return Err(format!("could not resolve file name from path {:?}", path)),
-    };
-
-    let target = if target.starts_with('\'') {
-        let mark = match target.chars().nth(1) {
-            Some(it) => it,
-            None => return Err("invalid mark format".to_string()),
-        };
-
-        if let Some(path) = marks.entries.get(&mark) {
-            path.to_path_buf()
+fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> Vec<Action> {
+    let emit = actions.iter_mut().find_map(|action| {
+        if let Action::EmitMessages(messages) = action {
+            Some(messages)
         } else {
-            return Err(format!("mark '{}' not found", mark));
+            None
         }
-    } else {
-        PathBuf::from(target)
-    };
+    });
 
-    let target_file = target.join(file_name);
-    if target.is_dir() && target.exists() && !target_file.exists() {
-        Ok(target.join(file_name))
-    } else {
-        Err("target path is not valid".to_string())
+    let change_mode_message = Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
+        mode_before,
+        mode,
+    )));
+
+    match emit {
+        Some(messages) => messages.insert(0, change_mode_message),
+        None => actions.insert(0, Action::EmitMessages(vec![change_mode_message])),
     }
+
+    actions
 }
 
 fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {

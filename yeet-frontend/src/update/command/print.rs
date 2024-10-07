@@ -14,7 +14,7 @@ use crate::{
     update::junkyard::get_junkyard_transaction,
 };
 
-pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
+pub fn marks(marks: &Marks) -> Vec<Action> {
     let mut marks: Vec<_> = marks
         .entries
         .iter()
@@ -27,24 +27,28 @@ pub fn print_marks(marks: &Marks) -> Vec<PrintContent> {
     let mut contents = vec![":marks".to_string(), "Char Content".to_string()];
     contents.extend(marks);
 
-    contents
+    let content = contents
         .iter()
         .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-        .collect()
+        .collect();
+
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
-pub fn tasks(tasks: &HashMap<String, CancellationToken>) -> Vec<PrintContent> {
+pub fn tasks(tasks: &HashMap<String, CancellationToken>) -> Vec<Action> {
     let mut contents = vec![":tasks", "Id"];
     let tasks = tasks.keys().map(|id| id.as_str());
     contents.extend(tasks);
 
-    contents
+    let content = contents
         .iter()
         .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-        .collect()
+        .collect();
+
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
-pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
+pub fn qfix(qfix: &QuickFix) -> Vec<Action> {
     let max_width = (qfix.entries.len() + 1).to_string().len();
 
     let entries: Vec<_> = qfix
@@ -77,7 +81,7 @@ pub fn print_qfix_list(qfix: &QuickFix) -> Vec<Action> {
     vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
-pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {
+pub fn junkyard(junkyard: &JunkYard) -> Vec<Action> {
     let mut contents = vec![":junk".to_string(), "Name Content".to_string()];
     if let Some(current) = get_junkyard_transaction(junkyard, &'"') {
         contents.push(print_junkyard_entry("\"\"", current));
@@ -90,10 +94,12 @@ pub fn print_junkyard(junkyard: &JunkYard) -> Vec<PrintContent> {
         contents.push(print_junkyard_entry(&junk_name, entry));
     }
 
-    contents
+    let content = contents
         .iter()
         .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-        .collect()
+        .collect();
+
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
 fn print_junkyard_entry(junk: &str, transaction: &FileTransaction) -> String {
@@ -116,7 +122,7 @@ fn print_junkyard_entry(junk: &str, transaction: &FileTransaction) -> String {
     format!("{:<4} {}", junk, content)
 }
 
-pub fn print_register(register: &Register) -> Vec<PrintContent> {
+pub fn register(register: &Register) -> Vec<Action> {
     let mut contents = vec![":reg".to_string(), "Name Content".to_string()];
 
     for (key, content) in register.content.iter() {
@@ -136,10 +142,12 @@ pub fn print_register(register: &Register) -> Vec<PrintContent> {
         contents.push(print_content(&'/', &searched.1));
     }
 
-    contents
+    let content = contents
         .iter()
         .map(|cntnt| PrintContent::Default(cntnt.to_string()))
-        .collect()
+        .collect();
+
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
 fn print_content(prefix: &char, content: &str) -> String {
