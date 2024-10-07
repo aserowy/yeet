@@ -42,22 +42,15 @@ pub fn set_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier
         None => return,
     };
 
-    let lines = if parent == model.files.current.path {
-        &mut model.files.current.buffer.lines
-    } else if Some(parent) == model.files.parent.resolve_path() {
-        if let BufferType::Text(_, buffer) = &mut model.files.parent {
-            &mut buffer.lines
-        } else {
-            return;
-        }
-    } else if Some(parent) == model.files.preview.resolve_path() {
-        if let BufferType::Text(_, buffer) = &mut model.files.preview {
-            &mut buffer.lines
-        } else {
-            return;
-        }
-    } else {
-        return;
+    let target = model
+        .files
+        .get_mut_directories()
+        .into_iter()
+        .find_map(|(p, b)| if p == parent { Some(b) } else { None });
+
+    let buffer = match target {
+        Some(buffer) => buffer,
+        None => return,
     };
 
     let file_name = match path.file_name() {
@@ -68,7 +61,8 @@ pub fn set_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier
         None => return,
     };
 
-    if let Some(line) = lines
+    if let Some(line) = buffer
+        .lines
         .iter_mut()
         .find(|bl| bl.content.to_stripped_string() == file_name)
     {
@@ -118,22 +112,15 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         None => return,
     };
 
-    let lines = if parent == model.files.current.path {
-        &mut model.files.current.buffer.lines
-    } else if Some(parent) == model.files.parent.resolve_path() {
-        if let BufferType::Text(_, buffer) = &mut model.files.parent {
-            &mut buffer.lines
-        } else {
-            return;
-        }
-    } else if Some(parent) == model.files.preview.resolve_path() {
-        if let BufferType::Text(_, buffer) = &mut model.files.preview {
-            &mut buffer.lines
-        } else {
-            return;
-        }
-    } else {
-        return;
+    let target = model
+        .files
+        .get_mut_directories()
+        .into_iter()
+        .find_map(|(p, b)| if p == parent { Some(b) } else { None });
+
+    let buffer = match target {
+        Some(buffer) => buffer,
+        None => return,
     };
 
     let file_name = match path.file_name() {
@@ -144,7 +131,8 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         None => return,
     };
 
-    if let Some(line) = lines
+    if let Some(line) = buffer
+        .lines
         .iter_mut()
         .find(|bl| bl.content.to_stripped_string() == file_name)
     {
