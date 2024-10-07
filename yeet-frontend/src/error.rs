@@ -8,6 +8,8 @@ pub enum AppError {
     ActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Envelope>),
     #[error("Error aggregation")]
     Aggregate(Vec<AppError>),
+    #[error("Command execution failed")]
+    ExecutionFailed(String),
     #[error("File operation failed")]
     FileOperationFailed(#[from] std::io::Error),
     #[error("Invalid mime type resolved")]

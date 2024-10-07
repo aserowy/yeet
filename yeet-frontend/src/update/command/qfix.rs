@@ -8,7 +8,7 @@ use crate::{
         qfix::{CdoState, QFIX_SIGN_ID},
         Model,
     },
-    update::sign::{set_sign, unset_sign, unset_sign_on_all_buffers},
+    update::sign::{set, unset, unset_sign_on_all_buffers},
 };
 
 pub fn reset(model: &mut Model) -> Vec<Action> {
@@ -33,7 +33,7 @@ pub fn clear_in(model: &mut Model, path: &str) -> Vec<Action> {
         let path = current_path.join(bl.content.to_stripped_string());
         if model.qfix.entries.contains(&path) {
             model.qfix.entries.retain(|p| p != &path);
-            unset_sign(bl, QFIX_SIGN_ID);
+            unset(bl, QFIX_SIGN_ID);
         }
     }
 
@@ -133,10 +133,10 @@ pub fn invert_in_current(model: &mut Model) -> Vec<Action> {
         let path = current_path.join(bl.content.to_stripped_string());
         if model.qfix.entries.contains(&path) {
             model.qfix.entries.retain(|p| p != &path);
-            unset_sign(bl, QFIX_SIGN_ID);
+            unset(bl, QFIX_SIGN_ID);
         } else {
             model.qfix.entries.push(path.clone());
-            set_sign(bl, QFIX_SIGN_ID);
+            set(bl, QFIX_SIGN_ID);
         }
     }
 

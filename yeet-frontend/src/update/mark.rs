@@ -6,7 +6,7 @@ use crate::{
 
 use super::{
     selection::{get_current_selected_bufferline, get_current_selected_path},
-    sign::{set_sign, unset_sign_for_path},
+    sign::{set, unset_sign_for_path},
 };
 
 pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
@@ -18,7 +18,7 @@ pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
         }
 
         if let Some(bl) = get_current_selected_bufferline(model) {
-            set_sign(bl, MARK_SIGN_ID);
+            set(bl, MARK_SIGN_ID);
         }
     }
     Vec::new()

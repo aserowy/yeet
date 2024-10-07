@@ -109,6 +109,7 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
         Message::Error(error) => {
             print_in_commandline(model, &[PrintContent::Error(error.to_string())])
         }
+        Message::FdResult(paths) => qfix::add(model, paths),
         Message::Keymap(msg) => update_with_keymap_message(model, &msg),
         Message::PathRemoved(path) => remove_path(model, &path),
         Message::PathsAdded(paths) => add_paths(model, &paths)

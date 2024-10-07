@@ -33,6 +33,7 @@ use crate::{
     model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
 };
 
+mod command;
 mod image;
 mod syntax;
 
@@ -44,6 +45,7 @@ pub enum Task {
     DeleteJunkYardEntry(FileEntry),
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf, Option<String>),
+    ExecuteFd(PathBuf, String),
     LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
@@ -65,6 +67,7 @@ impl Task {
             Task::DeleteJunkYardEntry(entry) => write!(f, "DeleteJunkYardEntry({:?})", entry),
             Task::EmitMessages(_) => write!(f, "EmitMessages"),
             Task::EnumerateDirectory(path, _) => write!(f, "EnumerateDirectory({:?}, _)", path),
+            Task::ExecuteFd(base, params) => write!(f, "ExecuteFd({:?}, {:?})", base, params),
             Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
             Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
             Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
@@ -386,6 +389,20 @@ async fn run_task(
                 }
             }
         }
+        Task::ExecuteFd(base, params) => match command::fd(base.as_path(), params).await {
+            Ok(paths) => {
+                let result = sender
+                    .send(to_envelope(vec![Message::FdResult(paths)]))
+                    .await;
+
+                if let Err(error) = result {
+                    tracing::error!("sending message failed: {:?}", error);
+                }
+            }
+            Err(err) => {
+                emit_error(&sender, err).await;
+            }
+        },
         Task::LoadPreview(path, rect) => {
             let mime = if let Some(mime) = infer::get_from_path(&path)? {
                 let kind = mime.mime_type().split('/').collect::<Vec<_>>();
@@ -422,7 +439,7 @@ async fn run_task(
                 .await;
 
             if let Err(error) = result {
-                emit_error(sender, AppError::ActionSendFailed(error)).await;
+                tracing::error!("sending message failed: {:?}", error);
             }
         }
         Task::RenamePath(old, new) => {

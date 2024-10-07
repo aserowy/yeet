@@ -13,7 +13,7 @@ pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl, QFIX_SIGN_ID);
+    set(bl, QFIX_SIGN_ID);
 }
 
 pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
@@ -22,10 +22,10 @@ pub fn set_sign_if_marked(marks: &Marks, bl: &mut BufferLine, path: &Path) {
         return;
     }
 
-    set_sign(bl, MARK_SIGN_ID);
+    set(bl, MARK_SIGN_ID);
 }
 
-pub fn set_sign(bl: &mut BufferLine, sign_id: SignIdentifier) {
+pub fn set(bl: &mut BufferLine, sign_id: SignIdentifier) {
     let is_signed = bl.signs.iter().any(|s| s.id == sign_id);
     if is_signed {
         return;
@@ -33,6 +33,46 @@ pub fn set_sign(bl: &mut BufferLine, sign_id: SignIdentifier) {
 
     if let Some(sign) = generate_sign(sign_id) {
         bl.signs.push(sign);
+    }
+}
+
+pub fn set_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier) {
+    let parent = match path.parent() {
+        Some(it) => it,
+        None => return,
+    };
+
+    let lines = if parent == model.files.current.path {
+        &mut model.files.current.buffer.lines
+    } else if Some(parent) == model.files.parent.resolve_path() {
+        if let BufferType::Text(_, buffer) = &mut model.files.parent {
+            &mut buffer.lines
+        } else {
+            return;
+        }
+    } else if Some(parent) == model.files.preview.resolve_path() {
+        if let BufferType::Text(_, buffer) = &mut model.files.preview {
+            &mut buffer.lines
+        } else {
+            return;
+        }
+    } else {
+        return;
+    };
+
+    let file_name = match path.file_name() {
+        Some(it) => match it.to_str() {
+            Some(it) => it,
+            None => return,
+        },
+        None => return,
+    };
+
+    if let Some(line) = lines
+        .iter_mut()
+        .find(|bl| bl.content.to_stripped_string() == file_name)
+    {
+        set(line, sign_id);
     }
 }
 
@@ -56,18 +96,18 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
 
 pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {
     for line in &mut model.files.current.buffer.lines {
-        unset_sign(line, sign_id);
+        unset(line, sign_id);
     }
 
     if let BufferType::Text(_, buffer) = &mut model.files.parent {
         for line in &mut buffer.lines {
-            unset_sign(line, sign_id);
+            unset(line, sign_id);
         }
     }
 
     if let BufferType::Text(_, buffer) = &mut model.files.preview {
         for line in &mut buffer.lines {
-            unset_sign(line, sign_id);
+            unset(line, sign_id);
         }
     }
 }
@@ -108,11 +148,11 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         .iter_mut()
         .find(|bl| bl.content.to_stripped_string() == file_name)
     {
-        unset_sign(line, sign_id);
+        unset(line, sign_id);
     }
 }
 
-pub fn unset_sign(bl: &mut BufferLine, sign_id: SignIdentifier) {
+pub fn unset(bl: &mut BufferLine, sign_id: SignIdentifier) {
     let position = bl.signs.iter().position(|s| s.id == sign_id);
     if let Some(position) = position {
         bl.signs.remove(position);
