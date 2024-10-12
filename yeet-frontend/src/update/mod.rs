@@ -11,7 +11,7 @@ use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
-    model::{BufferType, Model, WindowType},
+    model::{DirectorySibling, Model, WindowType},
 };
 
 use self::{
@@ -209,8 +209,8 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
 
             buffer_type(&WindowType::Preview, model, &path, content);
         }
-        Preview::Image(path, protocol) => model.files.preview = BufferType::Image(path, protocol),
-        Preview::None(_) => model.files.preview = BufferType::None,
+        Preview::Image(path, protocol) => model.files.preview = DirectorySibling::Image(path, protocol),
+        Preview::None(_) => model.files.preview = DirectorySibling::None,
     };
     Vec::new()
 }
@@ -246,7 +246,7 @@ pub fn buffer_type(
         cursor::set_cursor_index_with_history(&model.mode, &model.history, &mut buffer, path);
     }
 
-    let buffer_type = BufferType::Text(path.to_path_buf(), buffer);
+    let buffer_type = DirectorySibling::Text(path.to_path_buf(), buffer);
     match window_type {
         WindowType::Parent => model.files.parent = buffer_type,
         WindowType::Preview => model.files.preview = buffer_type,

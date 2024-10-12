@@ -27,9 +27,19 @@ pub mod register;
 pub struct Model {
     pub commandline: CommandLine,
     pub current_tasks: HashMap<String, CancellationToken>,
-    pub files: FileWindow,
+    pub files: HashMap<usize, BufferKind>,
     pub history: History,
     pub junk: JunkYard,
+    // FIX:
+    // seperate windows and buffers with buffer id (file window should be file buffer)
+    // connect buffer and window in AppLayout
+    // add optional (mvp solution) quake menu like copen
+    // add buffer type to differentiate between different window behaviors on keymap messages
+    // introduce type for topen (task open)
+    // show tasks and update them on start/end
+    // introduce dd to cancel task: gray out on dd and remove on task end event
+    // add view to app shutdown (open on quite while tasks are running)
+    // quit when all tasks finished
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,
@@ -52,22 +62,28 @@ impl std::fmt::Debug for Model {
     }
 }
 
-pub struct FileWindow {
+pub enum BufferKind {
+    Directory(usize, Directory),
+    Tasks(usize),
+    Qfix(usize),
+}
+
+pub struct Directory {
     pub current: PathBuffer,
-    pub parent: BufferType,
-    pub preview: BufferType,
+    pub parent: DirectorySibling,
+    pub preview: DirectorySibling,
     pub show_border: bool,
 }
 
-impl FileWindow {
+impl Directory {
     pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut Buffer)> {
-        let parent_content_ref = if let BufferType::Text(path, buffer) = &mut self.parent {
+        let parent_content_ref = if let DirectorySibling::Text(path, buffer) = &mut self.parent {
             Some((path.as_path(), buffer))
         } else {
             None
         };
 
-        let preview_content_ref = if let BufferType::Text(path, buffer) = &mut self.preview {
+        let preview_content_ref = if let DirectorySibling::Text(path, buffer) = &mut self.preview {
             Some((path.as_path(), buffer))
         } else {
             None
@@ -84,7 +100,7 @@ impl FileWindow {
     }
 }
 
-impl Default for FileWindow {
+impl Default for Directory {
     fn default() -> Self {
         Self {
             current: PathBuffer {
@@ -114,19 +130,19 @@ pub enum WindowType {
 }
 
 #[derive(Default)]
-pub enum BufferType {
+pub enum DirectorySibling {
     Image(PathBuf, Box<dyn Protocol>),
     #[default]
     None,
     Text(PathBuf, Buffer),
 }
 
-impl BufferType {
+impl DirectorySibling {
     pub fn resolve_path(&self) -> Option<&Path> {
         match self {
-            BufferType::Text(path, _) => Some(path),
-            BufferType::Image(path, _) => Some(path),
-            BufferType::None => None,
+            DirectorySibling::Text(path, _) => Some(path),
+            DirectorySibling::Image(path, _) => Some(path),
+            DirectorySibling::None => None,
         }
     }
 }
@@ -159,14 +175,4 @@ impl Default for CommandLine {
 pub struct PathBuffer {
     pub buffer: Buffer,
     pub path: PathBuf,
-    pub state: DirectoryBufferState,
-}
-
-#[derive(Debug, Default, PartialEq)]
-pub enum DirectoryBufferState {
-    Loading,
-    PartiallyLoaded,
-    Ready,
-    #[default]
-    Uninitialized,
 }

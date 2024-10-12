@@ -9,7 +9,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{BufferType, DirectoryBufferState, Model, WindowType},
+    model::{DirectorySibling, Model, WindowType},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -53,16 +53,6 @@ pub fn update_on_enumeration_change(
         }
     }
 
-    if path == &model.files.current.path {
-        model.files.current.state = DirectoryBufferState::PartiallyLoaded;
-    }
-
-    tracing::trace!(
-        "changed enumeration for path {:?} with current directory states: current is {:?}",
-        path,
-        model.files.current.state,
-    );
-
     Vec::new()
 }
 
@@ -99,17 +89,7 @@ pub fn update_on_enumeration_finished(
         }
     }
 
-    if path == &model.files.current.path {
-        model.files.current.state = DirectoryBufferState::Ready;
-    }
-
-    tracing::trace!(
-        "finished enumeration for path {:?} with current directory states: current is {:?}",
-        path,
-        model.files.current.state,
-    );
-
-    if let BufferType::Text(_, buffer) = &mut model.files.parent {
+    if let DirectorySibling::Text(_, buffer) = &mut model.files.parent {
         update_buffer(
             &model.mode,
             buffer,
@@ -118,10 +98,6 @@ pub fn update_on_enumeration_finished(
     }
 
     let mut actions = Vec::new();
-    if model.files.current.state == DirectoryBufferState::Loading {
-        return actions;
-    }
-
     let selected_path = match selection::get_current_selected_path(model) {
         Some(path) => path,
         None => return actions,

@@ -7,7 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{BufferType, Model, WindowType},
+    model::{DirectorySibling, Model, WindowType},
 };
 
 use super::{history, selection};
@@ -97,7 +97,7 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    model.files.preview = BufferType::None;
+    model.files.preview = DirectorySibling::None;
 
     let mut actions = Vec::new();
     actions.push(Action::Load(
@@ -139,16 +139,16 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             ));
         }
 
-        let parent_buffer = match mem::replace(&mut model.files.parent, BufferType::None) {
-            BufferType::Text(_, buffer) => buffer,
-            BufferType::Image(_, _) | BufferType::None => Buffer::default(),
+        let parent_buffer = match mem::replace(&mut model.files.parent, DirectorySibling::None) {
+            DirectorySibling::Text(_, buffer) => buffer,
+            DirectorySibling::Image(_, _) | DirectorySibling::None => Buffer::default(),
         };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
         let current_buffer =
             mem_replace_buffer(&model.mode, &mut model.files.current.buffer, parent_buffer);
 
-        model.files.preview = BufferType::Text(current_path, current_buffer);
+        model.files.preview = DirectorySibling::Text(current_path, current_buffer);
 
         actions
     } else {
@@ -166,9 +166,9 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         history::add_history_entry(&mut model.history, selected.as_path());
 
         let mut actions = Vec::new();
-        let preview_buffer = match mem::replace(&mut model.files.preview, BufferType::None) {
-            BufferType::Text(_, buffer) => buffer,
-            BufferType::Image(_, _) | BufferType::None => {
+        let preview_buffer = match mem::replace(&mut model.files.preview, DirectorySibling::None) {
+            DirectorySibling::Text(_, buffer) => buffer,
+            DirectorySibling::Image(_, _) | DirectorySibling::None => {
                 let history =
                     history::get_selection_from_history(&model.history, selected.as_path())
                         .map(|s| s.to_string());
@@ -183,7 +183,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             }
         };
 
-        model.files.parent = BufferType::Text(
+        model.files.parent = DirectorySibling::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
             mem_replace_buffer(&model.mode, &mut model.files.current.buffer, preview_buffer),
         );

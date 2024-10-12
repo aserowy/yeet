@@ -4,7 +4,7 @@ use yeet_buffer::{model::Mode, view};
 
 use crate::{
     error::AppError,
-    model::{BufferType, Model},
+    model::{DirectorySibling, Model},
     terminal::TerminalWrapper,
 };
 
@@ -48,16 +48,16 @@ fn render_buffer(
     mode: &Mode,
     frame: &mut Frame,
     layout: Rect,
-    buffer_type: &BufferType,
+    buffer_type: &DirectorySibling,
     show_border: &bool,
 ) {
     match buffer_type {
-        BufferType::Text(_, buffer) => {
+        DirectorySibling::Text(_, buffer) => {
             view::view(mode, &buffer, show_border, frame, layout);
         }
-        BufferType::Image(_, protocol) => {
+        DirectorySibling::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol.as_ref()), layout);
         }
-        BufferType::None => {}
+        DirectorySibling::None => {}
     };
 }

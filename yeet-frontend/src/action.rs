@@ -9,7 +9,7 @@ use yeet_keymap::message::KeymapMessage;
 use crate::{
     error::AppError,
     event::{Emitter, Message},
-    model::{DirectoryBufferState, Model, WindowType},
+    model::{Model, WindowType},
     open,
     task::Task,
     terminal::TerminalWrapper,
@@ -108,7 +108,6 @@ async fn execute(
             Action::Load(window_type, path, selection) => {
                 match window_type {
                     WindowType::Current => {
-                        model.files.current.state = DirectoryBufferState::Loading;
                         model.files.current.path = path.clone();
 
                         yeet_buffer::update::update_buffer(

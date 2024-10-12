@@ -2,7 +2,7 @@ use yeet_buffer::model::Buffer;
 
 use crate::{
     action::Action,
-    model::{BufferType, Model},
+    model::{DirectorySibling, Model},
 };
 
 pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
@@ -17,7 +17,7 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     set_search_char_positions(&mut model.files.current.buffer, search.as_str());
 
     match &mut model.files.parent {
-        BufferType::Text(path, buffer) => {
+        DirectorySibling::Text(path, buffer) => {
             if path.is_dir() {
                 set_search_char_positions(buffer, search.as_str());
             }
@@ -26,7 +26,7 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
     };
 
     match &mut model.files.preview {
-        BufferType::Text(path, buffer) => {
+        DirectorySibling::Text(path, buffer) => {
             if path.is_dir() {
                 set_search_char_positions(buffer, search.as_str());
             }
@@ -39,12 +39,12 @@ pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.current.buffer.lines {
         line.search_char_position = None;
     }
-    if let BufferType::Text(_, buffer) = &mut model.files.parent {
+    if let DirectorySibling::Text(_, buffer) = &mut model.files.parent {
         for line in &mut buffer.lines {
             line.search_char_position = None;
         }
     }
-    if let BufferType::Text(_, buffer) = &mut model.files.preview {
+    if let DirectorySibling::Text(_, buffer) = &mut model.files.preview {
         for line in &mut buffer.lines {
             line.search_char_position = None;
         }

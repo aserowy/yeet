@@ -11,7 +11,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{BufferType, Model, WindowType},
+    model::{DirectorySibling, Model, WindowType},
 };
 
 use super::{
@@ -29,11 +29,11 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         model.mode == Mode::Navigation,
     )];
 
-    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+    if let DirectorySibling::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((path.as_path(), buffer, path.is_dir()));
     }
 
-    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+    if let DirectorySibling::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((path.as_path(), buffer, path.is_dir()));
     }
 
@@ -152,11 +152,11 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         &mut model.files.current.buffer,
     )];
 
-    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+    if let DirectorySibling::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((path.as_path(), buffer));
     }
 
-    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+    if let DirectorySibling::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((path.as_path(), buffer));
     }
 
