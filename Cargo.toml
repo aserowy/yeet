@@ -26,7 +26,7 @@ image = "0.25.2"
 infer = "0.16.0"
 notify = { version = "6.1.1", default-features = false, features = ["macos_fsevent"] }
 pathdiff = "0.2.2"
-ratatui = "0.28.1"
+ratatui = "0.29.0"
 ratatui-image = { version = "1.0.5", features = ["crossterm", "serde"] }
 regex = "1.11.0"
 syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"]}
