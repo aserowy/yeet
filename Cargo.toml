@@ -31,7 +31,7 @@ ratatui-image = { version = "1.0.5", features = ["crossterm", "serde"] }
 regex = "1.11.0"
 syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"]}
 tar = "0.4.42"
-thiserror = "1.0.64"
+thiserror = "1.0.65"
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-util = "0.7.12"
 tracing = "0.1.40"
