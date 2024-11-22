@@ -5,7 +5,7 @@ use std::{
 };
 
 use ratatui::layout::Rect;
-use ratatui_image::picker::{Picker, ProtocolType};
+use ratatui_image::picker::Picker;
 use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 use tokio::{
     fs,
@@ -198,17 +198,15 @@ fn resolve_picker() -> Option<(Picker, ProtocolType)> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn resolve_picker() -> Option<(Picker, ProtocolType)> {
-    Picker::from_termios()
-        .ok()
-        .and_then(|mut picker| Some((picker, picker.guess_protocol())))
+fn resolve_picker() -> Option<Picker> {
+    Picker::from_query_stdio().ok()
 }
 
 async fn run_task(
     sender: &Sender<Envelope>,
     resolver: Arc<Mutex<MessageResolver>>,
     highlighter: Arc<Mutex<(SyntaxSet, ThemeSet)>>,
-    picker: Arc<Mutex<Option<(Picker, ProtocolType)>>>,
+    picker: Arc<Mutex<Option<Picker>>>,
     task: Task,
     cancellation: CancellationToken,
 ) -> Result<(), AppError> {
@@ -416,12 +414,7 @@ async fn run_task(
 
             let content = match mime.as_deref() {
                 Some("image") => {
-                    // NOTE: each time protocol gets used (even for debug) the picker
-                    // forgets the given protocol type
-                    let mut picker = picker.lock().await.and_then(|(mut picker, protocol)| {
-                        picker.protocol_type = protocol;
-                        Some(picker)
-                    });
+                    let mut picker = picker.lock().await;
 
                     image::load(&mut picker, &path, &rect).await
                 }

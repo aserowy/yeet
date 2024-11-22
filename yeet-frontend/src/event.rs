@@ -98,7 +98,7 @@ impl std::fmt::Debug for Message {
 
 pub enum Preview {
     Content(PathBuf, Vec<String>),
-    Image(PathBuf, Box<dyn Protocol>),
+    Image(PathBuf, Protocol),
     None(PathBuf),
 }
 

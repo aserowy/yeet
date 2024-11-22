@@ -56,7 +56,7 @@ fn render_buffer(
             view::view(mode, &buffer, show_border, frame, layout);
         }
         BufferType::Image(_, protocol) => {
-            frame.render_widget(Image::new(protocol.as_ref()), layout);
+            frame.render_widget(Image::new(protocol), layout);
         }
         BufferType::None => {}
     };
