@@ -2,10 +2,8 @@ use yeet_buffer::message::{BufferMessage, TextModification};
 
 use crate::{
     action::Action,
-    model::{Model, WindowType},
+    model::{BufferType, Model},
 };
-
-use super::{history, selection};
 
 pub fn modify_buffer(
     model: &mut Model,
@@ -15,12 +13,7 @@ pub fn modify_buffer(
     let msg = BufferMessage::Modification(*repeat, modification.clone());
     super::update_current(model, &msg);
 
-    let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection =
-            history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
-    }
+    model.files.preview = BufferType::None;
 
-    actions
+    Vec::new()
 }
