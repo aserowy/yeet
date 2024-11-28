@@ -17,7 +17,7 @@ use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{KeymapMessage, PrintContent};
+use yeet_keymap::message::{KeymapMessage, PrintContent, QuitMode};
 
 mod action;
 pub mod error;
@@ -121,8 +121,21 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         )
         .await?;
 
-        if postview.result == ActionResult::Quit {
-            break;
+        if let ActionResult::Quit(mode) = postview.result {
+            match mode {
+                QuitMode::FailOnRunningTasks => {
+                    if model.current_tasks.is_empty() {
+                        break;
+                    } else {
+                        emitter.run(Task::EmitMessages(vec![Message::Keymap(
+                            KeymapMessage::Print(vec![PrintContent::Error(
+                                "Failed to quit due to running tasks. Check with :tl and stop with :delt <id>.".to_string(),
+                            )]),
+                        )]));
+                    }
+                }
+                QuitMode::Force => break,
+            };
         }
     }
 
@@ -272,7 +285,7 @@ fn is_message_queueing(action: &Action) -> bool {
         | Action::Resize(_, _)
         | Action::Task(_)
         | Action::ModeChanged
-        | Action::Quit(_)
+        | Action::Quit(_, _)
         | Action::UnwatchPath(_)
         | Action::WatchPath(_) => false,
     }

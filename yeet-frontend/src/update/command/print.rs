@@ -36,7 +36,7 @@ pub fn marks(marks: &Marks) -> Vec<Action> {
 }
 
 pub fn tasks(tasks: &HashMap<String, CancellationToken>) -> Vec<Action> {
-    let mut contents = vec![":tasks", "Id"];
+    let mut contents = vec![":tl", "Id"];
     let tasks = tasks.keys().map(|id| id.as_str());
     contents.extend(tasks);
 

@@ -152,7 +152,7 @@ pub fn update_with_keymap_message(model: &mut Model, msg: &KeymapMessage) -> Vec
         KeymapMessage::StartMacro(identifier) => set_recording_in_commandline(model, *identifier),
         KeymapMessage::StopMacro => set_mode_in_commandline(model),
         KeymapMessage::ToggleQuickFix => toggle_selected_to_qfix(model),
-        KeymapMessage::Quit => vec![Action::Quit(None)],
+        KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => copy_current_selected_path_to_clipboard(model),
         KeymapMessage::YankToJunkYard(repeat) => yank_to_junkyard(model, repeat),
     }

@@ -1,4 +1,5 @@
 use yeet_buffer::model::Mode;
+use yeet_keymap::message::QuitMode;
 
 use crate::{action::Action, model::Model};
 
@@ -13,7 +14,10 @@ pub fn open_selected(model: &Model) -> Vec<Action> {
         if model.settings.selection_to_file_on_open.is_some()
             || model.settings.selection_to_stdout_on_open
         {
-            vec![Action::Quit(Some(selected.to_string_lossy().to_string()))]
+            vec![Action::Quit(
+                QuitMode::FailOnRunningTasks,
+                Some(selected.to_string_lossy().to_string()),
+            )]
         } else {
             vec![Action::Open(selected)]
         }

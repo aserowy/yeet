@@ -4,7 +4,7 @@ use std::{
 };
 
 use yeet_buffer::message::BufferMessage;
-use yeet_keymap::message::KeymapMessage;
+use yeet_keymap::message::{KeymapMessage, QuitMode};
 
 use crate::{
     error::AppError,
@@ -22,7 +22,7 @@ pub enum Action {
     Load(WindowType, PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
-    Quit(Option<String>),
+    Quit(QuitMode, Option<String>),
     Resize(u16, u16),
     Task(Task),
     UnwatchPath(PathBuf),
@@ -37,7 +37,7 @@ pub fn emit_keymap(message: KeymapMessage) -> Action {
 pub enum ActionResult {
     Normal,
     SkipRender,
-    Quit,
+    Quit(QuitMode),
 }
 
 pub struct ExecResult {
@@ -71,7 +71,7 @@ fn is_preview_action(action: &Action) -> bool {
 
         Action::EmitMessages(_)
         | Action::ModeChanged
-        | Action::Quit(_)
+        | Action::Quit(_, _)
         | Action::UnwatchPath(_)
         | Action::WatchPath(_) => false,
     }
@@ -84,10 +84,16 @@ async fn execute(
     terminal: &mut TerminalWrapper,
     actions: Vec<Action>,
 ) -> Result<ExecResult, AppError> {
+    let quit_mode = if is_preview {
+        None
+    } else {
+        contains_quit(&actions)
+    };
+
     let result = if is_preview && contains_emit(&actions) {
         ActionResult::SkipRender
-    } else if !is_preview && contains_quit(&actions) {
-        ActionResult::Quit
+    } else if let Some(mode) = quit_mode {
+        ActionResult::Quit(mode)
     } else {
         ActionResult::Normal
     };
@@ -155,7 +161,7 @@ async fn execute(
                 emitter.resume();
                 terminal.resume()?;
             }
-            Action::Quit(stdout_result) => {
+            Action::Quit(mode, stdout_result) => {
                 if let Some(stdout_result) = stdout_result {
                     if let Some(target) = &model.settings.selection_to_file_on_open {
                         emitter.run(Task::SaveSelection(target.clone(), stdout_result.clone()));
@@ -165,9 +171,15 @@ async fn execute(
                         stdout().lock().write_all(stdout_result.as_bytes())?;
                     }
                 }
-                emitter.run(Task::SaveHistory(model.history.clone()));
-                emitter.run(Task::SaveMarks(model.marks.clone()));
-                emitter.run(Task::SaveQuickFix(model.qfix.clone()));
+
+                match mode {
+                    QuitMode::FailOnRunningTasks => {
+                        emitter.run(Task::SaveHistory(model.history.clone()));
+                        emitter.run(Task::SaveMarks(model.marks.clone()));
+                        emitter.run(Task::SaveQuickFix(model.qfix.clone()));
+                    }
+                    QuitMode::Force => {}
+                };
             }
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
@@ -215,6 +227,12 @@ fn contains_emit(actions: &[Action]) -> bool {
     actions.iter().any(|a| matches!(a, Action::EmitMessages(_)))
 }
 
-fn contains_quit(actions: &[Action]) -> bool {
-    actions.iter().any(|a| matches!(a, Action::Quit(_)))
+fn contains_quit(actions: &[Action]) -> Option<QuitMode> {
+    actions.iter().find_map(|a| {
+        if let Action::Quit(mode, _) = a {
+            Some(mode.clone())
+        } else {
+            None
+        }
+    })
 }
