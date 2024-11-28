@@ -1,6 +1,9 @@
 use yeet_buffer::message::{BufferMessage, TextModification};
 
-use crate::{action::Action, model::{BufferType, Model}};
+use crate::{
+    action::Action,
+    model::{BufferType, Model},
+};
 
 pub fn modify_buffer(
     model: &mut Model,
