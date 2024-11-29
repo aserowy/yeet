@@ -177,7 +177,7 @@ impl TaskManager {
 }
 
 #[cfg(target_os = "windows")]
-fn resolve_picker() -> Option<(Picker, ProtocolType)> {
+fn resolve_picker() -> Option<Picker> {
     // FIX: https://github.com/benjajaja/ratatui-image/issues/32
     // otherwise make fontsize configureable
     None
