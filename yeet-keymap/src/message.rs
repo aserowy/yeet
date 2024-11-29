@@ -109,10 +109,16 @@ pub enum KeymapMessage {
     StartMacro(char),
     StopMacro,
     ToggleQuickFix,
-    Quit,
+    Quit(QuitMode),
     YankPathToClipboard,
     // TODO: yank to junk with motion
     YankToJunkYard(usize),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum QuitMode {
+    FailOnRunningTasks,
+    Force,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

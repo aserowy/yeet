@@ -17,7 +17,7 @@ use update::update_model;
 use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::{KeymapMessage, PrintContent};
+use yeet_keymap::message::{KeymapMessage, PrintContent, QuitMode};
 
 mod action;
 pub mod error;
@@ -99,30 +99,52 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                 .len_or_default(model.commandline.key_sequence.chars().count()),
         );
 
-        let mut actions = update_model(&mut model, envelope);
-        actions.extend(get_watcher_changes(&mut model));
+        let mut actions_after_update = update_model(&mut model, envelope);
+        actions_after_update.extend(get_watcher_changes(&mut model));
 
-        let mut preview = action::preview(&mut model, &mut emitter, &mut terminal, actions).await?;
-        if preview.result != ActionResult::SkipRender {
-            render_model(&mut terminal, &model)?;
-        }
-
-        preview.remaining_actions.extend(get_command_from_stack(
-            &mut model,
-            &emitter,
-            &preview.remaining_actions,
-        ));
-
-        let postview = action::postview(
+        let mut preview_action_result = action::preview(
             &mut model,
             &mut emitter,
             &mut terminal,
-            preview.remaining_actions,
+            actions_after_update,
         )
         .await?;
 
-        if postview.result == ActionResult::Quit {
-            break;
+        if preview_action_result.result != ActionResult::SkipRender {
+            render_model(&mut terminal, &model)?;
+        }
+
+        preview_action_result
+            .remaining_actions
+            .extend(get_command_from_stack(
+                &mut model,
+                &emitter,
+                &preview_action_result.remaining_actions,
+            ));
+
+        let postview_action_result = action::postview(
+            &mut model,
+            &mut emitter,
+            &mut terminal,
+            preview_action_result.remaining_actions,
+        )
+        .await?;
+
+        if let ActionResult::Quit(mode) = postview_action_result.result {
+            match mode {
+                QuitMode::FailOnRunningTasks => {
+                    if model.current_tasks.is_empty() {
+                        break;
+                    } else {
+                        emitter.run(Task::EmitMessages(vec![Message::Keymap(
+                            KeymapMessage::Print(vec![PrintContent::Error(
+                                "Failed to quit due to running tasks. Check with :tl and stop with :delt <id>.".to_string(),
+                            )]),
+                        )]));
+                    }
+                }
+                QuitMode::Force => break,
+            };
         }
     }
 
@@ -272,7 +294,7 @@ fn is_message_queueing(action: &Action) -> bool {
         | Action::Resize(_, _)
         | Action::Task(_)
         | Action::ModeChanged
-        | Action::Quit(_)
+        | Action::Quit(_, _)
         | Action::UnwatchPath(_)
         | Action::WatchPath(_) => false,
     }

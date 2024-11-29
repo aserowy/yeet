@@ -1,5 +1,5 @@
 use yeet_buffer::{message::BufferMessage, model::Mode};
-use yeet_keymap::message::KeymapMessage;
+use yeet_keymap::message::{KeymapMessage, QuitMode};
 
 use crate::{
     action::{self, Action},
@@ -67,7 +67,10 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 KeymapMessage::ClearSearchHighlight,
             )])],
         ),
-        ("q", "") => vec![action::emit_keymap(KeymapMessage::Quit)],
+        ("q", "") => vec![action::emit_keymap(KeymapMessage::Quit(
+            QuitMode::FailOnRunningTasks,
+        ))],
+        ("q!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
         ("reg", "") => print::register(&model.register),
         ("tl", "") => print::tasks(&model.current_tasks),
         ("w", "") => add_change_mode(
@@ -82,7 +85,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             mode,
             vec![Action::EmitMessages(vec![
                 Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
-                Message::Keymap(KeymapMessage::Quit),
+                Message::Keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks)),
             ])],
         ),
         (cmd, args) => {
