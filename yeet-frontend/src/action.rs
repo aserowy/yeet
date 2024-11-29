@@ -209,7 +209,7 @@ async fn execute(
                     .current_tasks
                     .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
                 {
-                    cancellation.cancel();
+                    cancellation.token.cancel();
                 };
 
                 if let Err(error) = emitter.unwatch(path.as_path()) {

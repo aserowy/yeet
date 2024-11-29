@@ -11,6 +11,7 @@ use crate::{
 mod file;
 mod print;
 mod qfix;
+mod task;
 
 #[tracing::instrument(skip(model))]
 pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
@@ -46,6 +47,17 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 mode,
                 vec![action::emit_keymap(KeymapMessage::DeleteMarks(marks))],
             )
+        }
+        ("delt", args) if !args.is_empty() => {
+            let actions = match args.parse::<u16>() {
+                Ok(it) => task::delete(model, it),
+                Err(err) => {
+                    tracing::warn!("Failed to parse id: {}", err);
+                    return Vec::new();
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("e!", "") => add_change_mode(mode_before, mode, file::refresh(model)),
         ("fd", params) => add_change_mode(

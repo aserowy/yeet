@@ -26,10 +26,12 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
-    pub current_tasks: HashMap<String, CancellationToken>,
+    pub current_tasks: HashMap<String, CurrentTask>,
+    // pub current_tasks: HashMap<String, CancellationToken>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
+    pub latest_task_id: u16,
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,
@@ -50,6 +52,13 @@ impl std::fmt::Debug for Model {
             .field("settings", &self.settings)
             .finish()
     }
+}
+
+#[derive(Debug)]
+pub struct CurrentTask {
+    pub token: CancellationToken,
+    pub id: u16,
+    pub external_id: String,
 }
 
 pub struct FileWindow {
