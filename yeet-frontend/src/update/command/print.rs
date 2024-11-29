@@ -36,10 +36,10 @@ pub fn marks(marks: &Marks) -> Vec<Action> {
 }
 
 pub fn tasks(tasks: &HashMap<String, CurrentTask>) -> Vec<Action> {
-    let mut contents = vec![":tl".to_string(), "Id      Description".to_string()];
+    let mut contents = vec![":tl".to_string(), "Id   Task".to_string()];
     let mut tasks: Vec<_> = tasks
         .values()
-        .map(|task| format!("{:>7} {}", task.id, task.description))
+        .map(|task| format!("{:<4} {}", task.id, task.external_id))
         .collect();
 
     tasks.sort();

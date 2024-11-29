@@ -49,7 +49,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             )
         }
         ("delt", args) if !args.is_empty() => {
-            let actions = match args.parse::<usize>() {
+            let actions = match args.parse::<u16>() {
                 Ok(it) => task::delete(model, it),
                 Err(err) => {
                     tracing::warn!("Failed to parse id: {}", err);

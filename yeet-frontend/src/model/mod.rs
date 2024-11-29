@@ -31,6 +31,7 @@ pub struct Model {
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,
+    pub latest_task_id: u16,
     pub layout: AppLayout,
     pub marks: Marks,
     pub mode: Mode,
@@ -56,8 +57,8 @@ impl std::fmt::Debug for Model {
 #[derive(Debug)]
 pub struct CurrentTask {
     pub token: CancellationToken,
-    pub id: usize,
-    pub description: String,
+    pub id: u16,
+    pub external_id: String,
 }
 
 pub struct FileWindow {
