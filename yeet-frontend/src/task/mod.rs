@@ -25,12 +25,10 @@ use crate::{
     error::AppError,
     event::{ContentKind, Envelope, Message, MessageSource},
     init::{
-        history::{optimize_history_file, save_history_to_file},
         junkyard::{self, cache_and_compress, compress, restore},
         mark::{load_marks_from_file, save_marks_to_file},
-        qfix::save_qfix_to_files,
     },
-    model::{history::History, junkyard::FileEntry, mark::Marks, qfix::QuickFix},
+    model::{junkyard::FileEntry, mark::Marks},
 };
 
 mod command;
@@ -49,10 +47,6 @@ pub enum Task {
     LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
-    SaveHistory(History),
-    SaveMarks(Marks),
-    SaveQuickFix(QuickFix),
-    SaveSelection(PathBuf, String),
     TrashPath(FileEntry),
     YankPath(FileEntry),
 }
@@ -71,10 +65,6 @@ impl Task {
             Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
             Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
             Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
-            Task::SaveHistory(_) => write!(f, "SaveHistory"),
-            Task::SaveMarks(_) => write!(f, "SaveMarks"),
-            Task::SaveQuickFix(_) => write!(f, "SaveQuickFix"),
-            Task::SaveSelection(path, _) => write!(f, "SaveSelection({:?}, _)", path),
             Task::TrashPath(entry) => write!(f, "TrashPath({:?})", entry),
             Task::YankPath(entry) => write!(f, "YankPath({:?})", entry),
         }
@@ -109,10 +99,6 @@ impl PartialEq for Task {
             (Task::LoadPreview(p1, r1), Task::LoadPreview(p2, r2)) => p1 == p2 && r1 == r2,
             (Task::RenamePath(o1, n1), Task::RenamePath(o2, n2)) => o1 == o2 && n1 == n2,
             (Task::RestorePath(e1, p1), Task::RestorePath(e2, p2)) => e1 == e2 && p1 == p2,
-            (Task::SaveHistory(h1), Task::SaveHistory(h2)) => h1 == h2,
-            (Task::SaveMarks(m1), Task::SaveMarks(m2)) => m1 == m2,
-            (Task::SaveQuickFix(q1), Task::SaveQuickFix(q2)) => q1 == q2,
-            (Task::SaveSelection(p1, s1), Task::SaveSelection(p2, s2)) => p1 == p2 && s1 == s2,
             (Task::TrashPath(e1), Task::TrashPath(e2)) => e1 == e2,
             (Task::YankPath(e1), Task::YankPath(e2)) => e1 == e2,
             _ => false,
@@ -444,27 +430,6 @@ async fn run_task(
         }
         Task::RestorePath(entry, path) => {
             restore(entry, path)?;
-        }
-        Task::SaveHistory(history) => {
-            if let Err(error) = save_history_to_file(&history) {
-                emit_error(&sender, error).await;
-            }
-            optimize_history_file()?;
-        }
-        Task::SaveMarks(marks) => {
-            if let Err(error) = save_marks_to_file(&marks) {
-                emit_error(&sender, error).await;
-            }
-        }
-        Task::SaveQuickFix(qfix) => {
-            if let Err(error) = save_qfix_to_files(&qfix) {
-                emit_error(&sender, error).await;
-            }
-        }
-        Task::SaveSelection(target, selection) => {
-            if let Err(error) = fs::write(target, selection).await {
-                emit_error(&sender, AppError::FileOperationFailed(error)).await;
-            }
         }
         Task::TrashPath(entry) => {
             if let Err(error) = cache_and_compress(entry).await {

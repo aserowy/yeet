@@ -3,12 +3,14 @@ use std::{
     path::PathBuf,
 };
 
+use tokio::fs;
 use yeet_buffer::message::BufferMessage;
 use yeet_keymap::message::{KeymapMessage, QuitMode};
 
 use crate::{
     error::AppError,
     event::{Emitter, Message},
+    init::{history, mark, qfix},
     model::{DirectoryBufferState, Model, WindowType},
     open,
     task::Task,
@@ -164,7 +166,9 @@ async fn execute(
             Action::Quit(mode, stdout_result) => {
                 if let Some(stdout_result) = stdout_result {
                     if let Some(target) = &model.settings.selection_to_file_on_open {
-                        emitter.run(Task::SaveSelection(target.clone(), stdout_result.clone()));
+                        if let Err(error) = fs::write(target, stdout_result.clone()).await {
+                            tracing::error!("Failed to write selection to file: {:?}", error);
+                        }
                     }
 
                     if model.settings.selection_to_stdout_on_open {
@@ -174,9 +178,16 @@ async fn execute(
 
                 match mode {
                     QuitMode::FailOnRunningTasks => {
-                        emitter.run(Task::SaveHistory(model.history.clone()));
-                        emitter.run(Task::SaveMarks(model.marks.clone()));
-                        emitter.run(Task::SaveQuickFix(model.qfix.clone()));
+                        if let Err(error) = history::save_history_to_file(&model.history) {
+                            tracing::error!("Failed to save history to file: {:?}", error);
+                        }
+                        history::optimize_history_file()?;
+                        if let Err(error) = mark::save_marks_to_file(&model.marks) {
+                            tracing::error!("Failed to save marks to file: {:?}", error);
+                        }
+                        if let Err(error) = qfix::save_qfix_to_files(&model.qfix) {
+                            tracing::error!("Failed to save quick fix to file: {:?}", error);
+                        }
                     }
                     QuitMode::Force => {}
                 };
