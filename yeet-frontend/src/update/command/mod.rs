@@ -49,7 +49,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             )
         }
         ("delt", args) if !args.is_empty() => {
-            add_change_mode(mode_before, mode, task::delete(model, args))
+            let actions = match args.parse::<usize>() {
+                Ok(it) => task::delete(model, it),
+                Err(err) => {
+                    tracing::warn!("Failed to parse id: {}", err);
+                    return Vec::new();
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("e!", "") => add_change_mode(mode_before, mode, file::refresh(model)),
         ("fd", params) => add_change_mode(

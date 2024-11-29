@@ -11,7 +11,7 @@ use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
-    model::{BufferType, Model, WindowType},
+    model::{BufferType, CurrentTask, Model, WindowType},
 };
 
 use self::{
@@ -259,8 +259,22 @@ fn add_current_task(
     identifier: String,
     cancellation: CancellationToken,
 ) -> Vec<Action> {
-    if let Some(cancellation) = model.current_tasks.insert(identifier, cancellation) {
-        cancellation.cancel();
+    let id = model
+        .current_tasks
+        .values()
+        .map(|task| task.id + 1)
+        .max()
+        .unwrap_or(1);
+
+    if let Some(replaced_task) = model.current_tasks.insert(
+        identifier.clone(),
+        CurrentTask {
+            token: cancellation,
+            id,
+            description: identifier,
+        },
+    ) {
+        replaced_task.token.cancel();
     }
     Vec::new()
 }
