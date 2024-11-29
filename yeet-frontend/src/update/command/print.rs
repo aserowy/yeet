@@ -43,7 +43,6 @@ pub fn tasks(tasks: &HashMap<String, CurrentTask>) -> Vec<Action> {
         .collect();
 
     tasks.sort();
-
     contents.extend(tasks);
 
     let content = contents
