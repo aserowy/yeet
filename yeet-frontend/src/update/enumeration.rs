@@ -131,7 +131,7 @@ pub fn update_on_enumeration_finished(
         return actions;
     }
 
-    let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    let selection = get_selection_from_history(&model.history, path).map(|s| s.to_owned());
     actions.push(Action::Load(WindowType::Preview, selected_path, selection));
 
     actions

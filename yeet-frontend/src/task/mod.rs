@@ -230,14 +230,14 @@ async fn run_task(
         Task::DeleteMarks(marks) => {
             let mut current = Marks::default();
             if let Err(err) = load_marks_from_file(&mut current) {
-                emit_error(&sender, err).await;
+                emit_error(sender, err).await;
             } else {
                 for mark in marks {
                     current.entries.remove(&mark);
                 }
 
                 if let Err(error) = save_marks_to_file(&current) {
-                    emit_error(&sender, error).await;
+                    emit_error(sender, error).await;
                 }
             }
         }
@@ -287,7 +287,7 @@ async fn run_task(
             drop(resolver);
 
             if let Err(error) = sender.send(envelope).await {
-                emit_error(&sender, AppError::ActionSendFailed(error)).await;
+                emit_error(sender, AppError::ActionSendFailed(error)).await;
             }
         }
         Task::EnumerateDirectory(path, selection) => {
@@ -386,7 +386,7 @@ async fn run_task(
                 }
             }
             Err(err) => {
-                emit_error(&sender, err).await;
+                emit_error(sender, err).await;
             }
         },
         Task::ExecuteZoxide(params) => match command::zoxide(params).await {
@@ -400,7 +400,7 @@ async fn run_task(
                 }
             }
             Err(err) => {
-                emit_error(&sender, err).await;
+                emit_error(sender, err).await;
             }
         },
         Task::LoadPreview(path, rect) => {
@@ -449,12 +449,12 @@ async fn run_task(
         }
         Task::TrashPath(entry) => {
             if let Err(error) = cache_and_compress(entry).await {
-                emit_error(&sender, error).await;
+                emit_error(sender, error).await;
             }
         }
         Task::YankPath(entry) => {
             if let Err(error) = compress(entry).await {
-                emit_error(&sender, error).await;
+                emit_error(sender, error).await;
             }
         }
     };

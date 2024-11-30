@@ -286,10 +286,10 @@ fn next_id(model: &mut Model) -> u16 {
     running_ids.sort();
 
     for id in running_ids {
-        if next_id == id {
-            next_id += 1;
-        } else if next_id > id {
-            break;
+        match next_id.cmp(&id) {
+            Ordering::Equal => next_id += 1,
+            Ordering::Greater => break,
+            Ordering::Less => {}
         }
     }
 

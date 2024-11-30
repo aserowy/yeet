@@ -32,7 +32,7 @@ async fn load_with_ratatui_image(
 
     let image = ImageReader::open(path)?.decode()?;
 
-    match picker.new_protocol(image, rect.clone(), Resize::Fit(None)) {
+    match picker.new_protocol(image, *rect, Resize::Fit(None)) {
         Ok(protocol) => Ok(Preview::Image(path.to_path_buf(), protocol)),
         Err(err) => {
             tracing::error!("Generation of preview image protocol failed: {:?}", err);

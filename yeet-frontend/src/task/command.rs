@@ -30,7 +30,7 @@ pub async fn fd(base_path: &Path, params: String) -> Result<Vec<PathBuf>, AppErr
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else if output.stdout.is_empty() {
-                let message = format!("fd failed: result is empty");
+                let message = "fd failed: result is empty".to_string();
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else {
@@ -78,7 +78,7 @@ pub async fn zoxide(params: String) -> Result<PathBuf, AppError> {
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else if output.stdout.is_empty() {
-                let message = format!("zoxide failed: result is empty");
+                let message = "zoxide failed: result is empty".to_string();
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else {
@@ -96,7 +96,7 @@ pub async fn zoxide(params: String) -> Result<PathBuf, AppError> {
                         .collect()
                 });
 
-                if let Some(target) = result.into_iter().nth(0) {
+                if let Some(target) = result.into_iter().next() {
                     Ok(target)
                 } else {
                     Err(AppError::ExecutionFailed(
