@@ -122,6 +122,9 @@ pub enum WindowType {
     Preview,
 }
 
+// NOTE: most of the time Text is used. Thus, boxing Buffer would only increase hassle to work
+// with this BufferType.
+#[allow(clippy::large_enum_variant)]
 #[derive(Default)]
 pub enum BufferType {
     Image(PathBuf, Protocol),

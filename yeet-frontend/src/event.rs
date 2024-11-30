@@ -71,6 +71,7 @@ pub enum Message {
     Resize(u16, u16),
     TaskStarted(String, CancellationToken),
     TaskEnded(String),
+    ZoxideResult(PathBuf),
 }
 
 impl std::fmt::Debug for Message {
@@ -92,6 +93,7 @@ impl std::fmt::Debug for Message {
             Message::Resize(x, y) => write!(f, "Resize({}, {})", x, y),
             Message::TaskStarted(identifier, _) => write!(f, "TaskStarted({})", identifier),
             Message::TaskEnded(identifier) => write!(f, "TaskEnded({})", identifier),
+            Message::ZoxideResult(path) => write!(f, "ZoxideResult({:?})", path),
         }
     }
 }

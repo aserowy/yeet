@@ -16,22 +16,16 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
 
     set_search_char_positions(&mut model.files.current.buffer, search.as_str());
 
-    match &mut model.files.parent {
-        BufferType::Text(path, buffer) => {
-            if path.is_dir() {
-                set_search_char_positions(buffer, search.as_str());
-            }
+    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+        if path.is_dir() {
+            set_search_char_positions(buffer, search.as_str());
         }
-        _ => (),
     };
 
-    match &mut model.files.preview {
-        BufferType::Text(path, buffer) => {
-            if path.is_dir() {
-                set_search_char_positions(buffer, search.as_str());
-            }
+    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+        if path.is_dir() {
+            set_search_char_positions(buffer, search.as_str());
         }
-        _ => (),
     };
 }
 

@@ -127,6 +127,7 @@ In normal mode, all register interactions target the default register (equal to
 | tl                          | list all currently running tasks                                                                                                                                                                                       |
 | w                           | write changes without changing mode                                                                                                                                                                                    |
 | wq                          | write changes and quit yeet                                                                                                                                                                                            |
+| z \<target for z>           | jump to paths with zoxide like in your terminal. `:z foo` will execute zoxide to jump to the given directory |
 
 ## faq
 

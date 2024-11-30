@@ -53,7 +53,7 @@ fn render_buffer(
 ) {
     match buffer_type {
         BufferType::Text(_, buffer) => {
-            view::view(mode, &buffer, show_border, frame, layout);
+            view::view(mode, buffer, show_border, frame, layout);
         }
         BufferType::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol), layout);
