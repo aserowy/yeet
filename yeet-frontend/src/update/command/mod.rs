@@ -100,6 +100,11 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 Message::Keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks)),
             ])],
         ),
+        ("z", params) => add_change_mode(
+            mode_before,
+            mode,
+            vec![Action::Task(Task::ExecuteZoxide(params.to_owned()))],
+        ),
         (cmd, args) => {
             let mut actions = Vec::new();
             if !args.is_empty() {

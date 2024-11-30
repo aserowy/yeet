@@ -123,6 +123,7 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
             add_current_task(model, identifier, cancellation)
         }
         Message::TaskEnded(identifier) => remove_current_task(model, identifier),
+        Message::ZoxideResult(path) => navigate_to_path(model, path.as_ref()),
     }
 }
 

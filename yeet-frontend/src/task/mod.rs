@@ -44,6 +44,7 @@ pub enum Task {
     EmitMessages(Vec<Message>),
     EnumerateDirectory(PathBuf, Option<String>),
     ExecuteFd(PathBuf, String),
+    ExecuteZoxide(String),
     LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
@@ -62,6 +63,7 @@ impl Task {
             Task::EmitMessages(_) => write!(f, "EmitMessages"),
             Task::EnumerateDirectory(path, _) => write!(f, "EnumerateDirectory({:?}, _)", path),
             Task::ExecuteFd(base, params) => write!(f, "ExecuteFd({:?}, {:?})", base, params),
+            Task::ExecuteZoxide(params) => write!(f, "ExecuteZoxide({:?})", params),
             Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
             Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
             Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
@@ -377,6 +379,20 @@ async fn run_task(
             Ok(paths) => {
                 let result = sender
                     .send(to_envelope(vec![Message::FdResult(paths)]))
+                    .await;
+
+                if let Err(error) = result {
+                    tracing::error!("sending message failed: {:?}", error);
+                }
+            }
+            Err(err) => {
+                emit_error(&sender, err).await;
+            }
+        },
+        Task::ExecuteZoxide(params) => match command::zoxide(params).await {
+            Ok(paths) => {
+                let result = sender
+                    .send(to_envelope(vec![Message::ZoxideResult(paths)]))
                     .await;
 
                 if let Err(error) = result {

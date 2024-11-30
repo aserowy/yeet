@@ -9,7 +9,6 @@ members = [
 authors = ["Alexander Serowy"]
 description = "yet another... tui file manager with a touch of neovim like buffers and modal editing"
 edition = "2021"
-name = "yeet"
 repository = "https://github.com/aserowy/yeet"
 version = "0.1.0"
 
