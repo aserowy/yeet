@@ -12,6 +12,8 @@ to Their Unique Needs!
 
 In short: y337
 
+![2024-11-30 08-32-26](https://github.com/user-attachments/assets/4a5268ba-e796-45dc-9ae8-8a41386c0a49)
+
 ## shortcuts
 
 ### changing modes
