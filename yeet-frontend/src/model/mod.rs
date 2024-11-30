@@ -27,7 +27,6 @@ pub mod register;
 pub struct Model {
     pub commandline: CommandLine,
     pub current_tasks: HashMap<String, CurrentTask>,
-    // pub current_tasks: HashMap<String, CancellationToken>,
     pub files: FileWindow,
     pub history: History,
     pub junk: JunkYard,

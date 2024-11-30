@@ -133,6 +133,28 @@ In normal mode, all register interactions target the default register (equal to
 | wq                          | write changes and quit yeet                                                                                                                                                                                            |
 | z \<target for z>           | jump to paths with zoxide like in your terminal. `:z foo` will execute zoxide to jump to the given directory |
 
+## cli
+
+```sh
+$ yeet --help
+yeet - yet another... read the name on gh...
+
+Usage: yeet [OPTIONS] [path]
+
+Arguments:
+  [path]  path to open in yeet on startup
+
+Options:
+      --selection-to-file-on-open <selection-to-file-on-open>
+          on open write selected paths to the given file path instead and close the application
+      --selection-to-stdout-on-open
+          on open print selected paths to stdout instead and close the application
+  -v, --verbosity <verbosity>
+          set verbosity level for file logging [default: warn] [possible values: error, warn, info, debug, trace]
+  -h, --help
+          Print help
+```
+
 ## faq
 
 ### how fast is yeet
