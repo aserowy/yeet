@@ -7,25 +7,25 @@ use super::cursor;
 
 pub fn update(
     mode: &Mode,
-    model: &mut Buffer,
+    buffer: &mut Buffer,
     count: &usize,
     modification: &TextModification,
 ) -> Option<Vec<BufferChanged>> {
     match modification {
         TextModification::DeleteLine => {
-            if model.lines.is_empty() {
+            if buffer.lines.is_empty() {
                 None
-            } else if let Some(cursor) = &mut model.cursor {
+            } else if let Some(cursor) = &mut buffer.cursor {
                 let mut changes = Vec::new();
                 for _ in 0..*count {
-                    if model.lines.is_empty() {
+                    if buffer.lines.is_empty() {
                         break;
                     }
 
                     let line_index = cursor.vertical_index;
-                    let line = model.lines.remove(line_index);
+                    let line = buffer.lines.remove(line_index);
 
-                    let line_count = model.lines.len();
+                    let line_count = buffer.lines.len();
                     if line_count == 0 {
                         cursor.vertical_index = 0;
                     } else if line_index >= line_count {
@@ -35,7 +35,7 @@ pub fn update(
                     changes.push(BufferChanged::LineRemoved(line_index, line.content));
                 }
 
-                cursor::validate_cursor_position(mode, model);
+                cursor::set_outbound_cursor_into_content_bounds(mode, buffer);
 
                 Some(changes)
             } else {
@@ -43,17 +43,17 @@ pub fn update(
             }
         }
         TextModification::DeleteMotion(delete_count, motion) => {
-            let cursor = &model.cursor;
+            let cursor = &buffer.cursor;
             let pre_motion_cursor = match cursor.clone() {
                 Some(it) => it,
                 None => return None,
             };
 
             for _ in 0..*count {
-                cursor::update_cursor_by_direction(mode, model, delete_count, motion);
+                cursor::update_cursor_by_direction(mode, buffer, delete_count, motion);
             }
 
-            let post_motion_cursor = match &model.cursor {
+            let post_motion_cursor = match &buffer.cursor {
                 Some(it) => it,
                 None => return None,
             };
@@ -70,17 +70,17 @@ pub fn update(
                 let count = if pre_index > post_index {
                     pre_index - post_index + 1
                 } else {
-                    model.cursor = Some(pre_motion_cursor.clone());
+                    buffer.cursor = Some(pre_motion_cursor.clone());
                     post_index - pre_index + 1
                 };
 
                 let action = &TextModification::DeleteLine;
-                if let Some(cng) = update(mode, model, &count, action) {
+                if let Some(cng) = update(mode, buffer, &count, action) {
                     changes.extend(cng);
                 }
             } else {
                 // TODO: multi line motion like search
-                let line = match model.lines.get_mut(pre_motion_cursor.vertical_index) {
+                let line = match buffer.lines.get_mut(pre_motion_cursor.vertical_index) {
                     Some(it) => it,
                     None => return None,
                 };
@@ -99,7 +99,7 @@ pub fn update(
                 let (index, mut count) = if pre_index > post_index {
                     (post_index, pre_index - post_index)
                 } else {
-                    model.cursor = Some(pre_motion_cursor.clone());
+                    buffer.cursor = Some(pre_motion_cursor.clone());
                     (pre_index, post_index - pre_index)
                 };
 
@@ -121,12 +121,12 @@ pub fn update(
                 changes.push(changed);
             }
 
-            cursor::validate_cursor_position(mode, model);
+            cursor::set_outbound_cursor_into_content_bounds(mode, buffer);
 
             Some(changes)
         }
         TextModification::Insert(raw) => {
-            let line = get_line_or_create_on_empty(model);
+            let line = get_line_or_create_on_empty(buffer);
             if let Some((cursor, line)) = line {
                 let index = get_cursor_index(cursor, line);
 
@@ -152,11 +152,11 @@ pub fn update(
             }
         }
         TextModification::InsertNewLine(direction) => {
-            if let Some(cursor) = &mut model.cursor {
+            if let Some(cursor) = &mut buffer.cursor {
                 let index = match direction {
                     LineDirection::Up => cursor.vertical_index,
                     LineDirection::Down => {
-                        if model.lines.is_empty() {
+                        if buffer.lines.is_empty() {
                             cursor.vertical_index = 0;
 
                             0
@@ -174,7 +174,7 @@ pub fn update(
                     expanded: 0,
                 };
 
-                model.lines.insert(index, BufferLine::default());
+                buffer.lines.insert(index, BufferLine::default());
 
                 Some(vec![BufferChanged::LineAdded(index, Ansi::new(""))])
             } else {
@@ -182,7 +182,7 @@ pub fn update(
             }
         }
         TextModification::InsertLineBreak => {
-            let line = get_line_or_create_on_empty(model);
+            let line = get_line_or_create_on_empty(buffer);
 
             if let Some((cursor, line)) = line {
                 let horizontal = get_cursor_index(cursor, line);
@@ -208,7 +208,7 @@ pub fn update(
                 let vertical = cursor.vertical_index + 1;
                 cursor.vertical_index = vertical;
 
-                model.lines.insert(
+                buffer.lines.insert(
                     vertical,
                     BufferLine {
                         content: new.clone(),
@@ -284,29 +284,30 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
     }
 }
 
-fn get_line_or_create_on_empty(model: &mut Buffer) -> Option<(&mut Cursor, &mut BufferLine)> {
-    if let Some(cursor) = &mut model.cursor {
-        if cursor.horizontal_index == CursorPosition::None {
-            return None;
-        }
+fn get_line_or_create_on_empty<'a>(
+    buffer: &'a mut Buffer,
+    cursor: &Cursor,
+) -> Option<(Cursor, &'a mut BufferLine)> {
+    if cursor.horizontal_index == CursorPosition::None {
+        return None;
+    }
 
-        if model.lines.is_empty() {
-            cursor.vertical_index = 0;
+    let mut cursor = cursor.clone();
 
-            let line = BufferLine::default();
-            model.lines.push(line);
+    if buffer.lines.is_empty() {
+        cursor.vertical_index = 0;
 
-            Some((cursor, &mut model.lines[0]))
-        } else {
-            let line = match model.lines.get_mut(cursor.vertical_index) {
-                Some(it) => it,
-                None => return None,
-            };
+        let line = BufferLine::default();
+        buffer.lines.push(line);
 
-            Some((cursor, line))
-        }
+        Some((cursor, &mut buffer.lines[0]))
     } else {
-        None
+        let line = match buffer.lines.get_mut(cursor.vertical_index) {
+            Some(it) => it,
+            None => return None,
+        };
+
+        Some((cursor, line))
     }
 }
 

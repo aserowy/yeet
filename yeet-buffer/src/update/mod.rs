@@ -1,7 +1,7 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
     model::{Buffer, BufferResult, CursorPosition, Mode},
-    update::cursor::{update_cursor_by_direction, validate_cursor_position},
+    update::cursor::{update_cursor_by_direction, set_outbound_cursor_into_content_bounds},
 };
 
 mod cursor;
@@ -44,7 +44,7 @@ pub fn update_buffer(
         }
         BufferMessage::RemoveLine(index) => {
             model.lines.remove(*index);
-            validate_cursor_position(mode, model);
+            set_outbound_cursor_into_content_bounds(mode, model);
             Vec::new()
         }
         BufferMessage::ResetCursor => {
@@ -77,7 +77,7 @@ pub fn update_buffer(
         BufferMessage::SetContent(content) => {
             // TODO: optional selection?
             model.lines = content.to_vec();
-            validate_cursor_position(mode, model);
+            set_outbound_cursor_into_content_bounds(mode, model);
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
@@ -96,7 +96,7 @@ pub fn update_buffer(
                 cursor.vertical_index = index;
                 cursor.hide_cursor_line = false;
 
-                validate_cursor_position(mode, model);
+                set_outbound_cursor_into_content_bounds(mode, model);
                 viewport::update_by_cursor(model);
 
                 vec![BufferResult::CursorPositionChanged]
@@ -107,7 +107,7 @@ pub fn update_buffer(
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             model.lines.sort_unstable_by(sort);
-            validate_cursor_position(mode, model);
+            set_outbound_cursor_into_content_bounds(mode, model);
             Vec::new()
         }
         BufferMessage::UpdateViewPortByCursor => Vec::new(),

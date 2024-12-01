@@ -3,6 +3,11 @@ use std::collections::HashSet;
 use super::{BufferLine, SignIdentifier};
 
 #[derive(Debug, Default)]
+pub struct ViewPortSettings {
+    pub sign_column_width: usize,
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct ViewPort {
     pub height: usize,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
@@ -54,6 +59,10 @@ impl ViewPort {
 
     fn get_prefix_width(&self) -> usize {
         self.sign_column_width + self.get_line_number_width()
+    }
+
+    pub fn set(&mut self, settings: &ViewPortSettings) {
+        self.sign_column_width = settings.sign_column_width;
     }
 }
 

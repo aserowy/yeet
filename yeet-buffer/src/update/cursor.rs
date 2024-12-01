@@ -10,24 +10,20 @@ use super::{find, word};
 // TODO: refactor
 pub fn update_cursor_by_direction(
     mode: &Mode,
-    model: &mut Buffer,
+    buffer: &mut Buffer,
+    cursor: &mut Cursor,
     count: &usize,
     direction: &CursorDirection,
 ) -> Vec<BufferResult> {
-    if model.lines.is_empty() {
+    if buffer.lines.is_empty() {
         return Vec::new();
     }
 
     for _ in 0..*count {
         match direction {
             CursorDirection::Bottom => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                cursor.vertical_index = model.lines.len() - 1;
-                let line = match model.lines.get(cursor.vertical_index) {
+                cursor.vertical_index = buffer.lines.len() - 1;
+                let line = match buffer.lines.get(cursor.vertical_index) {
                     Some(line) => line,
                     None => return Vec::new(),
                 };
@@ -36,19 +32,14 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::Down => {
-                let max_index = model.lines.len() - 1;
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
+                let max_index = buffer.lines.len() - 1;
                 if cursor.vertical_index >= max_index {
                     cursor.vertical_index = max_index;
                 } else {
                     cursor.vertical_index += 1
                 }
 
-                let line = match model.lines.get(cursor.vertical_index) {
+                let line = match buffer.lines.get(cursor.vertical_index) {
                     Some(line) => line,
                     None => return Vec::new(),
                 };
@@ -59,13 +50,13 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::FindBackward(_) => {
-                find::char(direction, model, true);
+                find::char(direction, buffer, true);
             }
             CursorDirection::FindForward(_) => {
-                find::char(direction, model, true);
+                find::char(direction, buffer, true);
             }
             CursorDirection::LastFindBackward => {
-                if let Some(find) = model.last_find.clone() {
+                if let Some(find) = buffer.last_find.clone() {
                     let find = match find {
                         CursorDirection::FindBackward(find) => CursorDirection::FindForward(find),
                         CursorDirection::FindForward(find) => CursorDirection::FindBackward(find),
@@ -74,21 +65,16 @@ pub fn update_cursor_by_direction(
                         _ => unreachable!(),
                     };
 
-                    find::char(&find, model, false);
+                    find::char(&find, buffer, false);
                 }
             }
             CursorDirection::LastFindForward => {
-                if let Some(find) = model.last_find.clone() {
-                    find::char(&find, model, false);
+                if let Some(find) = buffer.last_find.clone() {
+                    find::char(&find, buffer, false);
                 }
             }
             CursorDirection::Left => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                let line = match model.lines.get(cursor.vertical_index) {
+                let line = match buffer.lines.get(cursor.vertical_index) {
                     Some(line) => line,
                     None => return Vec::new(),
                 };
@@ -108,13 +94,8 @@ pub fn update_cursor_by_direction(
                 }
             }
             CursorDirection::LineEnd => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
                 if mode == &Mode::Insert {
-                    let line = match model.lines.get(cursor.vertical_index) {
+                    let line = match buffer.lines.get(cursor.vertical_index) {
                         Some(line) => line,
                         None => return Vec::new(),
                     };
@@ -131,23 +112,13 @@ pub fn update_cursor_by_direction(
                 }
             }
             CursorDirection::LineStart => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
                 cursor.horizontal_index = CursorPosition::Absolute {
                     current: 0,
                     expanded: 0,
                 };
             }
             CursorDirection::Right => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                let line = match model.lines.get(cursor.vertical_index) {
+                let line = match buffer.lines.get(cursor.vertical_index) {
                     Some(line) => line,
                     None => return Vec::new(),
                 };
@@ -181,28 +152,18 @@ pub fn update_cursor_by_direction(
                 }
             }
             CursorDirection::Search(direction) => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
-                jump_to_next_search(cursor, &model.lines, direction);
+                jump_to_next_search(cursor, &buffer.lines, direction);
             }
             CursorDirection::TillBackward(_) => {
-                find::char(direction, model, true);
+                find::char(direction, buffer, true);
             }
             CursorDirection::TillForward(_) => {
-                find::char(direction, model, true);
+                find::char(direction, buffer, true);
             }
             CursorDirection::Top => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
                 cursor.vertical_index = 0;
 
-                let line = match model.lines.get(cursor.vertical_index) {
+                let line = match buffer.lines.get(cursor.vertical_index) {
                     Some(line) => line,
                     None => return Vec::new(),
                 };
@@ -213,15 +174,10 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::Up => {
-                let cursor = match &mut model.cursor {
-                    Some(cursor) => cursor,
-                    None => return Vec::new(),
-                };
-
                 if cursor.vertical_index > 0 {
                     cursor.vertical_index -= 1;
 
-                    let line = match model.lines.get(cursor.vertical_index) {
+                    let line = match buffer.lines.get(cursor.vertical_index) {
                         Some(line) => line,
                         None => return Vec::new(),
                     };
@@ -233,28 +189,28 @@ pub fn update_cursor_by_direction(
                 }
             }
             CursorDirection::WordEndBackward => {
-                word::move_cursor_to_word_end_backward(model, false);
+                word::move_cursor_to_word_end_backward(buffer, cursor, false);
             }
             CursorDirection::WordEndForward => {
-                word::move_cursor_to_word_end_forward(model, false);
+                word::move_cursor_to_word_end_forward(buffer, cursor, false);
             }
             CursorDirection::WordStartBackward => {
-                word::move_cursor_to_word_start_backward(model, false);
+                word::move_cursor_to_word_start_backward(buffer, cursor, false);
             }
             CursorDirection::WordStartForward => {
-                word::move_cursor_to_word_start_forward(model, false);
+                word::move_cursor_to_word_start_forward(buffer, cursor, false);
             }
             CursorDirection::WordUpperEndBackward => {
-                word::move_cursor_to_word_end_backward(model, true);
+                word::move_cursor_to_word_end_backward(buffer, cursor, true);
             }
             CursorDirection::WordUpperEndForward => {
-                word::move_cursor_to_word_end_forward(model, true);
+                word::move_cursor_to_word_end_forward(buffer, cursor, true);
             }
             CursorDirection::WordUpperStartBackward => {
-                word::move_cursor_to_word_start_backward(model, true);
+                word::move_cursor_to_word_start_backward(buffer, cursor, true);
             }
             CursorDirection::WordUpperStartForward => {
-                word::move_cursor_to_word_start_forward(model, true);
+                word::move_cursor_to_word_start_forward(buffer, cursor, true);
             }
         }
     }
@@ -266,7 +222,7 @@ pub fn update_cursor_by_direction(
             | CursorDirection::TillBackward(_)
             | CursorDirection::TillForward(_)
     ) {
-        model.last_find = Some(direction.clone());
+        buffer.last_find = Some(direction.clone());
 
         // NOTE: return is necessary to set last find when multiple directories are used (not implemented yet)
         vec![BufferResult::FindScopeChanged(direction.clone())]
@@ -275,27 +231,33 @@ pub fn update_cursor_by_direction(
     }
 }
 
-pub fn validate_cursor_position(mode: &Mode, model: &mut Buffer) {
-    if let Some(cursor) = &mut model.cursor {
-        let position = if model.lines.is_empty() {
-            get_position(mode, &0, &cursor.horizontal_index)
-        } else {
-            let max_index = model.lines.len() - 1;
-            if cursor.vertical_index >= max_index {
-                cursor.vertical_index = max_index;
-            }
+pub fn set_outbound_cursor_into_content_bounds(
+    mode: &Mode,
+    buffer: &Buffer,
+    cursor: &Cursor,
+) -> Cursor {
+    let mut cursor = cursor.clone();
 
-            let line = match model.lines.get(cursor.vertical_index) {
-                Some(line) => line,
-                None => return,
-            };
+    let position = if buffer.lines.is_empty() {
+        get_position(mode, &0, &cursor.horizontal_index)
+    } else {
+        let max_index = buffer.lines.len() - 1;
+        if cursor.vertical_index >= max_index {
+            cursor.vertical_index = max_index;
+        }
 
-            let line_length = &line.len();
-            get_position(mode, line_length, &cursor.horizontal_index)
+        let line = match buffer.lines.get(cursor.vertical_index) {
+            Some(line) => line,
+            None => unreachable!(),
         };
 
-        cursor.horizontal_index = position;
-    }
+        let line_length = &line.len();
+        get_position(mode, line_length, &cursor.horizontal_index)
+    };
+
+    cursor.horizontal_index = position;
+
+    cursor
 }
 
 fn get_position(mode: &Mode, line_length: &usize, position: &CursorPosition) -> CursorPosition {
