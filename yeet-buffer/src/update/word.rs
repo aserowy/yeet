@@ -2,21 +2,20 @@ use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
 
 use super::cursor;
 
-pub fn move_cursor_to_word_start_forward(
-    buffer: &Buffer,
-    cursor: &Cursor,
-    is_upper: bool,
-) -> Cursor {
-    let mut cursor = cursor.clone();
+pub fn move_cursor_to_word_start_forward(model: &mut Buffer, is_upper: bool) {
+    let cursor = match &mut model.cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
 
-    let current = match buffer.lines.get(cursor.vertical_index) {
+    let current = match model.lines.get(cursor.vertical_index) {
         Some(line) => line,
-        None => return cursor,
+        None => return,
     };
 
     let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
         Some(index) => index,
-        None => return cursor,
+        None => return,
     };
 
     let content = current
@@ -27,7 +26,7 @@ pub fn move_cursor_to_word_start_forward(
 
     let char = match content.get(index) {
         Some(chr) => chr,
-        None => return cursor,
+        None => return,
     };
 
     let is_alphanumeric = char.is_alphanumeric() || char == &'_';
@@ -48,32 +47,31 @@ pub fn move_cursor_to_word_start_forward(
             current: next_index,
             expanded: next_index,
         };
-
-        cursor
     } else {
-        match get_cursor_on_word_next_line(&cursor, &buffer.lines) {
+        let cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
             Ok(crsr) => crsr,
-            Err(_) => cursor,
-        }
+            Err(_) => return,
+        };
+
+        model.cursor = Some(cursor);
     }
 }
 
-pub fn move_cursor_to_word_end_backward(
-    buffer: &Buffer,
-    cursor: &Cursor,
-    is_upper: bool,
-) -> Cursor {
-    let mut cursor = cursor.clone();
+pub fn move_cursor_to_word_end_backward(model: &mut Buffer, is_upper: bool) {
+    let cursor = match &mut model.cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
 
-    let current = match buffer.lines.get(cursor.vertical_index) {
+    let current = match model.lines.get(cursor.vertical_index) {
         Some(line) => line,
-        None => return cursor,
+        None => return,
     };
 
     let content_len = current.content.count_chars();
     let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
         Some(index) => content_len - index - 1,
-        None => return cursor,
+        None => return,
     };
 
     let content = current
@@ -85,7 +83,7 @@ pub fn move_cursor_to_word_end_backward(
 
     let char = match content.get(index) {
         Some(chr) => chr,
-        None => return cursor,
+        None => return,
     };
 
     let is_alphanumeric = char.is_alphanumeric() || char == &'_';
@@ -107,27 +105,30 @@ pub fn move_cursor_to_word_end_backward(
             current: next_index,
             expanded: next_index,
         };
-
-        cursor
     } else {
-        match get_cursor_on_word_previous_line(&cursor, &buffer.lines) {
+        let cursor = match get_cursor_on_word_previous_line(cursor, &model.lines) {
             Ok(crsr) => crsr,
-            Err(_) => cursor,
-        }
+            Err(_) => return,
+        };
+
+        model.cursor = Some(cursor);
     }
 }
 
-pub fn move_cursor_to_word_end_forward(buffer: &Buffer, cursor: &Cursor, is_upper: bool) -> Cursor {
-    let mut cursor = cursor.clone();
+pub fn move_cursor_to_word_end_forward(model: &mut Buffer, is_upper: bool) {
+    let cursor = match &mut model.cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
 
-    let current = match buffer.lines.get(cursor.vertical_index) {
+    let current = match model.lines.get(cursor.vertical_index) {
         Some(line) => line,
-        None => return cursor,
+        None => return,
     };
 
     let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
         Some(index) => index,
-        None => return cursor,
+        None => return,
     };
 
     let content = current
@@ -147,14 +148,14 @@ pub fn move_cursor_to_word_end_forward(buffer: &Buffer, cursor: &Cursor, is_uppe
             cursor.horizontal_index = position;
         }
     } else {
-        let new_line_cursor = match get_cursor_on_word_next_line(&cursor, &buffer.lines) {
+        let new_line_cursor = match get_cursor_on_word_next_line(cursor, &model.lines) {
             Ok(crsr) => crsr,
-            Err(_) => return cursor,
+            Err(_) => return,
         };
 
-        let current = match buffer.lines.get(new_line_cursor.vertical_index) {
+        let current = match model.lines.get(new_line_cursor.vertical_index) {
             Some(line) => line,
-            None => return cursor,
+            None => return,
         };
 
         let content = current
@@ -166,7 +167,7 @@ pub fn move_cursor_to_word_end_forward(buffer: &Buffer, cursor: &Cursor, is_uppe
         let new_line_index =
             match cursor::get_horizontal_index(&new_line_cursor.horizontal_index, current) {
                 Some(index) => index,
-                None => return cursor,
+                None => return,
             };
 
         let position = get_position_on_word_end(content, new_line_index, is_upper);
@@ -175,26 +176,23 @@ pub fn move_cursor_to_word_end_forward(buffer: &Buffer, cursor: &Cursor, is_uppe
             cursor.horizontal_index = position;
         }
     }
-
-    cursor
 }
 
-pub fn move_cursor_to_word_start_backward(
-    buffer: &Buffer,
-    cursor: &Cursor,
-    is_upper: bool,
-) -> Cursor {
-    let mut cursor = cursor.clone();
+pub fn move_cursor_to_word_start_backward(model: &mut Buffer, is_upper: bool) {
+    let cursor = match &mut model.cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
 
-    let current = match buffer.lines.get(cursor.vertical_index) {
+    let current = match model.lines.get(cursor.vertical_index) {
         Some(line) => line,
-        None => return cursor,
+        None => return,
     };
 
     let content_len = current.content.count_chars();
     let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
         Some(index) => content_len - index - 1,
-        None => return cursor,
+        None => return,
     };
 
     let content = current
@@ -219,14 +217,14 @@ pub fn move_cursor_to_word_start_backward(
             cursor.horizontal_index = position;
         }
     } else {
-        let new_line_cursor = match get_cursor_on_word_previous_line(&cursor, &buffer.lines) {
+        let new_line_cursor = match get_cursor_on_word_previous_line(cursor, &model.lines) {
             Ok(crsr) => crsr,
-            Err(_) => return cursor,
+            Err(_) => return,
         };
 
-        let current = match buffer.lines.get(new_line_cursor.vertical_index) {
+        let current = match model.lines.get(new_line_cursor.vertical_index) {
             Some(line) => line,
-            None => return cursor,
+            None => return,
         };
 
         let content = current
@@ -240,7 +238,7 @@ pub fn move_cursor_to_word_start_backward(
         let new_line_index =
             match cursor::get_horizontal_index(&new_line_cursor.horizontal_index, current) {
                 Some(index) => content_len - index - 1,
-                None => return cursor,
+                None => return,
             };
 
         let position = get_position_on_word_end(content, new_line_index, is_upper);
@@ -253,8 +251,6 @@ pub fn move_cursor_to_word_start_backward(
             cursor.horizontal_index = position;
         }
     }
-
-    cursor
 }
 
 fn get_position_on_word_end(
@@ -402,8 +398,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
 
-        let cursor = super::move_cursor_to_word_end_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello world_");
@@ -426,8 +425,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
 
-        let cursor = super::move_cursor_to_word_end_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ worldz");
@@ -450,8 +452,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
 
-        let cursor = super::move_cursor_to_word_start_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
@@ -474,8 +479,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
 
-        let cursor = super::move_cursor_to_word_start_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
@@ -498,8 +506,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld");
 
-        let cursor = super::move_cursor_to_word_start_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
@@ -522,8 +533,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld  ");
 
-        let cursor = super::move_cursor_to_word_start_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
@@ -546,8 +560,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo!@#$!@#$");
 
-        let cursor = super::move_cursor_to_word_start_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello_@#$!@#$");
@@ -570,8 +587,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
@@ -594,8 +614,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, " _  hello world");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "    hell_ world");
@@ -618,8 +641,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world ");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_ ");
@@ -642,8 +668,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
@@ -666,8 +695,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_   ");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 1);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
@@ -690,8 +722,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "!@#_ world");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "!@#- worl_");
@@ -714,8 +749,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell#_world");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell#-worl_");
@@ -738,8 +776,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ell#-world");
 
-        let cursor = super::move_cursor_to_word_end_forward(&buffer, &cursor, true);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_end_forward(&mut buffer, true);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hell#-worl_");
@@ -762,8 +803,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
 
-        let cursor = super::move_cursor_to_word_start_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
@@ -786,8 +830,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
 
-        let cursor = super::move_cursor_to_word_start_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello worldz");
@@ -810,8 +857,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, " _  hello world");
 
-        let cursor = super::move_cursor_to_word_start_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
@@ -834,8 +884,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
 
-        let cursor = super::move_cursor_to_word_start_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
@@ -858,8 +911,11 @@ mod test {
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld");
 
-        let cursor = super::move_cursor_to_word_start_backward(&buffer, &cursor, false);
+        buffer.cursor = Some(cursor);
 
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
+
+        let cursor = buffer.cursor.unwrap();
         assert_eq!(cursor.vertical_index, 0);
 
         assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");

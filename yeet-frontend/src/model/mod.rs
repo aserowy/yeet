@@ -95,22 +95,21 @@ impl FileWindow {
 impl Default for FileWindow {
     fn default() -> Self {
         Self {
-            // current: PathBuffer {
-            //     buffer: Buffer {
-            //         cursor: Some(Cursor::default()),
-            //         view_port: ViewPort {
-            //             line_number: LineNumber::Relative,
-            //             line_number_width: 3,
-            //             ..Default::default()
-            //         },
-            //         ..Default::default()
-            //     },
-            //     ..Default::default()
-            // },
-            // parent: Default::default(),
-            // preview: Default::default(),
+            current: PathBuffer {
+                buffer: Buffer {
+                    cursor: Some(Cursor::default()),
+                    view_port: ViewPort {
+                        line_number: LineNumber::Relative,
+                        line_number_width: 3,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            parent: Default::default(),
+            preview: Default::default(),
             show_border: true,
-            ..Default::default()
         }
     }
 }
@@ -152,18 +151,17 @@ pub struct CommandLine {
 impl Default for CommandLine {
     fn default() -> Self {
         Self {
-            // buffer: Buffer {
-            //     cursor: Some(Cursor {
-            //         hide_cursor: true,
-            //         hide_cursor_line: true,
-            //         vertical_index: 0,
-            //         ..Default::default()
-            //     }),
-            //     ..Default::default()
-            // },
+            buffer: Buffer {
+                cursor: Some(Cursor {
+                    hide_cursor: true,
+                    hide_cursor_line: true,
+                    vertical_index: 0,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
             key_sequence: "".to_owned(),
             layout: CommandLineLayout::new(Rect::default(), 0),
-..Default::default()
         }
     }
 }
