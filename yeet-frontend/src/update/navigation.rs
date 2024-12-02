@@ -1,9 +1,6 @@
 use std::{mem, path::Path};
 
-use yeet_buffer::{
-    message::BufferMessage,
-    model::{viewport::ViewPort, Buffer, Cursor, CursorPosition, Mode},
-};
+use yeet_buffer::model::{viewport::ViewPort, Buffer, Cursor, CursorPosition};
 
 use crate::{
     action::Action,
@@ -145,15 +142,12 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
-        let current_buffer = mem_replace_buffer(
-            &model.mode,
-            &mut model.files.current_vp,
-            &mut model.files.current.buffer,
-            &mut model.files.parent_vp,
-            parent_buffer,
-        );
+        let current_buffer = mem_replace_buffer(&mut model.files.current.buffer, parent_buffer);
 
         model.files.preview = BufferType::Text(current_path, current_buffer);
+
+        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
+        mem_swap_viewport(&mut model.files.parent_vp, &mut model.files.preview_vp);
 
         actions
     } else {
@@ -190,13 +184,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         model.files.parent = BufferType::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
-            mem_replace_buffer(
-                &model.mode,
-                &mut model.files.current_vp,
-                &mut model.files.current.buffer,
-                &mut model.files.preview_vp,
-                preview_buffer,
-            ),
+            mem_replace_buffer(&mut model.files.current.buffer, preview_buffer),
         );
 
         let cursor_position = model
@@ -227,19 +215,27 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             ));
         }
 
+        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
+        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.preview_vp);
+
         actions
     } else {
         Vec::new()
     }
 }
 
-fn mem_replace_buffer(
-    mode: &Mode,
-    dest_viewport: &mut ViewPort,
-    dest_buffer: &mut Buffer,
-    src_viewport: &mut ViewPort,
-    mut src_buffer: Buffer,
-) -> Buffer {
+fn mem_swap_viewport(dest_viewport: &mut ViewPort, src_viewport: &mut ViewPort) {
+    mem::swap(
+        &mut dest_viewport.horizontal_index,
+        &mut src_viewport.horizontal_index,
+    );
+    mem::swap(
+        &mut dest_viewport.vertical_index,
+        &mut src_viewport.vertical_index,
+    );
+}
+
+fn mem_replace_buffer(dest_buffer: &mut Buffer, mut src_buffer: Buffer) -> Buffer {
     if let (Some(dest_cursor), Some(src_cursor)) = (&mut dest_buffer.cursor, &mut src_buffer.cursor)
     {
         mem::swap(
@@ -249,25 +245,5 @@ fn mem_replace_buffer(
         mem::swap(dest_cursor, src_cursor);
     }
 
-    let mut result = mem::replace(dest_buffer, src_buffer);
-
-    mem::swap(
-        &mut dest_viewport.vertical_index,
-        &mut src_viewport.vertical_index,
-    );
-
-    yeet_buffer::update::update_buffer(
-        src_viewport,
-        mode,
-        &mut result,
-        &BufferMessage::UpdateViewPortByCursor,
-    );
-    yeet_buffer::update::update_buffer(
-        dest_viewport,
-        mode,
-        dest_buffer,
-        &BufferMessage::UpdateViewPortByCursor,
-    );
-
-    result
+    mem::replace(dest_buffer, src_buffer)
 }

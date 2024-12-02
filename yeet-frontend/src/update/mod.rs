@@ -103,8 +103,8 @@ fn update_with_message(model: &mut Model, message: Message) -> Vec<Action> {
         Message::EnumerationChanged(path, contents, selection) => {
             update_on_enumeration_change(model, &path, &contents, &selection)
         }
-        Message::EnumerationFinished(path, selection) => {
-            update_on_enumeration_finished(model, &path, &selection)
+        Message::EnumerationFinished(path, contents, selection) => {
+            update_on_enumeration_finished(model, &path, &contents, &selection)
         }
         Message::Error(error) => {
             print_in_commandline(model, &[PrintContent::Error(error.to_string())])

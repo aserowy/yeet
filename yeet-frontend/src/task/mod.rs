@@ -361,12 +361,7 @@ async fn run_task(
 
                     let _ = sender
                         .send(to_envelope(vec![
-                            Message::EnumerationChanged(
-                                path.clone(),
-                                cache.clone(),
-                                selection.clone(),
-                            ),
-                            Message::EnumerationFinished(path, selection),
+                            Message::EnumerationFinished(path, cache, selection),
                         ]))
                         .await;
                 }

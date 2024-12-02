@@ -75,8 +75,11 @@ pub fn update_on_enumeration_change(
 pub fn update_on_enumeration_finished(
     model: &mut Model,
     path: &PathBuf,
+    contents: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
+    update_on_enumeration_change(model, path, contents, selection);
+
     if model.mode != Mode::Navigation {
         return Vec::new();
     }
