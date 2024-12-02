@@ -34,13 +34,15 @@
             inherit system overlays;
           };
 
-          toml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+          toml_version = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+          toml_name = builtins.fromTOML (builtins.readFile ./yeet/Cargo.toml);
 
           package = (pkgs.makeRustPlatform {
             cargo = pkgs.rust-bin.stable.latest.minimal;
             rustc = pkgs.rust-bin.stable.latest.minimal;
           }).buildRustPackage {
-            inherit (toml.workspace.package) name version;
+            inherit (toml_name.package) name;
+            inherit (toml_version.workspace.package) version;
 
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
