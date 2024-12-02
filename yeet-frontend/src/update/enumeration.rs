@@ -9,7 +9,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{BufferType, DirectoryBufferState, Model, WindowType},
+    model::{DirectoryBufferState, Model, WindowType},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -106,6 +106,13 @@ pub fn update_on_enumeration_finished(
                 set_cursor_index_with_history(viewport, &model.mode, &model.history, buffer, path);
             }
         }
+
+        update_buffer(
+            viewport,
+            &model.mode,
+            buffer,
+            &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
+        );
     }
 
     if path == &model.files.current.path {
@@ -117,15 +124,6 @@ pub fn update_on_enumeration_finished(
         path,
         model.files.current.state,
     );
-
-    if let BufferType::Text(_, buffer) = &mut model.files.parent {
-        update_buffer(
-            &mut model.files.parent_vp,
-            &model.mode,
-            buffer,
-            &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
-        );
-    }
 
     let mut actions = Vec::new();
     if model.files.current.state == DirectoryBufferState::Loading {
