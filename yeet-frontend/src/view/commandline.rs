@@ -7,6 +7,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
     let commandline = &model.commandline;
 
     view::view(
+        &commandline.viewport,
         &model.mode,
         &commandline.buffer,
         &false,

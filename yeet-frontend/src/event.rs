@@ -61,7 +61,7 @@ pub enum MessageSource {
 pub enum Message {
     Keymap(KeymapMessage),
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
-    EnumerationFinished(PathBuf, Option<String>),
+    EnumerationFinished(PathBuf, Vec<(ContentKind, String)>, Option<String>),
     Error(String),
     FdResult(Vec<PathBuf>),
     PathRemoved(PathBuf),
@@ -81,7 +81,7 @@ impl std::fmt::Debug for Message {
             Message::EnumerationChanged(path, _, opt) => {
                 write!(f, "EnumerationChanged({:?}, _, {:?})", path, opt)
             }
-            Message::EnumerationFinished(path, opt) => {
+            Message::EnumerationFinished(path, _, opt) => {
                 write!(f, "EnumerationFinished({:?}, {:?})", path, opt)
             }
             Message::Error(err) => write!(f, "Error({:?})", err),

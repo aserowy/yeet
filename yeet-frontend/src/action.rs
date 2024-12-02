@@ -120,17 +120,19 @@ async fn execute(
                         model.files.current.path = path.clone();
 
                         yeet_buffer::update::update_buffer(
+                            &mut model.files.current_vp,
                             &model.mode,
                             &mut model.files.current.buffer,
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
                         viewport::set_viewport_dimensions(
-                            &mut model.files.current.buffer.view_port,
+                            &mut model.files.current_vp,
                             &model.layout.current,
                         );
 
                         yeet_buffer::update::update_buffer(
+                            &mut model.files.current_vp,
                             &model.mode,
                             &mut model.files.current.buffer,
                             &BufferMessage::ResetCursor,

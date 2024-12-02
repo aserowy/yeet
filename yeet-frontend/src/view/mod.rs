@@ -1,6 +1,9 @@
 use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
-use yeet_buffer::{model::Mode, view};
+use yeet_buffer::{
+    model::{viewport::ViewPort, Mode},
+    view,
+};
 
 use crate::{
     error::AppError,
@@ -18,6 +21,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         commandline::view(model, frame);
 
         view::view(
+            &model.files.current_vp,
             &model.mode,
             &model.files.current.buffer,
             &model.files.show_border,
@@ -26,6 +30,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         );
 
         render_buffer(
+            &model.files.parent_vp,
             &model.mode,
             frame,
             layout.parent,
@@ -33,6 +38,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
             &model.files.show_border,
         );
         render_buffer(
+            &model.files.preview_vp,
             &model.mode,
             frame,
             layout.preview,
@@ -45,6 +51,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
 }
 
 fn render_buffer(
+    viewport: &ViewPort,
     mode: &Mode,
     frame: &mut Frame,
     layout: Rect,
@@ -53,7 +60,7 @@ fn render_buffer(
 ) {
     match buffer_type {
         BufferType::Text(_, buffer) => {
-            view::view(mode, buffer, show_border, frame, layout);
+            view::view(viewport, mode, buffer, show_border, frame, layout);
         }
         BufferType::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol), layout);

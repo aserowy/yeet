@@ -2,11 +2,8 @@ use std::fmt::Display;
 
 use crate::message::CursorDirection;
 
-use self::{
-    ansi::Ansi,
-    undo::{BufferChanged, Undo},
-    viewport::ViewPort,
-};
+use ansi::Ansi;
+use undo::{BufferChanged, Undo};
 
 pub mod ansi;
 pub mod undo;
@@ -54,18 +51,12 @@ pub enum SearchDirection {
     Up,
 }
 
-#[derive(Debug, Default)]
-pub struct BufferSettings {
-    pub sign_column_width: usize,
-}
-
 #[derive(Default)]
 pub struct Buffer {
     pub cursor: Option<Cursor>,
     pub last_find: Option<CursorDirection>,
     pub lines: Vec<BufferLine>,
     pub undo: Undo,
-    pub view_port: ViewPort,
 }
 
 impl std::fmt::Debug for Buffer {
@@ -74,14 +65,7 @@ impl std::fmt::Debug for Buffer {
             .field("cursor", &self.cursor)
             .field("last_find", &self.last_find)
             .field("lines", &self.lines)
-            .field("view_port", &self.view_port)
             .finish()
-    }
-}
-
-impl Buffer {
-    pub fn set(&mut self, settings: &BufferSettings) {
-        self.view_port.sign_column_width = settings.sign_column_width;
     }
 }
 

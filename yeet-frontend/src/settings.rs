@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
-use yeet_buffer::model::BufferSettings;
+use yeet_buffer::model::viewport::WindowSettings;
 
 #[derive(Debug)]
 pub struct Settings {
-    pub current: BufferSettings,
-    pub parent: BufferSettings,
-    pub preview: BufferSettings,
+    pub current: WindowSettings,
+    pub parent: WindowSettings,
+    pub preview: WindowSettings,
     pub selection_to_file_on_open: Option<PathBuf>,
     pub selection_to_stdout_on_open: bool,
     pub show_quickfix_signs: bool,
@@ -17,11 +17,11 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            current: BufferSettings {
+            current: WindowSettings {
                 sign_column_width: 2,
             },
-            parent: BufferSettings::default(),
-            preview: BufferSettings::default(),
+            parent: WindowSettings::default(),
+            preview: WindowSettings::default(),
             selection_to_file_on_open: None,
             selection_to_stdout_on_open: false,
             show_mark_signs: true,

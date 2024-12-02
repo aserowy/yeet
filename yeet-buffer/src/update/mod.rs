@@ -1,6 +1,6 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
-    model::{Buffer, BufferResult, CursorPosition, Mode},
+    model::{viewport::ViewPort, Buffer, BufferResult, CursorPosition, Mode},
     update::cursor::{update_cursor_by_direction, validate_cursor_position},
 };
 
@@ -11,8 +11,9 @@ mod viewport;
 mod word;
 
 pub fn update_buffer(
+    viewport: &mut ViewPort,
     mode: &Mode,
-    model: &mut Buffer,
+    buffer: &mut Buffer,
     message: &BufferMessage,
 ) -> Vec<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
@@ -22,37 +23,36 @@ pub fn update_buffer(
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
         BufferMessage::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
-                model.undo.close_transaction();
-                update_cursor_by_direction(mode, model, &1, &CursorDirection::Left);
+                buffer.undo.close_transaction();
+                update_cursor_by_direction(mode, buffer, &1, &CursorDirection::Left);
             }
             Vec::new()
         }
         BufferMessage::Modification(count, modification) => {
-            let buffer_changes = modification::update(mode, model, count, modification);
+            let buffer_changes = modification::update(mode, buffer, count, modification);
             if let Some(changes) = buffer_changes {
-                model.undo.add(mode, changes);
+                buffer.undo.add(mode, changes);
             }
             Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            update_cursor_by_direction(mode, model, count, direction)
+            update_cursor_by_direction(mode, buffer, count, direction)
             // TODO: history::add_history_entry(&mut model.history, selected.as_path());
         }
         BufferMessage::MoveViewPort(direction) => {
-            viewport::update_by_direction(model, direction);
+            viewport::update_by_direction(viewport, buffer, direction);
             Vec::new()
         }
         BufferMessage::RemoveLine(index) => {
-            model.lines.remove(*index);
-            validate_cursor_position(mode, model);
+            buffer.lines.remove(*index);
+            validate_cursor_position(mode, buffer);
             Vec::new()
         }
         BufferMessage::ResetCursor => {
-            let view_port = &mut model.view_port;
-            view_port.horizontal_index = 0;
-            view_port.vertical_index = 0;
+            viewport.horizontal_index = 0;
+            viewport.vertical_index = 0;
 
-            if let Some(cursor) = &mut model.cursor {
+            if let Some(cursor) = &mut buffer.cursor {
                 cursor.vertical_index = 0;
 
                 cursor.horizontal_index = match &cursor.horizontal_index {
@@ -71,22 +71,22 @@ pub fn update_buffer(
             Vec::new()
         }
         BufferMessage::SaveBuffer => {
-            let changes = model.undo.save();
+            let changes = buffer.undo.save();
             vec![BufferResult::Changes(changes)]
         }
         BufferMessage::SetContent(content) => {
             // TODO: optional selection?
-            model.lines = content.to_vec();
-            validate_cursor_position(mode, model);
+            buffer.lines = content.to_vec();
+            validate_cursor_position(mode, buffer);
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
-            let cursor = match &mut model.cursor {
+            let cursor = match &mut buffer.cursor {
                 Some(it) => it,
                 None => return Vec::new(),
             };
 
-            let line = model
+            let line = buffer
                 .lines
                 .iter()
                 .enumerate()
@@ -96,8 +96,8 @@ pub fn update_buffer(
                 cursor.vertical_index = index;
                 cursor.hide_cursor_line = false;
 
-                validate_cursor_position(mode, model);
-                viewport::update_by_cursor(model);
+                validate_cursor_position(mode, buffer);
+                viewport::update_by_cursor(viewport, buffer);
 
                 vec![BufferResult::CursorPositionChanged]
             } else {
@@ -106,14 +106,14 @@ pub fn update_buffer(
         }
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
-            model.lines.sort_unstable_by(sort);
-            validate_cursor_position(mode, model);
+            buffer.lines.sort_unstable_by(sort);
+            validate_cursor_position(mode, buffer);
             Vec::new()
         }
         BufferMessage::UpdateViewPortByCursor => Vec::new(),
     };
 
-    viewport::update_by_cursor(model);
+    viewport::update_by_cursor(viewport, buffer);
 
     result
 }

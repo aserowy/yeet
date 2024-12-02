@@ -73,8 +73,9 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
 fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
+    let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(&mut buffer.view_port, &commandline.layout.buffer);
+    set_viewport_dimensions(viewport, &commandline.layout.buffer);
 
     let command_mode = match &model.mode {
         Mode::Command(it) => it,
@@ -85,7 +86,12 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
                 .is_some_and(|mode| mode.is_command());
 
             if from_command {
-                update_buffer(&model.mode, buffer, &BufferMessage::SetContent(vec![]));
+                update_buffer(
+                    viewport,
+                    &model.mode,
+                    buffer,
+                    &BufferMessage::SetContent(vec![]),
+                );
             }
             return Vec::new();
         }
@@ -93,7 +99,7 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
-            update_buffer(&model.mode, buffer, &BufferMessage::ResetCursor);
+            update_buffer(viewport, &model.mode, buffer, &BufferMessage::ResetCursor);
 
             let prefix = match &command_mode {
                 CommandMode::Command => Some(":".to_string()),
@@ -108,6 +114,7 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
             };
 
             update_buffer(
+                viewport,
                 &model.mode,
                 buffer,
                 &BufferMessage::SetContent(vec![bufferline]),
