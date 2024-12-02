@@ -360,9 +360,9 @@ async fn run_task(
                     }
 
                     let _ = sender
-                        .send(to_envelope(vec![
-                            Message::EnumerationFinished(path, cache, selection),
-                        ]))
+                        .send(to_envelope(vec![Message::EnumerationFinished(
+                            path, cache, selection,
+                        )]))
                         .await;
                 }
                 Err(error) => {
