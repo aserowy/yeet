@@ -19,6 +19,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
     content.retain(|line| !line.content.is_empty());
 
     update_buffer(
+        &mut model.files.current_vp,
         &model.mode,
         &mut model.files.current.buffer,
         &BufferMessage::SetContent(content),
@@ -26,6 +27,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
 
     if let Some(selection) = selection {
         update_buffer(
+            &mut model.files.current_vp,
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
@@ -33,6 +35,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
     }
 
     let result = update_buffer(
+        &mut model.files.current_vp,
         &model.mode,
         &mut model.files.current.buffer,
         &BufferMessage::SaveBuffer,

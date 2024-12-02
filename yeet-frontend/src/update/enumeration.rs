@@ -27,7 +27,7 @@ pub fn update_on_enumeration_change(
 ) -> Vec<Action> {
     // TODO: handle unsaved changes
     let directories = model.files.get_mut_directories();
-    if let Some((path, buffer)) = directories.into_iter().find(|(p, _)| p == path) {
+    if let Some((path, viewport, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
         let is_first_changed_event = buffer.lines.is_empty();
@@ -42,11 +42,16 @@ pub fn update_on_enumeration_change(
             })
             .collect();
 
-        update_buffer(&model.mode, buffer, &BufferMessage::SetContent(content));
+        update_buffer(
+            viewport,
+            &model.mode,
+            buffer,
+            &BufferMessage::SetContent(content),
+        );
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if set_cursor_index_to_selection(&model.mode, buffer, selection) {
+                if set_cursor_index_to_selection(viewport, &model.mode, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                 }
             }
@@ -77,8 +82,9 @@ pub fn update_on_enumeration_finished(
     }
 
     let directories = model.files.get_mut_directories();
-    if let Some((_, buffer)) = directories.into_iter().find(|(p, _)| p == path) {
+    if let Some((_, viewport, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         update_buffer(
+            viewport,
             &model.mode,
             buffer,
             &BufferMessage::SortContent(super::SORT),
@@ -93,8 +99,8 @@ pub fn update_on_enumeration_finished(
                 });
             }
 
-            if !set_cursor_index_to_selection(&model.mode, buffer, selection) {
-                set_cursor_index_with_history(&model.mode, &model.history, buffer, path);
+            if !set_cursor_index_to_selection(viewport, &model.mode, buffer, selection) {
+                set_cursor_index_with_history(viewport, &model.mode, &model.history, buffer, path);
             }
         }
     }
@@ -111,6 +117,7 @@ pub fn update_on_enumeration_finished(
 
     if let BufferType::Text(_, buffer) = &mut model.files.parent {
         update_buffer(
+            &mut model.files.parent_vp,
             &model.mode,
             buffer,
             &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),

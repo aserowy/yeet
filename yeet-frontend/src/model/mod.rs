@@ -62,27 +62,34 @@ pub struct CurrentTask {
 
 pub struct FileWindow {
     pub current: PathBuffer,
+    pub current_vp: ViewPort,
     pub parent: BufferType,
+    pub parent_vp: ViewPort,
     pub preview: BufferType,
+    pub preview_vp: ViewPort,
     pub show_border: bool,
 }
 
 impl FileWindow {
-    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut Buffer)> {
+    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut ViewPort, &mut Buffer)> {
         let parent_content_ref = if let BufferType::Text(path, buffer) = &mut self.parent {
-            Some((path.as_path(), buffer))
+            Some((path.as_path(), &mut self.parent_vp, buffer))
         } else {
             None
         };
 
         let preview_content_ref = if let BufferType::Text(path, buffer) = &mut self.preview {
-            Some((path.as_path(), buffer))
+            Some((path.as_path(), &mut self.preview_vp, buffer))
         } else {
             None
         };
 
         vec![
-            Some((self.current.path.as_path(), &mut self.current.buffer)),
+            Some((
+                self.current.path.as_path(),
+                &mut self.current_vp,
+                &mut self.current.buffer,
+            )),
             parent_content_ref,
             preview_content_ref,
         ]
@@ -98,17 +105,19 @@ impl Default for FileWindow {
             current: PathBuffer {
                 buffer: Buffer {
                     cursor: Some(Cursor::default()),
-                    view_port: ViewPort {
-                        line_number: LineNumber::Relative,
-                        line_number_width: 3,
-                        ..Default::default()
-                    },
                     ..Default::default()
                 },
                 ..Default::default()
             },
+            current_vp: ViewPort {
+                line_number: LineNumber::Relative,
+                line_number_width: 3,
+                ..Default::default()
+            },
             parent: Default::default(),
+            parent_vp: Default::default(),
             preview: Default::default(),
+            preview_vp: Default::default(),
             show_border: true,
         }
     }
@@ -146,6 +155,7 @@ pub struct CommandLine {
     pub buffer: Buffer,
     pub key_sequence: String,
     pub layout: CommandLineLayout,
+    pub viewport: ViewPort,
 }
 
 impl Default for CommandLine {
@@ -162,6 +172,7 @@ impl Default for CommandLine {
             },
             key_sequence: "".to_owned(),
             layout: CommandLineLayout::new(Rect::default(), 0),
+            viewport: Default::default(),
         }
     }
 }
