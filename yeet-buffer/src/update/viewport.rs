@@ -1,47 +1,46 @@
 use crate::{
     message::ViewPortDirection,
-    model::{viewport::ViewPort, Buffer, CursorPosition},
+    model::{viewport::ViewPort, Buffer, Cursor, CursorPosition},
 };
 
-pub fn update_by_cursor(viewport: &mut ViewPort, buffer: &Buffer) {
+pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &Buffer) {
     if buffer.lines.is_empty() {
         return;
     }
 
-    if let Some(cursor) = &buffer.cursor {
-        if viewport.vertical_index > cursor.vertical_index {
-            viewport.vertical_index = cursor.vertical_index;
-        } else if viewport.vertical_index + (viewport.height - 1) < cursor.vertical_index {
-            viewport.vertical_index = cursor.vertical_index - (viewport.height - 1);
-        }
+    if viewport.vertical_index > cursor.vertical_index {
+        viewport.vertical_index = cursor.vertical_index;
+    } else if viewport.vertical_index + (viewport.height - 1) < cursor.vertical_index {
+        viewport.vertical_index = cursor.vertical_index - (viewport.height - 1);
+    }
 
-        let cursor_index = match cursor.horizontal_index {
-            CursorPosition::Absolute {
-                current,
-                expanded: _,
-            } => current,
-            CursorPosition::End => {
-                let line_lenght = buffer.lines[cursor.vertical_index].len();
-                if line_lenght == 0 {
-                    0
-                } else {
-                    line_lenght - 1
-                }
+    let cursor_index = match cursor.horizontal_index {
+        CursorPosition::Absolute {
+            current,
+            expanded: _,
+        } => current,
+        CursorPosition::End => {
+            let line_lenght = buffer.lines[cursor.vertical_index].len();
+            if line_lenght == 0 {
+                0
+            } else {
+                line_lenght - 1
             }
-            CursorPosition::None => return,
-        };
-
-        let line = &buffer.lines[cursor.vertical_index];
-        if viewport.horizontal_index > cursor_index {
-            viewport.horizontal_index = cursor_index;
-        } else if viewport.horizontal_index + viewport.get_content_width(line) < cursor_index {
-            viewport.horizontal_index = cursor_index - viewport.get_content_width(line)
         }
+        CursorPosition::None => return,
+    };
+
+    let line = &buffer.lines[cursor.vertical_index];
+    if viewport.horizontal_index > cursor_index {
+        viewport.horizontal_index = cursor_index;
+    } else if viewport.horizontal_index + viewport.get_content_width(line) < cursor_index {
+        viewport.horizontal_index = cursor_index - viewport.get_content_width(line)
     }
 }
 
 pub fn update_by_direction(
     viewport: &mut ViewPort,
+    cursor: &mut Option<Cursor>,
     buffer: &mut Buffer,
     direction: &ViewPortDirection,
 ) {
@@ -51,7 +50,7 @@ pub fn update_by_direction(
 
     match direction {
         ViewPortDirection::BottomOnCursor => {
-            if let Some(cursor) = &buffer.cursor {
+            if let Some(cursor) = &cursor {
                 if cursor.vertical_index < viewport.height {
                     viewport.vertical_index = 0;
                 } else {
@@ -61,7 +60,7 @@ pub fn update_by_direction(
             }
         }
         ViewPortDirection::CenterOnCursor => {
-            if let Some(cursor) = &buffer.cursor {
+            if let Some(cursor) = &cursor {
                 let index_offset = viewport.height / 2;
                 if cursor.vertical_index < index_offset {
                     viewport.vertical_index = 0;
@@ -83,7 +82,7 @@ pub fn update_by_direction(
                 viewport.vertical_index = buffer.lines.len() - viewport.height;
             }
 
-            if let Some(cursor) = &mut buffer.cursor {
+            if let Some(ref mut cursor) = cursor {
                 if cursor.vertical_index + index_offset >= buffer.lines.len() {
                     cursor.vertical_index = buffer.lines.len() - 1;
                 } else {
@@ -99,7 +98,7 @@ pub fn update_by_direction(
                 viewport.vertical_index -= index_offset;
             }
 
-            if let Some(cursor) = &mut buffer.cursor {
+            if let Some(ref mut cursor) = cursor {
                 if cursor.vertical_index < index_offset {
                     cursor.vertical_index = 0;
                 } else {
@@ -108,7 +107,7 @@ pub fn update_by_direction(
             }
         }
         ViewPortDirection::TopOnCursor => {
-            if let Some(cursor) = &buffer.cursor {
+            if let Some(cursor) = &cursor {
                 viewport.vertical_index = cursor.vertical_index;
             }
         }

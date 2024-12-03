@@ -189,11 +189,17 @@ pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec
 
 pub fn update_current(model: &mut Model, message: &BufferMessage) {
     let viewport = &mut model.files.current_vp;
-    let buffer = &mut model.files.current.buffer;
     let layout = &model.layout.current;
 
     set_viewport_dimensions(viewport, layout);
-    update_buffer(viewport, &model.mode, buffer, message);
+
+    update_buffer(
+        viewport,
+        &mut model.files.current_cursor,
+        &model.mode,
+        &mut model.files.current.buffer,
+        message,
+    );
 }
 
 pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
@@ -226,14 +232,23 @@ pub fn buffer_type(
 ) {
     let mut buffer = Buffer::default();
 
-    let (viewport, layout) = match window_type {
-        WindowType::Parent => (&mut model.files.parent_vp, &model.layout.parent),
-        WindowType::Preview => (&mut model.files.preview_vp, &model.layout.preview),
+    let (viewport, cursor, layout) = match window_type {
+        WindowType::Parent => (
+            &mut model.files.parent_vp,
+            &mut model.files.parent_cursor,
+            &model.layout.parent,
+        ),
+        WindowType::Preview => (
+            &mut model.files.preview_vp,
+            &mut model.files.preview_cursor,
+            &model.layout.preview,
+        ),
         WindowType::Current => unreachable!(),
     };
 
     update_buffer(
         viewport,
+        cursor,
         &model.mode,
         &mut buffer,
         &BufferMessage::SetContent(content.to_vec()),
@@ -242,18 +257,20 @@ pub fn buffer_type(
     viewport::set_viewport_dimensions(viewport, layout);
     update_buffer(
         viewport,
+        cursor,
         &model.mode,
         &mut buffer,
         &BufferMessage::ResetCursor,
     );
 
-    if let Some(cursor) = &mut buffer.cursor {
+    if let Some(cursor) = cursor {
         cursor.hide_cursor_line = true;
     }
 
     if path.is_dir() {
         cursor::set_cursor_index_with_history(
             viewport,
+            cursor,
             &model.mode,
             &model.history,
             &mut buffer,

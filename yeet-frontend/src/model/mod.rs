@@ -63,23 +63,38 @@ pub struct CurrentTask {
 pub struct FileWindow {
     pub current: PathBuffer,
     pub current_vp: ViewPort,
+    pub current_cursor: Option<Cursor>,
     pub parent: BufferType,
     pub parent_vp: ViewPort,
+    pub parent_cursor: Option<Cursor>,
     pub preview: BufferType,
     pub preview_vp: ViewPort,
+    pub preview_cursor: Option<Cursor>,
     pub show_border: bool,
 }
 
 impl FileWindow {
-    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut ViewPort, &mut Buffer)> {
+    pub fn get_mut_directories(
+        &mut self,
+    ) -> Vec<(&Path, &mut ViewPort, &mut Option<Cursor>, &mut Buffer)> {
         let parent_content_ref = if let BufferType::Text(path, buffer) = &mut self.parent {
-            Some((path.as_path(), &mut self.parent_vp, buffer))
+            Some((
+                path.as_path(),
+                &mut self.parent_vp,
+                &mut self.parent_cursor,
+                buffer,
+            ))
         } else {
             None
         };
 
         let preview_content_ref = if let BufferType::Text(path, buffer) = &mut self.preview {
-            Some((path.as_path(), &mut self.preview_vp, buffer))
+            Some((
+                path.as_path(),
+                &mut self.preview_vp,
+                &mut self.preview_cursor,
+                buffer,
+            ))
         } else {
             None
         };
@@ -88,6 +103,7 @@ impl FileWindow {
             Some((
                 self.current.path.as_path(),
                 &mut self.current_vp,
+                &mut self.current_cursor,
                 &mut self.current.buffer,
             )),
             parent_content_ref,
@@ -102,13 +118,8 @@ impl FileWindow {
 impl Default for FileWindow {
     fn default() -> Self {
         Self {
-            current: PathBuffer {
-                buffer: Buffer {
-                    cursor: Some(Cursor::default()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            current: Default::default(),
+            current_cursor: Some(Cursor::default()),
             current_vp: ViewPort {
                 line_number: LineNumber::Relative,
                 line_number_width: 3,
@@ -116,8 +127,10 @@ impl Default for FileWindow {
             },
             parent: Default::default(),
             parent_vp: Default::default(),
+            parent_cursor: Default::default(),
             preview: Default::default(),
             preview_vp: Default::default(),
+            preview_cursor: Default::default(),
             show_border: true,
         }
     }
@@ -153,6 +166,7 @@ impl BufferType {
 
 pub struct CommandLine {
     pub buffer: Buffer,
+    pub cursor: Option<Cursor>,
     pub key_sequence: String,
     pub layout: CommandLineLayout,
     pub viewport: ViewPort,
@@ -161,15 +175,13 @@ pub struct CommandLine {
 impl Default for CommandLine {
     fn default() -> Self {
         Self {
-            buffer: Buffer {
-                cursor: Some(Cursor {
-                    hide_cursor: true,
-                    hide_cursor_line: true,
-                    vertical_index: 0,
-                    ..Default::default()
-                }),
+            cursor: Some(Cursor {
+                hide_cursor: true,
+                hide_cursor_line: true,
+                vertical_index: 0,
                 ..Default::default()
-            },
+            }),
+            buffer: Default::default(),
             key_sequence: "".to_owned(),
             layout: CommandLineLayout::new(Rect::default(), 0),
             viewport: Default::default(),

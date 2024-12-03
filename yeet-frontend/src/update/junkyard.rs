@@ -152,7 +152,7 @@ pub fn yank_to_junkyard(model: &mut Model, repeat: &usize) -> Vec<Action> {
     let current_buffer = &model.files.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = &current_buffer.cursor {
+    } else if let Some(cursor) = &model.files.current_cursor {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;

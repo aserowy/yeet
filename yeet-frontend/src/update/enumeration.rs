@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{mem, path::PathBuf};
 
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
@@ -27,7 +27,9 @@ pub fn update_on_enumeration_change(
 ) -> Vec<Action> {
     // TODO: handle unsaved changes
     let directories = model.files.get_mut_directories();
-    if let Some((path, viewport, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
+    if let Some((path, viewport, cursor, buffer)) =
+        directories.into_iter().find(|(p, _, _, _)| p == path)
+    {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
         let is_first_changed_event = buffer.lines.is_empty();
@@ -44,6 +46,7 @@ pub fn update_on_enumeration_change(
 
         update_buffer(
             viewport,
+            cursor,
             &model.mode,
             buffer,
             &BufferMessage::SetContent(content),
@@ -51,7 +54,7 @@ pub fn update_on_enumeration_change(
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if set_cursor_index_to_selection(viewport, &model.mode, buffer, selection) {
+                if set_cursor_index_to_selection(viewport, cursor, &model.mode, buffer, selection) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                 }
             }
@@ -85,30 +88,50 @@ pub fn update_on_enumeration_finished(
     }
 
     let directories = model.files.get_mut_directories();
-    if let Some((_, viewport, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
+    if let Some((_, viewport, cursor, buffer)) =
+        directories.into_iter().find(|(p, _, _, _)| p == path)
+    {
         update_buffer(
             viewport,
+            cursor,
             &model.mode,
             buffer,
             &BufferMessage::SortContent(super::SORT),
         );
 
         if let Some(selection) = selection {
-            if buffer.cursor.is_none() {
-                buffer.cursor = Some(Cursor {
+            let mut cursor_after_finished = match cursor {
+                Some(it) => Some(it.clone()),
+                None => Some(Cursor {
                     horizontal_index: CursorPosition::None,
                     vertical_index: 0,
                     ..Default::default()
-                });
+                }),
+            };
+
+            if !set_cursor_index_to_selection(
+                viewport,
+                &mut cursor_after_finished,
+                &model.mode,
+                buffer,
+                selection,
+            ) {
+                set_cursor_index_with_history(
+                    viewport,
+                    &mut cursor_after_finished,
+                    &model.mode,
+                    &model.history,
+                    buffer,
+                    path,
+                );
             }
 
-            if !set_cursor_index_to_selection(viewport, &model.mode, buffer, selection) {
-                set_cursor_index_with_history(viewport, &model.mode, &model.history, buffer, path);
-            }
+            let _ = mem::replace(cursor, cursor_after_finished);
         }
 
         update_buffer(
             viewport,
+            cursor,
             &model.mode,
             buffer,
             &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),

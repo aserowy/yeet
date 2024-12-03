@@ -5,7 +5,7 @@ use std::{
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, Buffer, BufferLine, Mode},
+    model::{ansi::Ansi, Buffer, BufferLine, Cursor, Mode},
     update::update_buffer,
 };
 
@@ -26,6 +26,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     let mut buffer_contents = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current_vp,
+        &mut model.files.current_cursor,
         &mut model.files.current.buffer,
         model.mode == Mode::Navigation,
     )];
@@ -34,6 +35,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.parent_vp,
+            &mut model.files.parent_cursor,
             buffer,
             path.is_dir(),
         ));
@@ -43,18 +45,22 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.preview_vp,
+            &mut model.files.preview_cursor,
             buffer,
             path.is_dir(),
         ));
     }
 
-    for (path, viewport, buffer, sort) in buffer_contents {
+    for (path, viewport, cursor, buffer, sort) in buffer_contents {
         let paths_for_buffer: Vec<_> = paths.iter().filter(|p| p.parent() == Some(path)).collect();
         if paths_for_buffer.is_empty() {
             continue;
         }
 
-        let mut selection = get_selected_content_from_buffer(buffer);
+        let mut selection = match cursor {
+            Some(it) => get_selected_content_from_buffer(it, buffer),
+            None => None,
+        };
 
         let indexes = buffer
             .lines
@@ -97,6 +103,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         if sort {
             update_buffer(
                 viewport,
+                cursor,
                 &model.mode,
                 buffer,
                 &BufferMessage::SortContent(super::SORT),
@@ -106,6 +113,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         if let Some(selection) = selection {
             update_buffer(
                 viewport,
+                cursor,
                 &model.mode,
                 buffer,
                 &BufferMessage::SetCursorToLineContent(selection),
@@ -122,15 +130,10 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     actions
 }
 
-fn get_selected_content_from_buffer(model: &Buffer) -> Option<String> {
-    let index = match &model.cursor {
-        Some(it) => it.vertical_index,
-        None => return None,
-    };
-
+fn get_selected_content_from_buffer(cursor: &Cursor, model: &Buffer) -> Option<String> {
     model
         .lines
-        .get(index)
+        .get(cursor.vertical_index)
         .map(|line| line.content.to_stripped_string())
 }
 
@@ -158,25 +161,40 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         remove_from_junkyard(&mut model.junk, path);
     }
 
-    let current_selection = get_selected_content_from_buffer(&model.files.current.buffer);
+    let current_selection = match &model.files.current_cursor {
+        Some(it) => get_selected_content_from_buffer(it, &model.files.current.buffer),
+        None => None,
+    };
 
     let mut buffer_contents = vec![(
         model.files.current.path.as_path(),
         &mut model.files.current_vp,
+        &mut model.files.current_cursor,
         &mut model.files.current.buffer,
     )];
 
     if let BufferType::Text(path, buffer) = &mut model.files.parent {
-        buffer_contents.push((path.as_path(), &mut model.files.parent_vp, buffer));
+        buffer_contents.push((
+            path.as_path(),
+            &mut model.files.parent_vp,
+            &mut model.files.parent_cursor,
+            buffer,
+        ));
     }
 
     if let BufferType::Text(path, buffer) = &mut model.files.preview {
-        buffer_contents.push((path.as_path(), &mut model.files.preview_vp, buffer));
+        buffer_contents.push((
+            path.as_path(),
+            &mut model.files.preview_vp,
+            &mut model.files.preview_cursor,
+            buffer,
+        ));
     }
 
     if let Some(parent) = path.parent() {
-        if let Some((_, viewport, buffer)) =
-            buffer_contents.into_iter().find(|(p, _, _)| p == &parent)
+        if let Some((_, viewport, cursor, buffer)) = buffer_contents
+            .into_iter()
+            .find(|(p, _, _, _)| p == &parent)
         {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let index = buffer
@@ -189,6 +207,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
                 if let Some(index) = index {
                     update_buffer(
                         viewport,
+                        cursor,
                         &model.mode,
                         buffer,
                         &BufferMessage::RemoveLine(index),
@@ -201,6 +220,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     if let Some(selection) = current_selection {
         update_buffer(
             &mut model.files.current_vp,
+            &mut model.files.current_cursor,
             &model.mode,
             &mut model.files.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection),

@@ -5,14 +5,9 @@ use crate::{
 
 use super::cursor;
 
-pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool) {
+pub fn char(cursor: &mut Cursor, direction: &CursorDirection, model: &Buffer) {
     match direction {
         CursorDirection::FindBackward(find) => {
-            let cursor = match &mut model.cursor {
-                Some(cursor) => cursor,
-                None => return,
-            };
-
             if let Some(found) = find_char_backward(find, &model.lines, cursor) {
                 cursor.horizontal_index = CursorPosition::Absolute {
                     current: found,
@@ -21,11 +16,6 @@ pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool
             }
         }
         CursorDirection::FindForward(find) => {
-            let cursor = match &mut model.cursor {
-                Some(cursor) => cursor,
-                None => return,
-            };
-
             if let Some(found) = find_char_forward(find, &model.lines, cursor) {
                 cursor.horizontal_index = CursorPosition::Absolute {
                     current: found,
@@ -34,11 +24,6 @@ pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool
             }
         }
         CursorDirection::TillBackward(find) => {
-            let cursor = match &mut model.cursor {
-                Some(cursor) => cursor,
-                None => return,
-            };
-
             if let Some(found) = find_char_backward(find, &model.lines, cursor) {
                 let new = found + 1;
                 cursor.horizontal_index = CursorPosition::Absolute {
@@ -48,11 +33,6 @@ pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool
             }
         }
         CursorDirection::TillForward(find) => {
-            let cursor = match &mut model.cursor {
-                Some(cursor) => cursor,
-                None => return,
-            };
-
             if let Some(found) = find_char_forward(find, &model.lines, cursor) {
                 let new = found - 1;
                 cursor.horizontal_index = CursorPosition::Absolute {
@@ -63,10 +43,6 @@ pub fn char(direction: &CursorDirection, model: &mut Buffer, set_last_find: bool
         }
         _ => unreachable!(),
     };
-
-    if set_last_find {
-        model.last_find = Some(direction.clone());
-    }
 }
 
 fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
