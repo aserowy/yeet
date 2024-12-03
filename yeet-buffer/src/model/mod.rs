@@ -67,7 +67,6 @@ impl std::fmt::Debug for Buffer {
     }
 }
 
-// FIX: enable easier NoCursor (Option<Cursor> in a Window { vp, opt cursor }
 #[derive(Clone, Debug, Default)]
 pub struct Cursor {
     pub hide_cursor: bool,

@@ -145,14 +145,15 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
 
         model.files.preview = BufferType::Text(current_path, current_buffer);
+        model.files.preview_cursor = Some(Default::default());
 
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
+        mem_swap_viewport(&mut model.files.parent_vp, &mut model.files.preview_vp);
+
         mem_swap_cursor(
             &mut model.files.current_cursor,
             &mut model.files.parent_cursor,
         );
-
-        mem_swap_viewport(&mut model.files.parent_vp, &mut model.files.preview_vp);
         mem_swap_cursor(
             &mut model.files.parent_cursor,
             &mut model.files.preview_cursor,
@@ -196,6 +197,15 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             mem::replace(&mut model.files.current.buffer, preview_buffer),
         );
 
+        mem_swap_cursor(
+            &mut model.files.current_cursor,
+            &mut model.files.parent_cursor,
+        );
+        mem_swap_cursor(
+            &mut model.files.current_cursor,
+            &mut model.files.preview_cursor,
+        );
+
         let cursor_position = model
             .files
             .current_cursor
@@ -223,16 +233,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         }
 
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
-        mem_swap_cursor(
-            &mut model.files.current_cursor,
-            &mut model.files.parent_cursor,
-        );
-
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.preview_vp);
-        mem_swap_cursor(
-            &mut model.files.current_cursor,
-            &mut model.files.preview_cursor,
-        );
 
         actions
     } else {
