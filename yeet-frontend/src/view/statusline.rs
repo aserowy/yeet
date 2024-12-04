@@ -42,9 +42,7 @@ fn get_position_content(model: &Model) -> Line {
     let count = model.files.current.buffer.lines.len();
     let current_position = model
         .files
-        .current
-        .buffer
-        .cursor
+        .current_cursor
         .as_ref()
         .map(|crsr| crsr.vertical_index + 1);
 

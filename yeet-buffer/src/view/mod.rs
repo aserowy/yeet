@@ -16,6 +16,7 @@ mod style;
 // FIX: long lines break viewport content
 pub fn view(
     viewport: &ViewPort,
+    cursor: &Option<Cursor>,
     mode: &Mode,
     buffer: &Buffer,
     show_border: &bool,
@@ -23,7 +24,7 @@ pub fn view(
     rect: Rect,
 ) {
     let rendered = get_rendered_lines(viewport, buffer);
-    let styled = get_styled_lines(viewport, mode, &buffer.cursor, rendered);
+    let styled = get_styled_lines(viewport, mode, cursor, rendered);
 
     let rect = if *show_border {
         let block = Block::default()

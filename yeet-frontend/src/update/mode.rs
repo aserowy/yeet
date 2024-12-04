@@ -31,11 +31,11 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
-            unfocus_buffer(&mut model.commandline.buffer);
+            unfocus_buffer(&mut model.commandline.cursor);
             update_commandline_on_mode_change(model)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            unfocus_buffer(&mut model.files.current.buffer);
+            unfocus_buffer(&mut model.files.current_cursor);
             vec![]
         }
     });
@@ -45,23 +45,23 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
-            focus_buffer(&mut model.commandline.buffer);
+            focus_buffer(&mut model.commandline.cursor);
             update_commandline_on_mode_change(model)
         }
         Mode::Insert => {
-            focus_buffer(&mut model.files.current.buffer);
+            focus_buffer(&mut model.files.current_cursor);
             update_current(model, &msg);
             vec![]
         }
         Mode::Navigation => {
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            focus_buffer(&mut model.files.current.buffer);
+            focus_buffer(&mut model.files.current_cursor);
             update_current(model, &msg);
             persist_path_changes(model)
         }
         Mode::Normal => {
-            focus_buffer(&mut model.files.current.buffer);
+            focus_buffer(&mut model.files.current_cursor);
             update_current(model, &msg);
             vec![]
         }
@@ -88,6 +88,7 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
             if from_command {
                 update_buffer(
                     viewport,
+                    &mut commandline.cursor,
                     &model.mode,
                     buffer,
                     &BufferMessage::SetContent(vec![]),
@@ -99,7 +100,13 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
-            update_buffer(viewport, &model.mode, buffer, &BufferMessage::ResetCursor);
+            update_buffer(
+                viewport,
+                &mut commandline.cursor,
+                &model.mode,
+                buffer,
+                &BufferMessage::ResetCursor,
+            );
 
             let prefix = match &command_mode {
                 CommandMode::Command => Some(":".to_string()),
@@ -115,6 +122,7 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
 
             update_buffer(
                 viewport,
+                &mut commandline.cursor,
                 &model.mode,
                 buffer,
                 &BufferMessage::SetContent(vec![bufferline]),

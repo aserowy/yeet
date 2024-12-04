@@ -25,6 +25,7 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
 
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
+    let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
 
     set_viewport_dimensions(viewport, &commandline.layout.buffer);
@@ -32,7 +33,7 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                update_buffer(viewport, &model.mode, buffer, message);
+                update_buffer(viewport, cursor, &model.mode, buffer, message);
             }
             CommandMode::PrintMultiline => {}
         }
@@ -53,6 +54,7 @@ pub fn update_commandline_on_modification(
 
     let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
+    let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
 
     set_viewport_dimensions(viewport, &commandline.layout.buffer);
@@ -75,6 +77,7 @@ pub fn update_commandline_on_modification(
 
             update_buffer(
                 viewport,
+                cursor,
                 &model.mode,
                 buffer,
                 &BufferMessage::Modification(*repeat, modification.clone()),
@@ -116,6 +119,7 @@ pub fn update_commandline_on_modification(
                 } else {
                     update_buffer(
                         viewport,
+                        cursor,
                         &model.mode,
                         buffer,
                         &BufferMessage::SetContent(vec![]),
@@ -189,6 +193,7 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
 
     update_buffer(
         &mut model.commandline.viewport,
+        &mut model.commandline.cursor,
         &model.mode,
         &mut model.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -205,6 +210,7 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
 
     update_buffer(
         &mut model.commandline.viewport,
+        &mut model.commandline.cursor,
         &model.mode,
         &mut model.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -266,12 +272,14 @@ pub fn print_in_commandline(model: &mut Model, content: &[PrintContent]) -> Vec<
 
     update_buffer(
         &mut commandline.viewport,
+        &mut commandline.cursor,
         &model.mode,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::Bottom),
     );
     update_buffer(
         &mut commandline.viewport,
+        &mut commandline.cursor,
         &model.mode,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::LineEnd),

@@ -121,6 +121,7 @@ async fn execute(
 
                         yeet_buffer::update::update_buffer(
                             &mut model.files.current_vp,
+                            &mut model.files.current_cursor,
                             &model.mode,
                             &mut model.files.current.buffer,
                             &BufferMessage::SetContent(Vec::new()),
@@ -133,6 +134,7 @@ async fn execute(
 
                         yeet_buffer::update::update_buffer(
                             &mut model.files.current_vp,
+                            &mut model.files.current_cursor,
                             &model.mode,
                             &mut model.files.current.buffer,
                             &BufferMessage::ResetCursor,

@@ -142,12 +142,22 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
-        let current_buffer = mem_replace_buffer(&mut model.files.current.buffer, parent_buffer);
+        let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
 
         model.files.preview = BufferType::Text(current_path, current_buffer);
+        model.files.preview_cursor = Some(Default::default());
 
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
         mem_swap_viewport(&mut model.files.parent_vp, &mut model.files.preview_vp);
+
+        mem_swap_cursor(
+            &mut model.files.current_cursor,
+            &mut model.files.parent_cursor,
+        );
+        mem_swap_cursor(
+            &mut model.files.parent_cursor,
+            &mut model.files.preview_cursor,
+        );
 
         actions
     } else {
@@ -184,22 +194,25 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         model.files.parent = BufferType::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
-            mem_replace_buffer(&mut model.files.current.buffer, preview_buffer),
+            mem::replace(&mut model.files.current.buffer, preview_buffer),
         );
 
-        let cursor_position = model
-            .files
-            .current
-            .buffer
-            .cursor
-            .as_ref()
-            .map(|cursor| &cursor.horizontal_index);
+        mem_swap_cursor(
+            &mut model.files.current_cursor,
+            &mut model.files.parent_cursor,
+        );
+        mem_swap_cursor(
+            &mut model.files.current_cursor,
+            &mut model.files.preview_cursor,
+        );
 
-        if matches!(
-            cursor_position,
-            Some(CursorPosition::End) | Some(CursorPosition::None) | None
-        ) {
-            model.files.current.buffer.cursor = Some(Cursor::default());
+        if let Some(cursor) = &mut model.files.current_cursor {
+            cursor.horizontal_index = CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            };
+        } else {
+            model.files.current_cursor = Some(Default::default());
         }
 
         if let Some(selected) = selection::get_current_selected_path(model) {
@@ -235,15 +248,11 @@ fn mem_swap_viewport(dest_viewport: &mut ViewPort, src_viewport: &mut ViewPort) 
     );
 }
 
-fn mem_replace_buffer(dest_buffer: &mut Buffer, mut src_buffer: Buffer) -> Buffer {
-    if let (Some(dest_cursor), Some(src_cursor)) = (&mut dest_buffer.cursor, &mut src_buffer.cursor)
-    {
+fn mem_swap_cursor(dest_cursor: &mut Option<Cursor>, src_cursor: &mut Option<Cursor>) {
+    if let (Some(dest_cursor), Some(src_cursor)) = (dest_cursor, src_cursor) {
         mem::swap(
             &mut dest_cursor.vertical_index,
             &mut src_cursor.vertical_index,
         );
-        mem::swap(dest_cursor, src_cursor);
     }
-
-    mem::replace(dest_buffer, src_buffer)
 }

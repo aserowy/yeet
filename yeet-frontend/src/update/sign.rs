@@ -46,7 +46,7 @@ pub fn set_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier
         .files
         .get_mut_directories()
         .into_iter()
-        .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
+        .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
 
     let buffer = match target {
         Some(buffer) => buffer,
@@ -93,7 +93,7 @@ pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {
         .files
         .get_mut_directories()
         .into_iter()
-        .flat_map(|(_, _, b)| &mut b.lines)
+        .flat_map(|(_, _, _, b)| &mut b.lines)
         .for_each(|l| unset(l, sign_id));
 }
 
@@ -107,7 +107,7 @@ pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifi
         .files
         .get_mut_directories()
         .into_iter()
-        .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
+        .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
 
     let buffer = match target {
         Some(buffer) => buffer,

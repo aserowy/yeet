@@ -10,7 +10,7 @@ pub fn get_current_selected_path(model: &Model) -> Option<PathBuf> {
         return None;
     }
 
-    let cursor = &buffer.cursor.as_ref()?;
+    let cursor = &model.files.current_cursor.as_ref()?;
     let current = &buffer.lines.get(cursor.vertical_index)?;
     if current.content.is_empty() {
         return None;
@@ -35,8 +35,7 @@ pub fn get_current_selected_bufferline(model: &mut Model) -> Option<&mut BufferL
         return None;
     }
 
-    let cursor = &buffer.cursor.as_ref()?;
-
+    let cursor = &model.files.current_cursor.as_ref()?;
     buffer.lines.get_mut(cursor.vertical_index)
 }
 
