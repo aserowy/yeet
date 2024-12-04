@@ -34,7 +34,11 @@ pub fn update_cursor_by_direction(
             }
             CursorDirection::Down => {
                 let max_index = buffer.lines.len() - 1;
-                if cursor.vertical_index >= max_index {
+                if cursor.vertical_index == max_index {
+                    return Vec::new();
+                }
+
+                if cursor.vertical_index > max_index {
                     cursor.vertical_index = max_index;
                 } else {
                     cursor.vertical_index += 1
@@ -172,19 +176,21 @@ pub fn update_cursor_by_direction(
                 cursor.horizontal_index = position;
             }
             CursorDirection::Up => {
-                if cursor.vertical_index > 0 {
-                    cursor.vertical_index -= 1;
-
-                    let line = match buffer.lines.get(cursor.vertical_index) {
-                        Some(line) => line,
-                        None => return Vec::new(),
-                    };
-
-                    let line_length = &line.len();
-                    let position = get_position(mode, line_length, &cursor.horizontal_index);
-
-                    cursor.horizontal_index = position;
+                if cursor.vertical_index == 0 {
+                    return Vec::new();
                 }
+
+                cursor.vertical_index -= 1;
+
+                let line = match buffer.lines.get(cursor.vertical_index) {
+                    Some(line) => line,
+                    None => return Vec::new(),
+                };
+
+                let line_length = &line.len();
+                let position = get_position(mode, line_length, &cursor.horizontal_index);
+
+                cursor.horizontal_index = position;
             }
             CursorDirection::WordEndBackward => {
                 word::move_cursor_to_word_end_backward(cursor, buffer, false);

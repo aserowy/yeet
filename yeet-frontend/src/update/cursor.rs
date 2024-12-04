@@ -8,7 +8,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, Model, WindowType},
+    model::{history::History, BufferType, Model, WindowType},
 };
 
 use super::{
@@ -52,6 +52,11 @@ pub fn set_cursor_index_with_history(
 }
 
 pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec<Action> {
+    let premotion_preview_path = match &model.files.preview {
+        BufferType::Image(path, _) | BufferType::Text(path, _) => Some(path.clone()),
+        BufferType::None => None,
+    };
+
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(dr) = mtn {
         let term = get_register(&model.register, &'/');
@@ -76,7 +81,12 @@ pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
+    let current_preview_path = selection::get_current_selected_path(model);
+    if premotion_preview_path == current_preview_path {
+        return actions;
+    }
+
+    if let Some(path) = current_preview_path {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(WindowType::Preview, path, selection));
     }
