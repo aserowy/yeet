@@ -2,7 +2,7 @@ use yeet_buffer::message::{BufferMessage, TextModification};
 
 use crate::{
     action::Action,
-    model::{BufferType, Model},
+    model::{FileTreeBufferSectionType, Model},
 };
 
 pub fn modify_buffer(
@@ -13,7 +13,7 @@ pub fn modify_buffer(
     let msg = BufferMessage::Modification(*repeat, modification.clone());
     super::update_current(model, &msg);
 
-    model.files.preview = BufferType::None;
+    model.files.preview = FileTreeBufferSectionType::None;
 
     Vec::new()
 }

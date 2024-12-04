@@ -11,7 +11,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{BufferType, Model, WindowType},
+    model::{FileTreeBufferSection, FileTreeBufferSectionType, Model},
 };
 
 use super::{
@@ -31,7 +31,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         model.mode == Mode::Navigation,
     )];
 
-    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.parent_vp,
@@ -41,7 +41,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         ));
     }
 
-    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.preview_vp,
@@ -124,7 +124,11 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
+        actions.push(Action::Load(
+            FileTreeBufferSection::Preview,
+            path,
+            selection,
+        ));
     }
 
     actions
@@ -173,7 +177,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         &mut model.files.current.buffer,
     )];
 
-    if let BufferType::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.parent_vp,
@@ -182,7 +186,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         ));
     }
 
-    if let BufferType::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.preview_vp,
@@ -230,7 +234,11 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
+        actions.push(Action::Load(
+            FileTreeBufferSection::Preview,
+            path,
+            selection,
+        ));
     }
 
     actions

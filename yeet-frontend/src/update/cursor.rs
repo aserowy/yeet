@@ -8,7 +8,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, Model, WindowType},
+    model::{history::History, FileTreeBufferSection, Model},
 };
 
 use super::{
@@ -78,7 +78,11 @@ pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(model) {
         let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
+        actions.push(Action::Load(
+            FileTreeBufferSection::Preview,
+            path,
+            selection,
+        ));
     }
 
     actions

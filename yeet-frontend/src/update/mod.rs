@@ -11,7 +11,7 @@ use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
-    model::{BufferType, CurrentTask, Model, WindowType},
+    model::{CurrentTask, FileTreeBufferSection, FileTreeBufferSectionType, Model},
 };
 
 use self::{
@@ -215,17 +215,19 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            buffer_type(&WindowType::Preview, model, &path, content);
+            buffer_type(&FileTreeBufferSection::Preview, model, &path, content);
         }
-        Preview::Image(path, protocol) => model.files.preview = BufferType::Image(path, protocol),
-        Preview::None(_) => model.files.preview = BufferType::None,
+        Preview::Image(path, protocol) => {
+            model.files.preview = FileTreeBufferSectionType::Image(path, protocol)
+        }
+        Preview::None(_) => model.files.preview = FileTreeBufferSectionType::None,
     };
     Vec::new()
 }
 
 pub fn buffer_type(
     // FIX: rename to?
-    window_type: &WindowType,
+    window_type: &FileTreeBufferSection,
     model: &mut Model,
     path: &Path,
     content: Vec<BufferLine>,
@@ -233,17 +235,17 @@ pub fn buffer_type(
     let mut buffer = Buffer::default();
 
     let (viewport, cursor, layout) = match window_type {
-        WindowType::Parent => (
+        FileTreeBufferSection::Parent => (
             &mut model.files.parent_vp,
             &mut model.files.parent_cursor,
             &model.layout.parent,
         ),
-        WindowType::Preview => (
+        FileTreeBufferSection::Preview => (
             &mut model.files.preview_vp,
             &mut model.files.preview_cursor,
             &model.layout.preview,
         ),
-        WindowType::Current => unreachable!(),
+        FileTreeBufferSection::Current => unreachable!(),
     };
 
     update_buffer(
@@ -278,11 +280,11 @@ pub fn buffer_type(
         );
     }
 
-    let buffer_type = BufferType::Text(path.to_path_buf(), buffer);
+    let buffer_type = FileTreeBufferSectionType::Text(path.to_path_buf(), buffer);
     match window_type {
-        WindowType::Parent => model.files.parent = buffer_type,
-        WindowType::Preview => model.files.preview = buffer_type,
-        WindowType::Current => unreachable!(),
+        FileTreeBufferSection::Parent => model.files.parent = buffer_type,
+        FileTreeBufferSection::Preview => model.files.preview = buffer_type,
+        FileTreeBufferSection::Current => unreachable!(),
     };
 }
 

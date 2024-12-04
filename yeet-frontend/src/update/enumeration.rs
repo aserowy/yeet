@@ -9,7 +9,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{DirectoryBufferState, Model, WindowType},
+    model::{DirectoryBufferState, FileTreeBufferSection, Model},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -163,7 +163,11 @@ pub fn update_on_enumeration_finished(
     }
 
     let selection = get_selection_from_history(&model.history, path).map(|s| s.to_owned());
-    actions.push(Action::Load(WindowType::Preview, selected_path, selection));
+    actions.push(Action::Load(
+        FileTreeBufferSection::Preview,
+        selected_path,
+        selection,
+    ));
 
     actions
 }

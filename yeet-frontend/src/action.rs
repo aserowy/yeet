@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     event::{Emitter, Message},
     init::{history, mark, qfix},
-    model::{DirectoryBufferState, Model, WindowType},
+    model::{DirectoryBufferState, FileTreeBufferSection, Model},
     open,
     task::Task,
     terminal::TerminalWrapper,
@@ -21,7 +21,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
-    Load(WindowType, PathBuf, Option<String>),
+    Load(FileTreeBufferSection, PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(QuitMode, Option<String>),
@@ -115,7 +115,7 @@ async fn execute(
             }
             Action::Load(window_type, path, selection) => {
                 match window_type {
-                    WindowType::Current => {
+                    FileTreeBufferSection::Current => {
                         model.files.current.state = DirectoryBufferState::Loading;
                         model.files.current.path = path.clone();
 
@@ -142,7 +142,7 @@ async fn execute(
 
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
-                    WindowType::Parent | WindowType::Preview => {
+                    FileTreeBufferSection::Parent | FileTreeBufferSection::Preview => {
                         update::buffer_type(&window_type, model, path.as_path(), vec![]);
 
                         if path.is_dir() {

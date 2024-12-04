@@ -4,7 +4,7 @@ use yeet_buffer::model::{viewport::ViewPort, Buffer, Cursor, CursorPosition};
 
 use crate::{
     action::Action,
-    model::{BufferType, Model, WindowType},
+    model::{FileTreeBufferSection, FileTreeBufferSectionType, Model},
 };
 
 use super::{history, selection};
@@ -94,11 +94,11 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    model.files.preview = BufferType::None;
+    model.files.preview = FileTreeBufferSectionType::None;
 
     let mut actions = Vec::new();
     actions.push(Action::Load(
-        WindowType::Current,
+        FileTreeBufferSection::Current,
         path.to_path_buf(),
         selection.clone(),
     ));
@@ -107,7 +107,7 @@ pub fn navigate_to_path_with_selection(
     if let Some(parent) = parent {
         if parent != path {
             actions.push(Action::Load(
-                WindowType::Parent,
+                FileTreeBufferSection::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
@@ -130,21 +130,24 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
             tracing::trace!("loading parent: {:?}", parent);
 
             actions.push(Action::Load(
-                WindowType::Parent,
+                FileTreeBufferSection::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
         }
 
-        let parent_buffer = match mem::replace(&mut model.files.parent, BufferType::None) {
-            BufferType::Text(_, buffer) => buffer,
-            BufferType::Image(_, _) | BufferType::None => Buffer::default(),
-        };
+        let parent_buffer =
+            match mem::replace(&mut model.files.parent, FileTreeBufferSectionType::None) {
+                FileTreeBufferSectionType::Text(_, buffer) => buffer,
+                FileTreeBufferSectionType::Image(_, _) | FileTreeBufferSectionType::None => {
+                    Buffer::default()
+                }
+            };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
         let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
 
-        model.files.preview = BufferType::Text(current_path, current_buffer);
+        model.files.preview = FileTreeBufferSectionType::Text(current_path, current_buffer);
         model.files.preview_cursor = Some(Default::default());
 
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
@@ -175,24 +178,25 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
         history::add_history_entry(&mut model.history, selected.as_path());
 
         let mut actions = Vec::new();
-        let preview_buffer = match mem::replace(&mut model.files.preview, BufferType::None) {
-            BufferType::Text(_, buffer) => buffer,
-            BufferType::Image(_, _) | BufferType::None => {
-                let history =
-                    history::get_selection_from_history(&model.history, selected.as_path())
-                        .map(|s| s.to_string());
+        let preview_buffer =
+            match mem::replace(&mut model.files.preview, FileTreeBufferSectionType::None) {
+                FileTreeBufferSectionType::Text(_, buffer) => buffer,
+                FileTreeBufferSectionType::Image(_, _) | FileTreeBufferSectionType::None => {
+                    let history =
+                        history::get_selection_from_history(&model.history, selected.as_path())
+                            .map(|s| s.to_string());
 
-                actions.push(Action::Load(
-                    WindowType::Current,
-                    selected.to_path_buf(),
-                    history,
-                ));
+                    actions.push(Action::Load(
+                        FileTreeBufferSection::Current,
+                        selected.to_path_buf(),
+                        history,
+                    ));
 
-                Buffer::default()
-            }
-        };
+                    Buffer::default()
+                }
+            };
 
-        model.files.parent = BufferType::Text(
+        model.files.parent = FileTreeBufferSectionType::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
             mem::replace(&mut model.files.current.buffer, preview_buffer),
         );
@@ -222,7 +226,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
                 .map(|s| s.to_string());
 
             actions.push(Action::Load(
-                WindowType::Preview,
+                FileTreeBufferSection::Preview,
                 selected.to_path_buf(),
                 history,
             ));

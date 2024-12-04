@@ -1,4 +1,4 @@
-use yeet_buffer::model::{viewport::ViewPort, SignIdentifier};
+use yeet_buffer::model::SignIdentifier;
 
 use crate::model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, Model};
 
@@ -21,21 +21,13 @@ pub fn update_with_settings(model: &mut Model) {
 }
 
 fn add_hidden_sign_on_all_buffer(model: &mut Model, id: SignIdentifier) {
-    add_hidden_sign(&mut model.files.current_vp, id);
-    add_hidden_sign(&mut model.files.parent_vp, id);
-    add_hidden_sign(&mut model.files.preview_vp, id);
-}
-
-fn add_hidden_sign(viewport: &mut ViewPort, id: SignIdentifier) {
-    viewport.hidden_sign_ids.insert(id);
+    model.files.current_vp.hidden_sign_ids.insert(id);
+    model.files.parent_vp.hidden_sign_ids.insert(id);
+    model.files.preview_vp.hidden_sign_ids.insert(id);
 }
 
 fn remove_hidden_sign_on_all_buffer(model: &mut Model, id: &SignIdentifier) {
-    remove_hidden_sign(&mut model.files.current_vp, id);
-    remove_hidden_sign(&mut model.files.parent_vp, id);
-    remove_hidden_sign(&mut model.files.preview_vp, id);
-}
-
-fn remove_hidden_sign(viewport: &mut ViewPort, id: &SignIdentifier) {
-    viewport.hidden_sign_ids.remove(id);
+    model.files.current_vp.hidden_sign_ids.remove(id);
+    model.files.parent_vp.hidden_sign_ids.remove(id);
+    model.files.preview_vp.hidden_sign_ids.remove(id);
 }

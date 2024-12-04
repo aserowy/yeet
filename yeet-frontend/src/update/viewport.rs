@@ -6,7 +6,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{Model, WindowType},
+    model::{FileTreeBufferSection, Model},
 };
 
 use super::{history, selection};
@@ -19,7 +19,11 @@ pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Ac
     if let Some(path) = selection::get_current_selected_path(model) {
         let selection =
             history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
+        actions.push(Action::Load(
+            FileTreeBufferSection::Preview,
+            path,
+            selection,
+        ));
     }
 
     actions
