@@ -55,9 +55,9 @@ impl std::fmt::Debug for Model {
 
 #[derive(Debug)]
 pub struct CurrentTask {
-    pub token: CancellationToken,
-    pub id: u16,
     pub external_id: String,
+    pub id: u16,
+    pub token: CancellationToken,
 }
 
 pub struct FileWindow {

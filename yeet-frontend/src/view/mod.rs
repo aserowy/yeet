@@ -69,6 +69,16 @@ fn render_buffer(
         BufferType::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol), layout);
         }
-        BufferType::None => {}
+        BufferType::None => {
+            view::view(
+                viewport,
+                &None,
+                mode,
+                &Default::default(),
+                show_border,
+                frame,
+                layout,
+            );
+        }
     };
 }

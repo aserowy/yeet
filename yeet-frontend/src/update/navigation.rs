@@ -206,17 +206,13 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             &mut model.files.preview_cursor,
         );
 
-        let cursor_position = model
-            .files
-            .current_cursor
-            .as_ref()
-            .map(|cursor| &cursor.horizontal_index);
-
-        if matches!(
-            cursor_position,
-            Some(CursorPosition::End) | Some(CursorPosition::None) | None
-        ) {
-            model.files.current_cursor = Some(Cursor::default());
+        if let Some(cursor) = &mut model.files.current_cursor {
+            cursor.horizontal_index = CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            };
+        } else {
+            model.files.current_cursor = Some(Default::default());
         }
 
         if let Some(selected) = selection::get_current_selected_path(model) {
