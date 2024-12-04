@@ -7,11 +7,7 @@ use crate::{
     model::{CurrentTask, Model},
 };
 
-pub fn add(
-    model: &mut Model,
-    identifier: String,
-    cancellation: CancellationToken,
-) -> Vec<Action> {
+pub fn add(model: &mut Model, identifier: String, cancellation: CancellationToken) -> Vec<Action> {
     let id = next_id(model);
 
     if let Some(replaced_task) = model.current_tasks.insert(
