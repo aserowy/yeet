@@ -2,7 +2,7 @@ use std::path::Path;
 
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
-    model::{viewport::ViewPort, Buffer, BufferResult, Cursor, Mode, SearchDirection},
+    model::{viewport::ViewPort, BufferResult, Cursor, Mode, SearchDirection, TextBuffer},
     update::update_buffer,
 };
 
@@ -22,7 +22,7 @@ pub fn set_cursor_index_to_selection(
     viewport: &mut ViewPort,
     cursor: &mut Option<Cursor>,
     mode: &Mode,
-    model: &mut Buffer,
+    model: &mut TextBuffer,
     selection: &str,
 ) -> bool {
     let result = update_buffer(
@@ -41,7 +41,7 @@ pub fn set_cursor_index_with_history(
     cursor: &mut Option<Cursor>,
     mode: &Mode,
     history: &History,
-    buffer: &mut Buffer,
+    buffer: &mut TextBuffer,
     path: &Path,
 ) -> bool {
     if let Some(history) = get_selection_from_history(history, path) {

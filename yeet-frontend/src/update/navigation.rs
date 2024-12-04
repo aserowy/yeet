@@ -1,10 +1,10 @@
 use std::{mem, path::Path};
 
-use yeet_buffer::model::{viewport::ViewPort, Buffer, Cursor, CursorPosition};
+use yeet_buffer::model::{viewport::ViewPort, Cursor, CursorPosition, TextBuffer};
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSection, FileTreeBufferSectionType, Model},
+    model::{FileTreeBufferSection, FileTreeBufferSectionBuffer, Model},
 };
 
 use super::{history, selection};
@@ -94,7 +94,7 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    model.files.preview = FileTreeBufferSectionType::None;
+    model.files.preview = FileTreeBufferSectionBuffer::None;
 
     let mut actions = Vec::new();
     actions.push(Action::Load(
@@ -137,17 +137,17 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         }
 
         let parent_buffer =
-            match mem::replace(&mut model.files.parent, FileTreeBufferSectionType::None) {
-                FileTreeBufferSectionType::Text(_, buffer) => buffer,
-                FileTreeBufferSectionType::Image(_, _) | FileTreeBufferSectionType::None => {
-                    Buffer::default()
+            match mem::replace(&mut model.files.parent, FileTreeBufferSectionBuffer::None) {
+                FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
+                FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
+                    TextBuffer::default()
                 }
             };
 
         let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
         let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
 
-        model.files.preview = FileTreeBufferSectionType::Text(current_path, current_buffer);
+        model.files.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
         model.files.preview_cursor = Some(Default::default());
 
         mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
@@ -179,9 +179,9 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         let mut actions = Vec::new();
         let preview_buffer =
-            match mem::replace(&mut model.files.preview, FileTreeBufferSectionType::None) {
-                FileTreeBufferSectionType::Text(_, buffer) => buffer,
-                FileTreeBufferSectionType::Image(_, _) | FileTreeBufferSectionType::None => {
+            match mem::replace(&mut model.files.preview, FileTreeBufferSectionBuffer::None) {
+                FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
+                FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
                     let history =
                         history::get_selection_from_history(&model.history, selected.as_path())
                             .map(|s| s.to_string());
@@ -192,11 +192,11 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
                         history,
                     ));
 
-                    Buffer::default()
+                    TextBuffer::default()
                 }
             };
 
-        model.files.parent = FileTreeBufferSectionType::Text(
+        model.files.parent = FileTreeBufferSectionBuffer::Text(
             mem::replace(&mut model.files.current.path, selected.to_path_buf()),
             mem::replace(&mut model.files.current.buffer, preview_buffer),
         );

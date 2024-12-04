@@ -2,7 +2,9 @@ use std::mem;
 
 use crate::{
     message::{CursorDirection, LineDirection, TextModification},
-    model::{ansi::Ansi, undo::BufferChanged, Buffer, BufferLine, Cursor, CursorPosition, Mode},
+    model::{
+        ansi::Ansi, undo::BufferChanged, BufferLine, Cursor, CursorPosition, Mode, TextBuffer,
+    },
 };
 
 use super::cursor;
@@ -10,7 +12,7 @@ use super::cursor;
 pub fn update(
     cursor: &mut Cursor,
     mode: &Mode,
-    buffer: &mut Buffer,
+    buffer: &mut TextBuffer,
     count: &usize,
     modification: &TextModification,
 ) -> Option<Vec<BufferChanged>> {
@@ -271,7 +273,7 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
 
 fn get_line_or_create_on_empty<'a>(
     cursor: &'a mut Cursor,
-    model: &'a mut Buffer,
+    model: &'a mut TextBuffer,
 ) -> Option<(&'a mut Cursor, &'a mut BufferLine)> {
     if cursor.horizontal_index == CursorPosition::None {
         return None;

@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::{ansi::Ansi, viewport::ViewPort, Buffer, BufferLine, Cursor, Mode};
+use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, TextBuffer};
 
 mod line;
 mod prefix;
@@ -18,7 +18,7 @@ pub fn view(
     viewport: &ViewPort,
     cursor: &Option<Cursor>,
     mode: &Mode,
-    buffer: &Buffer,
+    buffer: &TextBuffer,
     show_border: &bool,
     frame: &mut Frame,
     rect: Rect,
@@ -43,7 +43,7 @@ pub fn view(
     frame.render_widget(Paragraph::new(styled), rect);
 }
 
-fn get_rendered_lines(viewport: &ViewPort, buffer: &Buffer) -> Vec<BufferLine> {
+fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLine> {
     buffer
         .lines
         .iter()

@@ -1,8 +1,8 @@
-use yeet_buffer::model::Buffer;
+use yeet_buffer::model::TextBuffer;
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSectionType, Model},
+    model::{FileTreeBufferSectionBuffer, Model},
 };
 
 pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
@@ -16,13 +16,13 @@ pub fn search_in_buffers(model: &mut Model, search: Option<String>) {
 
     set_search_char_positions(&mut model.files.current.buffer, search.as_str());
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.parent {
         if path.is_dir() {
             set_search_char_positions(buffer, search.as_str());
         }
     };
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.preview {
         if path.is_dir() {
             set_search_char_positions(buffer, search.as_str());
         }
@@ -33,12 +33,12 @@ pub fn clear_search(model: &mut Model) -> Vec<Action> {
     for line in &mut model.files.current.buffer.lines {
         line.search_char_position = None;
     }
-    if let FileTreeBufferSectionType::Text(_, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(_, buffer) = &mut model.files.parent {
         for line in &mut buffer.lines {
             line.search_char_position = None;
         }
     }
-    if let FileTreeBufferSectionType::Text(_, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(_, buffer) = &mut model.files.preview {
         for line in &mut buffer.lines {
             line.search_char_position = None;
         }
@@ -46,7 +46,7 @@ pub fn clear_search(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-fn set_search_char_positions(buffer: &mut Buffer, search: &str) {
+fn set_search_char_positions(buffer: &mut TextBuffer, search: &str) {
     let smart_case = search.chars().all(|c| c.is_ascii_lowercase());
     let search_length = search.chars().count();
 

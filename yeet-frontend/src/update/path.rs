@@ -5,13 +5,13 @@ use std::{
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, Buffer, BufferLine, Cursor, Mode},
+    model::{ansi::Ansi, BufferLine, Cursor, Mode, TextBuffer},
     update::update_buffer,
 };
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSection, FileTreeBufferSectionType, Model},
+    model::{FileTreeBufferSection, FileTreeBufferSectionBuffer, Model},
 };
 
 use super::{
@@ -31,7 +31,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         model.mode == Mode::Navigation,
     )];
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.parent_vp,
@@ -41,7 +41,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         ));
     }
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.preview_vp,
@@ -134,7 +134,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     actions
 }
 
-fn get_selected_content_from_buffer(cursor: &Cursor, model: &Buffer) -> Option<String> {
+fn get_selected_content_from_buffer(cursor: &Cursor, model: &TextBuffer) -> Option<String> {
     model
         .lines
         .get(cursor.vertical_index)
@@ -177,7 +177,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         &mut model.files.current.buffer,
     )];
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.parent {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.parent_vp,
@@ -186,7 +186,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
         ));
     }
 
-    if let FileTreeBufferSectionType::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.preview {
         buffer_contents.push((
             path.as_path(),
             &mut model.files.preview_vp,

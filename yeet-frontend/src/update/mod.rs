@@ -3,7 +3,7 @@ use std::{cmp::Ordering, path::Path};
 use tokio_util::sync::CancellationToken;
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, Buffer, BufferLine, Mode},
+    model::{ansi::Ansi, BufferLine, Mode, TextBuffer},
     update::update_buffer,
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
@@ -11,7 +11,7 @@ use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
-    model::{CurrentTask, FileTreeBufferSection, FileTreeBufferSectionType, Model},
+    model::{CurrentTask, FileTreeBufferSection, FileTreeBufferSectionBuffer, Model},
 };
 
 use self::{
@@ -218,9 +218,9 @@ pub fn update_preview(model: &mut Model, content: Preview) -> Vec<Action> {
             buffer_type(&FileTreeBufferSection::Preview, model, &path, content);
         }
         Preview::Image(path, protocol) => {
-            model.files.preview = FileTreeBufferSectionType::Image(path, protocol)
+            model.files.preview = FileTreeBufferSectionBuffer::Image(path, protocol)
         }
-        Preview::None(_) => model.files.preview = FileTreeBufferSectionType::None,
+        Preview::None(_) => model.files.preview = FileTreeBufferSectionBuffer::None,
     };
     Vec::new()
 }
@@ -232,7 +232,7 @@ pub fn buffer_type(
     path: &Path,
     content: Vec<BufferLine>,
 ) {
-    let mut buffer = Buffer::default();
+    let mut buffer = TextBuffer::default();
 
     let (viewport, cursor, layout) = match window_type {
         FileTreeBufferSection::Parent => (
@@ -280,7 +280,7 @@ pub fn buffer_type(
         );
     }
 
-    let buffer_type = FileTreeBufferSectionType::Text(path.to_path_buf(), buffer);
+    let buffer_type = FileTreeBufferSectionBuffer::Text(path.to_path_buf(), buffer);
     match window_type {
         FileTreeBufferSection::Parent => model.files.parent = buffer_type,
         FileTreeBufferSection::Preview => model.files.preview = buffer_type,

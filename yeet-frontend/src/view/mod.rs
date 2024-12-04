@@ -7,7 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     error::AppError,
-    model::{FileTreeBufferSectionType, Model},
+    model::{FileTreeBufferSectionBuffer, Model},
     terminal::TerminalWrapper,
 };
 
@@ -59,17 +59,17 @@ fn render_buffer(
     mode: &Mode,
     frame: &mut Frame,
     layout: Rect,
-    buffer_type: &FileTreeBufferSectionType,
+    buffer_type: &FileTreeBufferSectionBuffer,
     show_border: &bool,
 ) {
     match buffer_type {
-        FileTreeBufferSectionType::Text(_, buffer) => {
+        FileTreeBufferSectionBuffer::Text(_, buffer) => {
             view::view(viewport, cursor, mode, buffer, show_border, frame, layout);
         }
-        FileTreeBufferSectionType::Image(_, protocol) => {
+        FileTreeBufferSectionBuffer::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol), layout);
         }
-        FileTreeBufferSectionType::None => {
+        FileTreeBufferSectionBuffer::None => {
             view::view(
                 viewport,
                 &None,

@@ -12,7 +12,7 @@ use ratatui_image::protocol::Protocol;
 use tokio_util::sync::CancellationToken;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
-    Buffer, Cursor, Mode,
+    Cursor, Mode, TextBuffer,
 };
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
@@ -62,7 +62,7 @@ pub struct CurrentTask {
 }
 
 pub struct CommandLine {
-    pub buffer: Buffer,
+    pub buffer: TextBuffer,
     pub cursor: Option<Cursor>,
     pub key_sequence: String,
     pub layout: CommandLineLayout,
@@ -86,14 +86,19 @@ impl Default for CommandLine {
     }
 }
 
+// pub enum Buffer {
+//     FileTree(FileTreeBuffer),
+//     Text(Buffer),
+// }
+
 pub struct FileTreeBuffer {
     pub current: DirectoryBuffer,
     pub current_vp: ViewPort,
     pub current_cursor: Option<Cursor>,
-    pub parent: FileTreeBufferSectionType,
+    pub parent: FileTreeBufferSectionBuffer,
     pub parent_vp: ViewPort,
     pub parent_cursor: Option<Cursor>,
-    pub preview: FileTreeBufferSectionType,
+    pub preview: FileTreeBufferSectionBuffer,
     pub preview_vp: ViewPort,
     pub preview_cursor: Option<Cursor>,
     pub show_border: bool,
@@ -102,9 +107,9 @@ pub struct FileTreeBuffer {
 impl FileTreeBuffer {
     pub fn get_mut_directories(
         &mut self,
-    ) -> Vec<(&Path, &mut ViewPort, &mut Option<Cursor>, &mut Buffer)> {
+    ) -> Vec<(&Path, &mut ViewPort, &mut Option<Cursor>, &mut TextBuffer)> {
         let parent_content_ref =
-            if let FileTreeBufferSectionType::Text(path, buffer) = &mut self.parent {
+            if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.parent {
                 Some((
                     path.as_path(),
                     &mut self.parent_vp,
@@ -116,7 +121,7 @@ impl FileTreeBuffer {
             };
 
         let preview_content_ref =
-            if let FileTreeBufferSectionType::Text(path, buffer) = &mut self.preview {
+            if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.preview {
                 Some((
                     path.as_path(),
                     &mut self.preview_vp,
@@ -175,26 +180,26 @@ pub enum FileTreeBufferSection {
 // with this BufferType.
 #[allow(clippy::large_enum_variant)]
 #[derive(Default)]
-pub enum FileTreeBufferSectionType {
+pub enum FileTreeBufferSectionBuffer {
     Image(PathBuf, Protocol),
     #[default]
     None,
-    Text(PathBuf, Buffer),
+    Text(PathBuf, TextBuffer),
 }
 
-impl FileTreeBufferSectionType {
+impl FileTreeBufferSectionBuffer {
     pub fn resolve_path(&self) -> Option<&Path> {
         match self {
-            FileTreeBufferSectionType::Text(path, _) => Some(path),
-            FileTreeBufferSectionType::Image(path, _) => Some(path),
-            FileTreeBufferSectionType::None => None,
+            FileTreeBufferSectionBuffer::Text(path, _) => Some(path),
+            FileTreeBufferSectionBuffer::Image(path, _) => Some(path),
+            FileTreeBufferSectionBuffer::None => None,
         }
     }
 }
 
 #[derive(Default)]
 pub struct DirectoryBuffer {
-    pub buffer: Buffer,
+    pub buffer: TextBuffer,
     pub path: PathBuf,
     pub state: DirectoryBufferState,
 }
