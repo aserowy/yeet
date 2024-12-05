@@ -15,39 +15,39 @@ use super::{junkyard::trash_to_junkyard, selection::get_current_selected_bufferl
 pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
     let selection = get_current_selected_bufferline(model).map(|line| line.content.clone());
 
-    let mut content: Vec<_> = model.files.current.buffer.lines.drain(..).collect();
+    let mut content: Vec<_> = model.buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
     update_buffer(
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
+        &mut model.buffer.current_vp,
+        &mut model.buffer.current_cursor,
         &model.mode,
-        &mut model.files.current.buffer,
+        &mut model.buffer.current.buffer,
         &BufferMessage::SetContent(content),
     );
 
     if let Some(selection) = selection {
         update_buffer(
-            &mut model.files.current_vp,
-            &mut model.files.current_cursor,
+            &mut model.buffer.current_vp,
+            &mut model.buffer.current_cursor,
             &model.mode,
-            &mut model.files.current.buffer,
+            &mut model.buffer.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
         );
     }
 
     let result = update_buffer(
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
+        &mut model.buffer.current_vp,
+        &mut model.buffer.current_cursor,
         &model.mode,
-        &mut model.files.current.buffer,
+        &mut model.buffer.current.buffer,
         &BufferMessage::SaveBuffer,
     );
 
     let mut actions = Vec::new();
     for br in result {
         if let BufferResult::Changes(modifications) = br {
-            let path = &model.files.current.path;
+            let path = &model.buffer.current.path;
             let mut trashes = Vec::new();
             for modification in consolidate_modifications(&modifications) {
                 match modification {

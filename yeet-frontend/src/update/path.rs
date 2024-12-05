@@ -11,7 +11,10 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSection, FileTreeBufferSectionBuffer, Model},
+    model::{
+        history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, FileTreeBuffer,
+        FileTreeBufferSection, FileTreeBufferSectionBuffer,
+    },
 };
 
 use super::{
@@ -21,32 +24,39 @@ use super::{
     sign::{set_sign_if_marked, set_sign_if_qfix},
 };
 
-#[tracing::instrument(skip(model))]
-pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
+#[tracing::instrument(skip(buffer))]
+pub fn add_paths(
+    history: &History,
+    marks: &Marks,
+    qfix: &QuickFix,
+    mode: &Mode,
+    buffer: &mut FileTreeBuffer,
+    paths: &[PathBuf],
+) -> Vec<Action> {
     let mut buffer_contents = vec![(
-        model.files.current.path.as_path(),
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
-        &mut model.files.current.buffer,
-        model.mode == Mode::Navigation,
+        buffer.current.path.as_path(),
+        &mut buffer.current_vp,
+        &mut buffer.current_cursor,
+        &mut buffer.current.buffer,
+        mode == &Mode::Navigation,
     )];
 
-    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
         buffer_contents.push((
             path.as_path(),
-            &mut model.files.parent_vp,
-            &mut model.files.parent_cursor,
-            buffer,
+            &mut buffer.parent_vp,
+            &mut buffer.parent_cursor,
+            text_buffer,
             path.is_dir(),
         ));
     }
 
-    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.preview {
         buffer_contents.push((
             path.as_path(),
-            &mut model.files.preview_vp,
-            &mut model.files.preview_cursor,
-            buffer,
+            &mut buffer.preview_vp,
+            &mut buffer.preview_cursor,
+            text_buffer,
             path.is_dir(),
         ));
     }
@@ -81,8 +91,8 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let mut line = from(path);
-                set_sign_if_marked(&model.marks, &mut line, path);
-                set_sign_if_qfix(&model.qfix, &mut line, path);
+                set_sign_if_marked(&marks, &mut line, path);
+                set_sign_if_qfix(&qfix, &mut line, path);
 
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;
@@ -104,7 +114,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
             update_buffer(
                 viewport,
                 cursor,
-                &model.mode,
+                mode,
                 buffer,
                 &BufferMessage::SortContent(super::SORT),
             );
@@ -114,7 +124,7 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
             update_buffer(
                 viewport,
                 cursor,
-                &model.mode,
+                mode,
                 buffer,
                 &BufferMessage::SetCursorToLineContent(selection),
             );
@@ -122,8 +132,8 @@ pub fn add_paths(model: &mut Model, paths: &[PathBuf]) -> Vec<Action> {
     }
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    if let Some(path) = selection::get_current_selected_path(buffer) {
+        let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,
@@ -159,39 +169,45 @@ fn from(path: &Path) -> BufferLine {
     }
 }
 
-#[tracing::instrument(skip(model))]
-pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
-    if path.starts_with(&model.junk.path) {
-        remove_from_junkyard(&mut model.junk, path);
+#[tracing::instrument(skip(junk, buffer))]
+pub fn remove_path(
+    history: &History,
+    junk: &mut JunkYard,
+    mode: &Mode,
+    buffer: &mut FileTreeBuffer,
+    path: &Path,
+) -> Vec<Action> {
+    if path.starts_with(junk.path.clone()) {
+        remove_from_junkyard(junk, path);
     }
 
-    let current_selection = match &model.files.current_cursor {
-        Some(it) => get_selected_content_from_buffer(it, &model.files.current.buffer),
+    let current_selection = match &buffer.current_cursor {
+        Some(it) => get_selected_content_from_buffer(it, &buffer.current.buffer),
         None => None,
     };
 
     let mut buffer_contents = vec![(
-        model.files.current.path.as_path(),
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
-        &mut model.files.current.buffer,
+        buffer.current.path.as_path(),
+        &mut buffer.current_vp,
+        &mut buffer.current_cursor,
+        &mut buffer.current.buffer,
     )];
 
-    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.parent {
+    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
         buffer_contents.push((
             path.as_path(),
-            &mut model.files.parent_vp,
-            &mut model.files.parent_cursor,
-            buffer,
+            &mut buffer.parent_vp,
+            &mut buffer.parent_cursor,
+            text_buffer,
         ));
     }
 
-    if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut model.files.preview {
+    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.preview {
         buffer_contents.push((
             path.as_path(),
-            &mut model.files.preview_vp,
-            &mut model.files.preview_cursor,
-            buffer,
+            &mut buffer.preview_vp,
+            &mut buffer.preview_cursor,
+            text_buffer,
         ));
     }
 
@@ -212,7 +228,7 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
                     update_buffer(
                         viewport,
                         cursor,
-                        &model.mode,
+                        mode,
                         buffer,
                         &BufferMessage::RemoveLine(index),
                     );
@@ -223,17 +239,17 @@ pub fn remove_path(model: &mut Model, path: &Path) -> Vec<Action> {
 
     if let Some(selection) = current_selection {
         update_buffer(
-            &mut model.files.current_vp,
-            &mut model.files.current_cursor,
-            &model.mode,
-            &mut model.files.current.buffer,
+            &mut buffer.current_vp,
+            &mut buffer.current_cursor,
+            mode,
+            &mut buffer.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection),
         );
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    if let Some(path) = selection::get_current_selected_path(buffer) {
+        let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,

@@ -35,7 +35,7 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
             update_commandline_on_mode_change(model)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            unfocus_buffer(&mut model.files.current_cursor);
+            unfocus_buffer(&mut model.buffer.current_cursor);
             vec![]
         }
     });
@@ -49,19 +49,19 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
             update_commandline_on_mode_change(model)
         }
         Mode::Insert => {
-            focus_buffer(&mut model.files.current_cursor);
+            focus_buffer(&mut model.buffer.current_cursor);
             update_current(model, &msg);
             vec![]
         }
         Mode::Navigation => {
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            focus_buffer(&mut model.files.current_cursor);
+            focus_buffer(&mut model.buffer.current_cursor);
             update_current(model, &msg);
             persist_path_changes(model)
         }
         Mode::Normal => {
-            focus_buffer(&mut model.files.current_cursor);
+            focus_buffer(&mut model.buffer.current_cursor);
             update_current(model, &msg);
             vec![]
         }

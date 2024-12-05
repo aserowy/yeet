@@ -4,7 +4,7 @@ use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 use crate::model::{
     mark::{Marks, MARK_SIGN_ID},
     qfix::{QuickFix, QFIX_SIGN_ID},
-    Model,
+    FileTreeBuffer,
 };
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -36,14 +36,13 @@ pub fn set(bl: &mut BufferLine, sign_id: SignIdentifier) {
     }
 }
 
-pub fn set_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier) {
+pub fn set_sign_for_path(buffer: &mut FileTreeBuffer, path: &Path, sign_id: SignIdentifier) {
     let parent = match path.parent() {
         Some(it) => it,
         None => return,
     };
 
-    let target = model
-        .files
+    let target = buffer
         .get_mut_directories()
         .into_iter()
         .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
@@ -88,23 +87,21 @@ fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
     }
 }
 
-pub fn unset_sign_on_all_buffers(model: &mut Model, sign_id: SignIdentifier) {
-    model
-        .files
+pub fn unset_sign_on_all_buffers(buffer: &mut FileTreeBuffer, sign_id: SignIdentifier) {
+    buffer
         .get_mut_directories()
         .into_iter()
         .flat_map(|(_, _, _, b)| &mut b.lines)
         .for_each(|l| unset(l, sign_id));
 }
 
-pub fn unset_sign_for_path(model: &mut Model, path: &Path, sign_id: SignIdentifier) {
+pub fn unset_sign_for_path(buffer: &mut FileTreeBuffer, path: &Path, sign_id: SignIdentifier) {
     let parent = match path.parent() {
         Some(it) => it,
         None => return,
     };
 
-    let target = model
-        .files
+    let target = buffer
         .get_mut_directories()
         .into_iter()
         .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });

@@ -8,7 +8,7 @@ use crate::{
     action::Action,
     model::{
         junkyard::{FileEntry, FileEntryStatus, FileEntryType, FileTransaction, JunkYard},
-        Model,
+        FileTreeBuffer, Model,
     },
     task::Task,
 };
@@ -133,13 +133,17 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-pub fn paste_to_junkyard(model: &mut Model, entry_id: &char) -> Vec<Action> {
-    if let Some(transaction) = get_junkyard_transaction(&model.junk, entry_id) {
+pub fn paste_to_junkyard(
+    junk: &JunkYard,
+    buffer: &FileTreeBuffer,
+    entry_id: &char,
+) -> Vec<Action> {
+    if let Some(transaction) = get_junkyard_transaction(junk, entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries.iter() {
             actions.push(Action::Task(Task::RestorePath(
                 entry.clone(),
-                model.files.current.path.clone(),
+                buffer.current.path.clone(),
             )));
         }
         actions
@@ -148,27 +152,27 @@ pub fn paste_to_junkyard(model: &mut Model, entry_id: &char) -> Vec<Action> {
     }
 }
 
-pub fn yank_to_junkyard(model: &mut Model, repeat: &usize) -> Vec<Action> {
-    let current_buffer = &model.files.current.buffer;
+pub fn yank_to_junkyard(
+    junk: &mut JunkYard,
+    buffer: &FileTreeBuffer,
+    repeat: &usize,
+) -> Vec<Action> {
+    let current_buffer = &buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = &model.files.current_cursor {
+    } else if let Some(cursor) = &buffer.current_cursor {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
             if let Some(line) = current_buffer.lines.get(line_index) {
-                let target = model
-                    .files
-                    .current
-                    .path
-                    .join(line.content.to_stripped_string());
+                let target = buffer.current.path.join(line.content.to_stripped_string());
 
                 paths.push(target);
             }
         }
 
         let mut actions = Vec::new();
-        let (transaction, obsolete) = yank(&mut model.junk, paths);
+        let (transaction, obsolete) = yank(junk, paths);
         for entry in transaction.entries {
             actions.push(Action::Task(Task::YankPath(entry)));
         }

@@ -1,24 +1,31 @@
 use ratatui::layout::Rect;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::viewport::ViewPort,
+    model::{viewport::ViewPort, Mode},
 };
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSection, Model},
+    layout::AppLayout,
+    model::{history::History, FileTreeBuffer, FileTreeBufferSection},
 };
 
 use super::{history, selection};
 
-pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Action> {
+pub fn move_viewport(
+    history: &History,
+    layout: &AppLayout,
+    mode: &Mode,
+    buffer: &mut FileTreeBuffer,
+    direction: &ViewPortDirection,
+) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
-    super::update_current(model, &msg);
+    super::update_current(layout, mode, buffer, &msg);
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
+    if let Some(path) = selection::get_current_selected_path(buffer) {
         let selection =
-            history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+            history::get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,

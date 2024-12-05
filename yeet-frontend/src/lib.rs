@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::{env, mem, path::PathBuf};
 
 use action::{Action, ActionResult};
 use error::AppError;
@@ -8,7 +8,7 @@ use init::{
     qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::{qfix::CdoState, Model};
+use model::{qfix::CdoState, Buffer, FileTreeBuffer, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
@@ -100,7 +100,12 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         );
 
         let mut actions_after_update = update_model(&mut model, envelope);
-        actions_after_update.extend(get_watcher_changes(&mut model));
+
+        let buffer = match &mut model.buffer {
+            Buffer::FileTree(it) => it,
+            Buffer::Text(_) => todo!(),
+        };
+        actions_after_update.extend(get_watcher_changes(&mut model.watches, buffer));
 
         let mut preview_action_result = action::preview(
             &mut model,
@@ -176,43 +181,37 @@ fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
     height
 }
 
-#[tracing::instrument(skip(model))]
-fn get_watcher_changes(model: &mut Model) -> Vec<Action> {
+#[tracing::instrument(skip(buffer))]
+fn get_watcher_changes(watches: &mut Vec<PathBuf>, buffer: &FileTreeBuffer) -> Vec<Action> {
     let current = vec![
-        Some(model.files.current.path.clone()),
-        model.files.parent.resolve_path().map(|p| p.to_path_buf()),
-        model.files.preview.resolve_path().map(|p| p.to_path_buf()),
+        Some(buffer.current.path.clone()),
+        buffer.parent.resolve_path().map(|p| p.to_path_buf()),
+        buffer.preview.resolve_path().map(|p| p.to_path_buf()),
     ]
     .into_iter()
     .flatten()
     .collect::<Vec<_>>();
 
     let mut actions = Vec::new();
-    for path in &model.watches {
+    for path in watches.iter() {
         if !current.contains(path) {
             actions.push(Action::UnwatchPath(path.clone()));
         }
     }
 
     for path in &current {
-        if !model.watches.contains(path) {
+        if !watches.contains(path) {
             actions.push(Action::WatchPath(path.clone()));
         }
     }
 
-    model.watches = current;
+    let _ = mem::replace(watches, current);
 
     if !actions.is_empty() {
         tracing::trace!("watcher changes: {:?}", actions);
     }
 
     actions
-}
-
-fn set_remaining_keysequence(model: &mut Model, key_sequence: &str) -> Vec<Action> {
-    model.remaining_keysequence = Some(key_sequence.to_owned());
-
-    Vec::new()
 }
 
 #[tracing::instrument(skip(model, emitter))]

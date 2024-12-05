@@ -23,11 +23,10 @@ pub mod mark;
 pub mod qfix;
 pub mod register;
 
-#[derive(Default)]
 pub struct Model {
     pub commandline: CommandLine,
     pub current_tasks: HashMap<String, CurrentTask>,
-    pub files: FileTreeBuffer,
+    pub buffer: Buffer,
     pub history: History,
     pub junk: JunkYard,
     pub latest_task_id: u16,
@@ -40,6 +39,28 @@ pub struct Model {
     pub remaining_keysequence: Option<String>,
     pub settings: Settings,
     pub watches: Vec<PathBuf>,
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self {
+            commandline: Default::default(),
+            current_tasks: Default::default(),
+            buffer: Buffer::FileTree(Default::default()),
+            history: Default::default(),
+            junk: Default::default(),
+            latest_task_id: Default::default(),
+            layout: Default::default(),
+            marks: Default::default(),
+            mode: Default::default(),
+            mode_before: Default::default(),
+            qfix: Default::default(),
+            register: Default::default(),
+            remaining_keysequence: Default::default(),
+            settings: Default::default(),
+            watches: Default::default(),
+        }
+    }
 }
 
 impl std::fmt::Debug for Model {
@@ -86,10 +107,10 @@ impl Default for CommandLine {
     }
 }
 
-// pub enum Buffer {
-//     FileTree(FileTreeBuffer),
-//     Text(Buffer),
-// }
+pub enum Buffer {
+    FileTree(FileTreeBuffer),
+    Text(TextBuffer),
+}
 
 pub struct FileTreeBuffer {
     pub current: DirectoryBuffer,

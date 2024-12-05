@@ -8,7 +8,8 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, FileTreeBufferSection, Model},
+    layout::AppLayout,
+    model::{history::History, register::Register, FileTreeBuffer, FileTreeBufferSection},
 };
 
 use super::{
@@ -22,14 +23,14 @@ pub fn set_cursor_index_to_selection(
     viewport: &mut ViewPort,
     cursor: &mut Option<Cursor>,
     mode: &Mode,
-    model: &mut TextBuffer,
+    text_buffer: &mut TextBuffer,
     selection: &str,
 ) -> bool {
     let result = update_buffer(
         viewport,
         cursor,
         mode,
-        model,
+        text_buffer,
         &BufferMessage::SetCursorToLineContent(selection.to_string()),
     );
 
@@ -37,10 +38,10 @@ pub fn set_cursor_index_to_selection(
 }
 
 pub fn set_cursor_index_with_history(
+    history: &History,
     viewport: &mut ViewPort,
     cursor: &mut Option<Cursor>,
     mode: &Mode,
-    history: &History,
     buffer: &mut TextBuffer,
     path: &Path,
 ) -> bool {
@@ -51,13 +52,21 @@ pub fn set_cursor_index_with_history(
     }
 }
 
-pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec<Action> {
+pub fn move_cursor(
+    history: &History,
+    register: &Register,
+    layout: &AppLayout,
+    mode: &Mode,
+    buffer: &mut FileTreeBuffer,
+    rpt: &usize,
+    mtn: &CursorDirection,
+) -> Vec<Action> {
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(dr) = mtn {
-        let term = get_register(&model.register, &'/');
-        search_in_buffers(model, term);
+        let term = get_register(register, &'/');
+        search_in_buffers(buffer, term);
 
-        let current_dr = match get_direction_from_search_register(&model.register) {
+        let current_dr = match get_direction_from_search_register(register) {
             Some(it) => it,
             None => return Vec::new(),
         };
@@ -70,14 +79,14 @@ pub fn move_cursor(model: &mut Model, rpt: &usize, mtn: &CursorDirection) -> Vec
         };
 
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-        update_current(model, &msg);
+        update_current(layout, mode, buffer, &msg);
     } else {
-        update_current(model, &msg);
+        update_current(layout, mode, buffer, &msg);
     };
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection = get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
+    if let Some(path) = selection::get_current_selected_path(buffer) {
+        let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,

@@ -1,19 +1,26 @@
-use yeet_buffer::message::{BufferMessage, TextModification};
+use yeet_buffer::{
+    message::{BufferMessage, TextModification},
+    model::Mode,
+};
 
 use crate::{
     action::Action,
-    model::{FileTreeBufferSectionBuffer, Model},
+    layout::AppLayout,
+    model::{FileTreeBuffer, FileTreeBufferSectionBuffer, },
 };
 
 pub fn modify_buffer(
-    model: &mut Model,
+    layout: &AppLayout,
+    mode: &Mode,
+    buffer: &mut FileTreeBuffer,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
     let msg = BufferMessage::Modification(*repeat, modification.clone());
-    super::update_current(model, &msg);
+    super::update_current(layout, mode, buffer, &msg);
 
-    model.files.preview = FileTreeBufferSectionBuffer::None;
+    // FIX: only if selection changed!
+    buffer.preview = FileTreeBufferSectionBuffer::None;
 
     Vec::new()
 }

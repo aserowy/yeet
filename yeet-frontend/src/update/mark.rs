@@ -1,6 +1,9 @@
 use crate::{
     action::Action,
-    model::{mark::MARK_SIGN_ID, Model},
+    model::{
+        mark::{Marks, MARK_SIGN_ID},
+        FileTreeBuffer,
+    },
     task::Task,
 };
 
@@ -9,27 +12,33 @@ use super::{
     sign::{set, unset_sign_for_path},
 };
 
-pub fn add_mark(model: &mut Model, char: char) -> Vec<Action> {
-    let selected = get_current_selected_path(model);
+pub fn add_mark(marks: &mut Marks, buffer: &mut FileTreeBuffer, char: char) -> Vec<Action> {
+    let selected = get_current_selected_path(buffer);
     if let Some(selected) = selected {
-        let removed = model.marks.entries.insert(char, selected);
+        let removed = marks.entries.insert(char, selected);
         if let Some(removed) = removed {
-            unset_sign_for_path(model, &removed, MARK_SIGN_ID);
+            // NOTE: all file tree buffer must get handled here
+            unset_sign_for_path(buffer, &removed, MARK_SIGN_ID);
         }
 
-        if let Some(bl) = get_current_selected_bufferline(model) {
+        if let Some(bl) = get_current_selected_bufferline(buffer) {
             set(bl, MARK_SIGN_ID);
         }
     }
     Vec::new()
 }
 
-pub fn delete_mark(model: &mut Model, delete: &Vec<char>) -> Vec<Action> {
+pub fn delete_mark(
+    marks: &mut Marks,
+    buffer: &mut FileTreeBuffer,
+    delete: &Vec<char>,
+) -> Vec<Action> {
     let mut persisted = Vec::new();
     for mark in delete {
-        let deleted = model.marks.entries.remove_entry(mark);
+        let deleted = marks.entries.remove_entry(mark);
         if let Some((mark, path)) = deleted {
-            unset_sign_for_path(model, path.as_path(), MARK_SIGN_ID);
+            // NOTE: all file tree buffer must get handled here
+            unset_sign_for_path(buffer, path.as_path(), MARK_SIGN_ID);
             persisted.push(mark);
         }
     }

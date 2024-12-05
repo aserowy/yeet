@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     event::{Emitter, Message},
     init::{history, mark, qfix},
-    model::{DirectoryBufferState, FileTreeBufferSection, Model},
+    model::{Buffer, DirectoryBufferState, FileTreeBufferSection, Model},
     open,
     task::Task,
     terminal::TerminalWrapper,
@@ -100,6 +100,11 @@ async fn execute(
         ActionResult::Normal
     };
 
+    let buffer = match &mut model.buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::Text(_) => todo!(),
+    };
+
     let mut remaining_actions = vec![];
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
@@ -116,34 +121,42 @@ async fn execute(
             Action::Load(window_type, path, selection) => {
                 match window_type {
                     FileTreeBufferSection::Current => {
-                        model.files.current.state = DirectoryBufferState::Loading;
-                        model.files.current.path = path.clone();
+                        buffer.current.state = DirectoryBufferState::Loading;
+                        buffer.current.path = path.clone();
 
                         yeet_buffer::update::update_buffer(
-                            &mut model.files.current_vp,
-                            &mut model.files.current_cursor,
+                            &mut buffer.current_vp,
+                            &mut buffer.current_cursor,
                             &model.mode,
-                            &mut model.files.current.buffer,
+                            &mut buffer.current.buffer,
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
                         viewport::set_viewport_dimensions(
-                            &mut model.files.current_vp,
+                            &mut buffer.current_vp,
                             &model.layout.current,
                         );
 
                         yeet_buffer::update::update_buffer(
-                            &mut model.files.current_vp,
-                            &mut model.files.current_cursor,
+                            &mut buffer.current_vp,
+                            &mut buffer.current_cursor,
                             &model.mode,
-                            &mut model.files.current.buffer,
+                            &mut buffer.current.buffer,
                             &BufferMessage::ResetCursor,
                         );
 
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
                     FileTreeBufferSection::Parent | FileTreeBufferSection::Preview => {
-                        update::buffer_type(&window_type, model, path.as_path(), vec![]);
+                        update::buffer_type(
+                            &model.history,
+                            &model.layout,
+                            &model.mode,
+                            buffer,
+                            &window_type,
+                            path.as_path(),
+                            vec![],
+                        );
 
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
@@ -199,7 +212,7 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(path) = &model.files.preview.resolve_path() {
+                if let Some(path) = &buffer.preview.resolve_path() {
                     emitter.run(Task::LoadPreview(path.to_path_buf(), model.layout.preview));
                 }
             }

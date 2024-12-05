@@ -94,7 +94,7 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    model.files.preview = FileTreeBufferSectionBuffer::None;
+    model.buffer.preview = FileTreeBufferSectionBuffer::None;
 
     let mut actions = Vec::new();
     actions.push(Action::Load(
@@ -119,8 +119,8 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
-    if let Some(path) = model.files.current.path.clone().parent() {
-        if model.files.current.path == path {
+    if let Some(path) = model.buffer.current.path.clone().parent() {
+        if model.buffer.current.path == path {
             return Vec::new();
         }
 
@@ -137,29 +137,29 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
         }
 
         let parent_buffer =
-            match mem::replace(&mut model.files.parent, FileTreeBufferSectionBuffer::None) {
+            match mem::replace(&mut model.buffer.parent, FileTreeBufferSectionBuffer::None) {
                 FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
                 FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
                     TextBuffer::default()
                 }
             };
 
-        let current_path = mem::replace(&mut model.files.current.path, path.to_path_buf());
-        let current_buffer = mem::replace(&mut model.files.current.buffer, parent_buffer);
+        let current_path = mem::replace(&mut model.buffer.current.path, path.to_path_buf());
+        let current_buffer = mem::replace(&mut model.buffer.current.buffer, parent_buffer);
 
-        model.files.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
-        model.files.preview_cursor = Some(Default::default());
+        model.buffer.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
+        model.buffer.preview_cursor = Some(Default::default());
 
-        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
-        mem_swap_viewport(&mut model.files.parent_vp, &mut model.files.preview_vp);
+        mem_swap_viewport(&mut model.buffer.current_vp, &mut model.buffer.parent_vp);
+        mem_swap_viewport(&mut model.buffer.parent_vp, &mut model.buffer.preview_vp);
 
         mem_swap_cursor(
-            &mut model.files.current_cursor,
-            &mut model.files.parent_cursor,
+            &mut model.buffer.current_cursor,
+            &mut model.buffer.parent_cursor,
         );
         mem_swap_cursor(
-            &mut model.files.parent_cursor,
-            &mut model.files.preview_cursor,
+            &mut model.buffer.parent_cursor,
+            &mut model.buffer.preview_cursor,
         );
 
         actions
@@ -171,7 +171,7 @@ pub fn navigate_to_parent(model: &mut Model) -> Vec<Action> {
 #[tracing::instrument(skip(model))]
 pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
     if let Some(selected) = selection::get_current_selected_path(model) {
-        if model.files.current.path == selected || !selected.is_dir() {
+        if model.buffer.current.path == selected || !selected.is_dir() {
             return Vec::new();
         }
 
@@ -179,7 +179,7 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
 
         let mut actions = Vec::new();
         let preview_buffer =
-            match mem::replace(&mut model.files.preview, FileTreeBufferSectionBuffer::None) {
+            match mem::replace(&mut model.buffer.preview, FileTreeBufferSectionBuffer::None) {
                 FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
                 FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
                     let history =
@@ -196,27 +196,27 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
                 }
             };
 
-        model.files.parent = FileTreeBufferSectionBuffer::Text(
-            mem::replace(&mut model.files.current.path, selected.to_path_buf()),
-            mem::replace(&mut model.files.current.buffer, preview_buffer),
+        model.buffer.parent = FileTreeBufferSectionBuffer::Text(
+            mem::replace(&mut model.buffer.current.path, selected.to_path_buf()),
+            mem::replace(&mut model.buffer.current.buffer, preview_buffer),
         );
 
         mem_swap_cursor(
-            &mut model.files.current_cursor,
-            &mut model.files.parent_cursor,
+            &mut model.buffer.current_cursor,
+            &mut model.buffer.parent_cursor,
         );
         mem_swap_cursor(
-            &mut model.files.current_cursor,
-            &mut model.files.preview_cursor,
+            &mut model.buffer.current_cursor,
+            &mut model.buffer.preview_cursor,
         );
 
-        if let Some(cursor) = &mut model.files.current_cursor {
+        if let Some(cursor) = &mut model.buffer.current_cursor {
             cursor.horizontal_index = CursorPosition::Absolute {
                 current: 0,
                 expanded: 0,
             };
         } else {
-            model.files.current_cursor = Some(Default::default());
+            model.buffer.current_cursor = Some(Default::default());
         }
 
         if let Some(selected) = selection::get_current_selected_path(model) {
@@ -232,8 +232,8 @@ pub fn navigate_to_selected(model: &mut Model) -> Vec<Action> {
             ));
         }
 
-        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.parent_vp);
-        mem_swap_viewport(&mut model.files.current_vp, &mut model.files.preview_vp);
+        mem_swap_viewport(&mut model.buffer.current_vp, &mut model.buffer.parent_vp);
+        mem_swap_viewport(&mut model.buffer.current_vp, &mut model.buffer.preview_vp);
 
         actions
     } else {

@@ -7,7 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     error::AppError,
-    model::{FileTreeBufferSectionBuffer, Model},
+    model::{Buffer, FileTreeBufferSectionBuffer, Model},
     terminal::TerminalWrapper,
 };
 
@@ -15,41 +15,46 @@ mod commandline;
 mod statusline;
 
 pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+    let buffer = match &model.buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::Text(_) => todo!(),
+    };
+
     terminal.draw(|frame| {
         let layout = model.layout.clone();
 
         commandline::view(model, frame);
 
         view::view(
-            &model.files.current_vp,
-            &model.files.current_cursor,
+            &buffer.current_vp,
+            &buffer.current_cursor,
             &model.mode,
-            &model.files.current.buffer,
-            &model.files.show_border,
+            &buffer.current.buffer,
+            &buffer.show_border,
             frame,
             layout.current,
         );
 
         render_buffer(
-            &model.files.parent_vp,
-            &model.files.parent_cursor,
+            &buffer.parent_vp,
+            &buffer.parent_cursor,
             &model.mode,
             frame,
             layout.parent,
-            &model.files.parent,
-            &model.files.show_border,
+            &buffer.parent,
+            &buffer.show_border,
         );
         render_buffer(
-            &model.files.preview_vp,
-            &model.files.preview_cursor,
+            &buffer.preview_vp,
+            &buffer.preview_cursor,
             &model.mode,
             frame,
             layout.preview,
-            &model.files.preview,
+            &buffer.preview,
             &false,
         );
 
-        statusline::view(model, frame, layout.statusline);
+        statusline::view(buffer, frame, layout.statusline);
     })
 }
 

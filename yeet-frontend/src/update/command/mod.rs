@@ -4,7 +4,7 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::Model,
+    model::{Buffer, Model},
     task::Task,
 };
 
@@ -25,17 +25,30 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
     let mode_before = model.mode.clone();
     let mode = get_mode_after_command(&model.mode_before);
 
+    let buffer = match &mut model.buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::Text(_) => todo!(),
+    };
+
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     match cmd_with_args {
-        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(model, command)),
-        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(model)),
+        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut model.qfix, command)),
+        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut model.qfix)),
         ("cl", "") => print::qfix(&model.qfix),
-        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(model)),
-        ("clearcl", path) => add_change_mode(mode_before, mode, qfix::clear_in(model, path)),
-        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(model)),
-        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(model)),
-        ("cp", target) => add_change_mode(mode_before, mode, file::copy(model, target)),
-        ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(model)),
+        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(&mut model.qfix, buffer)),
+        ("clearcl", path) => add_change_mode(
+            mode_before,
+            mode,
+            qfix::clear_in(&mut model.qfix, buffer, path),
+        ),
+        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut model.qfix)),
+        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut model.qfix)),
+        ("cp", target) => add_change_mode(
+            mode_before,
+            mode,
+            file::copy_selection(&model.marks, &buffer.preview, target),
+        ),
+        ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview)),
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
             for mark in args.chars().filter(|c| c != &' ') {
@@ -59,19 +72,27 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(model)),
+        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(buffer)),
         ("fd", params) => add_change_mode(
             mode_before,
             mode,
             vec![Action::Task(Task::ExecuteFd(
-                model.files.current.path.clone(),
+                buffer.current.path.clone(),
                 params.to_owned(),
             ))],
         ),
-        ("invertcl", "") => add_change_mode(mode_before, mode, qfix::invert_in_current(model)),
+        ("invertcl", "") => add_change_mode(
+            mode_before,
+            mode,
+            qfix::invert_in_current(&mut model.qfix, buffer),
+        ),
         ("junk", "") => print::junkyard(&model.junk),
         ("marks", "") => print::marks(&model.marks),
-        ("mv", target) => add_change_mode(mode_before, mode, file::rename_selection(model, target)),
+        ("mv", target) => add_change_mode(
+            mode_before,
+            mode,
+            file::rename_selection(&model.marks, &buffer.preview, target),
+        ),
         ("noh", "") => add_change_mode(
             mode_before,
             mode,
