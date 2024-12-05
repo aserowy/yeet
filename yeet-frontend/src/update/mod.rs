@@ -14,7 +14,7 @@ use crate::{
     layout::AppLayout,
     model::{
         history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register,
-        CommandLine, CurrentTask, FileTreeBuffer, FileTreeBufferSection,
+        Buffer, CommandLine, CurrentTask, FileTreeBuffer, FileTreeBufferSection,
         FileTreeBufferSectionBuffer, Model,
     },
     settings::Settings,
@@ -44,7 +44,6 @@ use self::{
     save::persist_path_changes,
     search::clear_search,
     selection::copy_current_selected_path_to_clipboard,
-    settings::update_with_settings,
     viewport::{move_viewport, set_viewport_dimensions},
 };
 
@@ -85,7 +84,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     };
 
     update_commandline(model, None);
-    update_with_settings(model);
+    settings::update(model);
 
     let keymaps: Vec<_> = envelope.clone_keymap_messages();
     start_register_scope(&model.mode, &mut model.register, &keymaps);
@@ -95,7 +94,22 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     let actions = envelope
         .messages
         .into_iter()
-        .flat_map(|message| update_with_message(model, message))
+        .flat_map(|message| {
+            update_with_message(
+                &mut model.commandline,
+                &mut model.history,
+                &mut model.junk,
+                &mut model.layout,
+                &mut model.marks,
+                &mut model.qfix,
+                &mut model.register,
+                &mut model.remaining_keysequence,
+                &mut model.settings,
+                &mut model.mode,
+                &mut model.buffer,
+                message,
+            )
+        })
         .collect();
 
     finish_register_scope(&model.mode, &mut model.register, &sequence, &keymaps);
@@ -103,7 +117,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
     actions
 }
 
-#[tracing::instrument(skip(commandline, buffer, layout))]
+#[tracing::instrument(skip(commandline, buffer, layout, register))]
 fn update_with_message(
     commandline: &mut CommandLine,
     history: &History,
@@ -111,10 +125,18 @@ fn update_with_message(
     layout: &AppLayout,
     marks: &mut Marks,
     qfix: &mut QuickFix,
+    register: &mut Register,
+    remaining_keysequence: &mut Option<String>,
+    settings: &Settings,
     mode: &mut Mode,
-    buffer: &mut FileTreeBuffer,
+    buffer: &mut Buffer,
     message: Message,
 ) -> Vec<Action> {
+    let buffer = match buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::Text(_) => todo!(),
+    };
+
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
             update_on_enumeration_change(marks, qfix, mode, buffer, &path, &contents, &selection)
@@ -126,7 +148,20 @@ fn update_with_message(
             print_in_commandline(commandline, mode, &[PrintContent::Error(error.to_string())])
         }
         Message::FdResult(paths) => qfix::add(qfix, buffer, paths),
-        Message::Keymap(msg) => update_with_keymap_message(model, &msg),
+        Message::Keymap(msg) => update_with_keymap_message(
+            commandline,
+            history,
+            junk,
+            layout,
+            marks,
+            qfix,
+            register,
+            remaining_keysequence,
+            settings,
+            mode,
+            buffer,
+            &msg,
+        ),
         Message::PathRemoved(path) => remove_path(history, junk, mode, buffer, &path),
         Message::PathsAdded(paths) => add_paths(history, marks, qfix, mode, buffer, &paths)
             .into_iter()
@@ -143,7 +178,7 @@ fn update_with_message(
     }
 }
 
-#[tracing::instrument(skip(commandline, buffer, layout, msg))]
+#[tracing::instrument(skip(commandline, buffer, layout, msg, register))]
 pub fn update_with_keymap_message(
     commandline: &mut CommandLine,
     history: &History,
@@ -152,19 +187,32 @@ pub fn update_with_keymap_message(
     marks: &mut Marks,
     qfix: &mut QuickFix,
     register: &mut Register,
+    remaining_keysequence: &mut Option<String>,
     settings: &Settings,
     mode: &mut Mode,
     buffer: &mut FileTreeBuffer,
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
-        KeymapMessage::Buffer(msg) => update_with_buffer_message(model, msg),
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(
+            commandline,
+            history,
+            junk,
+            layout,
+            marks,
+            qfix,
+            register,
+            mode,
+            buffer,
+            msg,
+        ),
         KeymapMessage::ClearSearchHighlight => clear_search(buffer),
         KeymapMessage::DeleteMarks(mrks) => delete_mark(marks, buffer, mrks),
         KeymapMessage::ExecuteCommand => update_commandline_on_execute(model),
         KeymapMessage::ExecuteCommandString(command) => command::execute(command, model),
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
-            model.remaining_keysequence = Some(key_sequence.to_owned());
+            remaining_keysequence.replace(key_sequence.clone());
+            Vec::new()
         }
         KeymapMessage::ExecuteRegister(register) => replay_register(&mut model.register, register),
         KeymapMessage::LeaveCommandMode => leave_commandline(model),
@@ -189,22 +237,39 @@ pub fn update_with_keymap_message(
     }
 }
 
-#[tracing::instrument(skip(model, msg))]
-pub fn update_with_buffer_message(model: &mut Model, msg: &BufferMessage) -> Vec<Action> {
+#[tracing::instrument(skip(commandline, buffer, layout, msg, register))]
+pub fn update_with_buffer_message(
+    commandline: &mut CommandLine,
+    history: &History,
+    junk: &mut JunkYard,
+    layout: &AppLayout,
+    marks: &mut Marks,
+    qfix: &mut QuickFix,
+    register: &mut Register,
+    mode: &mut Mode,
+    buffer: &mut FileTreeBuffer,
+    msg: &BufferMessage,
+) -> Vec<Action> {
     match msg {
         BufferMessage::ChangeMode(from, to) => change_mode(model, from, to),
-        BufferMessage::Modification(repeat, modification) => match model.mode {
+        BufferMessage::Modification(repeat, modification) => match mode {
             Mode::Command(_) => update_commandline_on_modification(model, repeat, modification),
-            Mode::Insert | Mode::Normal => modify_buffer(model, repeat, modification),
+            Mode::Insert | Mode::Normal => {
+                modify_buffer(layout, mode, buffer, repeat, modification)
+            }
             Mode::Navigation => Vec::new(),
         },
-        BufferMessage::MoveCursor(rpt, mtn) => match &model.mode {
+        BufferMessage::MoveCursor(rpt, mtn) => match mode {
             Mode::Command(_) => update_commandline(model, Some(msg)),
-            Mode::Insert | Mode::Navigation | Mode::Normal => move_cursor(model, rpt, mtn),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
+                move_cursor(history, register, layout, mode, buffer, rpt, mtn)
+            }
         },
-        BufferMessage::MoveViewPort(mtn) => match model.mode {
+        BufferMessage::MoveViewPort(mtn) => match mode {
             Mode::Command(_) => update_commandline(model, Some(msg)),
-            Mode::Insert | Mode::Navigation | Mode::Normal => move_viewport(model, mtn),
+            Mode::Insert | Mode::Navigation | Mode::Normal => {
+                move_viewport(history, layout, mode, buffer, mtn)
+            }
         },
         BufferMessage::SaveBuffer => persist_path_changes(model),
 
