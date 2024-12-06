@@ -10,8 +10,7 @@ use crate::{
     action::Action,
     layout::AppLayout,
     model::{
-        history::History, FileTreeBuffer, FileTreeBufferSection,
-        FileTreeBufferSectionBuffer, State,
+        history::History, FileTreeBuffer, FileTreeBufferSection, FileTreeBufferSectionBuffer, State,
     },
 };
 

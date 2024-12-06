@@ -97,12 +97,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
         .messages
         .into_iter()
         .flat_map(|message| {
-            update_with_message(
-                &mut model.app,
-                &mut model.state,
-                &model.settings,
-                message,
-            )
+            update_with_message(&mut model.app, &mut model.state, &model.settings, message)
         })
         .collect();
 

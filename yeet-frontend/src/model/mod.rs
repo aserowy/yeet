@@ -112,8 +112,8 @@ impl Default for CommandLine {
 }
 
 pub enum Buffer {
-    FileTree(FileTreeBuffer),
-    _Text(TextBuffer),
+    FileTree(Box<FileTreeBuffer>),
+    _Text(Box<TextBuffer>),
 }
 
 pub struct FileTreeBuffer {

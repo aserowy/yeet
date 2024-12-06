@@ -167,7 +167,9 @@ async fn execute(
                 };
             }
             Action::ModeChanged => {
-                emitter.set_current_mode(model.state.modes.current.clone()).await;
+                emitter
+                    .set_current_mode(model.state.modes.current.clone())
+                    .await;
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
@@ -213,7 +215,10 @@ async fn execute(
                 terminal.resize(x, y)?;
 
                 if let Some(path) = &buffer.preview.resolve_path() {
-                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.app.layout.preview));
+                    emitter.run(Task::LoadPreview(
+                        path.to_path_buf(),
+                        model.app.layout.preview,
+                    ));
                 }
             }
             Action::Task(task) => emitter.run(task),
@@ -223,7 +228,8 @@ async fn execute(
                 }
 
                 if let Some(cancellation) = model
-                    .state.tasks
+                    .state
+                    .tasks
                     .running
                     .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
                 {
