@@ -1,5 +1,3 @@
-use std::mem;
-
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search, TextModification},
     model::{ansi::Ansi, BufferLine, CommandMode, Mode, SearchDirection},
@@ -10,7 +8,7 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{Buffer, CommandLine, Model},
+    model::{register::Register, CommandLine, FileTreeBuffer, ModeState},
     update::{
         register::get_register,
         search::{clear_search, search_in_buffers},
@@ -19,13 +17,16 @@ use crate::{
 
 use super::set_viewport_dimensions;
 
-pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) -> Vec<Action> {
-    let command_mode = match &model.mode {
+pub fn update(
+    commandline: &mut CommandLine,
+    mode: &Mode,
+    message: Option<&BufferMessage>,
+) -> Vec<Action> {
+    let command_mode = match mode {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
     };
 
-    let commandline = &mut model.commandline;
     let buffer = &mut commandline.buffer;
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
@@ -35,7 +36,7 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                update_buffer(viewport, cursor, &model.mode, buffer, message);
+                update_buffer(viewport, cursor, mode, buffer, message);
             }
             CommandMode::PrintMultiline => {}
         }
@@ -44,17 +45,18 @@ pub fn update_commandline(model: &mut Model, message: Option<&BufferMessage>) ->
     Vec::new()
 }
 
-pub fn update_commandline_on_modification(
-    model: &mut Model,
+pub fn modify(
+    commandline: &mut CommandLine,
+    modes: &mut ModeState,
+    buffer: &mut FileTreeBuffer,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
-    let command_mode = match &model.mode {
+    let command_mode = match &modes.current {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
     };
 
-    let commandline = &mut model.commandline;
     let text_buffer = &mut commandline.buffer;
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
@@ -69,8 +71,8 @@ pub fn update_commandline_on_modification(
                     if line.content.is_empty() {
                         actions.push(action::emit_keymap(KeymapMessage::Buffer(
                             BufferMessage::ChangeMode(
-                                model.mode.clone(),
-                                get_mode_after_command(&model.mode_before),
+                                modes.current.clone(),
+                                get_mode_after_command(&modes.previous),
                             ),
                         )));
                     }
@@ -80,23 +82,17 @@ pub fn update_commandline_on_modification(
             update_buffer(
                 viewport,
                 cursor,
-                &model.mode,
+                &modes.current,
                 text_buffer,
                 &BufferMessage::Modification(*repeat, modification.clone()),
             );
 
-            if matches!(model.mode, Mode::Command(CommandMode::Search(_))) {
-                let term = model
-                    .commandline
+            if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
+                let term = commandline
                     .buffer
                     .lines
                     .last()
                     .map(|bl| bl.content.to_stripped_string());
-
-                let buffer = match &mut model.buffer {
-                    Buffer::FileTree(it) => it,
-                    Buffer::Text(_) => todo!(),
-                };
 
                 search_in_buffers(buffer, term);
             }
@@ -107,7 +103,7 @@ pub fn update_commandline_on_modification(
             let mut messages = Vec::new();
             if let TextModification::Insert(cnt) = modification {
                 let action = if matches!(cnt.as_str(), ":" | "/" | "?") {
-                    model.mode = Mode::Command(match cnt.as_str() {
+                    modes.current = Mode::Command(match cnt.as_str() {
                         ":" => CommandMode::Command,
                         "/" => CommandMode::Search(SearchDirection::Down),
                         "?" => CommandMode::Search(SearchDirection::Up),
@@ -127,14 +123,14 @@ pub fn update_commandline_on_modification(
                     update_buffer(
                         viewport,
                         cursor,
-                        &model.mode,
+                        &modes.current,
                         text_buffer,
                         &BufferMessage::SetContent(vec![]),
                     );
 
                     Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
-                        model.mode.clone(),
-                        get_mode_after_command(&model.mode_before),
+                        modes.current.clone(),
+                        get_mode_after_command(&modes.previous),
                     )))
                 };
 
@@ -146,17 +142,22 @@ pub fn update_commandline_on_modification(
     }
 }
 
-pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
-    let command_mode = match &model.mode {
+pub fn update_commandline_on_execute(
+    commandline: &mut CommandLine,
+    register: &mut Register,
+    modes: &mut ModeState,
+    buffer: &mut FileTreeBuffer,
+) -> Vec<Action> {
+    let command_mode = match &modes.current {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
     };
 
     let messages = match command_mode {
         CommandMode::Command => {
-            if let Some(cmd) = model.commandline.buffer.lines.last() {
+            if let Some(cmd) = commandline.buffer.lines.last() {
                 // TODO: add command history and show previous command not current (this enables g: as well)
-                model.register.command = Some(cmd.content.to_stripped_string());
+                register.command = Some(cmd.content.to_stripped_string());
 
                 vec![Message::Keymap(KeymapMessage::ExecuteCommandString(
                     cmd.content.to_stripped_string(),
@@ -168,32 +169,26 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
         CommandMode::PrintMultiline => {
             vec![Message::Keymap(KeymapMessage::Buffer(
                 BufferMessage::ChangeMode(
-                    model.mode.clone(),
-                    get_mode_after_command(&model.mode_before),
+                    modes.current.clone(),
+                    get_mode_after_command(&modes.previous),
                 ),
             ))]
         }
         CommandMode::Search(direction) => {
-            model.register.searched = model
-                .commandline
+            register.searched = commandline
                 .buffer
                 .lines
                 .last()
                 .map(|bl| (direction.clone(), bl.content.to_stripped_string()));
 
-            if model.register.searched.is_none() {
-                let buffer = match &mut model.buffer {
-                    Buffer::FileTree(it) => it,
-                    Buffer::Text(_) => todo!(),
-                };
-
+            if register.searched.is_none() {
                 clear_search(buffer);
             }
 
             vec![
                 Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
-                    model.mode.clone(),
-                    get_mode_after_command(&model.mode_before),
+                    modes.current.clone(),
+                    get_mode_after_command(&modes.previous),
                 ))),
                 Message::Keymap(KeymapMessage::Buffer(BufferMessage::MoveCursor(
                     1,
@@ -204,38 +199,39 @@ pub fn update_commandline_on_execute(model: &mut Model) -> Vec<Action> {
     };
 
     update_buffer(
-        &mut model.commandline.viewport,
-        &mut model.commandline.cursor,
-        &model.mode,
-        &mut model.commandline.buffer,
+        &mut commandline.viewport,
+        &mut commandline.cursor,
+        &modes.current,
+        &mut commandline.buffer,
         &BufferMessage::SetContent(vec![]),
     );
 
     vec![Action::EmitMessages(messages)]
 }
 
-pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
-    if matches!(model.mode, Mode::Command(CommandMode::Search(_))) {
-        let content = get_register(&model.register, &'/');
-        let buffer = match &mut model.buffer {
-            Buffer::FileTree(it) => it,
-            Buffer::Text(_) => todo!(),
-        };
+pub fn leave_commandline(
+    commandline: &mut CommandLine,
+    register: &mut Register,
+    modes: &ModeState,
+    buffer: &mut FileTreeBuffer,
+) -> Vec<Action> {
+    if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
+        let content = get_register(register, &'/');
         search_in_buffers(buffer, content);
     }
 
     update_buffer(
-        &mut model.commandline.viewport,
-        &mut model.commandline.cursor,
-        &model.mode,
-        &mut model.commandline.buffer,
+        &mut commandline.viewport,
+        &mut commandline.cursor,
+        &modes.current,
+        &mut commandline.buffer,
         &BufferMessage::SetContent(vec![]),
     );
 
     vec![action::emit_keymap(KeymapMessage::Buffer(
         BufferMessage::ChangeMode(
-            model.mode.clone(),
-            get_mode_after_command(&model.mode_before),
+            modes.current.clone(),
+            get_mode_after_command(&modes.previous),
         ),
     ))]
 }
@@ -243,7 +239,7 @@ pub fn leave_commandline(model: &mut Model) -> Vec<Action> {
 // TODO: buffer messages till command mode left
 pub fn print_in_commandline(
     commandline: &mut CommandLine,
-    mode: &mut Mode,
+    modes: &mut ModeState,
     content: &[PrintContent],
 ) -> Vec<Action> {
     let viewport = &mut commandline.viewport;
@@ -275,12 +271,15 @@ pub fn print_in_commandline(
             ..Default::default()
         });
 
-        if mode.is_command() {
-            let _ = mem::replace(mode, Mode::Command(CommandMode::PrintMultiline));
+        if modes.current.is_command() {
+            modes.current = Mode::Command(CommandMode::PrintMultiline);
         }
 
         vec![action::emit_keymap(KeymapMessage::Buffer(
-            BufferMessage::ChangeMode(mode.clone(), Mode::Command(CommandMode::PrintMultiline)),
+            BufferMessage::ChangeMode(
+                modes.current.clone(),
+                Mode::Command(CommandMode::PrintMultiline),
+            ),
         ))]
     } else {
         Vec::new()
@@ -289,14 +288,14 @@ pub fn print_in_commandline(
     update_buffer(
         &mut commandline.viewport,
         &mut commandline.cursor,
-        mode,
+        &modes.current,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::Bottom),
     );
     update_buffer(
         &mut commandline.viewport,
         &mut commandline.cursor,
-        mode,
+        &modes.current,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::LineEnd),
     );

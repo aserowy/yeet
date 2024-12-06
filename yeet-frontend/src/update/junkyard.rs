@@ -8,16 +8,16 @@ use crate::{
     action::Action,
     model::{
         junkyard::{FileEntry, FileEntryStatus, FileEntryType, FileTransaction, JunkYard},
-        FileTreeBuffer, Model,
+        FileTreeBuffer,
     },
     task::Task,
 };
 
-pub fn add_to_junkyard(model: &mut Model, paths: &Vec<PathBuf>) -> Vec<Action> {
+pub fn add_to_junkyard(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
     for path in paths {
-        if path.starts_with(&model.junk.path) {
-            if let Some(obsolete) = add_or_update_junkyard_entry(&mut model.junk, path) {
+        if path.starts_with(&junk.path) {
+            if let Some(obsolete) = add_or_update_junkyard_entry(junk, path) {
                 for entry in obsolete.entries {
                     actions.push(Action::Task(Task::DeleteJunkYardEntry(entry)));
                 }
@@ -133,11 +133,7 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-pub fn paste_to_junkyard(
-    junk: &JunkYard,
-    buffer: &FileTreeBuffer,
-    entry_id: &char,
-) -> Vec<Action> {
+pub fn paste_to_junkyard(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<Action> {
     if let Some(transaction) = get_junkyard_transaction(junk, entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries.iter() {

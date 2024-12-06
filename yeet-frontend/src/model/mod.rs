@@ -25,19 +25,17 @@ pub mod register;
 
 pub struct Model {
     pub commandline: CommandLine,
-    pub current_tasks: HashMap<String, CurrentTask>,
     pub buffer: Buffer,
     pub history: History,
     pub junk: JunkYard,
-    pub latest_task_id: u16,
     pub layout: AppLayout,
     pub marks: Marks,
-    pub mode: Mode,
-    pub mode_before: Option<Mode>,
+    pub modes: ModeState,
     pub qfix: QuickFix,
     pub register: Register,
     pub remaining_keysequence: Option<String>,
     pub settings: Settings,
+    pub tasks: Tasks,
     pub watches: Vec<PathBuf>,
 }
 
@@ -45,19 +43,17 @@ impl Default for Model {
     fn default() -> Self {
         Self {
             commandline: Default::default(),
-            current_tasks: Default::default(),
             buffer: Buffer::FileTree(Default::default()),
             history: Default::default(),
             junk: Default::default(),
-            latest_task_id: Default::default(),
             layout: Default::default(),
             marks: Default::default(),
-            mode: Default::default(),
-            mode_before: Default::default(),
+            modes: Default::default(),
             qfix: Default::default(),
             register: Default::default(),
             remaining_keysequence: Default::default(),
             settings: Default::default(),
+            tasks: Default::default(),
             watches: Default::default(),
         }
     }
@@ -66,13 +62,24 @@ impl Default for Model {
 impl std::fmt::Debug for Model {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Model")
-            .field("current_tasks", &self.current_tasks)
             .field("junk", &self.junk)
             .field("marks", &self.marks)
             .field("qfix", &self.qfix)
             .field("settings", &self.settings)
             .finish()
     }
+}
+
+#[derive(Debug, Default)]
+pub struct ModeState {
+    pub current: Mode,
+    pub previous: Option<Mode>,
+}
+
+#[derive(Debug, Default)]
+pub struct Tasks {
+    pub latest_id: u16,
+    pub running: HashMap<String, CurrentTask>,
 }
 
 #[derive(Debug)]
