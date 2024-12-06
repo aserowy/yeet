@@ -9,7 +9,10 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     layout::AppLayout,
-    model::{history::History, register::Register, FileTreeBuffer, FileTreeBufferSection},
+    model::{
+        history::History, register::Register, FileTreeBuffer, FileTreeBufferSection,
+        FileTreeBufferSectionBuffer,
+    },
 };
 
 use super::{
@@ -61,6 +64,12 @@ pub fn move_cursor(
     rpt: &usize,
     mtn: &CursorDirection,
 ) -> Vec<Action> {
+    let premotion_preview_path = match &buffer.preview {
+        FileTreeBufferSectionBuffer::Image(path, _)
+        | FileTreeBufferSectionBuffer::Text(path, _) => Some(path.clone()),
+        FileTreeBufferSectionBuffer::None => None,
+    };
+
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(dr) = mtn {
         let term = get_register(register, &'/');
@@ -85,6 +94,11 @@ pub fn move_cursor(
     };
 
     let mut actions = Vec::new();
+    let current_preview_path = selection::get_current_selected_path(buffer);
+    if premotion_preview_path == current_preview_path {
+        return actions;
+    }
+
     if let Some(path) = selection::get_current_selected_path(buffer) {
         let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
