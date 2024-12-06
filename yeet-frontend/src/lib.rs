@@ -51,9 +51,9 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         ..Default::default()
     };
 
-    init_junkyard(&mut model.junk, &mut emitter).await?;
+    init_junkyard(&mut model.state.junk, &mut emitter).await?;
 
-    if load_history_from_file(&mut model.history).is_err() {
+    if load_history_from_file(&mut model.state.history).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Keymap(
             KeymapMessage::Print(vec![PrintContent::Error(
                 "Failed to load history".to_string(),
@@ -61,7 +61,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         )]));
     }
 
-    if load_marks_from_file(&mut model.marks).is_err() {
+    if load_marks_from_file(&mut model.state.marks).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Keymap(
             KeymapMessage::Print(vec![PrintContent::Error(
                 "Failed to load marks".to_string(),
@@ -69,7 +69,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         )]));
     }
 
-    if load_qfix_from_files(&mut model.qfix).is_err() {
+    if load_qfix_from_files(&mut model.state.qfix).is_err() {
         emitter.run(Task::EmitMessages(vec![Message::Keymap(
             KeymapMessage::Print(vec![PrintContent::Error("Failed to load qfix".to_string())]),
         )]));
@@ -81,7 +81,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         tracing::debug!("received messages: {:?}", envelope.messages);
 
         // TODO: C-c should interrupt (clear) cdo commands
-        if model.remaining_keysequence.is_some() && envelope.source == MessageSource::User {
+        if model.state.remaining_keysequence.is_some() && envelope.source == MessageSource::User {
             tracing::warn!(
                 "skipping user input while cdo commands are running: {:?}",
                 envelope.messages
@@ -91,21 +91,21 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         }
 
         let size = terminal.size().expect("Failed to get terminal size");
-        model.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
-        model.commandline.layout = CommandLineLayout::new(
-            model.layout.commandline,
+        model.app.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
+        model.app.commandline.layout = CommandLineLayout::new(
+            model.app.layout.commandline,
             envelope
                 .sequence
-                .len_or_default(model.commandline.key_sequence.chars().count()),
+                .len_or_default(model.app.commandline.key_sequence.chars().count()),
         );
 
         let mut actions_after_update = update_model(&mut model, envelope);
 
-        let buffer = match &mut model.buffer {
+        let buffer = match &mut model.app.buffer {
             Buffer::FileTree(it) => it,
             Buffer::_Text(_) => todo!(),
         };
-        actions_after_update.extend(get_watcher_changes(&mut model.watches, buffer));
+        actions_after_update.extend(get_watcher_changes(&mut model.state.watches, buffer));
 
         let mut preview_action_result = action::preview(
             &mut model,
@@ -138,7 +138,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         if let ActionResult::Quit(mode) = postview_action_result.result {
             match mode {
                 QuitMode::FailOnRunningTasks => {
-                    if model.tasks.running.is_empty() {
+                    if model.state.tasks.running.is_empty() {
                         break;
                     } else {
                         emitter.run(Task::EmitMessages(vec![Message::Keymap(
@@ -169,7 +169,7 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
 }
 
 fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
-    let lines_len = model.commandline.buffer.lines.len();
+    let lines_len = model.app.commandline.buffer.lines.len();
     let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
     for message in messages {
         if let Message::Keymap(KeymapMessage::Print(content)) = message {
@@ -216,7 +216,7 @@ fn get_watcher_changes(watches: &mut Vec<PathBuf>, buffer: &FileTreeBuffer) -> V
 
 #[tracing::instrument(skip(model, emitter))]
 fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Action]) -> Vec<Action> {
-    if model.remaining_keysequence.is_none() && model.qfix.cdo == CdoState::None {
+    if model.state.remaining_keysequence.is_none() && model.state.qfix.cdo == CdoState::None {
         return Vec::new();
     }
 
@@ -233,19 +233,19 @@ fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Actio
         return Vec::new();
     }
 
-    if !model.tasks.running.is_empty() {
+    if !model.state.tasks.running.is_empty() {
         tracing::debug!(
             "execution canceled: not all tasks finished > {:?}",
-            model.tasks.running
+            model.state.tasks.running
         );
         return Vec::new();
     }
 
-    if let Some(key_sequence) = model.remaining_keysequence.take() {
+    if let Some(key_sequence) = model.state.remaining_keysequence.take() {
         if key_sequence.is_empty() {
             tracing::debug!("remaining key sequence is empty");
 
-            model.remaining_keysequence = None;
+            model.state.remaining_keysequence = None;
         } else {
             tracing::debug!("executing remaining key sequence: {:?}", key_sequence);
 
@@ -255,15 +255,15 @@ fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Actio
         };
     }
 
-    let (next_state, actions) = match &model.qfix.cdo {
+    let (next_state, actions) = match &model.state.qfix.cdo {
         CdoState::Cnext(command) => (
-            CdoState::Cdo(Some(model.qfix.current_index), command.to_owned()),
+            CdoState::Cdo(Some(model.state.qfix.current_index), command.to_owned()),
             vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
                 "cn".to_owned(),
             ))],
         ),
         CdoState::Cdo(old_index, command) => {
-            if old_index.is_some_and(|index| index >= model.qfix.current_index) {
+            if old_index.is_some_and(|index| index >= model.state.qfix.current_index) {
                 (CdoState::None, Vec::new())
             } else {
                 (
@@ -277,9 +277,13 @@ fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Actio
         CdoState::None => (CdoState::None, Vec::new()),
     };
 
-    tracing::info!("cdo state change: {:?} -> {:?}", model.qfix.cdo, next_state);
+    tracing::info!(
+        "cdo state change: {:?} -> {:?}",
+        model.state.qfix.cdo,
+        next_state
+    );
 
-    model.qfix.cdo = next_state;
+    model.state.qfix.cdo = next_state;
 
     actions
 }

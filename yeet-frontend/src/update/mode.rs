@@ -9,9 +9,8 @@ use crate::{
     action::Action,
     layout::AppLayout,
     model::{
-        junkyard::JunkYard,
         register::{Register, RegisterScope},
-        CommandLine, FileTreeBuffer, ModeState,
+        CommandLine, FileTreeBuffer, ModeState, State,
     },
     update::update_current,
 };
@@ -22,11 +21,9 @@ use super::{
 };
 
 pub fn change_mode(
+    state: &mut State,
     commandline: &mut CommandLine,
-    junk: &mut JunkYard,
     layout: &AppLayout,
-    register: &Register,
-    modes: &mut ModeState,
     buffer: &mut FileTreeBuffer,
     from: &Mode,
     to: &Mode,
@@ -39,14 +36,14 @@ pub fn change_mode(
         _ => {}
     }
 
-    modes.current = to.clone();
-    modes.previous = Some(from.clone());
+    state.modes.current = to.clone();
+    state.modes.previous = Some(from.clone());
 
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
             unfocus_buffer(&mut commandline.cursor);
-            update_commandline_on_mode_change(commandline, modes)
+            update_commandline_on_mode_change(commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
             unfocus_buffer(&mut buffer.current_cursor);
@@ -54,29 +51,29 @@ pub fn change_mode(
         }
     });
 
-    set_commandline_content_to_mode(commandline, register, modes);
+    set_commandline_content_to_mode(commandline, &mut state.register, &mut state.modes);
 
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
             focus_buffer(&mut commandline.cursor);
-            update_commandline_on_mode_change(commandline, modes)
+            update_commandline_on_mode_change(commandline, &mut state.modes)
         }
         Mode::Insert => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &modes.current, buffer, &msg);
+            update_current(layout, &mut state.modes.current, buffer, &msg);
             vec![]
         }
         Mode::Navigation => {
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &modes.current, buffer, &msg);
-            persist_path_changes(junk, &modes.current, buffer)
+            update_current(layout, &mut state.modes.current, buffer, &msg);
+            persist_path_changes(&mut state.junk, &state.modes.current, buffer)
         }
         Mode::Normal => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &modes.current, buffer, &msg);
+            update_current(layout, &mut state.modes.current, buffer, &msg);
             vec![]
         }
     });

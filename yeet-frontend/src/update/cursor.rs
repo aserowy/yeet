@@ -10,8 +10,8 @@ use crate::{
     action::Action,
     layout::AppLayout,
     model::{
-        history::History, register::Register, FileTreeBuffer, FileTreeBufferSection,
-        FileTreeBufferSectionBuffer,
+        history::History, FileTreeBuffer, FileTreeBufferSection,
+        FileTreeBufferSectionBuffer, State,
     },
 };
 
@@ -56,10 +56,8 @@ pub fn set_cursor_index_with_history(
 }
 
 pub fn move_cursor(
-    history: &History,
-    register: &Register,
+    state: &mut State,
     layout: &AppLayout,
-    mode: &Mode,
     buffer: &mut FileTreeBuffer,
     rpt: &usize,
     mtn: &CursorDirection,
@@ -72,10 +70,10 @@ pub fn move_cursor(
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(dr) = mtn {
-        let term = get_register(register, &'/');
+        let term = get_register(&state.register, &'/');
         search_in_buffers(buffer, term);
 
-        let current_dr = match get_direction_from_search_register(register) {
+        let current_dr = match get_direction_from_search_register(&state.register) {
             Some(it) => it,
             None => return Vec::new(),
         };
@@ -88,9 +86,9 @@ pub fn move_cursor(
         };
 
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-        update_current(layout, mode, buffer, &msg);
+        update_current(layout, &state.modes.current, buffer, &msg);
     } else {
-        update_current(layout, mode, buffer, &msg);
+        update_current(layout, &state.modes.current, buffer, &msg);
     };
 
     let mut actions = Vec::new();
@@ -100,7 +98,7 @@ pub fn move_cursor(
     }
 
     if let Some(path) = selection::get_current_selected_path(buffer) {
-        let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
+        let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,

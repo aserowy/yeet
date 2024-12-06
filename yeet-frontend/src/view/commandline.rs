@@ -4,12 +4,12 @@ use yeet_buffer::view;
 use crate::model::Model;
 
 pub fn view(model: &Model, frame: &mut Frame) {
-    let commandline = &model.commandline;
+    let commandline = &model.app.commandline;
 
     view::view(
         &commandline.viewport,
         &commandline.cursor,
-        &model.modes.current,
+        &model.state.modes.current,
         &commandline.buffer,
         &false,
         frame,
@@ -17,7 +17,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
     );
 
     frame.render_widget(
-        Paragraph::new(model.commandline.key_sequence.clone()),
+        Paragraph::new(model.app.commandline.key_sequence.clone()),
         commandline.layout.key_sequence,
     );
 }

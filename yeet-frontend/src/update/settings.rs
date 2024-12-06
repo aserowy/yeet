@@ -4,7 +4,7 @@ use crate::model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, Buffer, FileTreeBuffe
 
 pub fn update(model: &mut Model) {
     let settings = &model.settings;
-    let buffer = match &mut model.buffer {
+    let buffer = match &mut model.app.buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };

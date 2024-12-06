@@ -15,20 +15,20 @@ mod commandline;
 mod statusline;
 
 pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
-    let buffer = match &model.buffer {
+    let buffer = match &model.app.buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };
 
     terminal.draw(|frame| {
-        let layout = model.layout.clone();
+        let layout = model.app.layout.clone();
 
         commandline::view(model, frame);
 
         view::view(
             &buffer.current_vp,
             &buffer.current_cursor,
-            &model.modes.current,
+            &model.state.modes.current,
             &buffer.current.buffer,
             &buffer.show_border,
             frame,
@@ -38,7 +38,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         render_buffer(
             &buffer.parent_vp,
             &buffer.parent_cursor,
-            &model.modes.current,
+            &model.state.modes.current,
             frame,
             layout.parent,
             &buffer.parent,
@@ -47,7 +47,7 @@ pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(),
         render_buffer(
             &buffer.preview_vp,
             &buffer.preview_cursor,
-            &model.modes.current,
+            &model.state.modes.current,
             frame,
             layout.preview,
             &buffer.preview,

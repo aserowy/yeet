@@ -23,48 +23,45 @@ pub mod mark;
 pub mod qfix;
 pub mod register;
 
+#[derive(Default)]
 pub struct Model {
+    pub app: App,
+    pub settings: Settings,
+    pub state: State,
+}
+
+pub struct App {
     pub commandline: CommandLine,
     pub buffer: Buffer,
+    pub layout: AppLayout,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            buffer: Buffer::FileTree(Default::default()),
+            commandline: Default::default(),
+            layout: Default::default(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct State {
     pub history: History,
     pub junk: JunkYard,
-    pub layout: AppLayout,
     pub marks: Marks,
     pub modes: ModeState,
     pub qfix: QuickFix,
     pub register: Register,
     pub remaining_keysequence: Option<String>,
-    pub settings: Settings,
     pub tasks: Tasks,
     pub watches: Vec<PathBuf>,
-}
-
-impl Default for Model {
-    fn default() -> Self {
-        Self {
-            commandline: Default::default(),
-            buffer: Buffer::FileTree(Default::default()),
-            history: Default::default(),
-            junk: Default::default(),
-            layout: Default::default(),
-            marks: Default::default(),
-            modes: Default::default(),
-            qfix: Default::default(),
-            register: Default::default(),
-            remaining_keysequence: Default::default(),
-            settings: Default::default(),
-            tasks: Default::default(),
-            watches: Default::default(),
-        }
-    }
 }
 
 impl std::fmt::Debug for Model {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Model")
-            .field("junk", &self.junk)
-            .field("marks", &self.marks)
-            .field("qfix", &self.qfix)
             .field("settings", &self.settings)
             .finish()
     }

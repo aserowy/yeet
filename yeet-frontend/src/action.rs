@@ -100,7 +100,7 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let buffer = match &mut model.buffer {
+    let buffer = match &mut model.app.buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };
@@ -127,20 +127,20 @@ async fn execute(
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
-                            &model.modes.current,
+                            &model.state.modes.current,
                             &mut buffer.current.buffer,
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
                         viewport::set_viewport_dimensions(
                             &mut buffer.current_vp,
-                            &model.layout.current,
+                            &model.app.layout.current,
                         );
 
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
-                            &model.modes.current,
+                            &model.state.modes.current,
                             &mut buffer.current.buffer,
                             &BufferMessage::ResetCursor,
                         );
@@ -149,9 +149,9 @@ async fn execute(
                     }
                     FileTreeBufferSection::Parent | FileTreeBufferSection::Preview => {
                         update::buffer_type(
-                            &model.history,
-                            &model.layout,
-                            &model.modes.current,
+                            &model.state.history,
+                            &model.app.layout,
+                            &model.state.modes.current,
                             buffer,
                             &window_type,
                             path.as_path(),
@@ -161,13 +161,13 @@ async fn execute(
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                         } else {
-                            emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
+                            emitter.run(Task::LoadPreview(path.clone(), model.app.layout.preview));
                         }
                     }
                 };
             }
             Action::ModeChanged => {
-                emitter.set_current_mode(model.modes.current.clone()).await;
+                emitter.set_current_mode(model.state.modes.current.clone()).await;
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
@@ -195,14 +195,14 @@ async fn execute(
 
                 match mode {
                     QuitMode::FailOnRunningTasks => {
-                        if let Err(error) = history::save_history_to_file(&model.history) {
+                        if let Err(error) = history::save_history_to_file(&model.state.history) {
                             tracing::error!("Failed to save history to file: {:?}", error);
                         }
                         history::optimize_history_file()?;
-                        if let Err(error) = mark::save_marks_to_file(&model.marks) {
+                        if let Err(error) = mark::save_marks_to_file(&model.state.marks) {
                             tracing::error!("Failed to save marks to file: {:?}", error);
                         }
-                        if let Err(error) = qfix::save_qfix_to_files(&model.qfix) {
+                        if let Err(error) = qfix::save_qfix_to_files(&model.state.qfix) {
                             tracing::error!("Failed to save quick fix to file: {:?}", error);
                         }
                     }
@@ -213,7 +213,7 @@ async fn execute(
                 terminal.resize(x, y)?;
 
                 if let Some(path) = &buffer.preview.resolve_path() {
-                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.layout.preview));
+                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.app.layout.preview));
                 }
             }
             Action::Task(task) => emitter.run(task),
@@ -223,7 +223,7 @@ async fn execute(
                 }
 
                 if let Some(cancellation) = model
-                    .tasks
+                    .state.tasks
                     .running
                     .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
                 {

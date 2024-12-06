@@ -9,10 +9,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{
-        history::History, mark::Marks, qfix::QuickFix, DirectoryBufferState, FileTreeBuffer,
-        FileTreeBufferSection,
-    },
+    model::{DirectoryBufferState, FileTreeBuffer, FileTreeBufferSection, State},
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -21,11 +18,9 @@ use crate::{
     },
 };
 
-#[tracing::instrument(skip(buffer, contents))]
+#[tracing::instrument(skip(state, buffer, contents))]
 pub fn update_on_enumeration_change(
-    marks: &Marks,
-    qfix: &QuickFix,
-    mode: &Mode,
+    state: &mut State,
     buffer: &mut FileTreeBuffer,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
@@ -43,8 +38,8 @@ pub fn update_on_enumeration_change(
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = from_enumeration(cntnt, knd);
-                set_sign_if_marked(marks, &mut line, &path.join(cntnt));
-                set_sign_if_qfix(qfix, &mut line, &path.join(cntnt));
+                set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt));
+                set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt));
 
                 line
             })
@@ -53,14 +48,20 @@ pub fn update_on_enumeration_change(
         update_buffer(
             viewport,
             cursor,
-            mode,
+            &state.modes.current,
             buffer,
             &BufferMessage::SetContent(content),
         );
 
         if is_first_changed_event {
             if let Some(selection) = selection {
-                if set_cursor_index_to_selection(viewport, cursor, mode, buffer, selection) {
+                if set_cursor_index_to_selection(
+                    viewport,
+                    cursor,
+                    &state.modes.current,
+                    buffer,
+                    selection,
+                ) {
                     tracing::trace!("setting cursor index from selection: {:?}", selection);
                 }
             }
@@ -80,20 +81,17 @@ pub fn update_on_enumeration_change(
     Vec::new()
 }
 
-#[tracing::instrument(skip(marks, qfix, mode, buffer))]
+#[tracing::instrument(skip(state, buffer, contents))]
 pub fn update_on_enumeration_finished(
-    history: &History,
-    marks: &Marks,
-    qfix: &QuickFix,
-    mode: &Mode,
+    state: &mut State,
     buffer: &mut FileTreeBuffer,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    update_on_enumeration_change(marks, qfix, mode, buffer, path, contents, selection);
+    update_on_enumeration_change(state, buffer, path, contents, selection);
 
-    if mode != &Mode::Navigation {
+    if &state.modes.current != &Mode::Navigation {
         return Vec::new();
     }
 
@@ -104,7 +102,7 @@ pub fn update_on_enumeration_finished(
         update_buffer(
             viewport,
             cursor,
-            mode,
+            &state.modes.current,
             buffer,
             &BufferMessage::SortContent(super::SORT),
         );
@@ -122,15 +120,15 @@ pub fn update_on_enumeration_finished(
             if !set_cursor_index_to_selection(
                 viewport,
                 &mut cursor_after_finished,
-                mode,
+                &state.modes.current,
                 buffer,
                 selection,
             ) {
                 set_cursor_index_with_history(
-                    history,
+                    &state.history,
                     viewport,
                     &mut cursor_after_finished,
-                    mode,
+                    &state.modes.current,
                     buffer,
                     path,
                 );
@@ -142,7 +140,7 @@ pub fn update_on_enumeration_finished(
         update_buffer(
             viewport,
             cursor,
-            mode,
+            &state.modes.current,
             buffer,
             &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
         );
@@ -172,7 +170,7 @@ pub fn update_on_enumeration_finished(
         return actions;
     }
 
-    let selection = get_selection_from_history(history, path).map(|s| s.to_owned());
+    let selection = get_selection_from_history(&state.history, path).map(|s| s.to_owned());
     actions.push(Action::Load(
         FileTreeBufferSection::Preview,
         selected_path,
