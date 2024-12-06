@@ -51,7 +51,7 @@ pub fn change_mode(
         }
     });
 
-    set_commandline_content_to_mode(commandline, &mut state.register, &mut state.modes);
+    set_commandline_content_to_mode(commandline, &state.register, &mut state.modes);
 
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
@@ -61,19 +61,19 @@ pub fn change_mode(
         }
         Mode::Insert => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &mut state.modes.current, buffer, &msg);
+            update_current(layout, &state.modes.current, buffer, &msg);
             vec![]
         }
         Mode::Navigation => {
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &mut state.modes.current, buffer, &msg);
+            update_current(layout, &state.modes.current, buffer, &msg);
             persist_path_changes(&mut state.junk, &state.modes.current, buffer)
         }
         Mode::Normal => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &mut state.modes.current, buffer, &msg);
+            update_current(layout, &state.modes.current, buffer, &msg);
             vec![]
         }
     });

@@ -29,7 +29,7 @@ pub fn execute(state: &mut State, buffer: &mut FileTreeBuffer, cmd: &str) -> Vec
     match cmd_with_args {
         ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut state.qfix, command)),
         ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut state.qfix)),
-        ("cl", "") => print::qfix(&mut state.qfix),
+        ("cl", "") => print::qfix(&state.qfix),
         ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(&mut state.qfix, buffer)),
         ("clearcl", path) => add_change_mode(
             mode_before,
@@ -41,7 +41,7 @@ pub fn execute(state: &mut State, buffer: &mut FileTreeBuffer, cmd: &str) -> Vec
         ("cp", target) => add_change_mode(
             mode_before,
             mode,
-            file::copy_selection(&mut state.marks, &buffer.preview, target),
+            file::copy_selection(&state.marks, &buffer.preview, target),
         ),
         ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview)),
         ("delm", args) if !args.is_empty() => {
@@ -81,12 +81,12 @@ pub fn execute(state: &mut State, buffer: &mut FileTreeBuffer, cmd: &str) -> Vec
             mode,
             qfix::invert_in_current(&mut state.qfix, buffer),
         ),
-        ("junk", "") => print::junkyard(&mut state.junk),
-        ("marks", "") => print::marks(&mut state.marks),
+        ("junk", "") => print::junkyard(&state.junk),
+        ("marks", "") => print::marks(&state.marks),
         ("mv", target) => add_change_mode(
             mode_before,
             mode,
-            file::rename_selection(&mut state.marks, &buffer.preview, target),
+            file::rename_selection(&state.marks, &buffer.preview, target),
         ),
         ("noh", "") => add_change_mode(
             mode_before,
@@ -99,8 +99,8 @@ pub fn execute(state: &mut State, buffer: &mut FileTreeBuffer, cmd: &str) -> Vec
             QuitMode::FailOnRunningTasks,
         ))],
         ("q!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
-        ("reg", "") => print::register(&mut state.register),
-        ("tl", "") => print::tasks(&mut state.tasks),
+        ("reg", "") => print::register(&state.register),
+        ("tl", "") => print::tasks(&state.tasks),
         ("w", "") => add_change_mode(
             mode_before,
             mode,

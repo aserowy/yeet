@@ -100,7 +100,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
             update_with_message(
                 &mut model.app,
                 &mut model.state,
-                &mut model.settings,
+                &model.settings,
                 message,
             )
         })
@@ -178,7 +178,7 @@ fn update_with_message(
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
         Message::TaskStarted(id, cancellation) => task::add(&mut state.tasks, id, cancellation),
         Message::TaskEnded(id) => task::remove(&mut state.tasks, id),
-        Message::ZoxideResult(path) => navigate_to_path(&mut state.history, buffer, path.as_ref()),
+        Message::ZoxideResult(path) => navigate_to_path(&state.history, buffer, path.as_ref()),
     }
 }
 
@@ -210,20 +210,20 @@ pub fn update_with_keymap_message(
         }
         KeymapMessage::ExecuteRegister(rgstr) => replay_register(&mut state.register, rgstr),
         KeymapMessage::LeaveCommandMode => {
-            leave_commandline(commandline, &mut state.register, &mut state.modes, buffer)
+            leave_commandline(commandline, &mut state.register, &state.modes, buffer)
         }
         KeymapMessage::NavigateToMark(char) => {
-            navigate_to_mark(&mut state.history, &mut state.marks, buffer, char)
+            navigate_to_mark(&state.history, &state.marks, buffer, char)
         }
         KeymapMessage::NavigateToParent => navigate_to_parent(buffer),
-        KeymapMessage::NavigateToPath(path) => navigate_to_path(&mut state.history, buffer, path),
+        KeymapMessage::NavigateToPath(path) => navigate_to_path(&state.history, buffer, path),
         KeymapMessage::NavigateToPathAsPreview(path) => {
-            navigate_to_path_as_preview(&mut state.history, buffer, path)
+            navigate_to_path_as_preview(&state.history, buffer, path)
         }
         KeymapMessage::NavigateToSelected => navigate_to_selected(&mut state.history, buffer),
-        KeymapMessage::OpenSelected => open_selected(settings, &mut state.modes.current, buffer),
+        KeymapMessage::OpenSelected => open_selected(settings, &state.modes.current, buffer),
         KeymapMessage::PasteFromJunkYard(entry_id) => {
-            paste_to_junkyard(&mut state.junk, buffer, entry_id)
+            paste_to_junkyard(&state.junk, buffer, entry_id)
         }
         KeymapMessage::Print(content) => {
             print_in_commandline(commandline, &mut state.modes, content)
@@ -259,19 +259,13 @@ pub fn update_with_buffer_message(
             Mode::Command(_) => {
                 commandline::modify(commandline, &mut state.modes, buffer, repeat, modification)
             }
-            Mode::Insert | Mode::Normal => modify_buffer(
-                layout,
-                &mut state.modes.current,
-                buffer,
-                repeat,
-                modification,
-            ),
+            Mode::Insert | Mode::Normal => {
+                modify_buffer(layout, &state.modes.current, buffer, repeat, modification)
+            }
             Mode::Navigation => Vec::new(),
         },
         BufferMessage::MoveCursor(rpt, mtn) => match &mut state.modes.current {
-            Mode::Command(_) => {
-                commandline::update(commandline, &mut state.modes.current, Some(msg))
-            }
+            Mode::Command(_) => commandline::update(commandline, &state.modes.current, Some(msg)),
             Mode::Insert | Mode::Navigation | Mode::Normal => {
                 move_cursor(state, layout, buffer, rpt, mtn)
             }
