@@ -1,7 +1,7 @@
 use yeet_buffer::model::Mode;
 use yeet_keymap::message::QuitMode;
 
-use crate::{action::Action, model::{FileTreeBuffer, }, settings::Settings};
+use crate::{action::Action, model::FileTreeBuffer, settings::Settings};
 
 use super::selection::get_current_selected_path;
 

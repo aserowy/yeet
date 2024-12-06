@@ -6,7 +6,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     layout::AppLayout,
-    model::{FileTreeBuffer, FileTreeBufferSectionBuffer, },
+    model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
 };
 
 pub fn modify_buffer(

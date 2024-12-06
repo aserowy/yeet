@@ -123,7 +123,7 @@ pub fn update_model(model: &mut Model, envelope: Envelope) -> Vec<Action> {
 #[tracing::instrument(skip(commandline, buffer, layout, register))]
 fn update_with_message(
     commandline: &mut CommandLine,
-    history: &History,
+    history: &mut History,
     junk: &mut JunkYard,
     layout: &AppLayout,
     marks: &mut Marks,
@@ -138,7 +138,7 @@ fn update_with_message(
 ) -> Vec<Action> {
     let buffer = match buffer {
         Buffer::FileTree(it) => it,
-        Buffer::Text(_) => todo!(),
+        Buffer::_Text(_) => todo!(),
     };
 
     match message {
@@ -177,6 +177,7 @@ fn update_with_message(
             register,
             remaining_keysequence,
             settings,
+            tasks,
             modes,
             buffer,
             &msg,
@@ -197,14 +198,14 @@ fn update_with_message(
             add_current_task(tasks, identifier, cancellation)
         }
         Message::TaskEnded(identifier) => remove_current_task(tasks, identifier),
-        Message::ZoxideResult(path) => navigate_to_path(model, path.as_ref()),
+        Message::ZoxideResult(path) => navigate_to_path(history, buffer, path.as_ref()),
     }
 }
 
 #[tracing::instrument(skip(commandline, buffer, layout, msg, register))]
 pub fn update_with_keymap_message(
     commandline: &mut CommandLine,
-    history: &History,
+    history: &mut History,
     junk: &mut JunkYard,
     layout: &AppLayout,
     marks: &mut Marks,
@@ -212,6 +213,7 @@ pub fn update_with_keymap_message(
     register: &mut Register,
     remaining_keysequence: &mut Option<String>,
     settings: &Settings,
+    tasks: &mut Tasks,
     modes: &mut ModeState,
     buffer: &mut FileTreeBuffer,
     msg: &KeymapMessage,
@@ -234,22 +236,26 @@ pub fn update_with_keymap_message(
         KeymapMessage::ExecuteCommand => {
             update_commandline_on_execute(commandline, register, modes, buffer)
         }
-        KeymapMessage::ExecuteCommandString(command) => command::execute(command, model),
+        KeymapMessage::ExecuteCommandString(command) => {
+            command::execute(junk, marks, qfix, register, tasks, modes, buffer, command)
+        }
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             remaining_keysequence.replace(key_sequence.clone());
             Vec::new()
         }
         KeymapMessage::ExecuteRegister(rgstr) => replay_register(register, rgstr),
         KeymapMessage::LeaveCommandMode => leave_commandline(commandline, register, modes, buffer),
-        KeymapMessage::NavigateToMark(char) => navigate_to_mark(char, model),
-        KeymapMessage::NavigateToParent => navigate_to_parent(model),
-        KeymapMessage::NavigateToPath(path) => navigate_to_path(model, path),
-        KeymapMessage::NavigateToPathAsPreview(path) => navigate_to_path_as_preview(model, path),
-        KeymapMessage::NavigateToSelected => navigate_to_selected(model),
+        KeymapMessage::NavigateToMark(char) => navigate_to_mark(history, marks, buffer, char),
+        KeymapMessage::NavigateToParent => navigate_to_parent(buffer),
+        KeymapMessage::NavigateToPath(path) => navigate_to_path(history, buffer, path),
+        KeymapMessage::NavigateToPathAsPreview(path) => {
+            navigate_to_path_as_preview(history, buffer, path)
+        }
+        KeymapMessage::NavigateToSelected => navigate_to_selected(history, buffer),
         KeymapMessage::OpenSelected => open_selected(settings, &modes.current, buffer),
         KeymapMessage::PasteFromJunkYard(entry_id) => paste_to_junkyard(junk, buffer, entry_id),
         KeymapMessage::Print(content) => print_in_commandline(commandline, modes, content),
-        KeymapMessage::ReplayMacro(char) => replay_macro_register(&mut register, char),
+        KeymapMessage::ReplayMacro(char) => replay_macro_register(register, char),
         KeymapMessage::SetMark(char) => add_mark(marks, buffer, *char),
         KeymapMessage::StartMacro(identifier) => {
             set_recording_in_commandline(commandline, modes, *identifier)

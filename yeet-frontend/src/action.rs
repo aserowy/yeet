@@ -102,7 +102,7 @@ async fn execute(
 
     let buffer = match &mut model.buffer {
         Buffer::FileTree(it) => it,
-        Buffer::Text(_) => todo!(),
+        Buffer::_Text(_) => todo!(),
     };
 
     let mut remaining_actions = vec![];
@@ -127,7 +127,7 @@ async fn execute(
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
-                            &model.mode,
+                            &model.modes.current,
                             &mut buffer.current.buffer,
                             &BufferMessage::SetContent(Vec::new()),
                         );
@@ -140,7 +140,7 @@ async fn execute(
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
-                            &model.mode,
+                            &model.modes.current,
                             &mut buffer.current.buffer,
                             &BufferMessage::ResetCursor,
                         );
@@ -151,7 +151,7 @@ async fn execute(
                         update::buffer_type(
                             &model.history,
                             &model.layout,
-                            &model.mode,
+                            &model.modes.current,
                             buffer,
                             &window_type,
                             path.as_path(),
@@ -167,7 +167,7 @@ async fn execute(
                 };
             }
             Action::ModeChanged => {
-                emitter.set_current_mode(model.mode.clone()).await;
+                emitter.set_current_mode(model.modes.current.clone()).await;
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
@@ -223,7 +223,8 @@ async fn execute(
                 }
 
                 if let Some(cancellation) = model
-                    .current_tasks
+                    .tasks
+                    .running
                     .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
                 {
                     cancellation.token.cancel();

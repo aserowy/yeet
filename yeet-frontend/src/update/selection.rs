@@ -5,7 +5,7 @@ use yeet_buffer::model::BufferLine;
 use crate::{
     action::Action,
     event::Message,
-    model::{register::Register, FileTreeBuffer, },
+    model::{register::Register, FileTreeBuffer},
 };
 
 pub fn get_current_selected_path(buffer: &FileTreeBuffer) -> Option<PathBuf> {

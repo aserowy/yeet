@@ -17,7 +17,7 @@ mod statusline;
 pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     let buffer = match &model.buffer {
         Buffer::FileTree(it) => it,
-        Buffer::Text(_) => todo!(),
+        Buffer::_Text(_) => todo!(),
     };
 
     terminal.draw(|frame| {

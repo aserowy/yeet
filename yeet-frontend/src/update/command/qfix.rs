@@ -117,7 +117,7 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
     }
 }
 
-pub fn invert_in_current( qfix: &mut QuickFix,buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn invert_in_current(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     let current_path = buffer.current.path.clone();
     for bl in buffer.current.buffer.lines.iter_mut() {
         if bl.content.is_empty() {

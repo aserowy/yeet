@@ -103,7 +103,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
 
         let buffer = match &mut model.buffer {
             Buffer::FileTree(it) => it,
-            Buffer::Text(_) => todo!(),
+            Buffer::_Text(_) => todo!(),
         };
         actions_after_update.extend(get_watcher_changes(&mut model.watches, buffer));
 
@@ -138,7 +138,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         if let ActionResult::Quit(mode) = postview_action_result.result {
             match mode {
                 QuitMode::FailOnRunningTasks => {
-                    if model.current_tasks.is_empty() {
+                    if model.tasks.running.is_empty() {
                         break;
                     } else {
                         emitter.run(Task::EmitMessages(vec![Message::Keymap(
@@ -233,10 +233,10 @@ fn get_command_from_stack(model: &mut Model, emitter: &Emitter, actions: &[Actio
         return Vec::new();
     }
 
-    if !model.current_tasks.is_empty() {
+    if !model.tasks.running.is_empty() {
         tracing::debug!(
             "execution canceled: not all tasks finished > {:?}",
-            model.current_tasks
+            model.tasks.running
         );
         return Vec::new();
     }

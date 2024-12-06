@@ -6,7 +6,7 @@ pub fn update(model: &mut Model) {
     let settings = &model.settings;
     let buffer = match &mut model.buffer {
         Buffer::FileTree(it) => it,
-        Buffer::Text(_) => todo!(),
+        Buffer::_Text(_) => todo!(),
     };
 
     buffer.current_vp.set(&settings.current);

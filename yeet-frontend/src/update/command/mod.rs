@@ -4,7 +4,10 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{Buffer, Model},
+    model::{
+        junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register, FileTreeBuffer,
+        ModeState, Tasks,
+    },
     task::Task,
 };
 
@@ -13,8 +16,17 @@ mod print;
 mod qfix;
 mod task;
 
-#[tracing::instrument(skip(model))]
-pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
+#[tracing::instrument(skip(buffer, register))]
+pub fn execute(
+    junk: &mut JunkYard,
+    marks: &mut Marks,
+    qfix: &mut QuickFix,
+    register: &mut Register,
+    tasks: &mut Tasks,
+    modes: &mut ModeState,
+    buffer: &mut FileTreeBuffer,
+    cmd: &str,
+) -> Vec<Action> {
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),
@@ -22,31 +34,22 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
 
     tracing::debug!("executing command: {:?}", cmd_with_args);
 
-    let mode_before = model.mode.clone();
-    let mode = get_mode_after_command(&model.mode_before);
-
-    let buffer = match &mut model.buffer {
-        Buffer::FileTree(it) => it,
-        Buffer::Text(_) => todo!(),
-    };
+    let mode_before = modes.current.clone();
+    let mode = get_mode_after_command(&modes.previous);
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     match cmd_with_args {
-        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut model.qfix, command)),
-        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut model.qfix)),
-        ("cl", "") => print::qfix(&model.qfix),
-        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(&mut model.qfix, buffer)),
-        ("clearcl", path) => add_change_mode(
-            mode_before,
-            mode,
-            qfix::clear_in(&mut model.qfix, buffer, path),
-        ),
-        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut model.qfix)),
-        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut model.qfix)),
+        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(qfix, command)),
+        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(qfix)),
+        ("cl", "") => print::qfix(qfix),
+        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(qfix, buffer)),
+        ("clearcl", path) => add_change_mode(mode_before, mode, qfix::clear_in(qfix, buffer, path)),
+        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(qfix)),
+        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(qfix)),
         ("cp", target) => add_change_mode(
             mode_before,
             mode,
-            file::copy_selection(&model.marks, &buffer.preview, target),
+            file::copy_selection(marks, &buffer.preview, target),
         ),
         ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview)),
         ("delm", args) if !args.is_empty() => {
@@ -63,7 +66,7 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
         }
         ("delt", args) if !args.is_empty() => {
             let actions = match args.parse::<u16>() {
-                Ok(it) => task::delete(model, it),
+                Ok(it) => task::delete(tasks, it),
                 Err(err) => {
                     tracing::warn!("Failed to parse id: {}", err);
                     return Vec::new();
@@ -81,17 +84,15 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
                 params.to_owned(),
             ))],
         ),
-        ("invertcl", "") => add_change_mode(
-            mode_before,
-            mode,
-            qfix::invert_in_current(&mut model.qfix, buffer),
-        ),
-        ("junk", "") => print::junkyard(&model.junk),
-        ("marks", "") => print::marks(&model.marks),
+        ("invertcl", "") => {
+            add_change_mode(mode_before, mode, qfix::invert_in_current(qfix, buffer))
+        }
+        ("junk", "") => print::junkyard(junk),
+        ("marks", "") => print::marks(marks),
         ("mv", target) => add_change_mode(
             mode_before,
             mode,
-            file::rename_selection(&model.marks, &buffer.preview, target),
+            file::rename_selection(marks, &buffer.preview, target),
         ),
         ("noh", "") => add_change_mode(
             mode_before,
@@ -104,8 +105,8 @@ pub fn execute(cmd: &str, model: &mut Model) -> Vec<Action> {
             QuitMode::FailOnRunningTasks,
         ))],
         ("q!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
-        ("reg", "") => print::register(&model.register),
-        ("tl", "") => print::tasks(&model.current_tasks),
+        ("reg", "") => print::register(register),
+        ("tl", "") => print::tasks(tasks),
         ("w", "") => add_change_mode(
             mode_before,
             mode,

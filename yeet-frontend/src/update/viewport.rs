@@ -24,8 +24,7 @@ pub fn move_viewport(
 
     let mut actions = Vec::new();
     if let Some(path) = selection::get_current_selected_path(buffer) {
-        let selection =
-            history::get_selection_from_history(history, &path).map(|s| s.to_owned());
+        let selection = history::get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,
             path,

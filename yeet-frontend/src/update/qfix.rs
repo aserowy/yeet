@@ -13,7 +13,7 @@ use super::{
     sign,
 };
 
-pub fn toggle_selected_to_qfix( qfix: &mut QuickFix,buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn toggle_selected_to_qfix(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     let selected = get_current_selected_path(buffer);
     if let Some(selected) = selected {
         if qfix.entries.contains(&selected) {

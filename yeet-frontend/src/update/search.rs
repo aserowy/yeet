@@ -2,7 +2,7 @@ use yeet_buffer::model::TextBuffer;
 
 use crate::{
     action::Action,
-    model::{FileTreeBuffer, FileTreeBufferSectionBuffer, },
+    model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
 };
 
 pub fn search_in_buffers(buffer: &mut FileTreeBuffer, search: Option<String>) {
