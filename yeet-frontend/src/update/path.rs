@@ -91,8 +91,8 @@ pub fn add_paths(
         for path in paths_for_buffer {
             if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
                 let mut line = from(path);
-                set_sign_if_marked(&marks, &mut line, path);
-                set_sign_if_qfix(&qfix, &mut line, path);
+                set_sign_if_marked(marks, &mut line, path);
+                set_sign_if_qfix(qfix, &mut line, path);
 
                 if let Some(index) = indexes.get(basename) {
                     buffer.lines[*index] = line;

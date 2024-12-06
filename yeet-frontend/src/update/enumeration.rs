@@ -91,7 +91,7 @@ pub fn update_on_enumeration_finished(
 ) -> Vec<Action> {
     update_on_enumeration_change(state, buffer, path, contents, selection);
 
-    if &state.modes.current != &Mode::Navigation {
+    if state.modes.current != Mode::Navigation {
         return Vec::new();
     }
 
