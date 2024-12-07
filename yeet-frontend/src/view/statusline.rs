@@ -7,13 +7,13 @@ use ratatui::{
 };
 use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::Model;
+use crate::model::FileTreeBuffer;
 
-pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
-    let changes = get_changes_content(model);
-    let position = get_position_content(model);
+pub fn view(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
+    let changes = get_changes_content(buffer);
+    let position = get_position_content(buffer);
 
-    let content = model.files.current.path.to_str().unwrap_or("");
+    let content = buffer.current.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
     let span = Span::styled(content, style);
     let path = Line::from(span);
@@ -38,10 +38,9 @@ pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(position), layout[3]);
 }
 
-fn get_position_content(model: &Model) -> Line {
-    let count = model.files.current.buffer.lines.len();
-    let current_position = model
-        .files
+fn get_position_content(buffer: &FileTreeBuffer) -> Line {
+    let count = buffer.current.buffer.lines.len();
+    let current_position = buffer
         .current_cursor
         .as_ref()
         .map(|crsr| crsr.vertical_index + 1);
@@ -66,8 +65,8 @@ fn get_position_content(model: &Model) -> Line {
     Line::from(content)
 }
 
-fn get_changes_content(model: &Model) -> Line {
-    let modifications = model.files.current.buffer.undo.get_uncommited_changes();
+fn get_changes_content(buffer: &FileTreeBuffer) -> Line {
+    let modifications = buffer.current.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

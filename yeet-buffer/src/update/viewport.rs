@@ -1,9 +1,9 @@
 use crate::{
     message::ViewPortDirection,
-    model::{viewport::ViewPort, Buffer, Cursor, CursorPosition},
+    model::{viewport::ViewPort, Cursor, CursorPosition, TextBuffer},
 };
 
-pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &Buffer) {
+pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextBuffer) {
     if buffer.lines.is_empty() {
         return;
     }
@@ -41,7 +41,7 @@ pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &Buffe
 pub fn update_by_direction(
     viewport: &mut ViewPort,
     cursor: &mut Option<Cursor>,
-    buffer: &mut Buffer,
+    buffer: &mut TextBuffer,
     direction: &ViewPortDirection,
 ) {
     if buffer.lines.is_empty() {

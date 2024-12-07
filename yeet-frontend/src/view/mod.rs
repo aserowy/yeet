@@ -7,49 +7,54 @@ use yeet_buffer::{
 
 use crate::{
     error::AppError,
-    model::{BufferType, Model},
+    model::{Buffer, FileTreeBufferSectionBuffer, Model},
     terminal::TerminalWrapper,
 };
 
 mod commandline;
 mod statusline;
 
-pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+    let buffer = match &model.app.buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
     terminal.draw(|frame| {
-        let layout = model.layout.clone();
+        let layout = model.app.layout.clone();
 
         commandline::view(model, frame);
 
         view::view(
-            &model.files.current_vp,
-            &model.files.current_cursor,
-            &model.mode,
-            &model.files.current.buffer,
-            &model.files.show_border,
+            &buffer.current_vp,
+            &buffer.current_cursor,
+            &model.state.modes.current,
+            &buffer.current.buffer,
+            &buffer.show_border,
             frame,
             layout.current,
         );
 
         render_buffer(
-            &model.files.parent_vp,
-            &model.files.parent_cursor,
-            &model.mode,
+            &buffer.parent_vp,
+            &buffer.parent_cursor,
+            &model.state.modes.current,
             frame,
             layout.parent,
-            &model.files.parent,
-            &model.files.show_border,
+            &buffer.parent,
+            &buffer.show_border,
         );
         render_buffer(
-            &model.files.preview_vp,
-            &model.files.preview_cursor,
-            &model.mode,
+            &buffer.preview_vp,
+            &buffer.preview_cursor,
+            &model.state.modes.current,
             frame,
             layout.preview,
-            &model.files.preview,
+            &buffer.preview,
             &false,
         );
 
-        statusline::view(model, frame, layout.statusline);
+        statusline::view(buffer, frame, layout.statusline);
     })
 }
 
@@ -59,17 +64,17 @@ fn render_buffer(
     mode: &Mode,
     frame: &mut Frame,
     layout: Rect,
-    buffer_type: &BufferType,
+    buffer_type: &FileTreeBufferSectionBuffer,
     show_border: &bool,
 ) {
     match buffer_type {
-        BufferType::Text(_, buffer) => {
+        FileTreeBufferSectionBuffer::Text(_, buffer) => {
             view::view(viewport, cursor, mode, buffer, show_border, frame, layout);
         }
-        BufferType::Image(_, protocol) => {
+        FileTreeBufferSectionBuffer::Image(_, protocol) => {
             frame.render_widget(Image::new(protocol), layout);
         }
-        BufferType::None => {
+        FileTreeBufferSectionBuffer::None => {
             view::view(
                 viewport,
                 &None,
