@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[tracing::instrument(skip(state, buffer, contents))]
-pub fn update_on_enumeration_change(
+pub fn change(
     state: &mut State,
     buffer: &mut FileTreeBuffer,
     path: &PathBuf,
@@ -82,14 +82,14 @@ pub fn update_on_enumeration_change(
 }
 
 #[tracing::instrument(skip(state, buffer, contents))]
-pub fn update_on_enumeration_finished(
+pub fn finish(
     state: &mut State,
     buffer: &mut FileTreeBuffer,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    update_on_enumeration_change(state, buffer, path, contents, selection);
+    change(state, buffer, path, contents, selection);
 
     if state.modes.current != Mode::Navigation {
         return Vec::new();

@@ -54,7 +54,7 @@ pub fn set_cursor_index_with_history(
     }
 }
 
-pub fn move_cursor(
+pub fn change(
     state: &mut State,
     layout: &AppLayout,
     buffer: &mut FileTreeBuffer,

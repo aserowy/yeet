@@ -8,13 +8,11 @@ use init::{
     qfix::load_qfix_from_files,
 };
 use layout::{AppLayout, CommandLineLayout};
-use model::{qfix::CdoState, Buffer, FileTreeBuffer, Model};
+use model::{qfix::CdoState, App, Buffer, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
 use tokio_util::sync::CancellationToken;
-use update::update_model;
-use view::render_model;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, PrintContent, QuitMode};
@@ -99,13 +97,8 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
                 .len_or_default(model.app.commandline.key_sequence.chars().count()),
         );
 
-        let mut actions_after_update = update_model(&mut model, envelope);
-
-        let buffer = match &mut model.app.buffer {
-            Buffer::FileTree(it) => it,
-            Buffer::_Text(_) => todo!(),
-        };
-        actions_after_update.extend(get_watcher_changes(&mut model.state.watches, buffer));
+        let mut actions_after_update = update::model(&mut model, envelope);
+        actions_after_update.extend(get_watcher_changes(&model.app, &mut model.state.watches));
 
         let mut preview_action_result = action::preview(
             &mut model,
@@ -116,7 +109,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
         .await?;
 
         if preview_action_result.result != ActionResult::SkipRender {
-            render_model(&mut terminal, &model)?;
+            view::model(&mut terminal, &model)?;
         }
 
         preview_action_result
@@ -181,8 +174,13 @@ fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
     height
 }
 
-#[tracing::instrument(skip(buffer))]
-fn get_watcher_changes(watches: &mut Vec<PathBuf>, buffer: &FileTreeBuffer) -> Vec<Action> {
+#[tracing::instrument(skip(app))]
+fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
+    let buffer = match &app.buffer {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
     let current = vec![
         Some(buffer.current.path.clone()),
         buffer.parent.resolve_path().map(|p| p.to_path_buf()),

@@ -12,7 +12,7 @@ use crate::{
 
 use super::{history, selection};
 
-pub fn move_viewport(
+pub fn change(
     history: &History,
     layout: &AppLayout,
     mode: &Mode,
@@ -35,7 +35,7 @@ pub fn move_viewport(
     actions
 }
 
-pub fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
+pub fn set_dimensions(vp: &mut ViewPort, rect: &Rect) {
     vp.height = usize::from(rect.height);
     vp.width = usize::from(rect.width);
 }

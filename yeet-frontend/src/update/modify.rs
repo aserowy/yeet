@@ -9,7 +9,7 @@ use crate::{
     model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
 };
 
-pub fn modify_buffer(
+pub fn buffer(
     layout: &AppLayout,
     mode: &Mode,
     buffer: &mut FileTreeBuffer,

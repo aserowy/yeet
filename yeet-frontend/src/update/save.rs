@@ -16,11 +16,7 @@ use crate::{
 use super::{junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
 
 #[tracing::instrument(skip(buffer))]
-pub fn persist_path_changes(
-    junk: &mut JunkYard,
-    mode: &Mode,
-    buffer: &mut FileTreeBuffer,
-) -> Vec<Action> {
+pub fn changes(junk: &mut JunkYard, mode: &Mode, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     let selection = get_current_selected_bufferline(buffer).map(|line| line.content.clone());
 
     let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();

@@ -15,12 +15,9 @@ use crate::{
     update::update_current,
 };
 
-use super::{
-    commandline::print_in_commandline, register::get_macro_register, save::persist_path_changes,
-    viewport::set_viewport_dimensions,
-};
+use super::{commandline, register::get_macro_register, save::changes, viewport::set_dimensions};
 
-pub fn change_mode(
+pub fn change(
     state: &mut State,
     commandline: &mut CommandLine,
     layout: &AppLayout,
@@ -69,7 +66,7 @@ pub fn change_mode(
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             focus_buffer(&mut buffer.current_cursor);
             update_current(layout, &state.modes.current, buffer, &msg);
-            persist_path_changes(&mut state.junk, &state.modes.current, buffer)
+            changes(&mut state.junk, &state.modes.current, buffer)
         }
         Mode::Normal => {
             focus_buffer(&mut buffer.current_cursor);
@@ -88,7 +85,7 @@ fn update_commandline_on_mode_change(
     let buffer = &mut commandline.buffer;
     let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(viewport, &commandline.layout.buffer);
+    set_dimensions(viewport, &commandline.layout.buffer);
 
     let command_mode = match &modes.current {
         Mode::Command(it) => it,
@@ -153,27 +150,24 @@ fn set_commandline_content_to_mode(
     modes: &mut ModeState,
 ) {
     if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(register) {
-        set_recording_in_commandline(commandline, modes, *identifier);
+        print_recording(commandline, modes, *identifier);
     } else {
-        set_mode_in_commandline(commandline, modes);
+        print_mode(commandline, modes);
     };
 }
 
-pub fn set_recording_in_commandline(
+pub fn print_recording(
     commandline: &mut CommandLine,
     modes: &mut ModeState,
     identifier: char,
 ) -> Vec<Action> {
     let content = format!("recording @{}", identifier);
-    print_in_commandline(commandline, modes, &[PrintContent::Default(content)]);
+    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
     Vec::new()
 }
 
-pub fn set_mode_in_commandline(
-    commandline: &mut CommandLine,
-    modes: &mut ModeState,
-) -> Vec<Action> {
+pub fn print_mode(commandline: &mut CommandLine, modes: &mut ModeState) -> Vec<Action> {
     let content = format!("--{}--", modes.current.to_string().to_uppercase());
-    print_in_commandline(commandline, modes, &[PrintContent::Default(content)]);
+    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
     Vec::new()
 }

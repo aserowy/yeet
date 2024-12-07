@@ -13,7 +13,7 @@ use crate::{
 use super::{history, selection};
 
 #[tracing::instrument(skip(buffer))]
-pub fn navigate_to_mark(
+pub fn mark(
     history: &History,
     marks: &Marks,
     buffer: &mut FileTreeBuffer,
@@ -37,11 +37,7 @@ pub fn navigate_to_mark(
 }
 
 #[tracing::instrument(skip(buffer, history))]
-pub fn navigate_to_path(
-    history: &History,
-    buffer: &mut FileTreeBuffer,
-    path: &Path,
-) -> Vec<Action> {
+pub fn path(history: &History, buffer: &mut FileTreeBuffer, path: &Path) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
 
@@ -66,11 +62,7 @@ pub fn navigate_to_path(
     navigate_to_path_with_selection(history, buffer, path, &selection)
 }
 
-pub fn navigate_to_path_as_preview(
-    history: &History,
-    buffer: &mut FileTreeBuffer,
-    path: &Path,
-) -> Vec<Action> {
+pub fn path_as_preview(history: &History, buffer: &mut FileTreeBuffer, path: &Path) -> Vec<Action> {
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
@@ -134,7 +126,7 @@ pub fn navigate_to_path_with_selection(
 }
 
 #[tracing::instrument(skip(buffer))]
-pub fn navigate_to_parent(buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn parent(buffer: &mut FileTreeBuffer) -> Vec<Action> {
     if let Some(path) = buffer.current.path.clone().parent() {
         if buffer.current.path == path {
             return Vec::new();
@@ -179,7 +171,7 @@ pub fn navigate_to_parent(buffer: &mut FileTreeBuffer) -> Vec<Action> {
 }
 
 #[tracing::instrument(skip(buffer, history))]
-pub fn navigate_to_selected(history: &mut History, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn selected(history: &mut History, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     if let Some(selected) = selection::get_current_selected_path(buffer) {
         if buffer.current.path == selected || !selected.is_dir() {
             return Vec::new();

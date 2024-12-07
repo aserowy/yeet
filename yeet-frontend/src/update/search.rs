@@ -9,7 +9,7 @@ pub fn search_in_buffers(buffer: &mut FileTreeBuffer, search: Option<String>) {
     let search = match search {
         Some(it) => it,
         None => {
-            clear_search(buffer);
+            clear(buffer);
             return;
         }
     };
@@ -29,7 +29,7 @@ pub fn search_in_buffers(buffer: &mut FileTreeBuffer, search: Option<String>) {
     };
 }
 
-pub fn clear_search(buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn clear(buffer: &mut FileTreeBuffer) -> Vec<Action> {
     for line in &mut buffer.current.buffer.lines {
         line.search_char_position = None;
     }

@@ -25,7 +25,7 @@ use super::{
 };
 
 #[tracing::instrument(skip(buffer))]
-pub fn add_paths(
+pub fn add(
     history: &History,
     marks: &Marks,
     qfix: &QuickFix,
@@ -170,7 +170,7 @@ fn from(path: &Path) -> BufferLine {
 }
 
 #[tracing::instrument(skip(junk, buffer))]
-pub fn remove_path(
+pub fn remove(
     history: &History,
     junk: &mut JunkYard,
     mode: &Mode,

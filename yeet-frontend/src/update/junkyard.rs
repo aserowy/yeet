@@ -13,7 +13,7 @@ use crate::{
     task::Task,
 };
 
-pub fn add_to_junkyard(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
+pub fn add(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
     for path in paths {
         if path.starts_with(&junk.path) {
@@ -133,7 +133,7 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-pub fn paste_to_junkyard(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<Action> {
+pub fn paste(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<Action> {
     if let Some(transaction) = get_junkyard_transaction(junk, entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries.iter() {
@@ -148,11 +148,7 @@ pub fn paste_to_junkyard(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &ch
     }
 }
 
-pub fn yank_to_junkyard(
-    junk: &mut JunkYard,
-    buffer: &FileTreeBuffer,
-    repeat: &usize,
-) -> Vec<Action> {
+pub fn yank(junk: &mut JunkYard, buffer: &FileTreeBuffer, repeat: &usize) -> Vec<Action> {
     let current_buffer = &buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
@@ -168,7 +164,7 @@ pub fn yank_to_junkyard(
         }
 
         let mut actions = Vec::new();
-        let (transaction, obsolete) = yank(junk, paths);
+        let (transaction, obsolete) = yank_path(junk, paths);
         for entry in transaction.entries {
             actions.push(Action::Task(Task::YankPath(entry)));
         }
@@ -185,7 +181,7 @@ pub fn yank_to_junkyard(
     }
 }
 
-fn yank(
+fn yank_path(
     junkyard: &mut JunkYard,
     paths: Vec<PathBuf>,
 ) -> (FileTransaction, Option<FileTransaction>) {

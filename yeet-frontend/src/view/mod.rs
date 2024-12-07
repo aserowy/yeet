@@ -14,7 +14,7 @@ use crate::{
 mod commandline;
 mod statusline;
 
-pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     let buffer = match &model.app.buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),

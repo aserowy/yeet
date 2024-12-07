@@ -132,10 +132,7 @@ async fn execute(
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
-                        viewport::set_viewport_dimensions(
-                            &mut buffer.current_vp,
-                            &model.app.layout.current,
-                        );
+                        viewport::set_dimensions(&mut buffer.current_vp, &model.app.layout.current);
 
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,

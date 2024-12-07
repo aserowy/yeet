@@ -5,7 +5,7 @@ use crate::{action::Action, model::FileTreeBuffer, settings::Settings};
 
 use super::selection::get_current_selected_path;
 
-pub fn open_selected(settings: &Settings, mode: &Mode, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn selected(settings: &Settings, mode: &Mode, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     if mode != &Mode::Navigation {
         return Vec::new();
     }

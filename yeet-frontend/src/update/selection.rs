@@ -42,10 +42,7 @@ pub fn get_current_selected_bufferline(buffer: &mut FileTreeBuffer) -> Option<&m
     current_buffer.lines.get_mut(cursor.vertical_index)
 }
 
-pub fn copy_current_selected_path_to_clipboard(
-    register: &mut Register,
-    buffer: &FileTreeBuffer,
-) -> Vec<Action> {
+pub fn copy_to_clipboard(register: &mut Register, buffer: &FileTreeBuffer) -> Vec<Action> {
     if let Some(path) = get_current_selected_path(buffer) {
         if let Some(clipboard) = register.clipboard.as_mut() {
             match clipboard.set_text(path.to_string_lossy()) {

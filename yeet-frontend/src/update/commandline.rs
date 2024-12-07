@@ -11,11 +11,11 @@ use crate::{
     model::{register::Register, CommandLine, FileTreeBuffer, ModeState},
     update::{
         register::get_register,
-        search::{clear_search, search_in_buffers},
+        search::{self, search_in_buffers},
     },
 };
 
-use super::set_viewport_dimensions;
+use super::viewport;
 
 pub fn update(
     commandline: &mut CommandLine,
@@ -31,7 +31,7 @@ pub fn update(
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(viewport, &commandline.layout.buffer);
+    viewport::set_dimensions(viewport, &commandline.layout.buffer);
 
     if let Some(message) = message {
         match command_mode {
@@ -61,7 +61,7 @@ pub fn modify(
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(viewport, &commandline.layout.buffer);
+    viewport::set_dimensions(viewport, &commandline.layout.buffer);
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
@@ -142,7 +142,7 @@ pub fn modify(
     }
 }
 
-pub fn update_commandline_on_execute(
+pub fn update_on_execute(
     commandline: &mut CommandLine,
     register: &mut Register,
     modes: &mut ModeState,
@@ -182,7 +182,7 @@ pub fn update_commandline_on_execute(
                 .map(|bl| (direction.clone(), bl.content.to_stripped_string()));
 
             if register.searched.is_none() {
-                clear_search(buffer);
+                search::clear(buffer);
             }
 
             vec![
@@ -209,7 +209,7 @@ pub fn update_commandline_on_execute(
     vec![Action::EmitMessages(messages)]
 }
 
-pub fn leave_commandline(
+pub fn leave(
     commandline: &mut CommandLine,
     register: &mut Register,
     modes: &ModeState,
@@ -237,14 +237,14 @@ pub fn leave_commandline(
 }
 
 // TODO: buffer messages till command mode left
-pub fn print_in_commandline(
+pub fn print(
     commandline: &mut CommandLine,
     modes: &mut ModeState,
     content: &[PrintContent],
 ) -> Vec<Action> {
     let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(viewport, &commandline.layout.buffer);
+    viewport::set_dimensions(viewport, &commandline.layout.buffer);
 
     commandline.buffer.lines = content
         .iter()
