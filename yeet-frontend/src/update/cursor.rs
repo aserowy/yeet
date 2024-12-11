@@ -8,7 +8,6 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    layout::AppLayout,
     model::{
         history::History, FileTreeBuffer, FileTreeBufferSection, FileTreeBufferSectionBuffer, State,
     },
@@ -18,7 +17,7 @@ use super::{
     history::get_selection_from_history,
     register::{get_direction_from_search_register, get_register},
     search::search_in_buffers,
-    selection, update_current,
+    selection,
 };
 
 pub fn set_cursor_index_to_selection(
@@ -54,9 +53,8 @@ pub fn set_cursor_index_with_history(
     }
 }
 
-pub fn change(
+pub fn relocate(
     state: &mut State,
-    layout: &AppLayout,
     buffer: &mut FileTreeBuffer,
     rpt: &usize,
     mtn: &CursorDirection,
@@ -85,9 +83,21 @@ pub fn change(
         };
 
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-        update_current(layout, &state.modes.current, buffer, &msg);
+        yeet_buffer::update::update_buffer(
+            &mut buffer.current_vp,
+            &mut buffer.current_cursor,
+            &state.modes.current,
+            &mut buffer.current.buffer,
+            &msg,
+        );
     } else {
-        update_current(layout, &state.modes.current, buffer, &msg);
+        yeet_buffer::update::update_buffer(
+            &mut buffer.current_vp,
+            &mut buffer.current_cursor,
+            &state.modes.current,
+            &mut buffer.current.buffer,
+            &msg,
+        );
     };
 
     let mut actions = Vec::new();

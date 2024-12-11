@@ -15,7 +15,7 @@ use crate::{
     open,
     task::Task,
     terminal::TerminalWrapper,
-    update::{self, viewport},
+    update,
 };
 
 #[derive(Debug)]
@@ -132,8 +132,6 @@ async fn execute(
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
-                        viewport::set_dimensions(&mut buffer.current_vp, &model.app.layout.current);
-
                         yeet_buffer::update::update_buffer(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
@@ -147,7 +145,6 @@ async fn execute(
                     FileTreeBufferSection::Parent | FileTreeBufferSection::Preview => {
                         update::buffer_type(
                             &model.state.history,
-                            &model.app.layout,
                             &model.state.modes.current,
                             buffer,
                             &window_type,

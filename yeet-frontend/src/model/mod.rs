@@ -3,11 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    layout::{AppLayout, CommandLineLayout},
-    settings::Settings,
-};
-use ratatui::layout::Rect;
+use crate::{error::AppError, settings::Settings};
 use ratatui_image::protocol::Protocol;
 use tokio_util::sync::CancellationToken;
 use yeet_buffer::model::{
@@ -32,16 +28,33 @@ pub struct Model {
 
 pub struct App {
     pub commandline: CommandLine,
-    pub buffer: Buffer,
-    pub layout: AppLayout,
+    pub buffers: HashMap<usize, Buffer>,
+    pub window: Vec<Window>,
 }
 
 impl Default for App {
     fn default() -> Self {
+        let mut buffers = HashMap::new();
+        buffers.insert(1, Buffer::FileTree(Box::new(FileTreeBuffer::default())));
+
         Self {
-            buffer: Buffer::FileTree(Default::default()),
+            buffers,
             commandline: Default::default(),
-            layout: Default::default(),
+            window: vec![Window::Content(Default::default(), Default::default(), 1)],
+        }
+    }
+}
+
+pub enum Window {
+    Horizontal(Box<Window>, Box<Window>),
+    Content(ViewPort, Cursor, usize),
+}
+
+impl Window {
+    pub fn get_height(&self) -> Result<u16, AppError> {
+        match self {
+            Window::Horizontal(_, _) => todo!(),
+            Window::Content(vp, _, _) => Ok(vp.height),
         }
     }
 }
@@ -90,7 +103,6 @@ pub struct CommandLine {
     pub buffer: TextBuffer,
     pub cursor: Option<Cursor>,
     pub key_sequence: String,
-    pub layout: CommandLineLayout,
     pub viewport: ViewPort,
 }
 
@@ -105,7 +117,6 @@ impl Default for CommandLine {
             }),
             buffer: Default::default(),
             key_sequence: "".to_owned(),
-            layout: CommandLineLayout::new(Rect::default(), 0),
             viewport: Default::default(),
         }
     }

@@ -7,7 +7,6 @@ use init::{
     history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
     qfix::load_qfix_from_files,
 };
-use layout::{AppLayout, CommandLineLayout};
 use model::{qfix::CdoState, App, Buffer, Model};
 use settings::Settings;
 use task::Task;
@@ -21,7 +20,6 @@ mod action;
 pub mod error;
 mod event;
 mod init;
-mod layout;
 mod model;
 mod open;
 pub mod settings;
@@ -88,16 +86,7 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             continue;
         }
 
-        let size = terminal.size().expect("Failed to get terminal size");
-        model.app.layout = AppLayout::new(size, get_commandline_height(&model, &envelope.messages));
-        model.app.commandline.layout = CommandLineLayout::new(
-            model.app.layout.commandline,
-            envelope
-                .sequence
-                .len_or_default(model.app.commandline.key_sequence.chars().count()),
-        );
-
-        let mut actions_after_update = update::model(&mut model, envelope);
+        let mut actions_after_update = update::model(&terminal, &mut model, envelope);
         actions_after_update.extend(get_watcher_changes(&model.app, &mut model.state.watches));
 
         let mut preview_action_result = action::preview(
@@ -161,34 +150,23 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
     env::current_dir().expect("Failed to get current directory")
 }
 
-fn get_commandline_height(model: &Model, messages: &Vec<Message>) -> u16 {
-    let lines_len = model.app.commandline.buffer.lines.len();
-    let mut height = if lines_len == 0 { 1 } else { lines_len as u16 };
-    for message in messages {
-        if let Message::Keymap(KeymapMessage::Print(content)) = message {
-            if content.len() > 1 {
-                height = content.len() as u16 + 1;
-            }
-        }
-    }
-    height
-}
-
 #[tracing::instrument(skip(app))]
 fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
-    let buffer = match &app.buffer {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
-    };
-
-    let current = vec![
-        Some(buffer.current.path.clone()),
-        buffer.parent.resolve_path().map(|p| p.to_path_buf()),
-        buffer.preview.resolve_path().map(|p| p.to_path_buf()),
-    ]
-    .into_iter()
-    .flatten()
-    .collect::<Vec<_>>();
+    let current = app
+        .buffers
+        .iter()
+        .map(|(_, bffr)| match bffr {
+            Buffer::FileTree(it) => vec![
+                Some(it.current.path.clone()),
+                it.parent.resolve_path().map(|p| p.to_path_buf()),
+                it.preview.resolve_path().map(|p| p.to_path_buf()),
+            ],
+            Buffer::_Text(_) => Vec::new(),
+        })
+        .into_iter()
+        .flatten()
+        .flatten()
+        .collect::<Vec<_>>();
 
     let mut actions = Vec::new();
     for path in watches.iter() {

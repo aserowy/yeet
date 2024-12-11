@@ -5,19 +5,24 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    layout::AppLayout,
     model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
 };
 
 pub fn buffer(
-    layout: &AppLayout,
     mode: &Mode,
     buffer: &mut FileTreeBuffer,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
     let msg = BufferMessage::Modification(*repeat, modification.clone());
-    super::update_current(layout, mode, buffer, &msg);
+
+    yeet_buffer::update::update_buffer(
+        &mut buffer.current_vp,
+        &mut buffer.current_cursor,
+        mode,
+        &mut buffer.current.buffer,
+        &msg,
+    );
 
     // FIX: only if selection changed!
     buffer.preview = FileTreeBufferSectionBuffer::None;

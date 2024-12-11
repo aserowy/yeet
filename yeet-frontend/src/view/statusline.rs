@@ -7,9 +7,16 @@ use ratatui::{
 };
 use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::FileTreeBuffer;
+use crate::model::{Buffer, FileTreeBuffer};
 
-pub fn view(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
+pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
+    match current {
+        Buffer::FileTree(it) => filetree_status(it, frame, rect),
+        Buffer::_Text(_) => todo!(),
+    }
+}
+
+fn filetree_status(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(buffer);
     let position = get_position_content(buffer);
 

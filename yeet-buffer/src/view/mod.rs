@@ -13,20 +13,26 @@ mod line;
 mod prefix;
 mod style;
 
-// FIX: long lines break viewport content
 pub fn view(
     viewport: &ViewPort,
     cursor: &Option<Cursor>,
     mode: &Mode,
     buffer: &TextBuffer,
-    show_border: &bool,
     frame: &mut Frame,
-    rect: Rect,
+    horizontal_offset: u16,
+    vertical_offset: u16,
 ) {
     let rendered = get_rendered_lines(viewport, buffer);
     let styled = get_styled_lines(viewport, mode, cursor, rendered);
 
-    let rect = if *show_border {
+    let rect = Rect {
+        x: horizontal_offset,
+        y: vertical_offset,
+        width: viewport.width,
+        height: viewport.height,
+    };
+
+    let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
             .border_style(Style::default().fg(Color::Black));
@@ -48,7 +54,7 @@ fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLin
         .lines
         .iter()
         .skip(viewport.vertical_index)
-        .take(viewport.height)
+        .take(usize::from(viewport.height))
         .map(|line| line.to_owned())
         .collect()
 }

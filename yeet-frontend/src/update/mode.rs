@@ -7,24 +7,17 @@ use yeet_keymap::message::PrintContent;
 
 use crate::{
     action::Action,
-    layout::AppLayout,
     model::{
         register::{Register, RegisterScope},
-        CommandLine, FileTreeBuffer, ModeState, State,
+        App, CommandLine, ModeState, State,
     },
-    update::update_current,
 };
 
-use super::{commandline, register::get_macro_register, save::changes, viewport::set_dimensions};
+use super::{commandline, register::get_macro_register, save::changes};
 
-pub fn change(
-    state: &mut State,
-    commandline: &mut CommandLine,
-    layout: &AppLayout,
-    buffer: &mut FileTreeBuffer,
-    from: &Mode,
-    to: &Mode,
-) -> Vec<Action> {
+pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<Action> {
+    let commandline = & mut app.commandline;
+
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
         | (Mode::Insert, Mode::Insert)
@@ -58,19 +51,43 @@ pub fn change(
         }
         Mode::Insert => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &state.modes.current, buffer, &msg);
+
+            yeet_buffer::update::update_buffer(
+                &mut buffer.current_vp,
+                &mut buffer.current_cursor,
+                &state.modes.current,
+                &mut buffer.current.buffer,
+                &msg,
+            );
+
             vec![]
         }
         Mode::Navigation => {
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &state.modes.current, buffer, &msg);
+
+            yeet_buffer::update::update_buffer(
+                &mut buffer.current_vp,
+                &mut buffer.current_cursor,
+                &state.modes.current,
+                &mut buffer.current.buffer,
+                &msg,
+            );
+
             changes(&mut state.junk, &state.modes.current, buffer)
         }
         Mode::Normal => {
             focus_buffer(&mut buffer.current_cursor);
-            update_current(layout, &state.modes.current, buffer, &msg);
+
+            yeet_buffer::update::update_buffer(
+                &mut buffer.current_vp,
+                &mut buffer.current_cursor,
+                &state.modes.current,
+                &mut buffer.current.buffer,
+                &msg,
+            );
+
             vec![]
         }
     });
@@ -84,8 +101,6 @@ fn update_commandline_on_mode_change(
 ) -> Vec<Action> {
     let buffer = &mut commandline.buffer;
     let viewport = &mut commandline.viewport;
-
-    set_dimensions(viewport, &commandline.layout.buffer);
 
     let command_mode = match &modes.current {
         Mode::Command(it) => it,

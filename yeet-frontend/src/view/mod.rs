@@ -1,89 +1,22 @@
-use ratatui::{layout::Rect, Frame};
-use ratatui_image::Image;
-use yeet_buffer::{
-    model::{viewport::ViewPort, Cursor, Mode},
-    view,
-};
-
-use crate::{
-    error::AppError,
-    model::{Buffer, FileTreeBufferSectionBuffer, Model},
-    terminal::TerminalWrapper,
-};
+use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 
 mod commandline;
+mod filetreebuffer;
 mod statusline;
+mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
-    let buffer = match &model.app.buffer {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
-    };
-
     terminal.draw(|frame| {
-        let layout = model.app.layout.clone();
+        let vertical_offset = window::view(model, frame).expect("Failed to render window view");
 
-        commandline::view(model, frame);
+        // TODO:
+        // statusline::view(buffer, frame, main[1]);
 
-        view::view(
-            &buffer.current_vp,
-            &buffer.current_cursor,
-            &model.state.modes.current,
-            &buffer.current.buffer,
-            &buffer.show_border,
-            frame,
-            layout.current,
-        );
-
-        render_buffer(
-            &buffer.parent_vp,
-            &buffer.parent_cursor,
+        commandline::view(
+            &model.app.commandline,
             &model.state.modes.current,
             frame,
-            layout.parent,
-            &buffer.parent,
-            &buffer.show_border,
-        );
-        render_buffer(
-            &buffer.preview_vp,
-            &buffer.preview_cursor,
-            &model.state.modes.current,
-            frame,
-            layout.preview,
-            &buffer.preview,
-            &false,
-        );
-
-        statusline::view(buffer, frame, layout.statusline);
+            vertical_offset + 1,
+        ).expect("Failed to render commandline view");
     })
-}
-
-fn render_buffer(
-    viewport: &ViewPort,
-    cursor: &Option<Cursor>,
-    mode: &Mode,
-    frame: &mut Frame,
-    layout: Rect,
-    buffer_type: &FileTreeBufferSectionBuffer,
-    show_border: &bool,
-) {
-    match buffer_type {
-        FileTreeBufferSectionBuffer::Text(_, buffer) => {
-            view::view(viewport, cursor, mode, buffer, show_border, frame, layout);
-        }
-        FileTreeBufferSectionBuffer::Image(_, protocol) => {
-            frame.render_widget(Image::new(protocol), layout);
-        }
-        FileTreeBufferSectionBuffer::None => {
-            view::view(
-                viewport,
-                &None,
-                mode,
-                &Default::default(),
-                show_border,
-                frame,
-                layout,
-            );
-        }
-    };
 }

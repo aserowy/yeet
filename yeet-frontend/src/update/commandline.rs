@@ -8,14 +8,12 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{register::Register, CommandLine, FileTreeBuffer, ModeState},
+    model::{register::Register, App, CommandLine, FileTreeBuffer, ModeState},
     update::{
         register::get_register,
         search::{self, search_in_buffers},
     },
 };
-
-use super::viewport;
 
 pub fn update(
     commandline: &mut CommandLine,
@@ -30,8 +28,6 @@ pub fn update(
     let buffer = &mut commandline.buffer;
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
-
-    viewport::set_dimensions(viewport, &commandline.layout.buffer);
 
     if let Some(message) = message {
         match command_mode {
@@ -60,8 +56,6 @@ pub fn modify(
     let text_buffer = &mut commandline.buffer;
     let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
-
-    viewport::set_dimensions(viewport, &commandline.layout.buffer);
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
@@ -210,10 +204,9 @@ pub fn update_on_execute(
 }
 
 pub fn leave(
-    commandline: &mut CommandLine,
+    app: &mut App,
     register: &mut Register,
     modes: &ModeState,
-    buffer: &mut FileTreeBuffer,
 ) -> Vec<Action> {
     if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
         let content = get_register(register, &'/');
@@ -242,10 +235,6 @@ pub fn print(
     modes: &mut ModeState,
     content: &[PrintContent],
 ) -> Vec<Action> {
-    let viewport = &mut commandline.viewport;
-
-    viewport::set_dimensions(viewport, &commandline.layout.buffer);
-
     commandline.buffer.lines = content
         .iter()
         .map(|content| match content {
