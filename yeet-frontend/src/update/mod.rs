@@ -98,24 +98,36 @@ fn update_with_message(
     message: Message,
 ) -> Vec<Action> {
     match message {
-        Message::EnumerationChanged(path, contents, selection) => {
-            enumeration::change(state, &mut app.buffers, &path, &contents, &selection)
-        }
-        Message::EnumerationFinished(path, contents, selection) => {
-            enumeration::finish(state, &mut app.buffers, &path, &contents, &selection)
-        }
+        Message::EnumerationChanged(path, contents, selection) => enumeration::change(
+            state,
+            &mut app.buffers.into_values().collect(),
+            &path,
+            &contents,
+            &selection,
+        ),
+        Message::EnumerationFinished(path, contents, selection) => enumeration::finish(
+            state,
+            &mut app.buffers.into_values().collect(),
+            &path,
+            &contents,
+            &selection,
+        ),
         Message::Error(error) => commandline::print(
             &mut app.commandline,
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) => qfix::add(&mut state.qfix, &mut app.buffers, paths),
+        Message::FdResult(paths) => qfix::add(
+            &mut state.qfix,
+            &mut app.buffers.into_values().collect(),
+            paths,
+        ),
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => path::remove(
             &state.history,
             &mut state.junk,
             &state.modes.current,
-            &mut app.buffers,
+            &mut app.buffers.into_values().collect(),
             &path,
         ),
         Message::PathsAdded(paths) => path::add(
@@ -123,7 +135,7 @@ fn update_with_message(
             &state.marks,
             &state.qfix,
             &state.modes.current,
-            &mut app.buffers,
+            &mut app.buffers.into_values().collect(),
             &paths,
         )
         .into_iter()
@@ -132,7 +144,7 @@ fn update_with_message(
         Message::PreviewLoaded(content) => update_preview(
             &state.history,
             &state.modes.current,
-            &mut app.buffers,
+            &mut app.buffers.into_values().collect(),
             content,
         ),
         Message::Rerender => Vec::new(),
@@ -320,7 +332,7 @@ pub fn update_with_buffer_message(
 pub fn update_preview(
     history: &History,
     mode: &Mode,
-    buffer: &mut FileTreeBuffer,
+    buffers: &mut Vec<Buffer>,
     content: Preview,
 ) -> Vec<Action> {
     match content {

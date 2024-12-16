@@ -4,7 +4,7 @@ use crate::{
     action::Action,
     model::{
         qfix::{QuickFix, QFIX_SIGN_ID},
-        FileTreeBuffer,
+        Buffer, FileTreeBuffer,
     },
 };
 
@@ -31,10 +31,10 @@ pub fn toggle(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn add(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer, paths: Vec<PathBuf>) -> Vec<Action> {
+pub fn add(qfix: &mut QuickFix, buffers: &mut Vec<Buffer>, paths: Vec<PathBuf>) -> Vec<Action> {
     for path in paths {
         if !qfix.entries.contains(&path) {
-            sign::set_sign_for_path(buffer, path.as_path(), QFIX_SIGN_ID);
+            sign::set_sign_for_path(buffers, path.as_path(), QFIX_SIGN_ID);
             qfix.entries.push(path);
         };
     }
