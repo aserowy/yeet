@@ -11,7 +11,7 @@ use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
     model::{
-        history::History, App, Buffer, CommandLine, FileTreeBuffer, FileTreeBufferSection,
+        history::History, App, Buffer, FileTreeBuffer, FileTreeBufferSection,
         FileTreeBufferSectionBuffer, Model, State,
     },
     settings::Settings,
@@ -100,14 +100,14 @@ fn update_with_message(
     match message {
         Message::EnumerationChanged(path, contents, selection) => enumeration::change(
             state,
-            &mut app.buffers.into_values().collect(),
+            app.buffers.values_mut().collect(),
             &path,
             &contents,
             &selection,
         ),
         Message::EnumerationFinished(path, contents, selection) => enumeration::finish(
             state,
-            &mut app.buffers.into_values().collect(),
+            app.buffers.values_mut().collect(),
             &path,
             &contents,
             &selection,
@@ -117,17 +117,15 @@ fn update_with_message(
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) => qfix::add(
-            &mut state.qfix,
-            &mut app.buffers.into_values().collect(),
-            paths,
-        ),
+        Message::FdResult(paths) => {
+            qfix::add(&mut state.qfix, app.buffers.values_mut().collect(), paths)
+        }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => path::remove(
             &state.history,
             &mut state.junk,
             &state.modes.current,
-            &mut app.buffers.into_values().collect(),
+            app.buffers.values_mut().collect(),
             &path,
         ),
         Message::PathsAdded(paths) => path::add(
@@ -135,7 +133,7 @@ fn update_with_message(
             &state.marks,
             &state.qfix,
             &state.modes.current,
-            &mut app.buffers.into_values().collect(),
+            app.buffers.values_mut().collect(),
             &paths,
         )
         .into_iter()
@@ -144,7 +142,7 @@ fn update_with_message(
         Message::PreviewLoaded(content) => update_preview(
             &state.history,
             &state.modes.current,
-            &mut app.buffers.into_values().collect(),
+            app.buffers.values_mut().collect(),
             content,
         ),
         Message::Rerender => Vec::new(),
@@ -153,9 +151,10 @@ fn update_with_message(
         Message::TaskEnded(id) => task::remove(&mut state.tasks, id),
         Message::ZoxideResult(path) => {
             let id = app::get_next_buffer_id(app);
-            if let Some(removed) = app
+            if app
                 .buffers
                 .insert(id, Buffer::FileTree(Box::new(FileTreeBuffer::default())))
+                .is_some()
             {
                 tracing::error!("Buffer with id {} already exists", id);
             };
@@ -181,17 +180,14 @@ pub fn update_with_keymap_message(
 ) -> Vec<Action> {
     match msg {
         KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, msg),
-        KeymapMessage::ClearSearchHighlight => search::clear(&mut app.buffers),
-        KeymapMessage::DeleteMarks(mrks) => mark::delete(&mut state.marks, &mut app.buffers, mrks),
-        KeymapMessage::ExecuteCommand => commandline::update_on_execute(
-            &mut app.commandline,
-            &mut state.register,
-            &mut state.modes,
-            app::get_focused_mut(app),
-        ),
-        KeymapMessage::ExecuteCommandString(command) => {
-            command::execute(state, app::get_focused_mut(app), command)
+        KeymapMessage::ClearSearchHighlight => search::clear(app.buffers.values_mut().collect()),
+        KeymapMessage::DeleteMarks(mrks) => {
+            mark::delete(&mut state.marks, app.buffers.values_mut().collect(), mrks)
         }
+        KeymapMessage::ExecuteCommand => {
+            commandline::update_on_execute(app, &mut state.register, &mut state.modes)
+        }
+        KeymapMessage::ExecuteCommandString(command) => command::execute(app, state, command),
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             state.remaining_keysequence.replace(key_sequence.clone());
             Vec::new()
@@ -276,13 +272,7 @@ pub fn update_with_buffer_message(
     match msg {
         BufferMessage::ChangeMode(from, to) => mode::change(app, state, from, to),
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
-            Mode::Command(_) => commandline::modify(
-                &mut app.commandline,
-                &mut state.modes,
-                app::get_focused_mut(app),
-                repeat,
-                modification,
-            ),
+            Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
             Mode::Insert | Mode::Normal => match &mut app::get_focused_mut(app) {
                 Buffer::FileTree(it) => {
                     modify::buffer(&state.modes.current, it, repeat, modification)
@@ -332,7 +322,7 @@ pub fn update_with_buffer_message(
 pub fn update_preview(
     history: &History,
     mode: &Mode,
-    buffers: &mut Vec<Buffer>,
+    buffers: Vec<&mut Buffer>,
     content: Preview,
 ) -> Vec<Action> {
     match content {

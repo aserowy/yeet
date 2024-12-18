@@ -30,7 +30,7 @@ pub fn add(
     marks: &Marks,
     qfix: &QuickFix,
     mode: &Mode,
-    buffers: &mut Vec<Buffer>,
+    buffers: Vec<&mut Buffer>,
     paths: &[PathBuf],
 ) -> Vec<Action> {
     let mut actions = Vec::new();
@@ -182,7 +182,7 @@ pub fn remove(
     history: &History,
     junk: &mut JunkYard,
     mode: &Mode,
-    buffers: &mut Vec<Buffer>,
+    buffers: Vec<&mut Buffer>,
     path: &Path,
 ) -> Vec<Action> {
     let mut actions = Vec::new();

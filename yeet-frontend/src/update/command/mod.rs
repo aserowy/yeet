@@ -4,7 +4,7 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{FileTreeBuffer, State},
+    model::{App,  State},
     task::Task,
 };
 
@@ -14,7 +14,7 @@ mod qfix;
 mod task;
 
 #[tracing::instrument(skip_all)]
-pub fn execute(state: &mut State, buffer: &mut FileTreeBuffer, cmd: &str) -> Vec<Action> {
+pub fn execute(app: &mut App,state: &mut State, cmd: &str) -> Vec<Action> {
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),

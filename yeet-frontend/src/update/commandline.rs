@@ -8,7 +8,7 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{register::Register, App, CommandLine, FileTreeBuffer, ModeState},
+    model::{register::Register, App, CommandLine, ModeState},
     update::{
         register::get_register,
         search::{self, search_in_buffers},
@@ -42,9 +42,8 @@ pub fn update(
 }
 
 pub fn modify(
-    commandline: &mut CommandLine,
+    app: &mut App,
     modes: &mut ModeState,
-    buffer: &mut FileTreeBuffer,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
@@ -53,9 +52,9 @@ pub fn modify(
         Mode::Insert | Mode::Navigation | Mode::Normal => return Vec::new(),
     };
 
-    let text_buffer = &mut commandline.buffer;
-    let cursor = &mut commandline.cursor;
-    let viewport = &mut commandline.viewport;
+    let text_buffer = &mut app.commandline.buffer;
+    let cursor = &mut app.commandline.cursor;
+    let viewport = &mut app.commandline.viewport;
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
@@ -82,13 +81,14 @@ pub fn modify(
             );
 
             if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
-                let term = commandline
+                let term = app
+                    .commandline
                     .buffer
                     .lines
                     .last()
                     .map(|bl| bl.content.to_stripped_string());
 
-                search_in_buffers(buffer, term);
+                search_in_buffers(app.buffers.values_mut().collect(), term);
             }
 
             actions
@@ -137,10 +137,9 @@ pub fn modify(
 }
 
 pub fn update_on_execute(
-    commandline: &mut CommandLine,
+    app: &mut App,
     register: &mut Register,
     modes: &mut ModeState,
-    buffer: &mut FileTreeBuffer,
 ) -> Vec<Action> {
     let command_mode = match &modes.current {
         Mode::Command(it) => it,
@@ -149,7 +148,7 @@ pub fn update_on_execute(
 
     let messages = match command_mode {
         CommandMode::Command => {
-            if let Some(cmd) = commandline.buffer.lines.last() {
+            if let Some(cmd) = app.commandline.buffer.lines.last() {
                 // TODO: add command history and show previous command not current (this enables g: as well)
                 register.command = Some(cmd.content.to_stripped_string());
 
@@ -169,14 +168,15 @@ pub fn update_on_execute(
             ))]
         }
         CommandMode::Search(direction) => {
-            register.searched = commandline
+            register.searched = app
+                .commandline
                 .buffer
                 .lines
                 .last()
                 .map(|bl| (direction.clone(), bl.content.to_stripped_string()));
 
             if register.searched.is_none() {
-                search::clear(buffer);
+                search::clear(app.buffers.values_mut().collect());
             }
 
             vec![
@@ -193,31 +193,27 @@ pub fn update_on_execute(
     };
 
     update_buffer(
-        &mut commandline.viewport,
-        &mut commandline.cursor,
+        &mut app.commandline.viewport,
+        &mut app.commandline.cursor,
         &modes.current,
-        &mut commandline.buffer,
+        &mut app.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
     );
 
     vec![Action::EmitMessages(messages)]
 }
 
-pub fn leave(
-    app: &mut App,
-    register: &mut Register,
-    modes: &ModeState,
-) -> Vec<Action> {
+pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<Action> {
     if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
         let content = get_register(register, &'/');
-        search_in_buffers(buffer, content);
+        search_in_buffers(app.buffers.values_mut().collect(), content);
     }
 
     update_buffer(
-        &mut commandline.viewport,
-        &mut commandline.cursor,
+        &mut app.commandline.viewport,
+        &mut app.commandline.cursor,
         &modes.current,
-        &mut commandline.buffer,
+        &mut app.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
     );
 

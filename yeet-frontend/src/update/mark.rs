@@ -2,42 +2,52 @@ use crate::{
     action::Action,
     model::{
         mark::{Marks, MARK_SIGN_ID},
-        FileTreeBuffer,
+        App, Buffer,
     },
     task::Task,
 };
 
-use super::{
-    selection::{get_current_selected_bufferline, get_current_selected_path},
-    sign::{set, unset_sign_for_path},
-};
+use super::{app, selection, sign};
 
-pub fn add(marks: &mut Marks, buffer: &mut FileTreeBuffer, char: char) -> Vec<Action> {
-    let selected = get_current_selected_path(buffer);
+pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => return Vec::new(),
+    };
+
+    let selected = selection::get_current_selected_path(buffer);
     if let Some(selected) = selected {
-        let removed = marks.entries.insert(char, selected);
+        let removed = marks.entries.insert(char, selected.clone());
         if let Some(removed) = removed {
-            // NOTE: all file tree buffer must get handled here
-            unset_sign_for_path(buffer, &removed, MARK_SIGN_ID);
+            sign::unset_sign_for_paths(
+                app.buffers.values_mut().collect(),
+                vec![removed],
+                MARK_SIGN_ID,
+            );
         }
 
-        if let Some(bl) = get_current_selected_bufferline(buffer) {
-            set(bl, MARK_SIGN_ID);
-        }
+        sign::set_sign_for_paths(
+            app.buffers.values_mut().collect(),
+            vec![selected],
+            MARK_SIGN_ID,
+        );
     }
+
     Vec::new()
 }
 
-pub fn delete(marks: &mut Marks, buffer: &mut FileTreeBuffer, delete: &Vec<char>) -> Vec<Action> {
+pub fn delete(marks: &mut Marks, buffers: Vec<&mut Buffer>, delete: &Vec<char>) -> Vec<Action> {
     let mut persisted = Vec::new();
+    let mut paths = Vec::new();
     for mark in delete {
         let deleted = marks.entries.remove_entry(mark);
         if let Some((mark, path)) = deleted {
-            // NOTE: all file tree buffer must get handled here
-            unset_sign_for_path(buffer, path.as_path(), MARK_SIGN_ID);
             persisted.push(mark);
+            paths.push(path);
         }
     }
+
+    sign::unset_sign_for_paths(buffers, paths, MARK_SIGN_ID);
 
     if persisted.is_empty() {
         Vec::new()

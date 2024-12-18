@@ -2,18 +2,23 @@ use yeet_buffer::model::TextBuffer;
 
 use crate::{
     action::Action,
-    model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
+    model::{Buffer, FileTreeBufferSectionBuffer},
 };
 
-pub fn search_in_buffers(buffer: &mut FileTreeBuffer, search: Option<String>) {
+pub fn search_in_buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
     let search = match search {
         Some(it) => it,
         None => {
-            clear(buffer);
+            clear(buffers);
             return;
         }
     };
 
+    for buffer in buffers {
+        let buffer = match buffer {
+            Buffer::FileTree(it) => it,
+            Buffer::_Text(_) => continue,
+        };
     set_search_char_positions(&mut buffer.current.buffer, search.as_str());
 
     if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
@@ -27,20 +32,28 @@ pub fn search_in_buffers(buffer: &mut FileTreeBuffer, search: Option<String>) {
             set_search_char_positions(text_buffer, search.as_str());
         }
     };
+    }
 }
 
-pub fn clear(buffer: &mut FileTreeBuffer) -> Vec<Action> {
-    for line in &mut buffer.current.buffer.lines {
-        line.search_char_position = None;
-    }
-    if let FileTreeBufferSectionBuffer::Text(_, text_buffer) = &mut buffer.parent {
-        for line in &mut text_buffer.lines {
+pub fn clear(buffers: Vec<&mut Buffer>) -> Vec<Action> {
+    for buffer in buffers {
+        let buffer = match buffer {
+            Buffer::FileTree(it) => it,
+            Buffer::_Text(_) => continue,
+        };
+
+        for line in &mut buffer.current.buffer.lines {
             line.search_char_position = None;
         }
-    }
-    if let FileTreeBufferSectionBuffer::Text(_, text_buffer) = &mut buffer.preview {
-        for line in &mut text_buffer.lines {
-            line.search_char_position = None;
+        if let FileTreeBufferSectionBuffer::Text(_, text_buffer) = &mut buffer.parent {
+            for line in &mut text_buffer.lines {
+                line.search_char_position = None;
+            }
+        }
+        if let FileTreeBufferSectionBuffer::Text(_, text_buffer) = &mut buffer.preview {
+            for line in &mut text_buffer.lines {
+                line.search_char_position = None;
+            }
         }
     }
     Vec::new()

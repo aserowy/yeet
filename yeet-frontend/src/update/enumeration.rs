@@ -21,7 +21,7 @@ use crate::{
 #[tracing::instrument(skip(state, buffers, contents))]
 pub fn change(
     state: &mut State,
-    buffers: &mut Vec<Buffer>,
+    buffers: Vec<&mut Buffer>,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
@@ -91,7 +91,7 @@ pub fn change(
 #[tracing::instrument(skip(state, buffers, contents))]
 pub fn finish(
     state: &mut State,
-    buffers: &mut Vec<Buffer>,
+    buffers: Vec<&mut Buffer>,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,

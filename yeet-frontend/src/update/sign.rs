@@ -1,8 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 
 use crate::model::{
-    mark::{Marks, MARK_SIGN_ID}, qfix::{QuickFix, QFIX_SIGN_ID}, Buffer, FileTreeBuffer
+    mark::{Marks, MARK_SIGN_ID},
+    qfix::{QuickFix, QFIX_SIGN_ID},
+    Buffer, FileTreeBuffer,
 };
 
 pub fn set_sign_if_qfix(qfix: &QuickFix, bl: &mut BufferLine, path: &Path) {
@@ -34,42 +36,44 @@ pub fn set(bl: &mut BufferLine, sign_id: SignIdentifier) {
     }
 }
 
-pub fn set_sign_for_path(buffers: &mut Vec<Buffer>, path: &Path, sign_id: SignIdentifier) {
+pub fn set_sign_for_paths(buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>, sign_id: SignIdentifier) {
     for buffer in buffers {
         let buffer = match buffer {
             Buffer::FileTree(it) => it,
             _ => continue,
         };
 
-        let parent = match path.parent() {
-            Some(it) => it,
-            None => return,
-        };
-
-        let target = buffer
-            .get_mut_directories()
-            .into_iter()
-            .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
-
-        let buffer = match target {
-            Some(buffer) => buffer,
-            None => return,
-        };
-
-        let file_name = match path.file_name() {
-            Some(it) => match it.to_str() {
+        for path in &paths {
+            let parent = match path.parent() {
                 Some(it) => it,
                 None => return,
-            },
-            None => return,
-        };
+            };
 
-        if let Some(line) = buffer
-            .lines
-            .iter_mut()
-            .find(|bl| bl.content.to_stripped_string() == file_name)
-        {
-            set(line, sign_id);
+            let target = buffer
+                .get_mut_directories()
+                .into_iter()
+                .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
+
+            let buffer = match target {
+                Some(buffer) => buffer,
+                None => return,
+            };
+
+            let file_name = match path.file_name() {
+                Some(it) => match it.to_str() {
+                    Some(it) => it,
+                    None => return,
+                },
+                None => return,
+            };
+
+            if let Some(line) = buffer
+                .lines
+                .iter_mut()
+                .find(|bl| bl.content.to_stripped_string() == file_name)
+            {
+                set(line, sign_id);
+            }
         }
     }
 }
@@ -100,7 +104,14 @@ pub fn unset_sign_on_all_buffers(buffer: &mut FileTreeBuffer, sign_id: SignIdent
         .for_each(|l| unset(l, sign_id));
 }
 
-pub fn unset_sign_for_path(buffer: &mut FileTreeBuffer, path: &Path, sign_id: SignIdentifier) {
+pub fn unset_sign_for_paths(buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>, sign_id: SignIdentifier) {
+    for buffer in buffers {
+        let buffer = match buffer {
+            Buffer::FileTree(it) => it,
+            _ => continue,
+        };
+
+        for path in &paths {
     let parent = match path.parent() {
         Some(it) => it,
         None => return,
@@ -132,6 +143,7 @@ pub fn unset_sign_for_path(buffer: &mut FileTreeBuffer, path: &Path, sign_id: Si
         unset(line, sign_id);
     }
 }
+}}
 
 pub fn unset(bl: &mut BufferLine, sign_id: SignIdentifier) {
     let position = bl.signs.iter().position(|s| s.id == sign_id);

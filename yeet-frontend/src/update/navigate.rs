@@ -5,20 +5,20 @@ use yeet_buffer::model::{viewport::ViewPort, Cursor, CursorPosition, TextBuffer}
 use crate::{
     action::Action,
     model::{
-        history::History, mark::Marks, FileTreeBuffer, FileTreeBufferSection,
+        history::History, mark::Marks, App, Buffer, FileTreeBuffer, FileTreeBufferSection,
         FileTreeBufferSectionBuffer,
     },
 };
 
-use super::{history, selection};
+use super::{app, history, selection};
 
-#[tracing::instrument(skip(buffer))]
-pub fn mark(
-    history: &History,
-    marks: &Marks,
-    buffer: &mut FileTreeBuffer,
-    char: &char,
-) -> Vec<Action> {
+#[tracing::instrument(skip(app))]
+pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
     let path = match marks.entries.get(char) {
         Some(it) => it.clone(),
         None => return Vec::new(),
