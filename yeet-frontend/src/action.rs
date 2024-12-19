@@ -15,7 +15,7 @@ use crate::{
     open,
     task::Task,
     terminal::TerminalWrapper,
-    update,
+    update::{self, app},
 };
 
 #[derive(Debug)]
@@ -100,7 +100,7 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let buffer = match &mut model.app.buffer {
+    let buffer = match app::get_focused_mut(&mut model.app) {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };
@@ -155,7 +155,8 @@ async fn execute(
                         if path.is_dir() {
                             emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
                         } else {
-                            emitter.run(Task::LoadPreview(path.clone(), model.app.layout.preview));
+                            // TODO: add rect to load preview after layout concept is implemented
+                            // emitter.run(Task::LoadPreview(path.clone(), model.app.layout.preview));
                         }
                     }
                 };
@@ -208,11 +209,12 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(path) = &buffer.preview.resolve_path() {
-                    emitter.run(Task::LoadPreview(
-                        path.to_path_buf(),
-                        model.app.layout.preview,
-                    ));
+                if let Some(_path) = &buffer.preview.resolve_path() {
+                    // TODO: add rect to load preview after layout concept is implemented
+                    // emitter.run(Task::LoadPreview(
+                    //     path.to_path_buf(),
+                    //     model.app.layout.preview,
+                    // ));
                 }
             }
             Action::Task(task) => emitter.run(task),

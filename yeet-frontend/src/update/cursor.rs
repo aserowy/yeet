@@ -8,16 +8,13 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{
-        history::History, FileTreeBuffer, FileTreeBufferSection, FileTreeBufferSectionBuffer, State,
-    },
+    model::{history::History, App, FileTreeBufferSection, FileTreeBufferSectionBuffer, State},
 };
 
 use super::{
     history::get_selection_from_history,
     register::{get_direction_from_search_register, get_register},
-    search::search_in_buffers,
-    selection,
+    search, selection,
 };
 
 pub fn set_cursor_index_to_selection(
@@ -54,8 +51,8 @@ pub fn set_cursor_index_with_history(
 }
 
 pub fn relocate(
+    app: &mut App,
     state: &mut State,
-    buffer: &mut FileTreeBuffer,
     rpt: &usize,
     mtn: &CursorDirection,
 ) -> Vec<Action> {
@@ -66,16 +63,16 @@ pub fn relocate(
     };
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
-    if let CursorDirection::Search(dr) = mtn {
+    if let CursorDirection::Search(drctn) = mtn {
         let term = get_register(&state.register, &'/');
-        search_in_buffers(buffer, term);
+        search::search_in_buffers(app.buffers.values_mut().collect(), term);
 
-        let current_dr = match get_direction_from_search_register(&state.register) {
+        let current_drctn = match get_direction_from_search_register(&state.register) {
             Some(it) => it,
             None => return Vec::new(),
         };
 
-        let dr = match (dr, current_dr) {
+        let dr = match (drctn, current_drctn) {
             (Search::Next, SearchDirection::Down) => Search::Next,
             (Search::Next, SearchDirection::Up) => Search::Previous,
             (Search::Previous, SearchDirection::Down) => Search::Previous,

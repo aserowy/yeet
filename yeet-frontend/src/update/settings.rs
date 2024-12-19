@@ -4,25 +4,28 @@ use crate::model::{mark::MARK_SIGN_ID, qfix::QFIX_SIGN_ID, Buffer, FileTreeBuffe
 
 pub fn update(model: &mut Model) {
     let settings = &model.settings;
-    let buffer = match &mut model.app.buffer {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
-    };
 
-    buffer.current_vp.set(&settings.current);
-    buffer.parent_vp.set(&settings.current);
-    buffer.preview_vp.set(&settings.current);
+    for buffer in model.app.buffers.values_mut() {
+        let buffer = match buffer {
+            Buffer::FileTree(it) => it,
+            Buffer::_Text(_) => todo!(),
+        };
 
-    if settings.show_mark_signs {
-        remove_hidden_sign_on_all_buffer(buffer, &MARK_SIGN_ID);
-    } else {
-        add_hidden_sign_on_all_buffer(buffer, MARK_SIGN_ID);
-    }
+        buffer.current_vp.set(&settings.current);
+        buffer.parent_vp.set(&settings.current);
+        buffer.preview_vp.set(&settings.current);
 
-    if settings.show_quickfix_signs {
-        remove_hidden_sign_on_all_buffer(buffer, &QFIX_SIGN_ID);
-    } else {
-        add_hidden_sign_on_all_buffer(buffer, QFIX_SIGN_ID);
+        if settings.show_mark_signs {
+            remove_hidden_sign_on_all_buffer(buffer, &MARK_SIGN_ID);
+        } else {
+            add_hidden_sign_on_all_buffer(buffer, MARK_SIGN_ID);
+        }
+
+        if settings.show_quickfix_signs {
+            remove_hidden_sign_on_all_buffer(buffer, &QFIX_SIGN_ID);
+        } else {
+            add_hidden_sign_on_all_buffer(buffer, QFIX_SIGN_ID);
+        }
     }
 }
 

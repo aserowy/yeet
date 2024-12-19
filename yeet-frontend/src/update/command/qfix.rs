@@ -6,25 +6,31 @@ use crate::{
     action::{self, Action},
     model::{
         qfix::{CdoState, QuickFix, QFIX_SIGN_ID},
-        FileTreeBuffer,
+        App, Buffer,
     },
-    update::sign,
+    update::{app, sign},
 };
 
-pub fn reset(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
     qfix.entries.clear();
     qfix.current_index = 0;
-    sign::unset_sign_on_all_buffers(buffer, QFIX_SIGN_ID);
+    sign::unset_sign_on_all_buffers(buffers, QFIX_SIGN_ID);
 
     Vec::new()
 }
 
-pub fn clear_in(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer, path: &str) -> Vec<Action> {
+pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
     let path = Path::new(path);
     let current_path = buffer.current.path.clone().join(path);
 
     tracing::debug!("clearing current cl for path: {:?}", current_path);
 
+    let mut removed_paths = Vec::new();
     for bl in buffer.current.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
             continue;
@@ -33,9 +39,15 @@ pub fn clear_in(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer, path: &str) ->
         let path = current_path.join(bl.content.to_stripped_string());
         if qfix.entries.contains(&path) {
             qfix.entries.retain(|p| p != &path);
-            sign::unset(bl, QFIX_SIGN_ID);
+            removed_paths.push(path);
         }
     }
+
+    sign::unset_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        removed_paths,
+        QFIX_SIGN_ID,
+    );
 
     Vec::new()
 }
@@ -117,7 +129,15 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
     }
 }
 
-pub fn invert_in_current(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
+    let mut added_paths = Vec::new();
+    let mut removed_paths = Vec::new();
+
     let current_path = buffer.current.path.clone();
     for bl in buffer.current.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
@@ -127,12 +147,24 @@ pub fn invert_in_current(qfix: &mut QuickFix, buffer: &mut FileTreeBuffer) -> Ve
         let path = current_path.join(bl.content.to_stripped_string());
         if qfix.entries.contains(&path) {
             qfix.entries.retain(|p| p != &path);
-            sign::unset(bl, QFIX_SIGN_ID);
+            removed_paths.push(path);
         } else {
             qfix.entries.push(path.clone());
-            sign::set(bl, QFIX_SIGN_ID);
+            added_paths.push(path);
         }
     }
+
+    sign::set_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        added_paths,
+        QFIX_SIGN_ID,
+    );
+
+    sign::unset_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        removed_paths,
+        QFIX_SIGN_ID,
+    );
 
     Vec::new()
 }

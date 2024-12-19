@@ -18,7 +18,7 @@ use crate::{
     terminal::TerminalWrapper,
 };
 
-mod app;
+pub mod app;
 mod command;
 pub mod commandline;
 mod cursor;
@@ -329,7 +329,7 @@ pub fn update_preview(
         Preview::Content(path, content) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            let content = content
+            let content: Vec<_> = content
                 .iter()
                 .map(|s| BufferLine {
                     content: Ansi::new(s),
@@ -337,20 +337,43 @@ pub fn update_preview(
                 })
                 .collect();
 
-            buffer_type(
-                history,
-                mode,
-                buffer,
-                &FileTreeBufferSection::Preview,
-                &path,
-                content,
-            );
+            for buffer in buffers {
+                let buffer = match buffer {
+                    Buffer::FileTree(it) => it,
+                    Buffer::_Text(_) => continue,
+                };
+
+                buffer_type(
+                    history,
+                    mode,
+                    buffer,
+                    &FileTreeBufferSection::Preview,
+                    &path,
+                    content.clone(),
+                );
+            }
         }
-        Preview::Image(path, protocol) => {
-            buffer.preview = FileTreeBufferSectionBuffer::Image(path, protocol)
+        Preview::Image(_path, _protocol) => {
+            for buffer in buffers {
+                let _buffer = match buffer {
+                    Buffer::FileTree(it) => it,
+                    Buffer::_Text(_) => continue,
+                };
+
+                // TODO: protocol into arc
+                // buffer.preview = FileTreeBufferSectionBuffer::Image(path.clone(), protocol);
+            }
         }
-        Preview::None(_) => buffer.preview = FileTreeBufferSectionBuffer::None,
-    };
+        Preview::None(_path) => {
+            for buffer in buffers {
+                let buffer = match buffer {
+                    Buffer::FileTree(it) => it,
+                    Buffer::_Text(_) => continue,
+                };
+                buffer.preview = FileTreeBufferSectionBuffer::None;
+            }
+        }
+    }
     Vec::new()
 }
 

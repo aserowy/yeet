@@ -11,7 +11,7 @@ use crate::{
     model::{register::Register, App, CommandLine, ModeState},
     update::{
         register::get_register,
-        search::{self, search_in_buffers},
+        search::{self},
     },
 };
 
@@ -88,7 +88,7 @@ pub fn modify(
                     .last()
                     .map(|bl| bl.content.to_stripped_string());
 
-                search_in_buffers(app.buffers.values_mut().collect(), term);
+                search::search_in_buffers(app.buffers.values_mut().collect(), term);
             }
 
             actions
@@ -206,7 +206,7 @@ pub fn update_on_execute(
 pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<Action> {
     if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
         let content = get_register(register, &'/');
-        search_in_buffers(app.buffers.values_mut().collect(), content);
+        search::search_in_buffers(app.buffers.values_mut().collect(), content);
     }
 
     update_buffer(

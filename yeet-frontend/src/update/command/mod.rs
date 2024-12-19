@@ -4,9 +4,11 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{App,  State},
+    model::{App, Buffer, State},
     task::Task,
 };
+
+use super::app;
 
 mod file;
 mod print;
@@ -14,7 +16,7 @@ mod qfix;
 mod task;
 
 #[tracing::instrument(skip_all)]
-pub fn execute(app: &mut App,state: &mut State, cmd: &str) -> Vec<Action> {
+pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),
@@ -30,20 +32,38 @@ pub fn execute(app: &mut App,state: &mut State, cmd: &str) -> Vec<Action> {
         ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut state.qfix, command)),
         ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut state.qfix)),
         ("cl", "") => print::qfix(&state.qfix),
-        ("clearcl", "") => add_change_mode(mode_before, mode, qfix::reset(&mut state.qfix, buffer)),
+        ("clearcl", "") => add_change_mode(
+            mode_before,
+            mode,
+            qfix::reset(&mut state.qfix, app.buffers.values_mut().collect()),
+        ),
         ("clearcl", path) => add_change_mode(
             mode_before,
             mode,
-            qfix::clear_in(&mut state.qfix, buffer, path),
+            qfix::clear_in(app, &mut state.qfix, path),
         ),
         ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
-        ("cp", target) => add_change_mode(
-            mode_before,
-            mode,
-            file::copy_selection(&state.marks, &buffer.preview, target),
-        ),
-        ("d!", "") => add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview)),
+        ("cp", target) => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
+            add_change_mode(
+                mode_before,
+                mode,
+                file::copy_selection(&state.marks, &buffer.preview, target),
+            )
+        }
+        ("d!", "") => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
+            add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview))
+        }
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
             for mark in args.chars().filter(|c| c != &' ') {
@@ -67,27 +87,48 @@ pub fn execute(app: &mut App,state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(buffer)),
-        ("fd", params) => add_change_mode(
-            mode_before,
-            mode,
-            vec![Action::Task(Task::ExecuteFd(
-                buffer.current.path.clone(),
-                params.to_owned(),
-            ))],
-        ),
+        ("e!", "") => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
+            add_change_mode(mode_before, mode, file::refresh(buffer))
+        }
+        ("fd", params) => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
+            add_change_mode(
+                mode_before,
+                mode,
+                vec![Action::Task(Task::ExecuteFd(
+                    buffer.current.path.clone(),
+                    params.to_owned(),
+                ))],
+            )
+        }
         ("invertcl", "") => add_change_mode(
             mode_before,
             mode,
-            qfix::invert_in_current(&mut state.qfix, buffer),
+            qfix::invert_in_current(app, &mut state.qfix),
         ),
         ("junk", "") => print::junkyard(&state.junk),
         ("marks", "") => print::marks(&state.marks),
-        ("mv", target) => add_change_mode(
-            mode_before,
-            mode,
-            file::rename_selection(&state.marks, &buffer.preview, target),
-        ),
+        ("mv", target) => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
+            add_change_mode(
+                mode_before,
+                mode,
+                file::rename_selection(&state.marks, &buffer.preview, target),
+            )
+        }
         ("noh", "") => add_change_mode(
             mode_before,
             mode,
