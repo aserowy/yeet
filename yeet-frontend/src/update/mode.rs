@@ -9,15 +9,13 @@ use crate::{
     action::Action,
     model::{
         register::{Register, RegisterScope},
-        App, CommandLine, ModeState, State,
+        App, Buffer, CommandLine, ModeState, State,
     },
 };
 
-use super::{commandline, register::get_macro_register, save::changes};
+use super::{app, commandline, register::get_macro_register, save::changes};
 
 pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<Action> {
-    let commandline = & mut app.commandline;
-
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
         | (Mode::Insert, Mode::Insert)
@@ -32,24 +30,32 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
-            unfocus_buffer(&mut commandline.cursor);
-            update_commandline_on_mode_change(commandline, &mut state.modes)
+            unfocus_buffer(&mut app.commandline.cursor);
+            update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            unfocus_buffer(&mut buffer.current_cursor);
+            match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => unfocus_buffer(&mut it.current_cursor),
+                Buffer::_Text(_) => todo!(),
+            };
             vec![]
         }
     });
 
-    set_commandline_content_to_mode(commandline, &state.register, &mut state.modes);
+    set_commandline_content_to_mode(&mut app.commandline, &state.register, &mut state.modes);
 
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
-            focus_buffer(&mut commandline.cursor);
-            update_commandline_on_mode_change(commandline, &mut state.modes)
+            focus_buffer(&mut app.commandline.cursor);
+            update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
             focus_buffer(&mut buffer.current_cursor);
 
             yeet_buffer::update::update_buffer(
@@ -63,6 +69,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             focus_buffer(&mut buffer.current_cursor);
@@ -78,6 +89,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             changes(&mut state.junk, &state.modes.current, buffer)
         }
         Mode::Normal => {
+            let buffer = match app::get_focused_mut(app) {
+                Buffer::FileTree(it) => it,
+                Buffer::_Text(_) => todo!(),
+            };
+
             focus_buffer(&mut buffer.current_cursor);
 
             yeet_buffer::update::update_buffer(

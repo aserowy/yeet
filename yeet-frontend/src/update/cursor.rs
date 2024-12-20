@@ -8,10 +8,13 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, App, FileTreeBufferSection, FileTreeBufferSectionBuffer, State},
+    model::{
+        history::History, App, Buffer, FileTreeBufferSection, FileTreeBufferSectionBuffer, State,
+    },
 };
 
 use super::{
+    app,
     history::get_selection_from_history,
     register::{get_direction_from_search_register, get_register},
     search, selection,
@@ -56,6 +59,16 @@ pub fn relocate(
     rpt: &usize,
     mtn: &CursorDirection,
 ) -> Vec<Action> {
+    if matches!(*mtn, CursorDirection::Search(_)){
+    let term = get_register(&state.register, &'/');
+    search::search_in_buffers(app.buffers.values_mut().collect(), term);
+    }
+
+    let buffer = match app::get_focused_mut(app) {
+        Buffer::FileTree(it) => it,
+        Buffer::_Text(_) => todo!(),
+    };
+
     let premotion_preview_path = match &buffer.preview {
         FileTreeBufferSectionBuffer::Image(path, _)
         | FileTreeBufferSectionBuffer::Text(path, _) => Some(path.clone()),
@@ -64,9 +77,6 @@ pub fn relocate(
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(drctn) = mtn {
-        let term = get_register(&state.register, &'/');
-        search::search_in_buffers(app.buffers.values_mut().collect(), term);
-
         let current_drctn = match get_direction_from_search_register(&state.register) {
             Some(it) => it,
             None => return Vec::new(),

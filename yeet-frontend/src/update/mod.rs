@@ -78,7 +78,10 @@ pub fn model(terminal: &TerminalWrapper, model: &mut Model, envelope: Envelope) 
         .collect();
 
     let size = terminal.size().expect("Failed to get terminal size");
-    window::update(&mut model.app, size);
+    match window::update(&mut model.app, size) {
+    Ok(_) => {}
+    Err(err) => tracing::error!("window update failed with error: {}", err),
+};
 
     register::finish_scope(
         &model.state.modes.current,
@@ -286,10 +289,7 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                match &mut app::get_focused_mut(app) {
-                    Buffer::FileTree(it) => cursor::relocate(state, it, rpt, mtn),
-                    Buffer::_Text(_) => todo!(),
-                }
+                cursor::relocate(app, state, rpt, mtn)
             }
         },
         BufferMessage::MoveViewPort(mtn) => match &state.modes.current {
