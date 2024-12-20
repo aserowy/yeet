@@ -1,6 +1,6 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
-    model::{viewport::ViewPort, Buffer, BufferResult, Cursor, CursorPosition, Mode},
+    model::{viewport::ViewPort, BufferResult, Cursor, CursorPosition, Mode, TextBuffer},
     update::cursor::{set_outbound_cursor_to_inbound_position, update_cursor_by_direction},
 };
 
@@ -14,7 +14,7 @@ pub fn update_buffer(
     viewport: &mut ViewPort,
     cursor: &mut Option<Cursor>,
     mode: &Mode,
-    buffer: &mut Buffer,
+    buffer: &mut TextBuffer,
     message: &BufferMessage,
 ) -> Vec<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
