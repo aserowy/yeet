@@ -27,9 +27,10 @@ pub struct Model {
 }
 
 pub struct App {
-    pub commandline: CommandLine,
     pub buffers: HashMap<usize, Buffer>,
-    pub window: Vec<Window>,
+    pub commandline: CommandLine,
+    pub latest_buffer_id: usize,
+    pub window: Window,
 }
 
 impl Default for App {
@@ -40,7 +41,8 @@ impl Default for App {
         Self {
             buffers,
             commandline: Default::default(),
-            window: vec![Window::Content(Default::default(), Default::default(), 1)],
+            latest_buffer_id: 1,
+            window: Window::Content(Default::default(), Default::default(), 1),
         }
     }
 }

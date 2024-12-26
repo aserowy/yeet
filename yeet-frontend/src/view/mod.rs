@@ -9,14 +9,14 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
     terminal.draw(|frame| {
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
 
-        // TODO:
-        // statusline::view(buffer, frame, main[1]);
+        statusline::view(buffer, frame, main[1]);
 
         commandline::view(
             &model.app.commandline,
             &model.state.modes.current,
             frame,
             vertical_offset + 1,
-        ).expect("Failed to render commandline view");
+        )
+        .expect("Failed to render commandline view");
     })
 }
