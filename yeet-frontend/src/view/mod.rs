@@ -1,4 +1,6 @@
-use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
+use ratatui::layout::Rect;
+
+use crate::{error::AppError, model::Model, terminal::TerminalWrapper, update::app};
 
 mod commandline;
 mod filetreebuffer;
@@ -9,7 +11,18 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
     terminal.draw(|frame| {
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
 
-        statusline::view(buffer, frame, main[1]);
+        let buffer = app::get_focused(&model.app);
+
+        statusline::view(
+            buffer,
+            frame,
+            Rect {
+                x: vertical_offset,
+                y: 0,
+                width: frame.area().width,
+                height: 1,
+            },
+        );
 
         commandline::view(
             &model.app.commandline,

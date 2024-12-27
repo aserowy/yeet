@@ -22,7 +22,7 @@ pub fn update(app: &mut App, size: Rect) -> Result<(), AppError> {
         ])
         .split(size);
 
-    set_commandline_vp(&mut app.commandline, main[2]);
+    set_commandline_vp(&mut app.commandline, main[2])?;
 
     // TODO: set window vp and related FileTreeBuffer vp (when shown)
     // let layout = Layout::default()

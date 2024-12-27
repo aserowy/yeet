@@ -2,6 +2,18 @@ use std::{cmp::Ordering, mem};
 
 use crate::model::{App, Buffer, Window};
 
+pub fn get_focused(app: &App) -> &Buffer {
+    let focused_id = match app.window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Content(_, _, it) => it,
+    };
+
+    match app.buffers.get(&focused_id) {
+        Some(it) => return it,
+        None => todo!(),
+    };
+}
+
 pub fn get_focused_mut(app: &mut App) -> &mut Buffer {
     let focused_id = match app.window {
         Window::Horizontal(_, _) => todo!(),
