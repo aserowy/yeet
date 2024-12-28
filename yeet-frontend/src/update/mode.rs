@@ -9,7 +9,7 @@ use crate::{
     action::Action,
     model::{
         register::{Register, RegisterScope},
-        App, Buffer, CommandLine, ModeState, State,
+        App, Buffer, CommandLine, ModBuffer, eState, State,
     },
 };
 

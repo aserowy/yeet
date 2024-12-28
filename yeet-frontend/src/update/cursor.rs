@@ -22,7 +22,7 @@ use super::{
 
 pub fn set_cursor_index_to_selection(
     viewport: &mut ViewPort,
-    cursor: &mut Option<Cursor>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     text_buffer: &mut TextBuffer,
     selection: &str,
@@ -41,7 +41,7 @@ pub fn set_cursor_index_to_selection(
 pub fn set_cursor_index_with_history(
     history: &History,
     viewport: &mut ViewPort,
-    cursor: &mut Option<Cursor>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     path: &Path,
@@ -59,9 +59,9 @@ pub fn relocate(
     rpt: &usize,
     mtn: &CursorDirection,
 ) -> Vec<Action> {
-    if matches!(*mtn, CursorDirection::Search(_)){
-    let term = get_register(&state.register, &'/');
-    search::search_in_buffers(app.buffers.values_mut().collect(), term);
+    if matches!(*mtn, CursorDirection::Search(_)) {
+        let term = get_register(&state.register, &'/');
+        search::search_in_buffers(app.buffers.values_mut().collect(), term);
     }
 
     let buffer = match app::get_focused_mut(app) {

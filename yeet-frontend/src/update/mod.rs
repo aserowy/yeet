@@ -39,6 +39,7 @@ mod selection;
 mod settings;
 mod sign;
 mod task;
+mod viewport;
 pub mod window;
 
 const SORT: fn(&BufferLine, &BufferLine) -> Ordering = |a, b| {
@@ -163,13 +164,7 @@ fn update_with_message(
             };
 
             app::set_focused_buffer(app, id);
-
-            if let Some(Buffer::FileTree(buffer)) = app.buffers.get_mut(&id) {
-                navigate::path(&state.history, buffer, path.as_ref())
-            } else {
-                tracing::warn!("Buffer with id {} has wrong type", id);
-                Vec::new()
-            }
+            navigate::path(app, &state.history, path.as_ref())
         }
     }
 }
@@ -203,41 +198,19 @@ pub fn update_with_keymap_message(
             navigate::mark(app, &state.history, &state.marks, char)
         }
         KeymapMessage::NavigateToParent => navigate::parent(app),
-        KeymapMessage::NavigateToPath(path) => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            navigate::path(&state.history, buffer, path)
-        }
+        KeymapMessage::NavigateToPath(path) => navigate::path(app, &state.history, path),
         KeymapMessage::NavigateToPathAsPreview(path) => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            navigate::path_as_preview(&state.history, buffer, path)
+            navigate::path_as_preview(app, &state.history, path)
         }
-        KeymapMessage::NavigateToSelected => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            navigate::selected(&mut state.history, buffer)
-        }
-        KeymapMessage::OpenSelected => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            open::selected(settings, &state.modes.current, buffer)
-        }
-        KeymapMessage::PasteFromJunkYard(entry_id) => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            junkyard::paste(&state.junk, buffer, entry_id)
-        }
+        KeymapMessage::NavigateToSelected => navigate::selected(app, &mut state.history),
+        KeymapMessage::OpenSelected => match app::get_focused_mut(app) {
+            (_, _, Buffer::FileTree(it)) => open::selected(settings, &state.modes.current, it),
+            (_, _, Buffer::_Text(_)) => todo!(),
+        },
+        KeymapMessage::PasteFromJunkYard(entry_id) => match app::get_focused_mut(app) {
+            (_, _, Buffer::FileTree(it)) => junkyard::paste(&state.junk, it, entry_id),
+            (_, _, Buffer::_Text(_)) => todo!(),
+        },
         KeymapMessage::Print(content) => {
             commandline::print(&mut app.commandline, &mut state.modes, content)
         }
@@ -250,12 +223,12 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => match app::get_focused_mut(app) {
-            Buffer::FileTree(it) => selection::copy_to_clipboard(&mut state.register, it),
-            Buffer::_Text(_) => todo!(),
+            (_, _, Buffer::FileTree(it)) => selection::copy_to_clipboard(&mut state.register, it),
+            (_, _, Buffer::_Text(_)) => todo!(),
         },
         KeymapMessage::YankToJunkYard(repeat) => match app::get_focused_mut(app) {
-            Buffer::FileTree(it) => junkyard::yank(&mut state.junk, it, repeat),
-            Buffer::_Text(_) => todo!(),
+            (_, _, Buffer::FileTree(it)) => junkyard::yank(&mut state.junk, it, repeat),
+            (_, _, Buffer::_Text(_)) => todo!(),
         },
     }
 }
@@ -288,12 +261,7 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                match &mut app::get_focused_mut(app) {
-                    Buffer::FileTree(it) => {
-                        window::relocate(&state.history, &state.modes.current, it, mtn)
-                    }
-                    Buffer::_Text(_) => todo!(),
-                }
+                viewport::relocate(app, &state.history, &state.modes.current, mtn)
             }
         },
         BufferMessage::SaveBuffer => save::changes(app, &mut state.junk, &state.modes.current),

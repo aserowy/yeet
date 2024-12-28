@@ -1,6 +1,10 @@
 use std::{mem, path::Path};
 
-use yeet_buffer::model::{viewport::ViewPort, Cursor, CursorPosition, TextBuffer};
+use yeet_buffer::{
+    message::ViewPortDirection,
+    model::{Cursor, CursorPosition, TextBuffer},
+    update::viewport,
+};
 
 use crate::{
     action::Action,
@@ -15,8 +19,8 @@ use super::{app, history, selection};
 #[tracing::instrument(skip(app))]
 pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
     let buffer = match app::get_focused_mut(app) {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
+        (_, _, Buffer::FileTree(it)) => it,
+        (_, _, Buffer::_Text(_)) => todo!(),
     };
 
     let path = match marks.entries.get(char) {
@@ -36,8 +40,13 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
     navigate_to_path_with_selection(history, buffer, path, &selection)
 }
 
-#[tracing::instrument(skip(buffer, history))]
-pub fn path(history: &History, buffer: &mut FileTreeBuffer, path: &Path) -> Vec<Action> {
+#[tracing::instrument(skip(app, history))]
+pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        (_, _, Buffer::FileTree(it)) => it,
+        (_, _, Buffer::_Text(_)) => todo!(),
+    };
+
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
 
@@ -62,7 +71,12 @@ pub fn path(history: &History, buffer: &mut FileTreeBuffer, path: &Path) -> Vec<
     navigate_to_path_with_selection(history, buffer, path, &selection)
 }
 
-pub fn path_as_preview(history: &History, buffer: &mut FileTreeBuffer, path: &Path) -> Vec<Action> {
+pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+    let buffer = match app::get_focused_mut(app) {
+        (_, _, Buffer::FileTree(it)) => it,
+        (_, _, Buffer::_Text(_)) => todo!(),
+    };
+
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
@@ -163,11 +177,20 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         buffer.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
         buffer.preview_cursor = Some(Default::default());
 
-        mem_swap_viewport(vp, &mut buffer.parent_vp);
-        mem_swap_viewport(&mut buffer.parent_vp, &mut buffer.preview_vp);
+        if let Some(parent_cursor) = &mut buffer.parent_cursor {
+            mem_swap_cursor(cursor, parent_cursor);
 
-        mem_swap_cursor(cursor, &mut buffer.parent_cursor);
-        mem_swap_cursor(&mut buffer.parent_cursor, &mut buffer.preview_cursor);
+            if let Some(preview_cursor) = &mut buffer.preview_cursor {
+                mem_swap_cursor(parent_cursor, preview_cursor);
+            }
+        }
+
+        viewport::update_by_direction(
+            vp,
+            Some(cursor),
+            &buffer.current.buffer,
+            &ViewPortDirection::CenterOnCursor,
+        );
 
         actions
     } else {
@@ -175,8 +198,13 @@ pub fn parent(app: &mut App) -> Vec<Action> {
     }
 }
 
-#[tracing::instrument(skip(buffer, history))]
-pub fn selected(history: &mut History, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+#[tracing::instrument(skip(app, history))]
+pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
+    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
+        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
+        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    };
+
     if let Some(selected) = selection::get_current_selected_path(buffer) {
         if buffer.current.path == selected || !selected.is_dir() {
             return Vec::new();
@@ -207,33 +235,38 @@ pub fn selected(history: &mut History, buffer: &mut FileTreeBuffer) -> Vec<Actio
             mem::replace(&mut buffer.current.buffer, preview_buffer),
         );
 
-        mem_swap_cursor(&mut buffer.current_cursor, &mut buffer.parent_cursor);
-        mem_swap_cursor(&mut buffer.current_cursor, &mut buffer.preview_cursor);
+        if let Some(parent_cursor) = &mut buffer.parent_cursor {
+            mem_swap_cursor(cursor, parent_cursor);
+        }
 
-        if let Some(cursor) = &mut buffer.current_cursor {
+        if let Some(preview_cursor) = &mut buffer.preview_cursor {
+            mem_swap_cursor(cursor, preview_cursor);
+        } else {
             cursor.horizontal_index = CursorPosition::Absolute {
                 current: 0,
                 expanded: 0,
             };
-        } else {
-            buffer.current_cursor = Some(Default::default());
+
+            if let Some(selected) = selection::get_current_selected_path(buffer) {
+                tracing::trace!("loading selection: {:?}", selected);
+
+                let history = history::get_selection_from_history(history, selected.as_path())
+                    .map(|s| s.to_string());
+
+                actions.push(Action::Load(
+                    FileTreeBufferSection::Preview,
+                    selected.to_path_buf(),
+                    history,
+                ));
+            }
         }
 
-        if let Some(selected) = selection::get_current_selected_path(buffer) {
-            tracing::trace!("loading selection: {:?}", selected);
-
-            let history = history::get_selection_from_history(history, selected.as_path())
-                .map(|s| s.to_string());
-
-            actions.push(Action::Load(
-                FileTreeBufferSection::Preview,
-                selected.to_path_buf(),
-                history,
-            ));
-        }
-
-        mem_swap_viewport(&mut buffer.current_vp, &mut buffer.parent_vp);
-        mem_swap_viewport(&mut buffer.current_vp, &mut buffer.preview_vp);
+        viewport::update_by_direction(
+            vp,
+            Some(cursor),
+            &buffer.current.buffer,
+            &ViewPortDirection::CenterOnCursor,
+        );
 
         actions
     } else {
@@ -241,22 +274,9 @@ pub fn selected(history: &mut History, buffer: &mut FileTreeBuffer) -> Vec<Actio
     }
 }
 
-fn mem_swap_viewport(dest_viewport: &mut ViewPort, src_viewport: &mut ViewPort) {
+fn mem_swap_cursor(dest_cursor: &mut Cursor, src_cursor: &mut Cursor) {
     mem::swap(
-        &mut dest_viewport.horizontal_index,
-        &mut src_viewport.horizontal_index,
+        &mut dest_cursor.vertical_index,
+        &mut src_cursor.vertical_index,
     );
-    mem::swap(
-        &mut dest_viewport.vertical_index,
-        &mut src_viewport.vertical_index,
-    );
-}
-
-fn mem_swap_cursor(dest_cursor: &mut Option<Cursor>, src_cursor: &mut Option<Cursor>) {
-    if let (Some(dest_cursor), Some(src_cursor)) = (dest_cursor, src_cursor) {
-        mem::swap(
-            &mut dest_cursor.vertical_index,
-            &mut src_cursor.vertical_index,
-        );
-    }
 }

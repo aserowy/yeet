@@ -11,7 +11,7 @@ pub fn view(
 ) -> Result<(), AppError> {
     view::view(
         &commandline.viewport,
-        &commandline.cursor,
+        commandline.cursor.as_ref(),
         mode,
         &commandline.buffer,
         frame,

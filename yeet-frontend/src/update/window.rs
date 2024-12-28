@@ -51,33 +51,3 @@ fn set_commandline_vp(
 
     Ok(())
 }
-
-// NOTE: FileTreeBuffer related
-pub fn relocate(
-    history: &History,
-    mode: &Mode,
-    buffer: &mut FileTreeBuffer,
-    direction: &ViewPortDirection,
-) -> Vec<Action> {
-    let msg = BufferMessage::MoveViewPort(direction.clone());
-
-    yeet_buffer::update::update_buffer(
-        &mut buffer.current_vp,
-        &mut buffer.current_cursor,
-        mode,
-        &mut buffer.current.buffer,
-        &msg,
-    );
-
-    let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(buffer) {
-        let selection = history::get_selection_from_history(history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(
-            FileTreeBufferSection::Preview,
-            path,
-            selection,
-        ));
-    }
-
-    actions
-}

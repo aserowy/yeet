@@ -6,10 +6,7 @@ use std::{
 use crate::{error::AppError, settings::Settings};
 use ratatui_image::protocol::Protocol;
 use tokio_util::sync::CancellationToken;
-use yeet_buffer::model::{
-    viewport::{LineNumber, ViewPort},
-    Cursor, Mode, TextBuffer,
-};
+use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode, TextBuffer};
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
@@ -186,17 +183,9 @@ impl Default for FileTreeBuffer {
     fn default() -> Self {
         Self {
             current: Default::default(),
-            current_cursor: Some(Cursor::default()),
-            current_vp: ViewPort {
-                line_number: LineNumber::Relative,
-                line_number_width: 3,
-                ..Default::default()
-            },
             parent: Default::default(),
-            parent_vp: Default::default(),
             parent_cursor: Default::default(),
             preview: Default::default(),
-            preview_vp: Default::default(),
             preview_cursor: Default::default(),
             show_border: true,
         }

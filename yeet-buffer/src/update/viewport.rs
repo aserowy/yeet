@@ -47,7 +47,7 @@ pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextB
 pub fn update_by_direction(
     viewport: &mut ViewPort,
     cursor: Option<&mut Cursor>,
-    buffer: &mut TextBuffer,
+    buffer: &TextBuffer,
     direction: &ViewPortDirection,
 ) {
     if buffer.lines.is_empty() {
