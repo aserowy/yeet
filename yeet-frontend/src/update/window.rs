@@ -7,12 +7,12 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     error::AppError,
-    model::{history::History, App, FileTreeBuffer, FileTreeBufferSection},
+    model::{history::History, App, FileTreeBuffer, FileTreeBufferSection, Window},
 };
 
 use super::{history, selection};
 
-pub fn update(app: &mut App, size: Rect) -> Result<(), AppError> {
+pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
     let main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -20,19 +20,22 @@ pub fn update(app: &mut App, size: Rect) -> Result<(), AppError> {
             Constraint::Length(1),
             Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
         ])
-        .split(size);
+        .split(area);
 
+    set_buffer_vp(&mut app.window, main[0])?;
     set_commandline_vp(&mut app.commandline, main[2])?;
 
-    // TODO: set window vp and related FileTreeBuffer vp (when shown)
-    // let layout = Layout::default()
-    //     .direction(Direction::Horizontal)
-    //     .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
-    //     .split(rect);
-    //
-    // parent: files[0],
-    // current: files[1],
-    // preview: files[2],
+    Ok(())
+}
+
+fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
+    let (vp, _, _) = match window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Content(vp, cursor, id) => (vp, cursor, id),
+    };
+
+    vp.height = area.height;
+    vp.width = area.width;
 
     Ok(())
 }

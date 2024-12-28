@@ -1,27 +1,29 @@
 use std::{cmp::Ordering, mem};
 
+use yeet_buffer::model::{viewport::ViewPort, Cursor};
+
 use crate::model::{App, Buffer, Window};
 
-pub fn get_focused(app: &App) -> &Buffer {
-    let focused_id = match app.window {
+pub fn get_focused(app: &App) -> (&ViewPort, &Cursor, &Buffer) {
+    let (viewportBuffer, , cursor, focused_id) = match &app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(_, _, it) => it,
+        Window::Content(vp, cursor, it) => (vp, cursor, it),
     };
 
     match app.buffers.get(&focused_id) {
-        Some(it) => return it,
+        Some(it) => return (viewport, cursor, it),
         None => todo!(),
     };
 }
 
-pub fn get_focused_mut(app: &mut App) -> &mut Buffer {
-    let focused_id = match app.window {
+pub fn get_focused_mut(app: &mut App) -> (&mut ViewPort, &mut Cursor, &mut Buffer) {
+    let (vp, cursor, focused_id) = match &mut app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(_, _, it) => it,
+        Window::Content(vp, cursor, it) => (vp, cursor, it),
     };
 
     match app.buffers.get_mut(&focused_id) {
-        Some(it) => return it,
+        Some(it) => return (vp, cursor, it),
         None => todo!(),
     };
 }

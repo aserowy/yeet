@@ -131,13 +131,9 @@ pub enum Buffer {
 
 pub struct FileTreeBuffer {
     pub current: DirectoryBuffer,
-    pub current_vp: ViewPort,
-    pub current_cursor: Option<Cursor>,
     pub parent: FileTreeBufferSectionBuffer,
-    pub parent_vp: ViewPort,
     pub parent_cursor: Option<Cursor>,
     pub preview: FileTreeBufferSectionBuffer,
-    pub preview_vp: ViewPort,
     pub preview_cursor: Option<Cursor>,
     pub show_border: bool,
 }

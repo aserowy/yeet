@@ -79,9 +79,9 @@ pub fn model(terminal: &TerminalWrapper, model: &mut Model, envelope: Envelope) 
 
     let size = terminal.size().expect("Failed to get terminal size");
     match window::update(&mut model.app, size) {
-    Ok(_) => {}
-    Err(err) => tracing::error!("window update failed with error: {}", err),
-};
+        Ok(_) => {}
+        Err(err) => tracing::error!("window update failed with error: {}", err),
+    };
 
     register::finish_scope(
         &model.state.modes.current,
@@ -202,13 +202,7 @@ pub fn update_with_keymap_message(
         KeymapMessage::NavigateToMark(char) => {
             navigate::mark(app, &state.history, &state.marks, char)
         }
-        KeymapMessage::NavigateToParent => {
-            let buffer = match app::get_focused_mut(app) {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => return Vec::new(),
-            };
-            navigate::parent(buffer)
-        }
+        KeymapMessage::NavigateToParent => navigate::parent(app),
         KeymapMessage::NavigateToPath(path) => {
             let buffer = match app::get_focused_mut(app) {
                 Buffer::FileTree(it) => it,
@@ -276,12 +270,9 @@ pub fn update_with_buffer_message(
         BufferMessage::ChangeMode(from, to) => mode::change(app, state, from, to),
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
-            Mode::Insert | Mode::Normal => match &mut app::get_focused_mut(app) {
-                Buffer::FileTree(it) => {
-                    modify::buffer(&state.modes.current, it, repeat, modification)
-                }
-                Buffer::_Text(_) => todo!(),
-            },
+            Mode::Insert | Mode::Normal => {
+                modify::buffer(app, &state.modes.current, repeat, modification)
+            }
             Mode::Navigation => Vec::new(),
         },
         BufferMessage::MoveCursor(rpt, mtn) => match &mut state.modes.current {
@@ -305,10 +296,7 @@ pub fn update_with_buffer_message(
                 }
             }
         },
-        BufferMessage::SaveBuffer => match &mut app::get_focused_mut(app) {
-            Buffer::FileTree(it) => save::changes(&mut state.junk, &state.modes.current, it),
-            Buffer::_Text(_) => todo!(),
-        },
+        BufferMessage::SaveBuffer => save::changes(app, &mut state.junk, &state.modes.current),
 
         BufferMessage::RemoveLine(_)
         | BufferMessage::ResetCursor

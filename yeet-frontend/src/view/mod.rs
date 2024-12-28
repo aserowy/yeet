@@ -9,17 +9,19 @@ mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     terminal.draw(|frame| {
-        let vertical_offset = window::view(model, frame).expect("Failed to render window view");
+        tracing::debug!("Rendering with area: {}", frame.area());
 
-        let buffer = app::get_focused(&model.app);
+        let vertical_offset = window::view(model, frame).expect("Failed to render window view");
+        let (_, cursor, buffer) = app::get_focused(&model.app);
 
         statusline::view(
+            cursor,
             buffer,
             frame,
             Rect {
-                x: vertical_offset,
-                y: 0,
+                x: 0,
                 width: frame.area().width,
+                y: vertical_offset,
                 height: 1,
             },
         );

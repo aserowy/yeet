@@ -125,8 +125,13 @@ pub fn navigate_to_path_with_selection(
     actions
 }
 
-#[tracing::instrument(skip(buffer))]
-pub fn parent(buffer: &mut FileTreeBuffer) -> Vec<Action> {
+#[tracing::instrument(skip(app))]
+pub fn parent(app: &mut App) -> Vec<Action> {
+    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
+        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
+        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    };
+
     if let Some(path) = buffer.current.path.clone().parent() {
         if buffer.current.path == path {
             return Vec::new();
@@ -158,10 +163,10 @@ pub fn parent(buffer: &mut FileTreeBuffer) -> Vec<Action> {
         buffer.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
         buffer.preview_cursor = Some(Default::default());
 
-        mem_swap_viewport(&mut buffer.current_vp, &mut buffer.parent_vp);
+        mem_swap_viewport(vp, &mut buffer.parent_vp);
         mem_swap_viewport(&mut buffer.parent_vp, &mut buffer.preview_vp);
 
-        mem_swap_cursor(&mut buffer.current_cursor, &mut buffer.parent_cursor);
+        mem_swap_cursor(cursor, &mut buffer.parent_cursor);
         mem_swap_cursor(&mut buffer.parent_cursor, &mut buffer.preview_cursor);
 
         actions

@@ -5,27 +5,32 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{FileTreeBuffer, FileTreeBufferSectionBuffer},
+    model::{App, Buffer, FileTreeBufferSectionBuffer},
 };
 
+use super::app;
+
 pub fn buffer(
+    app: &mut App,
     mode: &Mode,
-    buffer: &mut FileTreeBuffer,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
     let msg = BufferMessage::Modification(*repeat, modification.clone());
+    match app::get_focused_mut(app) {
+        (vp, cursor, Buffer::FileTree(it)) => {
+            yeet_buffer::update::update_buffer(
+                vp,
+                Some(cursor),
+                mode,
+                &mut it.current.buffer,
+                &msg,
+            );
 
-    yeet_buffer::update::update_buffer(
-        &mut buffer.current_vp,
-        &mut buffer.current_cursor,
-        mode,
-        &mut buffer.current.buffer,
-        &msg,
-    );
-
-    // FIX: only if selection changed!
-    buffer.preview = FileTreeBufferSectionBuffer::None;
-
+            // FIX: only if selection changed!
+            it.preview = FileTreeBufferSectionBuffer::None;
+        }
+        (vp, cursor, Buffer::_Text(_)) => todo!(),
+    }
     Vec::new()
 }

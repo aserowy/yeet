@@ -7,7 +7,7 @@ pub struct WindowSettings {
     pub sign_column_width: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ViewPort {
     pub height: u16,
     pub hidden_sign_ids: HashSet<SignIdentifier>,

@@ -9,22 +9,27 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{junkyard::JunkYard, FileTreeBuffer},
+    model::{junkyard::JunkYard, App, Buffer},
     task::Task,
 };
 
-use super::{junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
+use super::{app, junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
 
-#[tracing::instrument(skip(buffer))]
-pub fn changes(junk: &mut JunkYard, mode: &Mode, buffer: &mut FileTreeBuffer) -> Vec<Action> {
+#[tracing::instrument(skip(app))]
+pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
+    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
+        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
+        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    };
+
     let selection = get_current_selected_bufferline(buffer).map(|line| line.content.clone());
 
     let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
     update_buffer(
-        &mut buffer.current_vp,
-        &mut buffer.current_cursor,
+        vp,
+        Some(cursor),
         mode,
         &mut buffer.current.buffer,
         &BufferMessage::SetContent(content),
@@ -32,8 +37,8 @@ pub fn changes(junk: &mut JunkYard, mode: &Mode, buffer: &mut FileTreeBuffer) ->
 
     if let Some(selection) = selection {
         update_buffer(
-            &mut buffer.current_vp,
-            &mut buffer.current_cursor,
+            vp,
+            Some(cursor),
             mode,
             &mut buffer.current.buffer,
             &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
@@ -41,8 +46,8 @@ pub fn changes(junk: &mut JunkYard, mode: &Mode, buffer: &mut FileTreeBuffer) ->
     }
 
     let result = update_buffer(
-        &mut buffer.current_vp,
-        &mut buffer.current_cursor,
+        vp,
+        Some(cursor),
         mode,
         &mut buffer.current.buffer,
         &BufferMessage::SaveBuffer,

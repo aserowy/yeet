@@ -41,14 +41,14 @@ pub fn update(
                 changes.push(BufferChanged::LineRemoved(line_index, line.content));
             }
 
-            cursor::set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
+            cursor::set_to_inbound_position(cursor, mode, buffer);
 
             Some(changes)
         }
         TextModification::DeleteMotion(delete_count, motion) => {
             let pre_motion_cursor = cursor.clone();
             for _ in 0..*count {
-                cursor::update_cursor_by_direction(cursor, mode, buffer, delete_count, motion);
+                cursor::update_by_direction(cursor, mode, buffer, delete_count, motion);
             }
 
             let mut changes = Vec::new();
@@ -112,7 +112,7 @@ pub fn update(
                 changes.push(changed);
             }
 
-            cursor::set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
+            cursor::set_to_inbound_position(cursor, mode, buffer);
 
             Some(changes)
         }

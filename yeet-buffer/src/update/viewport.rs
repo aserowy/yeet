@@ -8,10 +8,16 @@ pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextB
         return;
     }
 
+    let viewport_offset = if viewport.height == 0 {
+        0
+    } else {
+        usize::from(viewport.height - 1)
+    };
+
     if viewport.vertical_index > cursor.vertical_index {
         viewport.vertical_index = cursor.vertical_index;
-    } else if viewport.vertical_index + usize::from(viewport.height - 1) < cursor.vertical_index {
-        viewport.vertical_index = cursor.vertical_index - usize::from(viewport.height - 1);
+    } else if viewport.vertical_index + viewport_offset < cursor.vertical_index {
+        viewport.vertical_index = cursor.vertical_index - viewport_offset;
     }
 
     let cursor_index = match cursor.horizontal_index {
@@ -40,7 +46,7 @@ pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextB
 
 pub fn update_by_direction(
     viewport: &mut ViewPort,
-    cursor: &mut Option<Cursor>,
+    cursor: Option<&mut Cursor>,
     buffer: &mut TextBuffer,
     direction: &ViewPortDirection,
 ) {
@@ -82,7 +88,7 @@ pub fn update_by_direction(
                 viewport.vertical_index = buffer.lines.len() - usize::from(viewport.height);
             }
 
-            if let Some(ref mut cursor) = cursor {
+            if let Some(cursor) = cursor {
                 if cursor.vertical_index + usize::from(index_offset) >= buffer.lines.len() {
                     cursor.vertical_index = buffer.lines.len() - 1;
                 } else {
@@ -98,7 +104,7 @@ pub fn update_by_direction(
                 viewport.vertical_index -= usize::from(index_offset);
             }
 
-            if let Some(ref mut cursor) = cursor {
+            if let Some(cursor) = cursor {
                 if cursor.vertical_index < usize::from(index_offset) {
                     cursor.vertical_index = 0;
                 } else {

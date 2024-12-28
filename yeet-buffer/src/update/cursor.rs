@@ -8,7 +8,7 @@ use crate::{
 use super::{find, word};
 
 // TODO: refactor
-pub fn update_cursor_by_direction(
+pub fn update_by_direction(
     cursor: &mut Cursor,
     mode: &Mode,
     buffer: &mut TextBuffer,
@@ -222,7 +222,7 @@ pub fn update_cursor_by_direction(
     results
 }
 
-pub fn set_outbound_cursor_to_inbound_position(
+pub fn set_to_inbound_position(
     cursor: &mut Cursor,
     mode: &Mode,
     model: &TextBuffer,

@@ -32,7 +32,7 @@ pub fn update(
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                update_buffer(viewport, cursor, mode, buffer, message);
+                update_buffer(viewport, cursor.as_mut(), mode, buffer, message);
             }
             CommandMode::PrintMultiline => {}
         }
@@ -74,7 +74,7 @@ pub fn modify(
 
             update_buffer(
                 viewport,
-                cursor,
+                cursor.as_mut(),
                 &modes.current,
                 text_buffer,
                 &BufferMessage::Modification(*repeat, modification.clone()),
@@ -116,7 +116,7 @@ pub fn modify(
                 } else {
                     update_buffer(
                         viewport,
-                        cursor,
+                        cursor.as_mut(),
                         &modes.current,
                         text_buffer,
                         &BufferMessage::SetContent(vec![]),
@@ -194,7 +194,7 @@ pub fn update_on_execute(
 
     update_buffer(
         &mut app.commandline.viewport,
-        &mut app.commandline.cursor,
+        app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -211,7 +211,7 @@ pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<A
 
     update_buffer(
         &mut app.commandline.viewport,
-        &mut app.commandline.cursor,
+        app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
         &BufferMessage::SetContent(vec![]),
@@ -272,14 +272,14 @@ pub fn print(
 
     update_buffer(
         &mut commandline.viewport,
-        &mut commandline.cursor,
+        commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::Bottom),
     );
     update_buffer(
         &mut commandline.viewport,
-        &mut commandline.cursor,
+        commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
         &BufferMessage::MoveCursor(1, CursorDirection::LineEnd),
