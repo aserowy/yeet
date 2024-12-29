@@ -2,8 +2,7 @@ use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, BufferLine, Mode, TextBuffer},
-    update::update_buffer,
+    model::{ansi::Ansi, viewport::ViewPort, BufferLine, Mode, TextBuffer},
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 
@@ -343,26 +342,21 @@ pub fn buffer_type(
 ) {
     let mut text_buffer = TextBuffer::default();
 
-    let (viewport, cursor) = match section {
-        FileTreeBufferSection::Parent => (&mut buffer.parent_vp, &mut buffer.parent_cursor),
-        FileTreeBufferSection::Preview => (&mut buffer.preview_vp, &mut buffer.preview_cursor),
+    let cursor = match section {
+        FileTreeBufferSection::Parent => buffer.parent_cursor,
+        FileTreeBufferSection::Preview => buffer.preview_cursor,
         FileTreeBufferSection::Current => unreachable!(),
     };
 
-    update_buffer(
-        viewport,
-        cursor,
+    yeet_buffer::update(
+        &mut None,
+        &mut cursor,
         mode,
         &mut text_buffer,
-        &BufferMessage::SetContent(content.to_vec()),
-    );
-
-    update_buffer(
-        viewport,
-        cursor,
-        mode,
-        &mut text_buffer,
-        &BufferMessage::ResetCursor,
+        vec![
+            &BufferMessage::SetContent(content.to_vec()),
+            &BufferMessage::ResetCursor,
+        ],
     );
 
     if let Some(cursor) = cursor {
@@ -372,8 +366,8 @@ pub fn buffer_type(
     if path.is_dir() {
         cursor::set_cursor_index_with_history(
             history,
-            viewport,
-            cursor,
+            &mut viewport,
+            &mut cursor,
             mode,
             &mut text_buffer,
             path,

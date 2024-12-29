@@ -9,9 +9,24 @@ mod modification;
 pub mod viewport;
 mod word;
 
+pub fn update(
+    viewport: &mut Option<ViewPort>,
+    cursor: &mut Option<Cursor>,
+    mode: &Mode,
+    buffer: &mut TextBuffer,
+    messages: Vec<&BufferMessage>,
+) -> Vec<BufferResult> {
+    let mut actions = Vec::new();
+    for message in messages.iter() {
+        actions.push(update_buffer(viewport, cursor, mode, buffer, message));
+    }
+
+    actions.into_iter().flatten().collect()
+}
+
 pub fn update_buffer(
-    viewport: &mut ViewPort,
-    cursor: Option<&mut Cursor>,
+    viewport: &mut Option<ViewPort>,
+    cursor: &mut Option<Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     message: &BufferMessage,
@@ -27,7 +42,9 @@ pub fn update_buffer(
 
                 if let Some(cursor) = cursor {
                     cursor::update_by_direction(cursor, mode, buffer, &1, &CursorDirection::Left);
-                    viewport::update_by_cursor(viewport, cursor, buffer);
+                    if let Some(viewport) = viewport {
+                        viewport::update_by_cursor(viewport, cursor, buffer);
+                    }
                 }
             }
             Vec::new()
@@ -35,7 +52,9 @@ pub fn update_buffer(
         BufferMessage::Modification(count, modification) => {
             if let Some(cursor) = cursor {
                 let changes = modification::update(cursor, mode, buffer, count, modification);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
 
                 if let Some(changes) = changes {
                     buffer.undo.add(mode, changes);
@@ -46,7 +65,9 @@ pub fn update_buffer(
         BufferMessage::MoveCursor(count, direction) => {
             if let Some(cursor) = cursor {
                 let result = cursor::update_by_direction(cursor, mode, buffer, count, direction);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
 
                 result
             } else {
@@ -55,11 +76,14 @@ pub fn update_buffer(
             // TODO: history::add_history_entry(&mut model.history, selected.as_path());
         }
         BufferMessage::MoveViewPort(direction) => {
+            let viewport = match viewport {
+                Some(it) => it,
+                None => return Vec::new(),
+            };
+
+            viewport::update_by_direction(viewport, cursor, buffer, direction);
             if let Some(cursor) = cursor {
-                viewport::update_by_direction(viewport, Some(cursor), buffer, direction);
                 viewport::update_by_cursor(viewport, cursor, buffer);
-            } else {
-                viewport::update_by_direction(viewport, cursor, buffer, direction);
             }
 
             Vec::new()
@@ -69,15 +93,14 @@ pub fn update_buffer(
 
             if let Some(cursor) = cursor {
                 cursor::set_to_inbound_position(cursor, mode, buffer);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
             }
 
             Vec::new()
         }
         BufferMessage::ResetCursor => {
-            viewport.horizontal_index = 0;
-            viewport.vertical_index = 0;
-
             if let Some(cursor) = cursor {
                 cursor.vertical_index = 0;
 
@@ -92,7 +115,12 @@ pub fn update_buffer(
                     CursorPosition::End => CursorPosition::End,
                     CursorPosition::None => CursorPosition::None,
                 };
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport.horizontal_index = 0;
+                    viewport.vertical_index = 0;
+
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
             }
 
             Vec::new()
@@ -107,7 +135,9 @@ pub fn update_buffer(
 
             if let Some(cursor) = cursor {
                 cursor::set_to_inbound_position(cursor, mode, buffer);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
             }
 
             Vec::new()
@@ -129,7 +159,9 @@ pub fn update_buffer(
                 cursor.hide_cursor_line = false;
 
                 cursor::set_to_inbound_position(cursor, mode, buffer);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
 
                 vec![BufferResult::CursorPositionChanged]
             } else {
@@ -141,7 +173,9 @@ pub fn update_buffer(
             buffer.lines.sort_unstable_by(sort);
             if let Some(cursor) = cursor {
                 cursor::set_to_inbound_position(cursor, mode, buffer);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, cursor, buffer);
+                }
             }
             Vec::new()
         }

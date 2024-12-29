@@ -4,7 +4,6 @@ use yeet_buffer::{
         undo::{consolidate_modifications, BufferChanged},
         BufferResult, Mode,
     },
-    update::update_buffer,
 };
 
 use crate::{
@@ -27,30 +26,30 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
-    update_buffer(
+    yeet_buffer::update(
         vp,
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
-        &BufferMessage::SetContent(content),
+        vec![&BufferMessage::SetContent(content)],
     );
 
     if let Some(selection) = selection {
-        update_buffer(
+        yeet_buffer::update(
             vp,
             Some(cursor),
             mode,
             &mut buffer.current.buffer,
-            &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
+            vec![&BufferMessage::SetCursorToLineContent(selection.to_stripped_string())],
         );
     }
 
-    let result = update_buffer(
+    let result = yeet_buffer::update(
         vp,
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
-        &BufferMessage::SaveBuffer,
+        vec![&BufferMessage::SaveBuffer],
     );
 
     let mut actions = Vec::new();

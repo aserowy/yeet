@@ -3,7 +3,6 @@ use std::path::Path;
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{viewport::ViewPort, BufferResult, Cursor, Mode, SearchDirection, TextBuffer},
-    update::update_buffer,
 };
 
 use crate::{
@@ -21,18 +20,20 @@ use super::{
 };
 
 pub fn set_cursor_index_to_selection(
-    viewport: &mut ViewPort,
-    cursor: Option<&mut Cursor>,
+    viewport: &mut Option<ViewPort>,
+    cursor: &mut Option<Cursor>,
     mode: &Mode,
     text_buffer: &mut TextBuffer,
     selection: &str,
 ) -> bool {
-    let result = update_buffer(
+    let result = yeet_buffer::update(
         viewport,
         cursor,
         mode,
         text_buffer,
-        &BufferMessage::SetCursorToLineContent(selection.to_string()),
+        vec![&BufferMessage::SetCursorToLineContent(
+            selection.to_string(),
+        )],
     );
 
     result.contains(&BufferResult::CursorPositionChanged)
@@ -40,8 +41,8 @@ pub fn set_cursor_index_to_selection(
 
 pub fn set_cursor_index_with_history(
     history: &History,
-    viewport: &mut ViewPort,
-    cursor: Option<&mut Cursor>,
+    viewport: &mut Option<ViewPort>,
+    cursor: &mut Option<Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     path: &Path,
@@ -90,7 +91,7 @@ pub fn relocate(
         };
 
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
-        yeet_buffer::update::update_buffer(
+        yeet_buffer::update(
             &mut buffer.current_vp,
             &mut buffer.current_cursor,
             &state.modes.current,
@@ -98,7 +99,7 @@ pub fn relocate(
             &msg,
         );
     } else {
-        yeet_buffer::update::update_buffer(
+        yeet_buffer::update(
             &mut buffer.current_vp,
             &mut buffer.current_cursor,
             &state.modes.current,
@@ -108,12 +109,12 @@ pub fn relocate(
     };
 
     let mut actions = Vec::new();
-    let current_preview_path = selection::get_current_selected_path(buffer);
+    let current_preview_path = selection::get_current_selected_path(&buffer);
     if premotion_preview_path == current_preview_path {
         return actions;
     }
 
-    if let Some(path) = selection::get_current_selected_path(buffer) {
+    if let Some(path) = selection::get_current_selected_path(&buffer) {
         let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,

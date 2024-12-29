@@ -3,7 +3,6 @@ use std::{mem, path::PathBuf};
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{ansi::Ansi, BufferLine, Cursor, CursorPosition, Mode},
-    update::update_buffer,
 };
 
 use crate::{
@@ -63,12 +62,12 @@ fn change_filetree(
             })
             .collect();
 
-        update_buffer(
+        yeet_buffer::update(
             viewport,
             cursor,
             &state.modes.current,
             buffer,
-            &BufferMessage::SetContent(content),
+            vec![&BufferMessage::SetContent(content)],
         );
 
         if is_first_changed_event {
@@ -122,12 +121,12 @@ pub fn finish(
         if let Some((_, viewport, cursor, buffer)) =
             directories.into_iter().find(|(p, _, _, _)| p == path)
         {
-            update_buffer(
+            yeet_buffer::update(
                 viewport,
                 cursor,
                 &state.modes.current,
                 buffer,
-                &BufferMessage::SortContent(super::SORT),
+                vec![&BufferMessage::SortContent(super::SORT)],
             );
 
             if let Some(selection) = selection {
@@ -160,12 +159,12 @@ pub fn finish(
                 let _ = mem::replace(cursor, cursor_after_finished);
             }
 
-            update_buffer(
+            yeet_buffer::update(
                 viewport,
                 cursor,
                 &state.modes.current,
                 buffer,
-                &BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor),
+                vec![&BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor)],
             );
         }
 

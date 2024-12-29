@@ -18,7 +18,7 @@ pub fn relocate(
 ) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
-    yeet_buffer::update::update_buffer(
+    yeet_buffer::update(
         &mut buffer.current_vp,
         &mut buffer.current_cursor,
         mode,

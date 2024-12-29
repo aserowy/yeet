@@ -124,7 +124,7 @@ async fn execute(
                         buffer.current.state = DirectoryBufferState::Loading;
                         buffer.current.path = path.clone();
 
-                        yeet_buffer::update::update_buffer(
+                        yeet_buffer::update(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
                             &model.state.modes.current,
@@ -132,7 +132,7 @@ async fn execute(
                             &BufferMessage::SetContent(Vec::new()),
                         );
 
-                        yeet_buffer::update::update_buffer(
+                        yeet_buffer::update(
                             &mut buffer.current_vp,
                             &mut buffer.current_cursor,
                             &model.state.modes.current,

@@ -1,15 +1,15 @@
 use yeet_buffer::{
     message::BufferMessage,
     model::{BufferLine, CommandMode, Mode, SearchDirection},
-    update::update_buffer,
 };
 use yeet_keymap::message::PrintContent;
 
 use crate::{
     action::Action,
     model::{
+        eState,
         register::{Register, RegisterScope},
-        App, Buffer, CommandLine, ModBuffer, eState, State,
+        App, Buffer, CommandLine, ModBuffer, State,
     },
 };
 
@@ -61,7 +61,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
 
             cursor.hide_cursor = false;
 
-            yeet_buffer::update::update_buffer(
+            yeet_buffer::update(
                 vp,
                 Some(cursor),
                 &state.modes.current,
@@ -81,7 +81,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
             cursor.hide_cursor = false;
 
-            yeet_buffer::update::update_buffer(
+            yeet_buffer::update(
                 vp,
                 Some(cursor),
                 &state.modes.current,
@@ -99,7 +99,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
 
             cursor.hide_cursor = false;
 
-            yeet_buffer::update::update_buffer(
+            yeet_buffer::update(
                 vp,
                 Some(cursor),
                 &state.modes.current,
@@ -130,12 +130,12 @@ fn update_commandline_on_mode_change(
                 .is_some_and(|mode| mode.is_command());
 
             if from_command {
-                update_buffer(
+                yeet_buffer::update(
                     viewport,
                     commandline.cursor.as_mut(),
                     &modes.current,
                     buffer,
-                    &BufferMessage::SetContent(vec![]),
+                    vec![&BufferMessage::SetContent(vec![])],
                 );
             }
             return Vec::new();
@@ -144,12 +144,12 @@ fn update_commandline_on_mode_change(
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
-            update_buffer(
+            yeet_buffer::update(
                 viewport,
                 commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
-                &BufferMessage::ResetCursor,
+                vec![&BufferMessage::ResetCursor],
             );
 
             let prefix = match &command_mode {
@@ -164,12 +164,12 @@ fn update_commandline_on_mode_change(
                 ..Default::default()
             };
 
-            update_buffer(
+            yeet_buffer::update(
                 viewport,
                 commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
-                &BufferMessage::SetContent(vec![bufferline]),
+                vec![&BufferMessage::SetContent(vec![bufferline])],
             );
         }
         CommandMode::PrintMultiline => {}

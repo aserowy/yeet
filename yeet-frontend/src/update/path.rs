@@ -6,7 +6,6 @@ use std::{
 use yeet_buffer::{
     message::BufferMessage,
     model::{ansi::Ansi, BufferLine, Cursor, Mode, TextBuffer},
-    update::update_buffer,
 };
 
 use crate::{
@@ -32,7 +31,7 @@ pub fn add(
     mode: &Mode,
     buffers: Vec<&mut Buffer>,
     paths: &[PathBuf],
-) -> Vec<Action> {
+) -> Vec<Action> { 
     let mut actions = Vec::new();
     for buffer in buffers {
         let buffer = match buffer {
@@ -119,22 +118,22 @@ pub fn add(
             }
 
             if sort {
-                update_buffer(
+                yeet_buffer::update(
                     viewport,
                     cursor,
                     mode,
                     buffer,
-                    &BufferMessage::SortContent(super::SORT),
+                    vec![&BufferMessage::SortContent(super::SORT)],
                 );
             }
 
             if let Some(selection) = selection {
-                update_buffer(
+                yeet_buffer::update(
                     viewport,
                     cursor,
                     mode,
                     buffer,
-                    &BufferMessage::SetCursorToLineContent(selection),
+                    vec![&BufferMessage::SetCursorToLineContent(selection)],
                 );
             }
         }
@@ -240,12 +239,12 @@ pub fn remove(
                         .map(|(i, _)| i);
 
                     if let Some(index) = index {
-                        update_buffer(
+                        yeet_buffer::update(
                             viewport,
                             cursor,
                             mode,
                             buffer,
-                            &BufferMessage::RemoveLine(index),
+                            vec![&BufferMessage::RemoveLine(index)],
                         );
                     }
                 }
@@ -253,12 +252,12 @@ pub fn remove(
         }
 
         if let Some(selection) = current_selection {
-            update_buffer(
+            yeet_buffer::update(
                 &mut buffer.current_vp,
                 &mut buffer.current_cursor,
                 mode,
                 &mut buffer.current.buffer,
-                &BufferMessage::SetCursorToLineContent(selection),
+                vec![&BufferMessage::SetCursorToLineContent(selection)],
             );
         };
 
