@@ -31,7 +31,8 @@ pub fn update(
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                yeet_buffer::update(viewport, cursor.as_mut(), mode, buffer,vec![ message]);
+                let viewport = &mut Some(viewport);
+                yeet_buffer::update(viewport, cursor, mode, buffer, vec![message]);
             }
             CommandMode::PrintMultiline => {}
         }

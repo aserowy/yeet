@@ -8,11 +8,10 @@ pub fn get_focused(app: &App) -> (&ViewPort, &Cursor, &Buffer) {
     let (viewport, cursor, focused_id) = match &app.window {
         Window::Horizontal(_, _) => todo!(),
         Window::Content(vp, cursor, it) => (vp, cursor, it),
-        eState,
     };
 
     match app.buffers.get(&focused_id) {
-        Some(it) => return (ewport, cursor, it),
+        Some(it) => return (viewport, cursor, it),
         None => todo!(),
     };
 }

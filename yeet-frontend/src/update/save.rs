@@ -27,7 +27,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     content.retain(|line| !line.content.is_empty());
 
     yeet_buffer::update(
-        vp,
+        Some(vp),
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
@@ -40,7 +40,9 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
             Some(cursor),
             mode,
             &mut buffer.current.buffer,
-            vec![&BufferMessage::SetCursorToLineContent(selection.to_stripped_string())],
+            vec![&BufferMessage::SetCursorToLineContent(
+                selection.to_stripped_string(),
+            )],
         );
     }
 

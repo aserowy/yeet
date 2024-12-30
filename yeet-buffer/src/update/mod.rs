@@ -10,21 +10,38 @@ pub mod viewport;
 mod word;
 
 pub fn update(
-    viewport: &mut Option<ViewPort>,
-    cursor: &mut Option<Cursor>,
+    viewport: Option<&ViewPort>,
+    cursor: Option<&Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     messages: Vec<&BufferMessage>,
-) -> Vec<BufferResult> {
+) -> (Option<ViewPort>, Option<Cursor>, Vec<BufferResult>) {
     let mut actions = Vec::new();
+
+    let mut viewport = match viewport {
+        Some(it) => Some(it.clone()),
+        None => None,
+    };
+
+    let mut cursor = match cursor {
+        Some(it) => Some(it.clone()),
+        None => None,
+    };
+
     for message in messages.iter() {
-        actions.push(update_buffer(viewport, cursor, mode, buffer, message));
+        actions.push(update_buffer(
+            &mut viewport,
+            &mut cursor,
+            mode,
+            buffer,
+            message,
+        ));
     }
 
-    actions.into_iter().flatten().collect()
+    (viewport, cursor, actions.into_iter().flatten().collect())
 }
 
-pub fn update_buffer(
+fn update_buffer(
     viewport: &mut Option<ViewPort>,
     cursor: &mut Option<Cursor>,
     mode: &Mode,
