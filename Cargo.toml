@@ -15,11 +15,11 @@ version = "0.1.0"
 [workspace.dependencies]
 ansi-to-tui = "7.0.0"
 arboard = { version = "3.4.1", default-features = false, features = ["windows-sys", "wayland-data-control"] }
-clap = "4.5.20"
+clap = "4.5.31"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 csv = "1.3.0"
 dirs = "5.0.1"
-flate2 = "1.0.34"
+flate2 = "1.1.0"
 futures = "0.3.31"
 image = "0.25.4"
 infer = "0.16.0"
@@ -29,13 +29,13 @@ ratatui = "0.29.0"
 ratatui-image = { version = "3.0.0", features = ["crossterm", "serde"] }
 regex = "1.11.1"
 syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"]}
-tar = "0.4.43"
-thiserror = "2.0.3"
-tokio = { version = "1.41.0", features = ["full"] }
-tokio-util = "0.7.12"
+tar = "0.4.44"
+thiserror = "2.0.12"
+tokio = { version = "1.43.0", features = ["full"] }
+tokio-util = "0.7.13"
 tracing = "0.1.40"
 tracing-appender = "0.2.3"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = "0.3.19"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
