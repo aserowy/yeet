@@ -46,10 +46,6 @@
 
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
-
-            buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk.frameworks; [ AppKit Foundation ]
-            );
           };
 
           rust-stable = inputs'.rust-overlay.packages.rust.override {
@@ -57,9 +53,6 @@
           };
 
           shell = pkgs.mkShell {
-            buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk.frameworks; [ AppKit Foundation ]
-            );
             nativeBuildInputs = [
               rust-stable
 
