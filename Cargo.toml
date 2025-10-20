@@ -22,7 +22,7 @@ dirs = "5.0.1"
 flate2 = "1.1.4"
 futures = "0.3.31"
 image = "0.25.8"
-infer = "0.16.0"
+infer = "0.19.0"
 notify = { version = "7.0.0", default-features = false, features = ["macos_fsevent"] }
 pathdiff = "0.2.2"
 ratatui = "0.29.0"
