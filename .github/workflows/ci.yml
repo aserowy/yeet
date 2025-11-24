@@ -10,7 +10,7 @@ jobs:
   validating:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: format
         run: cargo fmt --check --verbose
       - name: building
