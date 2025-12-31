@@ -26,6 +26,9 @@ jobs:
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
+      - name: setup
+        run: sudo apt update && sudo apt -y install chafa
+
       - uses: actions/checkout@v6
 
       - name: setup rust
