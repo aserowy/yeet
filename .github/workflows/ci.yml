@@ -10,6 +10,8 @@ jobs:
   validating:
     runs-on: ubuntu-latest
     steps:
+      - name: setup
+        run: apt update && apt -y install chafa
       - uses: actions/checkout@v6
       - name: format
         run: cargo fmt --check --verbose
@@ -17,3 +19,5 @@ jobs:
         run: cargo build --verbose
       - name: testing
         run: cargo test --verbose
+
+
