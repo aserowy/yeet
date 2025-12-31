@@ -13,7 +13,7 @@ repository = "https://github.com/aserowy/yeet"
 version = "0.1.0"
 
 [workspace.dependencies]
-ansi-to-tui = "7.0.0"
+ansi-to-tui = "8.0.0"
 arboard = { version = "3.6.1", default-features = false, features = ["windows-sys", "wayland-data-control"] }
 clap = "4.5.53"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
@@ -25,8 +25,8 @@ image = "0.25.9"
 infer = "0.19.0"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 pathdiff = "0.2.2"
-ratatui = "0.29.0"
-ratatui-image = { version = "8.1.1", features = ["crossterm", "serde"] }
+ratatui = "0.30.0"
+ratatui-image = { version = "10.0.2", features = ["crossterm", "serde"] }
 regex = "1.12.2"
 syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"]}
 tar = "0.4.44"

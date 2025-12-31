@@ -65,7 +65,9 @@
               pkgs.nodePackages.markdownlint-cli
               pkgs.nodePackages.prettier
 
+              pkgs.pkg-config
               pkgs.chafa
+              pkgs.glib
               pkgs.fd
               pkgs.kitty
               pkgs.wezterm

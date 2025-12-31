@@ -44,11 +44,7 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             if let Some(cursor) = cursor {
-                let relative = if cursor.vertical_index > index {
-                    cursor.vertical_index - index
-                } else {
-                    index - cursor.vertical_index
-                };
+                let relative = cursor.vertical_index.abs_diff(index);
 
                 Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
             } else {

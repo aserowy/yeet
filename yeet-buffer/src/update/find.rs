@@ -46,15 +46,8 @@ pub fn char(cursor: &mut Cursor, direction: &CursorDirection, model: &Buffer) {
 }
 
 fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
-    let current = match lines.get(cursor.vertical_index) {
-        Some(line) => line,
-        None => return None,
-    };
-
-    let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
-        Some(index) => index,
-        None => return None,
-    };
+    let current = lines.get(cursor.vertical_index)?;
+    let index = cursor::get_horizontal_index(&cursor.horizontal_index, current)?;
 
     if index <= 1 {
         return None;
@@ -71,15 +64,8 @@ fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Opt
 }
 
 fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> Option<usize> {
-    let current = match lines.get(cursor.vertical_index) {
-        Some(line) => line,
-        None => return None,
-    };
-
-    let index = match cursor::get_horizontal_index(&cursor.horizontal_index, current) {
-        Some(index) => index,
-        None => return None,
-    };
+    let current = lines.get(cursor.vertical_index)?;
+    let index = cursor::get_horizontal_index(&cursor.horizontal_index, current)?;
 
     current
         .content

@@ -38,7 +38,7 @@ pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(position), layout[3]);
 }
 
-fn get_position_content(model: &Model) -> Line {
+fn get_position_content(model: &Model) -> Line<'_> {
     let count = model.files.current.buffer.lines.len();
     let current_position = model
         .files
@@ -66,7 +66,7 @@ fn get_position_content(model: &Model) -> Line {
     Line::from(content)
 }
 
-fn get_changes_content(model: &Model) -> Line {
+fn get_changes_content(model: &Model) -> Line<'_> {
     let modifications = model.files.current.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
