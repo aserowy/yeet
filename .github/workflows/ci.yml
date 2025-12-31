@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: setup
-        run: sudo add-apt-repository ppa:hpjansson/chafa && sudo apt update && sudo apt -y install chafa pkg-config libglib2.0-dev
+        run: sudo apt update && sudo apt -y install chafa pkg-config libglib2.0-dev
 
       - uses: actions/checkout@v6
 
