@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: setup
-        run: apt update && apt -y install chafa
+        run: sudo apt update && sudo apt -y install chafa
       - uses: actions/checkout@v6
       - name: format
         run: cargo fmt --check --verbose
