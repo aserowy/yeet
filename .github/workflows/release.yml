@@ -27,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: setup
-        run: sudo apt update && sudo apt -y install chafa
+        run: sudo apt update && sudo apt -y install chafa pkg-config
 
       - uses: actions/checkout@v6
 
