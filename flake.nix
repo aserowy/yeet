@@ -1,4 +1,4 @@
-# https://github.com/cpu/woodwidelog/blob/bb549af2b33c5c50ae6e7361da4af3b1993caa1d/content/articles/rust-flake/index.md?plain=1#L50
+# https://github.com/cpu/woodwidelog/blob/bb549af2b33c5c50ae6e7361da4af3b1993caa1d/content/articles/rust-flake/index.md?plain=1#l50
 {
   description = "yeet the great flake";
 
@@ -30,12 +30,43 @@
       perSystem = { config, self', inputs', pkgs, system, lib, ... }:
         let
           overlays = [ (import rust-overlay) nixgl.overlay ];
+
           pkgs = import nixpkgs {
             inherit system overlays;
           };
 
           toml_version = builtins.fromTOML (builtins.readFile ./Cargo.toml);
           toml_name = builtins.fromTOML (builtins.readFile ./yeet/Cargo.toml);
+
+          rustDevEnvironment = inputs'.rust-overlay.packages.rust.override {
+            extensions = [ "rust-src" "rust-analyzer" "clippy" ];
+          };
+
+          shellDeps = with pkgs; [
+            rustDevEnvironment
+
+            asciinema
+            asciinema-agg
+            gh
+            nil
+            nixpkgs-fmt
+            nodejs_20
+            nodePackages.markdownlint-cli
+            nodePackages.prettier
+
+            fd
+            kitty
+            wezterm
+          ];
+
+          nativeDeps = with pkgs; [
+            pkg-config
+          ];
+
+          buildDeps = with pkgs; [
+            chafa
+            glib
+          ];
 
           package = (pkgs.makeRustPlatform {
             cargo = pkgs.rust-bin.stable.latest.minimal;
@@ -44,34 +75,18 @@
             inherit (toml_name.package) name;
             inherit (toml_version.workspace.package) version;
 
+            nativeBuildInputs = nativeDeps;
+            buildInputs = buildDeps;
+
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
           };
 
-          rust-stable = inputs'.rust-overlay.packages.rust.override {
-            extensions = [ "rust-src" "rust-analyzer" "clippy" ];
-          };
-
           shell = pkgs.mkShell {
-            nativeBuildInputs = [
-              rust-stable
-
-              pkgs.asciinema
-              pkgs.asciinema-agg
-              pkgs.gh
-              pkgs.nil
-              pkgs.nixpkgs-fmt
-              pkgs.nodejs_20
-              pkgs.nodePackages.markdownlint-cli
-              pkgs.nodePackages.prettier
-
-              pkgs.pkg-config
-              pkgs.chafa
-              pkgs.glib
-              pkgs.fd
-              pkgs.kitty
-              pkgs.wezterm
-            ] ++ lib.optionals (!pkgs.stdenv.isDarwin) [
+            nativeBuildInputs = shellDeps
+            ++ nativeDeps
+            ++ buildDeps
+            ++ lib.optionals (!pkgs.stdenv.isDarwin) [
               pkgs.vscode-extensions.vadimcn.vscode-lldb
             ];
             shellHook = ''
