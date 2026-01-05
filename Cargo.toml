@@ -31,7 +31,7 @@ regex = "1.12.2"
 syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"]}
 tar = "0.4.44"
 thiserror = "2.0.17"
-tokio = { version = "1.48.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 tokio-util = "0.7.17"
 tracing = "0.1.44"
 tracing-appender = "0.2.4"
