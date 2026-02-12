@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use crate::model::{BufferLine, Mode};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq)]
 pub enum BufferMessage {
     ChangeMode(Mode, Mode),
     Modification(usize, TextModification),
@@ -15,6 +15,22 @@ pub enum BufferMessage {
     SetCursorToLineContent(String),
     SortContent(fn(&BufferLine, &BufferLine) -> Ordering),
     UpdateViewPortByCursor,
+}
+
+impl PartialEq for BufferMessage {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::ChangeMode(l0, l1), Self::ChangeMode(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Modification(l0, l1), Self::Modification(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::MoveCursor(l0, l1), Self::MoveCursor(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::MoveViewPort(l0), Self::MoveViewPort(r0)) => l0 == r0,
+            (Self::RemoveLine(l0), Self::RemoveLine(r0)) => l0 == r0,
+            (Self::SetContent(l0), Self::SetContent(r0)) => l0 == r0,
+            (Self::SetCursorToLineContent(l0), Self::SetCursorToLineContent(r0)) => l0 == r0,
+            (Self::SortContent(l0), Self::SortContent(r0)) => std::ptr::fn_addr_eq(*l0, *r0),
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
 }
 
 impl std::fmt::Debug for BufferMessage {

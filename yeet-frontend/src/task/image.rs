@@ -8,7 +8,7 @@ use tokio::process::Command;
 use crate::{error::AppError, event::Preview};
 
 #[tracing::instrument]
-pub async fn load<'a>(picker: &mut Option<Picker>, path: &Path, rect: &Rect) -> Preview {
+pub async fn load(picker: &mut Option<Picker>, path: &Path, rect: &Rect) -> Preview {
     let picker = match picker {
         Some(pckr) => pckr,
         None => return load_with_chafa(path, rect).await,

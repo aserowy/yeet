@@ -55,11 +55,7 @@ fn add_cursor_styles(
             char_count
         };
 
-        let repeat_count = if content_width > line_length {
-            content_width - line_length
-        } else {
-            0
-        };
+        let repeat_count = content_width.saturating_sub(line_length);
         if cursor.hide_cursor_line {
             content.append(" ".repeat(repeat_count).as_str());
         } else {

@@ -137,7 +137,7 @@ impl Ansi {
                 current_position += 1;
             }
         }
-        return self.content.chars().count();
+        self.content.chars().count()
     }
 }
 

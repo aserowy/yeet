@@ -73,11 +73,7 @@ pub fn update(
                 }
             } else {
                 // TODO: multi line motion like search
-                let line = match buffer.lines.get_mut(pre_motion_cursor.vertical_index) {
-                    Some(it) => it,
-                    None => return None,
-                };
-
+                let line = buffer.lines.get_mut(pre_motion_cursor.vertical_index)?;
                 let pre_index = get_cursor_index(&pre_motion_cursor, line);
 
                 let post_index = match pre_motion_cursor.vertical_index.cmp(&cursor.vertical_index)
@@ -287,10 +283,7 @@ fn get_line_or_create_on_empty<'a>(
 
         Some((cursor, &mut model.lines[0]))
     } else {
-        let line = match model.lines.get_mut(cursor.vertical_index) {
-            Some(it) => it,
-            None => return None,
-        };
+        let line = model.lines.get_mut(cursor.vertical_index)?;
 
         Some((cursor, line))
     }

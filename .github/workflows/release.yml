@@ -26,7 +26,10 @@ jobs:
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - name: setup
+        run: sudo apt update && sudo apt -y install pkg-config libchafa-dev libglib2.0-dev
+
+      - uses: actions/checkout@v6
 
       - name: setup rust
         run: rustup toolchain install stable --profile minimal
