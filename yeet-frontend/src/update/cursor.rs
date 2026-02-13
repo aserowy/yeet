@@ -26,9 +26,9 @@ pub fn set_cursor_index_to_selection(
     text_buffer: &mut TextBuffer,
     selection: &str,
 ) -> bool {
-    let result = yeet_buffer::update(
-        viewport,
-        cursor,
+    let (_, _, result) = yeet_buffer::update(
+        viewport.as_ref(),
+        cursor.as_ref(),
         mode,
         text_buffer,
         vec![&BufferMessage::SetCursorToLineContent(
@@ -65,9 +65,9 @@ pub fn relocate(
         search::search_in_buffers(app.buffers.values_mut().collect(), term);
     }
 
-    let buffer = match app::get_focused_mut(app) {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
+    let (viewport, cursor, buffer) = match app::get_focused_mut(app) {
+        (viewport, cursor, Buffer::FileTree(buffer)) => (viewport, cursor, buffer),
+        (_, _, Buffer::_Text(_)) => todo!(),
     };
 
     let premotion_preview_path = match &buffer.preview {
@@ -92,19 +92,19 @@ pub fn relocate(
 
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
         yeet_buffer::update(
-            &mut buffer.current_vp,
-            &mut buffer.current_cursor,
+            Some(viewport),
+            Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
-            &msg,
+            vec![&msg],
         );
     } else {
         yeet_buffer::update(
-            &mut buffer.current_vp,
-            &mut buffer.current_cursor,
+            Some(viewport),
+            Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
-            &msg,
+            vec![&msg],
         );
     };
 

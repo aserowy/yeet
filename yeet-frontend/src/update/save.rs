@@ -36,7 +36,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
 
     if let Some(selection) = selection {
         yeet_buffer::update(
-            vp,
+            Some(vp),
             Some(cursor),
             mode,
             &mut buffer.current.buffer,
@@ -46,8 +46,8 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         );
     }
 
-    let result = yeet_buffer::update(
-        vp,
+    let (_, _, result) = yeet_buffer::update(
+        Some(vp),
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
