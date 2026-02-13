@@ -21,37 +21,39 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         (_vp, _cursor, Buffer::_Text(_)) => todo!(),
     };
 
-    let selection = get_current_selected_bufferline(buffer).map(|line| line.content.clone());
+    let selection =
+        get_current_selected_bufferline(buffer, Some(cursor)).map(|line| line.content.clone());
 
     let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
+    let message = BufferMessage::SetContent(content);
     yeet_buffer::update(
         Some(vp),
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
-        vec![&BufferMessage::SetContent(content)],
+        std::slice::from_ref(&message),
     );
 
     if let Some(selection) = selection {
+        let message = BufferMessage::SetCursorToLineContent(selection.to_stripped_string());
         yeet_buffer::update(
             Some(vp),
             Some(cursor),
             mode,
             &mut buffer.current.buffer,
-            vec![&BufferMessage::SetCursorToLineContent(
-                selection.to_stripped_string(),
-            )],
+            std::slice::from_ref(&message),
         );
     }
 
-    let (_, _, result) = yeet_buffer::update(
+    let message = BufferMessage::SaveBuffer;
+    let result = yeet_buffer::update(
         Some(vp),
         Some(cursor),
         mode,
         &mut buffer.current.buffer,
-        vec![&BufferMessage::SaveBuffer],
+        std::slice::from_ref(&message),
     );
 
     let mut actions = Vec::new();

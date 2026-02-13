@@ -8,13 +8,16 @@ use crate::{
     model::{register::Register, FileTreeBuffer},
 };
 
-pub fn get_current_selected_path(buffer: &FileTreeBuffer) -> Option<PathBuf> {
+pub fn get_current_selected_path(
+    buffer: &FileTreeBuffer,
+    cursor: Option<&yeet_buffer::model::Cursor>,
+) -> Option<PathBuf> {
     let current_buffer = &buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         return None;
     }
 
-    let cursor = &buffer.current_cursor.as_ref()?;
+    let cursor = cursor?;
     let current = &current_buffer.lines.get(cursor.vertical_index)?;
     if current.content.is_empty() {
         return None;
@@ -32,18 +35,25 @@ pub fn get_current_selected_path(buffer: &FileTreeBuffer) -> Option<PathBuf> {
     }
 }
 
-pub fn get_current_selected_bufferline(buffer: &mut FileTreeBuffer) -> Option<&mut BufferLine> {
+pub fn get_current_selected_bufferline<'a>(
+    buffer: &'a mut FileTreeBuffer,
+    cursor: Option<&'a yeet_buffer::model::Cursor>,
+) -> Option<&'a mut BufferLine> {
     let current_buffer = &mut buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         return None;
     }
 
-    let cursor = &buffer.current_cursor.as_ref()?;
+    let cursor = cursor?;
     current_buffer.lines.get_mut(cursor.vertical_index)
 }
 
-pub fn copy_to_clipboard(register: &mut Register, buffer: &FileTreeBuffer) -> Vec<Action> {
-    if let Some(path) = get_current_selected_path(buffer) {
+pub fn copy_to_clipboard(
+    register: &mut Register,
+    buffer: &FileTreeBuffer,
+    cursor: Option<&yeet_buffer::model::Cursor>,
+) -> Vec<Action> {
+    if let Some(path) = get_current_selected_path(buffer, cursor) {
         if let Some(clipboard) = register.clipboard.as_mut() {
             match clipboard.set_text(path.to_string_lossy()) {
                 Ok(_) => Vec::new(),

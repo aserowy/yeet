@@ -20,7 +20,8 @@ pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
 }
 
 pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
+    let (_, _, buffer) = app::get_focused_mut(app);
+    let buffer = match buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };
@@ -130,7 +131,8 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
 }
 
 pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
+    let (_, _, buffer) = app::get_focused_mut(app);
+    let buffer = match buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => todo!(),
     };

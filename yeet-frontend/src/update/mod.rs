@@ -2,7 +2,7 @@ use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, viewport::ViewPort, BufferLine, Mode, TextBuffer},
+    model::{ansi::Ansi, BufferLine, Mode, TextBuffer},
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 
@@ -222,11 +222,15 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => match app::get_focused_mut(app) {
-            (_, _, Buffer::FileTree(it)) => selection::copy_to_clipboard(&mut state.register, it),
+            (_, cursor, Buffer::FileTree(it)) => {
+                selection::copy_to_clipboard(&mut state.register, it, Some(cursor))
+            }
             (_, _, Buffer::_Text(_)) => todo!(),
         },
         KeymapMessage::YankToJunkYard(repeat) => match app::get_focused_mut(app) {
-            (_, _, Buffer::FileTree(it)) => junkyard::yank(&mut state.junk, it, repeat),
+            (_, cursor, Buffer::FileTree(it)) => {
+                junkyard::yank(&mut state.junk, it, Some(cursor), repeat)
+            }
             (_, _, Buffer::_Text(_)) => todo!(),
         },
     }
@@ -343,31 +347,25 @@ pub fn buffer_type(
     let mut text_buffer = TextBuffer::default();
 
     let cursor = match section {
-        FileTreeBufferSection::Parent => buffer.parent_cursor,
-        FileTreeBufferSection::Preview => buffer.preview_cursor,
+        FileTreeBufferSection::Parent => &mut buffer.parent_cursor,
+        FileTreeBufferSection::Preview => &mut buffer.preview_cursor,
         FileTreeBufferSection::Current => unreachable!(),
     };
 
-    yeet_buffer::update(
-        &mut None,
-        &mut cursor,
-        mode,
-        &mut text_buffer,
-        vec![
-            &BufferMessage::SetContent(content.to_vec()),
-            &BufferMessage::ResetCursor,
-        ],
-    );
+    let set_content = BufferMessage::SetContent(content.to_vec());
+    let reset_cursor = BufferMessage::ResetCursor;
+    let messages = [set_content, reset_cursor];
+    yeet_buffer::update(None, cursor.as_mut(), mode, &mut text_buffer, &messages);
 
-    if let Some(cursor) = cursor {
+    if let Some(cursor) = cursor.as_mut() {
         cursor.hide_cursor_line = true;
     }
 
     if path.is_dir() {
         cursor::set_cursor_index_with_history(
             history,
-            &mut viewport,
-            &mut cursor,
+            None,
+            cursor.as_mut(),
             mode,
             &mut text_buffer,
             path,

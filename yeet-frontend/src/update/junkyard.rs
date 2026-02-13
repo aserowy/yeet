@@ -12,6 +12,7 @@ use crate::{
     },
     task::Task,
 };
+use yeet_buffer::model::Cursor;
 
 pub fn add(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
@@ -148,11 +149,16 @@ pub fn paste(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<A
     }
 }
 
-pub fn yank(junk: &mut JunkYard, buffer: &FileTreeBuffer, repeat: &usize) -> Vec<Action> {
+pub fn yank(
+    junk: &mut JunkYard,
+    buffer: &FileTreeBuffer,
+    cursor: Option<&Cursor>,
+    repeat: &usize,
+) -> Vec<Action> {
     let current_buffer = &buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = &buffer.current_cursor {
+    } else if let Some(cursor) = cursor {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
@@ -277,6 +283,7 @@ mod test {
     #[test]
     fn junk_add_or_update() {
         use std::path::PathBuf;
+        use yeet_buffer::model::Cursor;
 
         use crate::update::junkyard::{add_or_update_junkyard_entry, trash_to_junkyard};
 

@@ -10,7 +10,8 @@ pub fn selected(settings: &Settings, mode: &Mode, buffer: &mut FileTreeBuffer) -
         return Vec::new();
     }
 
-    if let Some(selected) = get_current_selected_path(buffer) {
+    let cursor = buffer.parent_cursor.as_ref();
+    if let Some(selected) = get_current_selected_path(buffer, cursor) {
         if settings.selection_to_file_on_open.is_some() || settings.selection_to_stdout_on_open {
             vec![Action::Quit(
                 QuitMode::FailOnRunningTasks,

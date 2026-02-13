@@ -5,10 +5,10 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, App, FileTreeBufferSection},
+    model::{history::History, App, Buffer, FileTreeBufferSection},
 };
 
-use super::{history, selection};
+use super::{app, history, selection};
 
 pub fn relocate(
     app: &mut App,
@@ -18,16 +18,21 @@ pub fn relocate(
 ) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
+    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
+        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
+        (_vp, _cursor, Buffer::_Text(_)) => return Vec::new(),
+    };
+
     yeet_buffer::update(
-        &mut buffer.current_vp,
-        &mut buffer.current_cursor,
+        Some(vp),
+        Some(cursor),
         mode,
         &mut buffer.current.buffer,
-        &msg,
+        std::slice::from_ref(&msg),
     );
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(buffer) {
+    if let Some(path) = selection::get_current_selected_path(buffer, Some(cursor)) {
         let selection = history::get_selection_from_history(history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,

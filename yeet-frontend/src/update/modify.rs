@@ -19,7 +19,13 @@ pub fn buffer(
     let msg = BufferMessage::Modification(*repeat, modification.clone());
     match app::get_focused_mut(app) {
         (vp, cursor, Buffer::FileTree(it)) => {
-            yeet_buffer::update(vp, Some(cursor), mode, &mut it.current.buffer, &msg);
+            yeet_buffer::update(
+                Some(vp),
+                Some(cursor),
+                mode,
+                &mut it.current.buffer,
+                std::slice::from_ref(&msg),
+            );
 
             // FIX: only if selection changed!
             it.preview = FileTreeBufferSectionBuffer::None;

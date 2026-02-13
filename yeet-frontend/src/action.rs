@@ -100,9 +100,9 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let buffer = match app::get_focused_mut(&mut model.app) {
-        Buffer::FileTree(it) => it,
-        Buffer::_Text(_) => todo!(),
+    let (vp, cursor, buffer) = match app::get_focused_mut(&mut model.app) {
+        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
+        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
     };
 
     let mut remaining_actions = vec![];
@@ -124,20 +124,22 @@ async fn execute(
                         buffer.current.state = DirectoryBufferState::Loading;
                         buffer.current.path = path.clone();
 
+                        let message = BufferMessage::SetContent(Vec::new());
                         yeet_buffer::update(
-                            &mut buffer.current_vp,
-                            &mut buffer.current_cursor,
+                            Some(vp),
+                            Some(cursor),
                             &model.state.modes.current,
                             &mut buffer.current.buffer,
-                            &BufferMessage::SetContent(Vec::new()),
+                            std::slice::from_ref(&message),
                         );
 
+                        let message = BufferMessage::ResetCursor;
                         yeet_buffer::update(
-                            &mut buffer.current_vp,
-                            &mut buffer.current_cursor,
+                            Some(vp),
+                            Some(cursor),
                             &model.state.modes.current,
                             &mut buffer.current.buffer,
-                            &BufferMessage::ResetCursor,
+                            std::slice::from_ref(&message),
                         );
 
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
@@ -146,7 +148,7 @@ async fn execute(
                         update::buffer_type(
                             &model.state.history,
                             &model.state.modes.current,
-                            buffer,
+                            buffer.as_mut(),
                             &window_type,
                             path.as_path(),
                             vec![],

@@ -8,6 +8,10 @@ This repository is a Rust workspace with these crates:
 
 Use this file as the default playbook for agentic changes in this repo.
 
+## General
+
+- ask if you are uncertain
+
 ## Build, lint, test
 
 ### Prerequisites

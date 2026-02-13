@@ -1,5 +1,5 @@
 use ratatui::{layout::Rect, widgets::Paragraph, Frame};
-use yeet_buffer::{model::Mode, view};
+use yeet_buffer::{model::Mode, view as buffer_view};
 
 use crate::{error::AppError, model::CommandLine};
 
@@ -9,7 +9,7 @@ pub fn view(
     frame: &mut Frame,
     vertical_offset: u16,
 ) -> Result<(), AppError> {
-    view::view(
+    buffer_view(
         &commandline.viewport,
         commandline.cursor.as_ref(),
         mode,

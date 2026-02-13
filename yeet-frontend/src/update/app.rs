@@ -16,6 +16,20 @@ pub fn get_focused(app: &App) -> (&ViewPort, &Cursor, &Buffer) {
     };
 }
 
+pub fn focused_window_mut(app: &mut App) -> (&mut ViewPort, &mut Cursor, usize) {
+    match &mut app.window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Content(vp, cursor, it) => (vp, cursor, *it),
+    }
+}
+
+pub fn focused_id(app: &App) -> usize {
+    match &app.window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Content(_, _, id) => *id,
+    }
+}
+
 pub fn get_focused_mut(app: &mut App) -> (&mut ViewPort, &mut Cursor, &mut Buffer) {
     let (vp, cursor, focused_id) = match &mut app.window {
         Window::Horizontal(_, _) => todo!(),

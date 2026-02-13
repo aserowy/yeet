@@ -3,7 +3,6 @@ use std::{mem, path::Path};
 use yeet_buffer::{
     message::ViewPortDirection,
     model::{Cursor, CursorPosition, TextBuffer},
-    update::viewport,
 };
 
 use crate::{
@@ -185,7 +184,7 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             }
         }
 
-        viewport::update_by_direction(
+        yeet_buffer::update_viewport_by_direction(
             vp,
             Some(cursor),
             &buffer.current.buffer,
@@ -205,7 +204,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
         (_vp, _cursor, Buffer::_Text(_)) => todo!(),
     };
 
-    if let Some(selected) = selection::get_current_selected_path(buffer) {
+    if let Some(selected) = selection::get_current_selected_path(buffer, Some(cursor)) {
         if buffer.current.path == selected || !selected.is_dir() {
             return Vec::new();
         }
@@ -247,7 +246,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
                 expanded: 0,
             };
 
-            if let Some(selected) = selection::get_current_selected_path(buffer) {
+            if let Some(selected) = selection::get_current_selected_path(buffer, Some(cursor)) {
                 tracing::trace!("loading selection: {:?}", selected);
 
                 let history = history::get_selection_from_history(history, selected.as_path())
@@ -261,7 +260,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
             }
         }
 
-        viewport::update_by_direction(
+        yeet_buffer::update_viewport_by_direction(
             vp,
             Some(cursor),
             &buffer.current.buffer,

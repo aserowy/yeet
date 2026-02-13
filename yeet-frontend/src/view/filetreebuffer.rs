@@ -5,7 +5,7 @@ use ratatui::{
 use ratatui_image::Image;
 use yeet_buffer::{
     model::{viewport::ViewPort, Cursor, Mode},
-    view,
+    view as buffer_view,
 };
 
 use crate::model::{FileTreeBuffer, FileTreeBufferSectionBuffer};
@@ -44,7 +44,7 @@ pub fn view(
     viewport.height = layout[1].height;
     viewport.width = layout[1].width;
 
-    view::view(
+    buffer_view(
         &viewport,
         Some(cursor),
         mode,
@@ -83,10 +83,10 @@ fn render_buffer(
     match buffer_type {
         FileTreeBufferSectionBuffer::Text(_, buffer) => {
             if let Some(cursor) = cursor {
-                yeet_buffer::update::viewport::update_by_cursor(&mut viewport, cursor, &buffer);
+                yeet_buffer::update_viewport_by_cursor(&mut viewport, cursor, buffer);
             };
 
-            view::view(
+            buffer_view(
                 &viewport,
                 cursor.as_ref(),
                 mode,
@@ -107,7 +107,7 @@ fn render_buffer(
             frame.render_widget(Image::new(protocol), rect);
         }
         FileTreeBufferSectionBuffer::None => {
-            view::view(
+            buffer_view(
                 &viewport,
                 None,
                 mode,

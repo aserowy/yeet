@@ -10,40 +10,33 @@ pub mod viewport;
 mod word;
 
 pub fn update(
-    viewport: Option<&ViewPort>,
-    cursor: Option<&Cursor>,
+    viewport: Option<&mut ViewPort>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
-    messages: Vec<&BufferMessage>,
-) -> (Option<ViewPort>, Option<Cursor>, Vec<BufferResult>) {
+    messages: &[BufferMessage],
+) -> Vec<BufferResult> {
     let mut actions = Vec::new();
 
-    let mut viewport = match viewport {
-        Some(it) => Some(it.clone()),
-        None => None,
-    };
-
-    let mut cursor = match cursor {
-        Some(it) => Some(it.clone()),
-        None => None,
-    };
+    let mut viewport = viewport;
+    let mut cursor = cursor;
 
     for message in messages.iter() {
-        actions.push(update_buffer(
-            &mut viewport,
-            &mut cursor,
+        actions.extend(update_buffer(
+            viewport.as_deref_mut(),
+            cursor.as_deref_mut(),
             mode,
             buffer,
             message,
         ));
     }
 
-    (viewport, cursor, actions.into_iter().flatten().collect())
+    actions
 }
 
 fn update_buffer(
-    viewport: &mut Option<ViewPort>,
-    cursor: &mut Option<Cursor>,
+    viewport: Option<&mut ViewPort>,
+    mut cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     message: &BufferMessage,
@@ -98,9 +91,11 @@ fn update_buffer(
                 None => return Vec::new(),
             };
 
-            viewport::update_by_direction(viewport, cursor, buffer, direction);
-            if let Some(cursor) = cursor {
+            if let Some(cursor) = cursor.as_deref_mut() {
+                viewport::update_by_direction(viewport, Some(cursor), buffer, direction);
                 viewport::update_by_cursor(viewport, cursor, buffer);
+            } else {
+                viewport::update_by_direction(viewport, None, buffer, direction);
             }
 
             Vec::new()

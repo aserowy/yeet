@@ -8,13 +8,26 @@ mod update;
 mod view;
 
 pub fn update(
-    viewport: Option<&ViewPort>,
-    cursor: Option<&Cursor>,
+    viewport: Option<&mut ViewPort>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
-    messages: Vec<&BufferMessage>,
-) -> (Option<ViewPort>, Option<Cursor>, Vec<BufferResult>) {
+    messages: &[BufferMessage],
+) -> Vec<BufferResult> {
     update::update(viewport, cursor, mode, buffer, messages)
+}
+
+pub fn update_viewport_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextBuffer) {
+    update::viewport::update_by_cursor(viewport, cursor, buffer)
+}
+
+pub fn update_viewport_by_direction(
+    viewport: &mut ViewPort,
+    cursor: Option<&mut Cursor>,
+    buffer: &TextBuffer,
+    direction: &message::ViewPortDirection,
+) {
+    update::viewport::update_by_direction(viewport, cursor, buffer, direction)
 }
 
 pub fn view(

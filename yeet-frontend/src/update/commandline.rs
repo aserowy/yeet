@@ -31,8 +31,13 @@ pub fn update(
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                let viewport = &mut Some(viewport);
-                yeet_buffer::update(viewport, cursor, mode, buffer, vec![message]);
+                yeet_buffer::update(
+                    Some(viewport),
+                    cursor.as_mut(),
+                    mode,
+                    buffer,
+                    std::slice::from_ref(message),
+                );
             }
             CommandMode::PrintMultiline => {}
         }
@@ -72,12 +77,13 @@ pub fn modify(
                 }
             };
 
+            let message = BufferMessage::Modification(*repeat, modification.clone());
             yeet_buffer::update(
-                viewport,
+                Some(viewport),
                 cursor.as_mut(),
                 &modes.current,
                 text_buffer,
-                vec![&BufferMessage::Modification(*repeat, modification.clone())],
+                std::slice::from_ref(&message),
             );
 
             if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
@@ -114,12 +120,13 @@ pub fn modify(
 
                     Message::Rerender
                 } else {
+                    let message = BufferMessage::SetContent(vec![]);
                     yeet_buffer::update(
-                        viewport,
+                        Some(viewport),
                         cursor.as_mut(),
                         &modes.current,
                         text_buffer,
-                        vec![&BufferMessage::SetContent(vec![])],
+                        std::slice::from_ref(&message),
                     );
 
                     Message::Keymap(KeymapMessage::Buffer(BufferMessage::ChangeMode(
@@ -192,12 +199,13 @@ pub fn update_on_execute(
         }
     };
 
+    let message = BufferMessage::SetContent(vec![]);
     yeet_buffer::update(
-        &mut app.commandline.viewport,
+        Some(&mut app.commandline.viewport),
         app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
-        vec![&BufferMessage::SetContent(vec![])],
+        std::slice::from_ref(&message),
     );
 
     vec![Action::EmitMessages(messages)]
@@ -209,12 +217,13 @@ pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<A
         search::search_in_buffers(app.buffers.values_mut().collect(), content);
     }
 
+    let message = BufferMessage::SetContent(vec![]);
     yeet_buffer::update(
-        &mut app.commandline.viewport,
+        Some(&mut app.commandline.viewport),
         app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
-        vec![&BufferMessage::SetContent(vec![])],
+        std::slice::from_ref(&message),
     );
 
     vec![action::emit_keymap(KeymapMessage::Buffer(
@@ -270,19 +279,21 @@ pub fn print(
         Vec::new()
     };
 
+    let message = BufferMessage::MoveCursor(1, CursorDirection::Bottom);
     yeet_buffer::update(
-        &mut commandline.viewport,
+        Some(&mut commandline.viewport),
         commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
-        vec![&BufferMessage::MoveCursor(1, CursorDirection::Bottom)],
+        std::slice::from_ref(&message),
     );
+    let message = BufferMessage::MoveCursor(1, CursorDirection::LineEnd);
     yeet_buffer::update(
-        &mut commandline.viewport,
+        Some(&mut commandline.viewport),
         commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
-        vec![&BufferMessage::MoveCursor(1, CursorDirection::LineEnd)],
+        std::slice::from_ref(&message),
     );
 
     actions

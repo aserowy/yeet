@@ -222,11 +222,7 @@ pub fn update_by_direction(
     results
 }
 
-pub fn set_to_inbound_position(
-    cursor: &mut Cursor,
-    mode: &Mode,
-    model: &TextBuffer,
-) {
+pub fn set_to_inbound_position(cursor: &mut Cursor, mode: &Mode, model: &TextBuffer) {
     let position = if model.lines.is_empty() {
         get_position(mode, &0, &cursor.horizontal_index)
     } else {

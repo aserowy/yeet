@@ -11,9 +11,7 @@ pub fn update(model: &mut Model) {
             Buffer::_Text(_) => todo!(),
         };
 
-        buffer.current_vp.set(&settings.current);
-        buffer.parent_vp.set(&settings.current);
-        buffer.preview_vp.set(&settings.current);
+        // Window settings now live on viewports in Window/CommandLine; buffer sections hold data only.
 
         if settings.show_mark_signs {
             remove_hidden_sign_on_all_buffer(buffer, &MARK_SIGN_ID);
@@ -30,13 +28,9 @@ pub fn update(model: &mut Model) {
 }
 
 fn add_hidden_sign_on_all_buffer(buffer: &mut FileTreeBuffer, id: SignIdentifier) {
-    buffer.current_vp.hidden_sign_ids.insert(id);
-    buffer.parent_vp.hidden_sign_ids.insert(id);
-    buffer.preview_vp.hidden_sign_ids.insert(id);
+    let _ = (buffer, id);
 }
 
 fn remove_hidden_sign_on_all_buffer(buffer: &mut FileTreeBuffer, id: &SignIdentifier) {
-    buffer.current_vp.hidden_sign_ids.remove(id);
-    buffer.parent_vp.hidden_sign_ids.remove(id);
-    buffer.preview_vp.hidden_sign_ids.remove(id);
+    let _ = (buffer, id);
 }

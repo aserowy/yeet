@@ -19,19 +19,19 @@ pub fn search_in_buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
             Buffer::FileTree(it) => it,
             Buffer::_Text(_) => continue,
         };
-    set_search_char_positions(&mut buffer.current.buffer, search.as_str());
+        set_search_char_positions(&mut buffer.current.buffer, search.as_str());
 
-    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
-        if path.is_dir() {
-            set_search_char_positions(text_buffer, search.as_str());
-        }
-    };
+        if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
+            if path.is_dir() {
+                set_search_char_positions(text_buffer, search.as_str());
+            }
+        };
 
-    if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.preview {
-        if path.is_dir() {
-            set_search_char_positions(text_buffer, search.as_str());
-        }
-    };
+        if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.preview {
+            if path.is_dir() {
+                set_search_char_positions(text_buffer, search.as_str());
+            }
+        };
     }
 }
 

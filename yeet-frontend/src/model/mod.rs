@@ -136,46 +136,19 @@ pub struct FileTreeBuffer {
 }
 
 impl FileTreeBuffer {
-    pub fn get_mut_directories(
-        &mut self,
-    ) -> Vec<(&Path, &mut ViewPort, &mut Option<Cursor>, &mut TextBuffer)> {
-        let parent_content_ref =
-            if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.parent {
-                Some((
-                    path.as_path(),
-                    &mut self.parent_vp,
-                    &mut self.parent_cursor,
-                    buffer,
-                ))
-            } else {
-                None
-            };
+    pub fn get_mut_directories(&mut self) -> Vec<(&Path, Option<&mut Cursor>, &mut TextBuffer)> {
+        let mut directories = Vec::new();
+        directories.push((self.current.path.as_path(), None, &mut self.current.buffer));
 
-        let preview_content_ref =
-            if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.preview {
-                Some((
-                    path.as_path(),
-                    &mut self.preview_vp,
-                    &mut self.preview_cursor,
-                    buffer,
-                ))
-            } else {
-                None
-            };
+        if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.parent {
+            directories.push((path.as_path(), self.parent_cursor.as_mut(), buffer));
+        }
 
-        vec![
-            Some((
-                self.current.path.as_path(),
-                &mut self.current_vp,
-                &mut self.current_cursor,
-                &mut self.current.buffer,
-            )),
-            parent_content_ref,
-            preview_content_ref,
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
+        if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.preview {
+            directories.push((path.as_path(), self.preview_cursor.as_mut(), buffer));
+        }
+
+        directories
     }
 }
 

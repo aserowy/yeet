@@ -46,7 +46,7 @@ pub fn update_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextB
 
 pub fn update_by_direction(
     viewport: &mut ViewPort,
-    cursor: &mut Option<Cursor>,
+    cursor: Option<&mut Cursor>,
     buffer: &TextBuffer,
     direction: &ViewPortDirection,
 ) {
@@ -56,7 +56,7 @@ pub fn update_by_direction(
 
     match direction {
         ViewPortDirection::BottomOnCursor => {
-            if let Some(cursor) = &cursor {
+            if let Some(cursor) = cursor.as_ref() {
                 if cursor.vertical_index < usize::from(viewport.height) {
                     viewport.vertical_index = 0;
                 } else {
@@ -66,7 +66,7 @@ pub fn update_by_direction(
             }
         }
         ViewPortDirection::CenterOnCursor => {
-            if let Some(cursor) = &cursor {
+            if let Some(cursor) = cursor.as_ref() {
                 let index_offset = viewport.height / 2;
                 if cursor.vertical_index < usize::from(index_offset) {
                     viewport.vertical_index = 0;
@@ -113,7 +113,7 @@ pub fn update_by_direction(
             }
         }
         ViewPortDirection::TopOnCursor => {
-            if let Some(cursor) = &cursor {
+            if let Some(cursor) = cursor.as_ref() {
                 viewport.vertical_index = cursor.vertical_index;
             }
         }

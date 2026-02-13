@@ -45,7 +45,8 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
-            let buffer = match app::get_focused_mut(app) {
+            let (_, _, buffer) = app::get_focused_mut(app);
+            let buffer = match buffer {
                 Buffer::FileTree(it) => it,
                 Buffer::_Text(_) => todo!(),
             };
@@ -57,7 +58,8 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             )
         }
         ("d!", "") => {
-            let buffer = match app::get_focused_mut(app) {
+            let (_, _, buffer) = app::get_focused_mut(app);
+            let buffer = match buffer {
                 Buffer::FileTree(it) => it,
                 Buffer::_Text(_) => todo!(),
             };
@@ -88,15 +90,17 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("e!", "") => {
-            let buffer = match app::get_focused_mut(app) {
+            let (_, _, buffer) = app::get_focused_mut(app);
+            let buffer = match buffer {
                 Buffer::FileTree(it) => it,
                 Buffer::_Text(_) => todo!(),
             };
 
-            add_change_mode(mode_before, mode, file::refresh(buffer))
+            add_change_mode(mode_before, mode, file::refresh(buffer.as_ref()))
         }
         ("fd", params) => {
-            let buffer = match app::get_focused_mut(app) {
+            let (_, _, buffer) = app::get_focused_mut(app);
+            let buffer = match buffer {
                 Buffer::FileTree(it) => it,
                 Buffer::_Text(_) => todo!(),
             };
@@ -118,7 +122,8 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("junk", "") => print::junkyard(&state.junk),
         ("marks", "") => print::marks(&state.marks),
         ("mv", target) => {
-            let buffer = match app::get_focused_mut(app) {
+            let (_, _, buffer) = app::get_focused_mut(app);
+            let buffer = match buffer {
                 Buffer::FileTree(it) => it,
                 Buffer::_Text(_) => todo!(),
             };

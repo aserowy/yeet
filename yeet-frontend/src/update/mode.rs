@@ -7,9 +7,8 @@ use yeet_keymap::message::PrintContent;
 use crate::{
     action::Action,
     model::{
-        eState,
         register::{Register, RegisterScope},
-        App, Buffer, CommandLine, ModBuffer, State,
+        App, Buffer, CommandLine, ModeState, State,
     },
 };
 
@@ -62,11 +61,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             cursor.hide_cursor = false;
 
             yeet_buffer::update(
-                vp,
+                Some(vp),
                 Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
-                &msg,
+                std::slice::from_ref(&msg),
             );
 
             vec![]
@@ -82,11 +81,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             cursor.hide_cursor = false;
 
             yeet_buffer::update(
-                vp,
+                Some(vp),
                 Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
-                &msg,
+                std::slice::from_ref(&msg),
             );
 
             save::changes(app, &mut state.junk, &state.modes.current)
@@ -100,11 +99,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             cursor.hide_cursor = false;
 
             yeet_buffer::update(
-                vp,
+                Some(vp),
                 Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
-                &msg,
+                std::slice::from_ref(&msg),
             );
 
             vec![]
@@ -124,18 +123,16 @@ fn update_commandline_on_mode_change(
     let command_mode = match &modes.current {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let from_command = modes
-                .previous
-                .as_ref()
-                .is_some_and(|mode| mode.is_command());
+            let from_command = matches!(modes.previous.as_ref(), Some(mode) if mode.is_command());
 
             if from_command {
+                let message = BufferMessage::SetContent(vec![]);
                 yeet_buffer::update(
-                    viewport,
+                    Some(viewport),
                     commandline.cursor.as_mut(),
                     &modes.current,
                     buffer,
-                    vec![&BufferMessage::SetContent(vec![])],
+                    std::slice::from_ref(&message),
                 );
             }
             return Vec::new();
@@ -144,12 +141,13 @@ fn update_commandline_on_mode_change(
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
+            let message = BufferMessage::ResetCursor;
             yeet_buffer::update(
-                viewport,
+                Some(viewport),
                 commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
-                vec![&BufferMessage::ResetCursor],
+                std::slice::from_ref(&message),
             );
 
             let prefix = match &command_mode {
@@ -164,12 +162,13 @@ fn update_commandline_on_mode_change(
                 ..Default::default()
             };
 
+            let message = BufferMessage::SetContent(vec![bufferline]);
             yeet_buffer::update(
-                viewport,
+                Some(viewport),
                 commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
-                vec![&BufferMessage::SetContent(vec![bufferline])],
+                std::slice::from_ref(&message),
             );
         }
         CommandMode::PrintMultiline => {}

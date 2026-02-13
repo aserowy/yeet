@@ -20,20 +20,19 @@ use super::{
 };
 
 pub fn set_cursor_index_to_selection(
-    viewport: &mut Option<ViewPort>,
-    cursor: &mut Option<Cursor>,
+    viewport: Option<&mut ViewPort>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     text_buffer: &mut TextBuffer,
     selection: &str,
 ) -> bool {
-    let (_, _, result) = yeet_buffer::update(
-        viewport.as_ref(),
-        cursor.as_ref(),
+    let message = BufferMessage::SetCursorToLineContent(selection.to_string());
+    let result = yeet_buffer::update(
+        viewport,
+        cursor,
         mode,
         text_buffer,
-        vec![&BufferMessage::SetCursorToLineContent(
-            selection.to_string(),
-        )],
+        std::slice::from_ref(&message),
     );
 
     result.contains(&BufferResult::CursorPositionChanged)
@@ -41,8 +40,8 @@ pub fn set_cursor_index_to_selection(
 
 pub fn set_cursor_index_with_history(
     history: &History,
-    viewport: &mut Option<ViewPort>,
-    cursor: &mut Option<Cursor>,
+    viewport: Option<&mut ViewPort>,
+    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     path: &Path,
@@ -96,7 +95,7 @@ pub fn relocate(
             Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
-            vec![&msg],
+            std::slice::from_ref(&msg),
         );
     } else {
         yeet_buffer::update(
@@ -104,17 +103,17 @@ pub fn relocate(
             Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
-            vec![&msg],
+            std::slice::from_ref(&msg),
         );
     };
 
     let mut actions = Vec::new();
-    let current_preview_path = selection::get_current_selected_path(&buffer);
+    let current_preview_path = selection::get_current_selected_path(&buffer, Some(cursor));
     if premotion_preview_path == current_preview_path {
         return actions;
     }
 
-    if let Some(path) = selection::get_current_selected_path(&buffer) {
+    if let Some(path) = selection::get_current_selected_path(&buffer, Some(cursor)) {
         let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,

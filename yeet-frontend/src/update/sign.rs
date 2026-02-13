@@ -52,7 +52,7 @@ pub fn set_sign_for_paths(buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>, sign_i
             let target = buffer
                 .get_mut_directories()
                 .into_iter()
-                .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
+                .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
 
             let buffer = match target {
                 Some(buffer) => buffer,
@@ -106,7 +106,7 @@ pub fn unset_sign_on_all_buffers(buffers: Vec<&mut Buffer>, sign_id: SignIdentif
         buffer
             .get_mut_directories()
             .into_iter()
-            .flat_map(|(_, _, _, b)| &mut b.lines)
+            .flat_map(|(_, _, b)| &mut b.lines)
             .for_each(|l| unset(l, sign_id));
     }
 }
@@ -131,7 +131,7 @@ pub fn unset_sign_for_paths(
             let target = buffer
                 .get_mut_directories()
                 .into_iter()
-                .find_map(|(p, _, _, b)| if p == parent { Some(b) } else { None });
+                .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
 
             let buffer = match target {
                 Some(buffer) => buffer,

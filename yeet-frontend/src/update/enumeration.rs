@@ -45,13 +45,11 @@ fn change_filetree(
     selection: &Option<String>,
 ) {
     let directories = buffer.get_mut_directories();
-    if let Some((path, viewport, cursor, buffer)) =
-        directories.into_iter().find(|(p, _, _, _)| p == path)
-    {
+    if let Some((path, mut cursor, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
 
         let is_first_changed_event = buffer.lines.is_empty();
-        let content = contents
+        let content: Vec<BufferLine> = contents
             .iter()
             .map(|(knd, cntnt)| {
                 let mut line = from_enumeration(cntnt, knd);
@@ -62,19 +60,20 @@ fn change_filetree(
             })
             .collect();
 
+        let message = BufferMessage::SetContent(content);
         yeet_buffer::update(
-            viewport,
-            cursor,
+            None,
+            cursor.as_deref_mut(),
             &state.modes.current,
             buffer,
-            vec![&BufferMessage::SetContent(content)],
+            std::slice::from_ref(&message),
         );
 
         if is_first_changed_event {
             if let Some(selection) = selection {
                 if set_cursor_index_to_selection(
-                    viewport,
-                    cursor,
+                    None,
+                    cursor.as_deref_mut(),
                     &state.modes.current,
                     buffer,
                     selection,
@@ -118,20 +117,19 @@ pub fn finish(
         change_filetree(state, buffer, path, contents, selection);
 
         let directories = buffer.get_mut_directories();
-        if let Some((_, viewport, cursor, buffer)) =
-            directories.into_iter().find(|(p, _, _, _)| p == path)
-        {
+        if let Some((_, mut cursor, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
+            let message = BufferMessage::SortContent(super::SORT);
             yeet_buffer::update(
-                viewport,
-                cursor,
+                None,
+                cursor.as_deref_mut(),
                 &state.modes.current,
                 buffer,
-                vec![&BufferMessage::SortContent(super::SORT)],
+                std::slice::from_ref(&message),
             );
 
             if let Some(selection) = selection {
-                let mut cursor_after_finished = match cursor {
-                    Some(it) => Some(it.clone()),
+                let mut cursor_after_finished = match cursor.as_ref() {
+                    Some(it) => Some((*it).clone()),
                     None => Some(Cursor {
                         horizontal_index: CursorPosition::None,
                         vertical_index: 0,
@@ -140,31 +138,38 @@ pub fn finish(
                 };
 
                 if !set_cursor_index_to_selection(
-                    viewport,
-                    &mut cursor_after_finished,
+                    None,
+                    cursor_after_finished.as_mut(),
                     &state.modes.current,
                     buffer,
                     selection,
                 ) {
                     set_cursor_index_with_history(
                         &state.history,
-                        viewport,
-                        &mut cursor_after_finished,
+                        None,
+                        cursor_after_finished.as_mut(),
                         &state.modes.current,
                         buffer,
                         path,
                     );
                 }
 
-                let _ = mem::replace(cursor, cursor_after_finished);
+                if let Some(cursor) = cursor.as_deref_mut() {
+                    *cursor = cursor_after_finished.unwrap_or_else(|| Cursor {
+                        horizontal_index: CursorPosition::None,
+                        vertical_index: 0,
+                        ..Default::default()
+                    });
+                }
             }
 
+            let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
             yeet_buffer::update(
-                viewport,
-                cursor,
+                None,
+                cursor.as_deref_mut(),
                 &state.modes.current,
                 buffer,
-                vec![&BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor)],
+                std::slice::from_ref(&message),
             );
         }
 
@@ -182,10 +187,11 @@ pub fn finish(
             continue;
         }
 
-        let selected_path = match selection::get_current_selected_path(buffer) {
-            Some(path) => path,
-            None => continue,
-        };
+        let selected_path =
+            match selection::get_current_selected_path(buffer, buffer.parent_cursor.as_ref()) {
+                Some(path) => path,
+                None => continue,
+            };
 
         if Some(selected_path.as_path()) == buffer.preview.resolve_path() {
             continue;
