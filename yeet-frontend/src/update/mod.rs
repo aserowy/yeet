@@ -156,7 +156,7 @@ fn update_with_message(
             let id = app::get_next_buffer_id(app);
             if app
                 .buffers
-                .insert(id, Buffer::FileTree(Box::new(FileTreeBuffer::default())))
+                .insert(id, Buffer::FileTree(Box::default()))
                 .is_some()
             {
                 tracing::error!("Buffer with id {} already exists", id);
@@ -203,12 +203,12 @@ pub fn update_with_keymap_message(
         }
         KeymapMessage::NavigateToSelected => navigate::selected(app, &mut state.history),
         KeymapMessage::OpenSelected => match app::get_focused_mut(app) {
-            (_, _, Buffer::FileTree(it)) => open::selected(settings, &state.modes.current, it),
-            (_, _, Buffer::_Text(_)) => todo!(),
+            (_, Buffer::FileTree(it)) => open::selected(settings, &state.modes.current, it),
+            (_, Buffer::_Text(_)) => todo!(),
         },
         KeymapMessage::PasteFromJunkYard(entry_id) => match app::get_focused_mut(app) {
-            (_, _, Buffer::FileTree(it)) => junkyard::paste(&state.junk, it, entry_id),
-            (_, _, Buffer::_Text(_)) => todo!(),
+            (_, Buffer::FileTree(it)) => junkyard::paste(&state.junk, it, entry_id),
+            (_, Buffer::_Text(_)) => todo!(),
         },
         KeymapMessage::Print(content) => {
             commandline::print(&mut app.commandline, &mut state.modes, content)
@@ -222,16 +222,18 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => match app::get_focused_mut(app) {
-            (_, cursor, Buffer::FileTree(it)) => {
-                selection::copy_to_clipboard(&mut state.register, it, Some(cursor))
-            }
-            (_, _, Buffer::_Text(_)) => todo!(),
+            (_, Buffer::FileTree(it)) => selection::copy_to_clipboard(
+                &mut state.register,
+                it,
+                Some(&it.current.buffer.cursor),
+            ),
+            (_, Buffer::_Text(_)) => todo!(),
         },
         KeymapMessage::YankToJunkYard(repeat) => match app::get_focused_mut(app) {
-            (_, cursor, Buffer::FileTree(it)) => {
-                junkyard::yank(&mut state.junk, it, Some(cursor), repeat)
+            (_, Buffer::FileTree(it)) => {
+                junkyard::yank(&mut state.junk, it, Some(&it.current.buffer.cursor), repeat)
             }
-            (_, _, Buffer::_Text(_)) => todo!(),
+            (_, Buffer::_Text(_)) => todo!(),
         },
     }
 }
@@ -346,36 +348,31 @@ pub fn buffer_type(
 ) {
     let mut text_buffer = TextBuffer::default();
 
-    let cursor = match section {
-        FileTreeBufferSection::Parent => &mut buffer.parent_cursor,
-        FileTreeBufferSection::Preview => &mut buffer.preview_cursor,
-        FileTreeBufferSection::Current => unreachable!(),
-    };
-
     let set_content = BufferMessage::SetContent(content.to_vec());
     let reset_cursor = BufferMessage::ResetCursor;
     let messages = [set_content, reset_cursor];
-    yeet_buffer::update(None, cursor.as_mut(), mode, &mut text_buffer, &messages);
+    yeet_buffer::update(None, mode, &mut text_buffer, &messages);
 
-    if let Some(cursor) = cursor.as_mut() {
-        cursor.hide_cursor_line = true;
-    }
+    text_buffer.cursor.hide_cursor_line = true;
 
     if path.is_dir() {
-        cursor::set_cursor_index_with_history(
-            history,
-            None,
-            cursor.as_mut(),
-            mode,
-            &mut text_buffer,
-            path,
-        );
+        cursor::set_cursor_index_with_history(history, None, mode, &mut text_buffer, path);
     }
 
     let buffer_type = FileTreeBufferSectionBuffer::Text(path.to_path_buf(), text_buffer);
     match section {
-        FileTreeBufferSection::Parent => buffer.parent = buffer_type,
-        FileTreeBufferSection::Preview => buffer.preview = buffer_type,
+        FileTreeBufferSection::Parent => {
+            buffer.parent = buffer_type;
+            if let FileTreeBufferSectionBuffer::Text(_, buffer) = &mut buffer.parent {
+                buffer.cursor.hide_cursor_line = true;
+            }
+        }
+        FileTreeBufferSection::Preview => {
+            buffer.preview = buffer_type;
+            if let FileTreeBufferSectionBuffer::Text(_, buffer) = &mut buffer.preview {
+                buffer.cursor.hide_cursor_line = true;
+            }
+        }
         FileTreeBufferSection::Current => unreachable!(),
     };
 }

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
-    model::{viewport::ViewPort, BufferResult, Cursor, Mode, SearchDirection, TextBuffer},
+    model::{viewport::ViewPort, BufferResult, Mode, SearchDirection, TextBuffer},
 };
 
 use crate::{
@@ -21,19 +21,12 @@ use super::{
 
 pub fn set_cursor_index_to_selection(
     viewport: Option<&mut ViewPort>,
-    cursor: Option<&mut Cursor>,
     mode: &Mode,
     text_buffer: &mut TextBuffer,
     selection: &str,
 ) -> bool {
     let message = BufferMessage::SetCursorToLineContent(selection.to_string());
-    let result = yeet_buffer::update(
-        viewport,
-        cursor,
-        mode,
-        text_buffer,
-        std::slice::from_ref(&message),
-    );
+    let result = yeet_buffer::update(viewport, mode, text_buffer, std::slice::from_ref(&message));
 
     result.contains(&BufferResult::CursorPositionChanged)
 }
@@ -41,13 +34,12 @@ pub fn set_cursor_index_to_selection(
 pub fn set_cursor_index_with_history(
     history: &History,
     viewport: Option<&mut ViewPort>,
-    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     path: &Path,
 ) -> bool {
     if let Some(history) = get_selection_from_history(history, path) {
-        set_cursor_index_to_selection(viewport, cursor, mode, buffer, history)
+        set_cursor_index_to_selection(viewport, mode, buffer, history)
     } else {
         false
     }
@@ -64,9 +56,9 @@ pub fn relocate(
         search::search_in_buffers(app.buffers.values_mut().collect(), term);
     }
 
-    let (viewport, cursor, buffer) = match app::get_focused_mut(app) {
-        (viewport, cursor, Buffer::FileTree(buffer)) => (viewport, cursor, buffer),
-        (_, _, Buffer::_Text(_)) => todo!(),
+    let (viewport, buffer) = match app::get_focused_mut(app) {
+        (viewport, Buffer::FileTree(buffer)) => (viewport, buffer),
+        (_, Buffer::_Text(_)) => todo!(),
     };
 
     let premotion_preview_path = match &buffer.preview {
@@ -92,7 +84,6 @@ pub fn relocate(
         let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
         yeet_buffer::update(
             Some(viewport),
-            Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
             std::slice::from_ref(&msg),
@@ -100,7 +91,6 @@ pub fn relocate(
     } else {
         yeet_buffer::update(
             Some(viewport),
-            Some(cursor),
             &state.modes.current,
             &mut buffer.current.buffer,
             std::slice::from_ref(&msg),
@@ -108,12 +98,15 @@ pub fn relocate(
     };
 
     let mut actions = Vec::new();
-    let current_preview_path = selection::get_current_selected_path(&buffer, Some(cursor));
+    let current_preview_path =
+        selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor));
     if premotion_preview_path == current_preview_path {
         return actions;
     }
 
-    if let Some(path) = selection::get_current_selected_path(&buffer, Some(cursor)) {
+    if let Some(path) =
+        selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor))
+    {
         let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
         actions.push(Action::Load(
             FileTreeBufferSection::Preview,

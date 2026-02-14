@@ -12,17 +12,22 @@ use crate::{
     task::Task,
 };
 
-use super::{app, junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
+use super::{app, junkyard::trash_to_junkyard};
 
 #[tracing::instrument(skip(app))]
 pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
-    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    let (vp, buffer) = match app::get_focused_mut(app) {
+        (vp, Buffer::FileTree(it)) => (vp, it),
+        (_vp, Buffer::_Text(_)) => todo!(),
     };
 
-    let selection =
-        get_current_selected_bufferline(buffer, Some(cursor)).map(|line| line.content.clone());
+    let selected_index = buffer.current.buffer.cursor.vertical_index;
+    let selection = buffer
+        .current
+        .buffer
+        .lines
+        .get(selected_index)
+        .map(|line| line.content.clone());
 
     let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
@@ -30,7 +35,6 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let message = BufferMessage::SetContent(content);
     yeet_buffer::update(
         Some(vp),
-        Some(cursor),
         mode,
         &mut buffer.current.buffer,
         std::slice::from_ref(&message),
@@ -40,7 +44,6 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         let message = BufferMessage::SetCursorToLineContent(selection.to_stripped_string());
         yeet_buffer::update(
             Some(vp),
-            Some(cursor),
             mode,
             &mut buffer.current.buffer,
             std::slice::from_ref(&message),
@@ -50,7 +53,6 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let message = BufferMessage::SaveBuffer;
     let result = yeet_buffer::update(
         Some(vp),
-        Some(cursor),
         mode,
         &mut buffer.current.buffer,
         std::slice::from_ref(&message),

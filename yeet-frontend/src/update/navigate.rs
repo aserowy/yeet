@@ -18,8 +18,8 @@ use super::{app, history, selection};
 #[tracing::instrument(skip(app))]
 pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
     let buffer = match app::get_focused_mut(app) {
-        (_, _, Buffer::FileTree(it)) => it,
-        (_, _, Buffer::_Text(_)) => todo!(),
+        (_, Buffer::FileTree(it)) => it,
+        (_, Buffer::_Text(_)) => todo!(),
     };
 
     let path = match marks.entries.get(char) {
@@ -42,8 +42,8 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
 #[tracing::instrument(skip(app, history))]
 pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
     let buffer = match app::get_focused_mut(app) {
-        (_, _, Buffer::FileTree(it)) => it,
-        (_, _, Buffer::_Text(_)) => todo!(),
+        (_, Buffer::FileTree(it)) => it,
+        (_, Buffer::_Text(_)) => todo!(),
     };
 
     let (path, selection) = if path.is_file() {
@@ -72,8 +72,8 @@ pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
 
 pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
     let buffer = match app::get_focused_mut(app) {
-        (_, _, Buffer::FileTree(it)) => it,
-        (_, _, Buffer::_Text(_)) => todo!(),
+        (_, Buffer::FileTree(it)) => it,
+        (_, Buffer::_Text(_)) => todo!(),
     };
 
     let selection = path
@@ -140,9 +140,9 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
-    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    let (vp, buffer) = match app::get_focused_mut(app) {
+        (vp, Buffer::FileTree(it)) => (vp, it),
+        (_vp, Buffer::_Text(_)) => todo!(),
     };
 
     if let Some(path) = buffer.current.path.clone().parent() {
@@ -174,20 +174,17 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         let current_buffer = mem::replace(&mut buffer.current.buffer, parent_buffer);
 
         buffer.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
-        buffer.preview_cursor = Some(Default::default());
 
-        if let Some(parent_cursor) = &mut buffer.parent_cursor {
-            mem_swap_cursor(cursor, parent_cursor);
-
-            if let Some(preview_cursor) = &mut buffer.preview_cursor {
-                mem_swap_cursor(parent_cursor, preview_cursor);
-            }
+        if let FileTreeBufferSectionBuffer::Text(_, preview_buffer) = &buffer.preview {
+            buffer.preview_cursor = preview_buffer.cursor.clone();
         }
+
+        mem_swap_cursor(&mut buffer.current.buffer.cursor, &mut buffer.parent_cursor);
+        mem_swap_cursor(&mut buffer.parent_cursor, &mut buffer.preview_cursor);
 
         yeet_buffer::update_viewport_by_direction(
             vp,
-            Some(cursor),
-            &buffer.current.buffer,
+            &mut buffer.current.buffer,
             &ViewPortDirection::CenterOnCursor,
         );
 
@@ -199,12 +196,14 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    let (vp, buffer) = match app::get_focused_mut(app) {
+        (vp, Buffer::FileTree(it)) => (vp, it),
+        (_vp, Buffer::_Text(_)) => todo!(),
     };
 
-    if let Some(selected) = selection::get_current_selected_path(buffer, Some(cursor)) {
+    if let Some(selected) =
+        selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor))
+    {
         if buffer.current.path == selected || !selected.is_dir() {
             return Vec::new();
         }
@@ -234,20 +233,23 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
             mem::replace(&mut buffer.current.buffer, preview_buffer),
         );
 
-        if let Some(parent_cursor) = &mut buffer.parent_cursor {
-            mem_swap_cursor(cursor, parent_cursor);
-        }
+        mem_swap_cursor(&mut buffer.current.buffer.cursor, &mut buffer.parent_cursor);
 
-        if let Some(preview_cursor) = &mut buffer.preview_cursor {
-            mem_swap_cursor(cursor, preview_cursor);
+        if buffer.preview_cursor.horizontal_index != CursorPosition::None {
+            mem_swap_cursor(
+                &mut buffer.current.buffer.cursor,
+                &mut buffer.preview_cursor,
+            );
         } else {
-            cursor.vertical_index = 0;
-            cursor.horizontal_index = CursorPosition::Absolute {
+            buffer.current.buffer.cursor.vertical_index = 0;
+            buffer.current.buffer.cursor.horizontal_index = CursorPosition::Absolute {
                 current: 0,
                 expanded: 0,
             };
 
-            if let Some(selected) = selection::get_current_selected_path(buffer, Some(cursor)) {
+            if let Some(selected) =
+                selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor))
+            {
                 tracing::trace!("loading selection: {:?}", selected);
 
                 let history = history::get_selection_from_history(history, selected.as_path())
@@ -263,8 +265,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
 
         yeet_buffer::update_viewport_by_direction(
             vp,
-            Some(cursor),
-            &buffer.current.buffer,
+            &mut buffer.current.buffer,
             &ViewPortDirection::CenterOnCursor,
         );
 
@@ -278,5 +279,9 @@ fn mem_swap_cursor(dest_cursor: &mut Cursor, src_cursor: &mut Cursor) {
     mem::swap(
         &mut dest_cursor.vertical_index,
         &mut src_cursor.vertical_index,
+    );
+    mem::swap(
+        &mut dest_cursor.horizontal_index,
+        &mut src_cursor.horizontal_index,
     );
 }

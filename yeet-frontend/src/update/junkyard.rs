@@ -283,7 +283,6 @@ mod test {
     #[test]
     fn junk_add_or_update() {
         use std::path::PathBuf;
-        use yeet_buffer::model::Cursor;
 
         use crate::update::junkyard::{add_or_update_junkyard_entry, trash_to_junkyard};
 

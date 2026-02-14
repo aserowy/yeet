@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+
 use yeet_buffer::model::{BufferLine, Sign, SignIdentifier};
 
 use crate::model::{
@@ -49,10 +50,13 @@ pub fn set_sign_for_paths(buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>, sign_i
                 None => return,
             };
 
-            let target = buffer
-                .get_mut_directories()
-                .into_iter()
-                .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
+            let target = buffer.get_mut_directories().into_iter().find_map(|(p, b)| {
+                if p == parent {
+                    Some(b)
+                } else {
+                    None
+                }
+            });
 
             let buffer = match target {
                 Some(buffer) => buffer,
@@ -106,7 +110,7 @@ pub fn unset_sign_on_all_buffers(buffers: Vec<&mut Buffer>, sign_id: SignIdentif
         buffer
             .get_mut_directories()
             .into_iter()
-            .flat_map(|(_, _, b)| &mut b.lines)
+            .flat_map(|(_, b)| &mut b.lines)
             .for_each(|l| unset(l, sign_id));
     }
 }
@@ -128,10 +132,13 @@ pub fn unset_sign_for_paths(
                 None => return,
             };
 
-            let target = buffer
-                .get_mut_directories()
-                .into_iter()
-                .find_map(|(p, _, b)| if p == parent { Some(b) } else { None });
+            let target = buffer.get_mut_directories().into_iter().find_map(|(p, b)| {
+                if p == parent {
+                    Some(b)
+                } else {
+                    None
+                }
+            });
 
             let buffer = match target {
                 Some(buffer) => buffer,

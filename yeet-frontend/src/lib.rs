@@ -154,8 +154,8 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
 fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
     let current = app
         .buffers
-        .iter()
-        .map(|(_, bffr)| match bffr {
+        .values()
+        .flat_map(|bffr| match bffr {
             Buffer::FileTree(it) => vec![
                 Some(it.current.path.clone()),
                 it.parent.resolve_path().map(|p| p.to_path_buf()),
@@ -163,8 +163,6 @@ fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
             ],
             Buffer::_Text(_) => Vec::new(),
         })
-        .into_iter()
-        .flatten()
         .flatten()
         .collect::<Vec<_>>();
 

@@ -18,10 +18,9 @@ pub fn buffer(
 ) -> Vec<Action> {
     let msg = BufferMessage::Modification(*repeat, modification.clone());
     match app::get_focused_mut(app) {
-        (vp, cursor, Buffer::FileTree(it)) => {
+        (vp, Buffer::FileTree(it)) => {
             yeet_buffer::update(
                 Some(vp),
-                Some(cursor),
                 mode,
                 &mut it.current.buffer,
                 std::slice::from_ref(&msg),
@@ -30,7 +29,7 @@ pub fn buffer(
             // FIX: only if selection changed!
             it.preview = FileTreeBufferSectionBuffer::None;
         }
-        (vp, cursor, Buffer::_Text(_)) => todo!(),
+        (_vp, Buffer::_Text(_)) => todo!(),
     }
     Vec::new()
 }

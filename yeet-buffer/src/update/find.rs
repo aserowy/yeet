@@ -1,11 +1,12 @@
 use crate::{
     message::CursorDirection,
-    model::{BufferLine, Cursor, CursorPosition, TextBuffer},
+    model::{BufferLine, CursorPosition, TextBuffer},
 };
 
 use super::cursor;
 
-pub fn char(cursor: &mut Cursor, direction: &CursorDirection, model: &TextBuffer) {
+pub fn char(direction: &CursorDirection, model: &mut TextBuffer) {
+    let cursor = &mut model.cursor;
     match direction {
         CursorDirection::FindBackward(find) => {
             if let Some(found) = find_char_backward(find, &model.lines, cursor) {
@@ -45,7 +46,11 @@ pub fn char(cursor: &mut Cursor, direction: &CursorDirection, model: &TextBuffer
     };
 }
 
-fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Option<usize> {
+fn find_char_backward(
+    find: &char,
+    lines: &[BufferLine],
+    cursor: &crate::model::Cursor,
+) -> Option<usize> {
     let current = lines.get(cursor.vertical_index)?;
     let index = cursor::get_horizontal_index(&cursor.horizontal_index, current)?;
 
@@ -63,7 +68,11 @@ fn find_char_backward(find: &char, lines: &[BufferLine], cursor: &Cursor) -> Opt
         .rposition(|c| c == find)
 }
 
-fn find_char_forward(find: &char, lines: &[BufferLine], cursor: &mut Cursor) -> Option<usize> {
+fn find_char_forward(
+    find: &char,
+    lines: &[BufferLine],
+    cursor: &crate::model::Cursor,
+) -> Option<usize> {
     let current = lines.get(cursor.vertical_index)?;
     let index = cursor::get_horizontal_index(&cursor.horizontal_index, current)?;
 

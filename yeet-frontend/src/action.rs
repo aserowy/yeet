@@ -100,9 +100,9 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let (vp, cursor, buffer) = match app::get_focused_mut(&mut model.app) {
-        (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-        (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+    let (vp, buffer) = match app::get_focused_mut(&mut model.app) {
+        (vp, Buffer::FileTree(it)) => (vp, it),
+        (_vp, Buffer::_Text(_)) => todo!(),
     };
 
     let mut remaining_actions = vec![];
@@ -127,7 +127,6 @@ async fn execute(
                         let message = BufferMessage::SetContent(Vec::new());
                         yeet_buffer::update(
                             Some(vp),
-                            Some(cursor),
                             &model.state.modes.current,
                             &mut buffer.current.buffer,
                             std::slice::from_ref(&message),
@@ -136,7 +135,6 @@ async fn execute(
                         let message = BufferMessage::ResetCursor;
                         yeet_buffer::update(
                             Some(vp),
-                            Some(cursor),
                             &model.state.modes.current,
                             &mut buffer.current.buffer,
                             std::slice::from_ref(&message),

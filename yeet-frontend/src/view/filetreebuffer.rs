@@ -4,7 +4,7 @@ use ratatui::{
 };
 use ratatui_image::Image;
 use yeet_buffer::{
-    model::{viewport::ViewPort, Cursor, Mode},
+    model::{viewport::ViewPort, Mode},
     view as buffer_view,
 };
 
@@ -13,7 +13,6 @@ use crate::model::{FileTreeBuffer, FileTreeBufferSectionBuffer};
 pub fn view(
     mode: &Mode,
     viewport: &ViewPort,
-    cursor: &Cursor,
     buffer: &FileTreeBuffer,
     frame: &mut Frame,
     horizontal_offset: u16,
@@ -30,7 +29,6 @@ pub fn view(
         });
 
     render_buffer(
-        &buffer.parent_cursor,
         mode,
         frame,
         &buffer.parent,
@@ -46,7 +44,6 @@ pub fn view(
 
     buffer_view(
         &viewport,
-        Some(cursor),
         mode,
         &buffer.current.buffer,
         frame,
@@ -55,7 +52,6 @@ pub fn view(
     );
 
     render_buffer(
-        &buffer.preview_cursor,
         mode,
         frame,
         &buffer.preview,
@@ -67,7 +63,6 @@ pub fn view(
 }
 
 fn render_buffer(
-    cursor: &Option<Cursor>,
     mode: &Mode,
     frame: &mut Frame,
     buffer_type: &FileTreeBufferSectionBuffer,
@@ -76,19 +71,18 @@ fn render_buffer(
     vertical_offset: u16,
     height: u16,
 ) {
-    let mut viewport = ViewPort::default();
-    viewport.height = height;
-    viewport.width = width;
+    let mut viewport = ViewPort {
+        height,
+        width,
+        ..Default::default()
+    };
 
     match buffer_type {
         FileTreeBufferSectionBuffer::Text(_, buffer) => {
-            if let Some(cursor) = cursor {
-                yeet_buffer::update_viewport_by_cursor(&mut viewport, cursor, buffer);
-            };
+            yeet_buffer::update_viewport_by_cursor(&mut viewport, buffer);
 
             buffer_view(
                 &viewport,
-                cursor.as_ref(),
                 mode,
                 buffer,
                 frame,
@@ -109,7 +103,6 @@ fn render_buffer(
         FileTreeBufferSectionBuffer::None => {
             buffer_view(
                 &viewport,
-                None,
                 mode,
                 &Default::default(),
                 frame,

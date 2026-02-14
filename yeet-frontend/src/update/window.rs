@@ -1,16 +1,8 @@
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use yeet_buffer::{
-    message::{BufferMessage, ViewPortDirection},
-    model::Mode,
-};
-
 use crate::{
-    action::Action,
     error::AppError,
-    model::{history::History, App, FileTreeBuffer, FileTreeBufferSection, Window},
+    model::{App, Window},
 };
-
-use super::{history, selection};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
 pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
     let main = Layout::default()
@@ -29,9 +21,9 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
 }
 
 fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
-    let (vp, _, _) = match window {
+    let (vp, _) = match window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, cursor, id) => (vp, cursor, id),
+        Window::Content(vp, id) => (vp, id),
     };
 
     vp.height = area.height;

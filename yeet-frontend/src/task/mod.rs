@@ -45,6 +45,7 @@ pub enum Task {
     EnumerateDirectory(PathBuf, Option<String>),
     ExecuteFd(PathBuf, String),
     ExecuteZoxide(String),
+    #[allow(dead_code)]
     LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),

@@ -12,10 +12,9 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
         tracing::debug!("Rendering with area: {}", frame.area());
 
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
-        let (_, cursor, buffer) = app::get_focused(&model.app);
+        let (_, buffer) = app::get_focused(&model.app);
 
         statusline::view(
-            cursor,
             buffer,
             frame,
             Rect {

@@ -33,27 +33,28 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         let mut buffers = HashMap::new();
-        buffers.insert(1, Buffer::FileTree(Box::new(FileTreeBuffer::default())));
+        buffers.insert(1, Buffer::FileTree(Box::default()));
 
         Self {
             buffers,
             commandline: Default::default(),
             latest_buffer_id: 1,
-            window: Window::Content(Default::default(), Default::default(), 1),
+            window: Window::Content(Default::default(), 1),
         }
     }
 }
 
+#[allow(dead_code)]
 pub enum Window {
     Horizontal(Box<Window>, Box<Window>),
-    Content(ViewPort, Cursor, usize),
+    Content(ViewPort, usize),
 }
 
 impl Window {
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
             Window::Horizontal(_, _) => todo!(),
-            Window::Content(vp, _, _) => Ok(vp.height),
+            Window::Content(vp, _) => Ok(vp.height),
         }
     }
 }
@@ -100,7 +101,6 @@ pub struct CurrentTask {
 
 pub struct CommandLine {
     pub buffer: TextBuffer,
-    pub cursor: Option<Cursor>,
     pub key_sequence: String,
     pub viewport: ViewPort,
 }
@@ -108,13 +108,15 @@ pub struct CommandLine {
 impl Default for CommandLine {
     fn default() -> Self {
         Self {
-            cursor: Some(Cursor {
-                hide_cursor: true,
-                hide_cursor_line: true,
-                vertical_index: 0,
+            buffer: TextBuffer {
+                cursor: yeet_buffer::model::Cursor {
+                    hide_cursor: true,
+                    hide_cursor_line: true,
+                    vertical_index: 0,
+                    ..Default::default()
+                },
                 ..Default::default()
-            }),
-            buffer: Default::default(),
+            },
             key_sequence: "".to_owned(),
             viewport: Default::default(),
         }
@@ -129,23 +131,24 @@ pub enum Buffer {
 pub struct FileTreeBuffer {
     pub current: DirectoryBuffer,
     pub parent: FileTreeBufferSectionBuffer,
-    pub parent_cursor: Option<Cursor>,
+    pub parent_cursor: Cursor,
     pub preview: FileTreeBufferSectionBuffer,
-    pub preview_cursor: Option<Cursor>,
+    pub preview_cursor: Cursor,
+    #[allow(dead_code)]
     pub show_border: bool,
 }
 
 impl FileTreeBuffer {
-    pub fn get_mut_directories(&mut self) -> Vec<(&Path, Option<&mut Cursor>, &mut TextBuffer)> {
+    pub fn get_mut_directories(&mut self) -> Vec<(&Path, &mut TextBuffer)> {
         let mut directories = Vec::new();
-        directories.push((self.current.path.as_path(), None, &mut self.current.buffer));
+        directories.push((self.current.path.as_path(), &mut self.current.buffer));
 
         if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.parent {
-            directories.push((path.as_path(), self.parent_cursor.as_mut(), buffer));
+            directories.push((path.as_path(), buffer));
         }
 
         if let FileTreeBufferSectionBuffer::Text(path, buffer) = &mut self.preview {
-            directories.push((path.as_path(), self.preview_cursor.as_mut(), buffer));
+            directories.push((path.as_path(), buffer));
         }
 
         directories
@@ -177,6 +180,7 @@ pub enum FileTreeBufferSection {
 #[allow(clippy::large_enum_variant)]
 #[derive(Default)]
 pub enum FileTreeBufferSectionBuffer {
+    #[allow(dead_code)]
     Image(PathBuf, Protocol),
     #[default]
     None,

@@ -5,7 +5,7 @@ use std::{
 
 use yeet_buffer::{
     message::BufferMessage,
-    model::{ansi::Ansi, BufferLine, Cursor, Mode, TextBuffer},
+    model::{ansi::Ansi, BufferLine, Mode, TextBuffer},
 };
 
 use crate::{
@@ -40,26 +40,20 @@ pub fn add(
         };
 
         if mode == &Mode::Navigation {
-            if let Some(cursor) = buffer.parent_cursor.as_mut() {
-                apply_paths_to_buffer(
-                    buffer.current.path.as_path(),
-                    cursor,
-                    &mut buffer.current.buffer,
-                    true,
-                    paths,
-                    marks,
-                    qfix,
-                    mode,
-                );
-            }
+            apply_paths_to_buffer(
+                buffer.current.path.as_path(),
+                &mut buffer.current.buffer,
+                true,
+                paths,
+                marks,
+                qfix,
+                mode,
+            );
         }
 
-        if let (Some(cursor), FileTreeBufferSectionBuffer::Text(path, text_buffer)) =
-            (buffer.parent_cursor.as_mut(), &mut buffer.parent)
-        {
+        if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.parent {
             apply_paths_to_buffer(
                 path.as_path(),
-                cursor,
                 text_buffer,
                 path.is_dir(),
                 paths,
@@ -69,12 +63,9 @@ pub fn add(
             );
         }
 
-        if let (Some(cursor), FileTreeBufferSectionBuffer::Text(path, text_buffer)) =
-            (buffer.preview_cursor.as_mut(), &mut buffer.preview)
-        {
+        if let FileTreeBufferSectionBuffer::Text(path, text_buffer) = &mut buffer.preview {
             apply_paths_to_buffer(
                 path.as_path(),
-                cursor,
                 text_buffer,
                 path.is_dir(),
                 paths,
@@ -86,9 +77,17 @@ pub fn add(
 
         let _ = (marks, qfix, mode);
 
-        if let Some(path) =
-            selection::get_current_selected_path(buffer, buffer.parent_cursor.as_ref())
-        {
+        if let Some(path) = match &buffer.parent {
+            FileTreeBufferSectionBuffer::Text(path, text_buffer) => {
+                selection::get_selected_path_with_base(
+                    path.as_path(),
+                    text_buffer,
+                    Some(&buffer.parent_cursor),
+                    |path| path.exists(),
+                )
+            }
+            _ => None,
+        } {
             let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
             actions.push(Action::Load(
                 FileTreeBufferSection::Preview,
@@ -101,7 +100,10 @@ pub fn add(
     actions
 }
 
-fn get_selected_content_from_buffer(cursor: &Cursor, model: &TextBuffer) -> Option<String> {
+fn get_selected_content_from_buffer(
+    cursor: &yeet_buffer::model::Cursor,
+    model: &TextBuffer,
+) -> Option<String> {
     model
         .lines
         .get(cursor.vertical_index)
@@ -110,7 +112,6 @@ fn get_selected_content_from_buffer(cursor: &Cursor, model: &TextBuffer) -> Opti
 
 fn apply_paths_to_buffer(
     dir_path: &Path,
-    cursor: &mut Cursor,
     buffer: &mut TextBuffer,
     sort: bool,
     paths: &[PathBuf],
@@ -126,7 +127,7 @@ fn apply_paths_to_buffer(
         return;
     }
 
-    let mut selection = get_selected_content_from_buffer(cursor, buffer);
+    let mut selection = get_selected_content_from_buffer(&buffer.cursor, buffer);
 
     let indexes = buffer
         .lines
@@ -168,28 +169,16 @@ fn apply_paths_to_buffer(
 
     if sort {
         let message = BufferMessage::SortContent(super::SORT);
-        yeet_buffer::update(
-            None,
-            Some(cursor),
-            mode,
-            buffer,
-            std::slice::from_ref(&message),
-        );
+        yeet_buffer::update(None, mode, buffer, std::slice::from_ref(&message));
     }
 
     if let Some(selection) = selection {
         let message = BufferMessage::SetCursorToLineContent(selection);
-        yeet_buffer::update(
-            None,
-            Some(cursor),
-            mode,
-            buffer,
-            std::slice::from_ref(&message),
-        );
+        yeet_buffer::update(None, mode, buffer, std::slice::from_ref(&message));
     }
 }
 
-fn remove_line_from_buffer(cursor: &mut Cursor, mode: &Mode, buffer: &mut TextBuffer, path: &Path) {
+fn remove_line_from_buffer(mode: &Mode, buffer: &mut TextBuffer, path: &Path) {
     if let Some(basename) = path.file_name().and_then(|oss| oss.to_str()) {
         let index = buffer
             .lines
@@ -200,13 +189,7 @@ fn remove_line_from_buffer(cursor: &mut Cursor, mode: &Mode, buffer: &mut TextBu
 
         if let Some(index) = index {
             let message = BufferMessage::RemoveLine(index);
-            yeet_buffer::update(
-                None,
-                Some(cursor),
-                mode,
-                buffer,
-                std::slice::from_ref(&message),
-            );
+            yeet_buffer::update(None, mode, buffer, std::slice::from_ref(&message));
         }
     }
 }
@@ -248,50 +231,39 @@ pub fn remove(
             remove_from_junkyard(junk, path);
         }
 
-        let current_selection = match buffer.parent_cursor.as_ref() {
-            Some(it) => get_selected_content_from_buffer(it, &buffer.current.buffer),
-            None => None,
-        };
+        let current_selection =
+            get_selected_content_from_buffer(&buffer.parent_cursor, &buffer.current.buffer);
 
         if let Some(parent) = path.parent() {
             if buffer.current.path.as_path() == parent {
-                if let Some(cursor) = buffer.parent_cursor.as_mut() {
-                    remove_line_from_buffer(cursor, mode, &mut buffer.current.buffer, path);
+                remove_line_from_buffer(mode, &mut buffer.current.buffer, path);
+            }
+
+            if let FileTreeBufferSectionBuffer::Text(dir_path, text_buffer) = &mut buffer.parent {
+                if dir_path.as_path() == parent {
+                    remove_line_from_buffer(mode, text_buffer, path);
                 }
             }
 
-            if let (Some(cursor), FileTreeBufferSectionBuffer::Text(dir_path, text_buffer)) =
-                (buffer.parent_cursor.as_mut(), &mut buffer.parent)
-            {
+            if let FileTreeBufferSectionBuffer::Text(dir_path, text_buffer) = &mut buffer.preview {
                 if dir_path.as_path() == parent {
-                    remove_line_from_buffer(cursor, mode, text_buffer, path);
-                }
-            }
-
-            if let (Some(cursor), FileTreeBufferSectionBuffer::Text(dir_path, text_buffer)) =
-                (buffer.preview_cursor.as_mut(), &mut buffer.preview)
-            {
-                if dir_path.as_path() == parent {
-                    remove_line_from_buffer(cursor, mode, text_buffer, path);
+                    remove_line_from_buffer(mode, text_buffer, path);
                 }
             }
         }
 
         if let Some(selection) = current_selection {
-            if let Some(cursor) = buffer.parent_cursor.as_mut() {
-                let message = BufferMessage::SetCursorToLineContent(selection);
-                yeet_buffer::update(
-                    None,
-                    Some(cursor),
-                    mode,
-                    &mut buffer.current.buffer,
-                    std::slice::from_ref(&message),
-                );
-            }
+            let message = BufferMessage::SetCursorToLineContent(selection);
+            yeet_buffer::update(
+                None,
+                mode,
+                &mut buffer.current.buffer,
+                std::slice::from_ref(&message),
+            );
         };
 
         if let Some(path) =
-            selection::get_current_selected_path(buffer, buffer.parent_cursor.as_ref())
+            selection::get_current_selected_path(buffer, Some(&buffer.parent_cursor))
         {
             let selection = get_selection_from_history(history, &path).map(|s| s.to_owned());
             actions.push(Action::Load(

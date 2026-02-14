@@ -1,5 +1,5 @@
 use message::BufferMessage;
-use model::{viewport::ViewPort, BufferResult, Cursor, Mode, TextBuffer};
+use model::{viewport::ViewPort, BufferResult, Mode, TextBuffer};
 use ratatui::Frame;
 
 pub mod message;
@@ -9,30 +9,27 @@ mod view;
 
 pub fn update(
     viewport: Option<&mut ViewPort>,
-    cursor: Option<&mut Cursor>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     messages: &[BufferMessage],
 ) -> Vec<BufferResult> {
-    update::update(viewport, cursor, mode, buffer, messages)
+    update::update(viewport, mode, buffer, messages)
 }
 
-pub fn update_viewport_by_cursor(viewport: &mut ViewPort, cursor: &Cursor, buffer: &TextBuffer) {
-    update::viewport::update_by_cursor(viewport, cursor, buffer)
+pub fn update_viewport_by_cursor(viewport: &mut ViewPort, buffer: &TextBuffer) {
+    update::viewport::update_by_cursor(viewport, buffer)
 }
 
 pub fn update_viewport_by_direction(
     viewport: &mut ViewPort,
-    cursor: Option<&mut Cursor>,
-    buffer: &TextBuffer,
+    buffer: &mut TextBuffer,
     direction: &message::ViewPortDirection,
 ) {
-    update::viewport::update_by_direction(viewport, cursor, buffer, direction)
+    update::viewport::update_by_direction(viewport, buffer, direction)
 }
 
 pub fn view(
     viewport: &ViewPort,
-    cursor: Option<&Cursor>,
     mode: &Mode,
     buffer: &TextBuffer,
     frame: &mut Frame,
@@ -41,7 +38,7 @@ pub fn view(
 ) {
     view::view(
         viewport,
-        cursor,
+        Some(&buffer.cursor),
         mode,
         buffer,
         frame,

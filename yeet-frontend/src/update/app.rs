@@ -1,45 +1,47 @@
 use std::{cmp::Ordering, mem};
 
-use yeet_buffer::model::{viewport::ViewPort, Cursor};
+use yeet_buffer::model::viewport::ViewPort;
 
 use crate::model::{App, Buffer, Window};
 
-pub fn get_focused(app: &App) -> (&ViewPort, &Cursor, &Buffer) {
-    let (viewport, cursor, focused_id) = match &app.window {
+pub fn get_focused(app: &App) -> (&ViewPort, &Buffer) {
+    let (viewport, focused_id) = match &app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, cursor, it) => (vp, cursor, it),
+        Window::Content(vp, it) => (vp, it),
     };
 
-    match app.buffers.get(&focused_id) {
-        Some(it) => return (viewport, cursor, it),
+    match app.buffers.get(focused_id) {
+        Some(it) => (viewport, it),
         None => todo!(),
-    };
-}
-
-pub fn focused_window_mut(app: &mut App) -> (&mut ViewPort, &mut Cursor, usize) {
-    match &mut app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, cursor, it) => (vp, cursor, *it),
     }
 }
 
+#[allow(dead_code)]
+pub fn focused_window_mut(app: &mut App) -> (&mut ViewPort, usize) {
+    match &mut app.window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Content(vp, it) => (vp, *it),
+    }
+}
+
+#[allow(dead_code)]
 pub fn focused_id(app: &App) -> usize {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(_, _, id) => *id,
+        Window::Content(_, id) => *id,
     }
 }
 
-pub fn get_focused_mut(app: &mut App) -> (&mut ViewPort, &mut Cursor, &mut Buffer) {
-    let (vp, cursor, focused_id) = match &mut app.window {
+pub fn get_focused_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
+    let (vp, focused_id) = match &mut app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, cursor, it) => (vp, cursor, it),
+        Window::Content(vp, it) => (vp, it),
     };
 
-    match app.buffers.get_mut(&focused_id) {
-        Some(it) => return (vp, cursor, it),
+    match app.buffers.get_mut(focused_id) {
+        Some(it) => (vp, it),
         None => todo!(),
-    };
+    }
 }
 
 pub fn get_next_buffer_id(app: &mut App) -> usize {
@@ -53,7 +55,7 @@ pub fn get_next_buffer_id(app: &mut App) -> usize {
     running_ids.sort();
 
     for id in running_ids {
-        match next_id.cmp(&id) {
+        match next_id.cmp(id) {
             Ordering::Equal => next_id += 1,
             Ordering::Greater => break,
             Ordering::Less => {}
@@ -68,6 +70,6 @@ pub fn get_next_buffer_id(app: &mut App) -> usize {
 pub fn set_focused_buffer(app: &mut App, id: usize) {
     match &mut app.window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(_, _, it) => mem::replace(it, id),
+        Window::Content(_, it) => mem::replace(it, id),
     };
 }

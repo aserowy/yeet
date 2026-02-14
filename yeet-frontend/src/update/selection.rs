@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use std::path::Path;
+
 use yeet_buffer::model::BufferLine;
 
 use crate::{
@@ -20,21 +22,26 @@ pub fn get_current_selected_path_with_exists(
     cursor: Option<&yeet_buffer::model::Cursor>,
     exists: impl Fn(&std::path::Path) -> bool,
 ) -> Option<PathBuf> {
-    let current_buffer = &buffer.current.buffer;
-    if current_buffer.lines.is_empty() {
+    get_selected_path_with_base(&buffer.current.path, &buffer.current.buffer, cursor, exists)
+}
+
+pub fn get_selected_path_with_base(
+    base_path: &Path,
+    text_buffer: &yeet_buffer::model::TextBuffer,
+    cursor: Option<&yeet_buffer::model::Cursor>,
+    exists: impl Fn(&std::path::Path) -> bool,
+) -> Option<PathBuf> {
+    if text_buffer.lines.is_empty() {
         return None;
     }
 
     let cursor = cursor?;
-    let current = &current_buffer.lines.get(cursor.vertical_index)?;
+    let current = &text_buffer.lines.get(cursor.vertical_index)?;
     if current.content.is_empty() {
         return None;
     }
 
-    let target = buffer
-        .current
-        .path
-        .join(current.content.to_stripped_string());
+    let target = base_path.join(current.content.to_stripped_string());
 
     if exists(&target) {
         Some(target)
@@ -43,6 +50,7 @@ pub fn get_current_selected_path_with_exists(
     }
 }
 
+#[allow(dead_code)]
 pub fn get_current_selected_bufferline<'a>(
     buffer: &'a mut FileTreeBuffer,
     cursor: Option<&'a yeet_buffer::model::Cursor>,

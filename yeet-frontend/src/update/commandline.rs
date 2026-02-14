@@ -25,19 +25,12 @@ pub fn update(
     };
 
     let buffer = &mut commandline.buffer;
-    let cursor = &mut commandline.cursor;
     let viewport = &mut commandline.viewport;
 
     if let Some(message) = message {
         match command_mode {
             CommandMode::Command | CommandMode::Search(_) => {
-                yeet_buffer::update(
-                    Some(viewport),
-                    cursor.as_mut(),
-                    mode,
-                    buffer,
-                    std::slice::from_ref(message),
-                );
+                yeet_buffer::update(Some(viewport), mode, buffer, std::slice::from_ref(message));
             }
             CommandMode::PrintMultiline => {}
         }
@@ -58,7 +51,6 @@ pub fn modify(
     };
 
     let text_buffer = &mut app.commandline.buffer;
-    let cursor = &mut app.commandline.cursor;
     let viewport = &mut app.commandline.viewport;
 
     match command_mode {
@@ -80,7 +72,6 @@ pub fn modify(
             let message = BufferMessage::Modification(*repeat, modification.clone());
             yeet_buffer::update(
                 Some(viewport),
-                cursor.as_mut(),
                 &modes.current,
                 text_buffer,
                 std::slice::from_ref(&message),
@@ -123,7 +114,6 @@ pub fn modify(
                     let message = BufferMessage::SetContent(vec![]);
                     yeet_buffer::update(
                         Some(viewport),
-                        cursor.as_mut(),
                         &modes.current,
                         text_buffer,
                         std::slice::from_ref(&message),
@@ -202,7 +192,6 @@ pub fn update_on_execute(
     let message = BufferMessage::SetContent(vec![]);
     yeet_buffer::update(
         Some(&mut app.commandline.viewport),
-        app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
         std::slice::from_ref(&message),
@@ -220,7 +209,6 @@ pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<A
     let message = BufferMessage::SetContent(vec![]);
     yeet_buffer::update(
         Some(&mut app.commandline.viewport),
-        app.commandline.cursor.as_mut(),
         &modes.current,
         &mut app.commandline.buffer,
         std::slice::from_ref(&message),
@@ -282,7 +270,6 @@ pub fn print(
     let message = BufferMessage::MoveCursor(1, CursorDirection::Bottom);
     yeet_buffer::update(
         Some(&mut commandline.viewport),
-        commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
         std::slice::from_ref(&message),
@@ -290,7 +277,6 @@ pub fn print(
     let message = BufferMessage::MoveCursor(1, CursorDirection::LineEnd);
     yeet_buffer::update(
         Some(&mut commandline.viewport),
-        commandline.cursor.as_mut(),
         &modes.current,
         &mut commandline.buffer,
         std::slice::from_ref(&message),

@@ -11,13 +11,14 @@ use crate::{
 use super::{app, selection, sign};
 
 pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let (_, cursor, buffer) = app::get_focused_mut(app);
+    let (_, buffer) = app::get_focused_mut(app);
     let buffer = match buffer {
         Buffer::FileTree(it) => it,
         Buffer::_Text(_) => return Vec::new(),
     };
 
-    let selected = selection::get_current_selected_path(buffer.as_ref(), Some(cursor));
+    let selected =
+        selection::get_current_selected_path(buffer.as_ref(), Some(&buffer.current.buffer.cursor));
     if let Some(selected) = selected {
         if qfix.entries.contains(&selected) {
             qfix.entries.retain(|p| p != &selected);

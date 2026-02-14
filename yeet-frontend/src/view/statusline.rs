@@ -5,23 +5,20 @@ use ratatui::{
     widgets::{Block, Paragraph},
     Frame,
 };
-use yeet_buffer::model::{
-    undo::{self, BufferChanged},
-    Cursor,
-};
+use yeet_buffer::model::undo::{self, BufferChanged};
 
 use crate::model::{Buffer, FileTreeBuffer};
 
-pub fn view(cursor: &Cursor, current: &Buffer, frame: &mut Frame, rect: Rect) {
+pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
     match current {
-        Buffer::FileTree(it) => filetree_status(cursor, it, frame, rect),
+        Buffer::FileTree(it) => filetree_status(it, frame, rect),
         Buffer::_Text(_) => todo!(),
     }
 }
 
-fn filetree_status(cursor: &Cursor, buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
+fn filetree_status(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(buffer);
-    let position = get_position_content(cursor, buffer);
+    let position = get_position_content(buffer);
 
     let content = buffer.current.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
@@ -47,9 +44,9 @@ fn filetree_status(cursor: &Cursor, buffer: &FileTreeBuffer, frame: &mut Frame, 
     frame.render_widget(Paragraph::new(position), layout[3]);
 }
 
-fn get_position_content<'a>(cursor: &Cursor, buffer: &'a FileTreeBuffer) -> Line<'a> {
+fn get_position_content<'a>(buffer: &'a FileTreeBuffer) -> Line<'a> {
     let count = buffer.current.buffer.lines.len();
-    let mut position = cursor.vertical_index + 1;
+    let mut position = buffer.current.buffer.cursor.vertical_index + 1;
 
     let mut content = Vec::new();
     if count == 0 {
@@ -69,7 +66,7 @@ fn get_position_content<'a>(cursor: &Cursor, buffer: &'a FileTreeBuffer) -> Line
     Line::from(content)
 }
 
-fn get_changes_content(buffer: &FileTreeBuffer) -> Line {
+fn get_changes_content(buffer: &FileTreeBuffer) -> Line<'_> {
     let modifications = buffer.current.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate_modifications(&modifications);
 

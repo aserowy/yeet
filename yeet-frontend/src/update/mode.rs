@@ -29,14 +29,14 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
-            if let Some(cursor) = &mut app.commandline.cursor {
-                cursor.hide_cursor = true;
-            }
+            app.commandline.buffer.cursor.hide_cursor = true;
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (_, cursor, _) = app::get_focused_mut(app);
-            cursor.hide_cursor = true;
+            let (_, buffer) = app::get_focused_mut(app);
+            if let Buffer::FileTree(it) = buffer {
+                it.current.buffer.cursor.hide_cursor = true;
+            }
 
             vec![]
         }
@@ -47,22 +47,19 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
-            if let Some(cursor) = &mut app.commandline.cursor {
-                cursor.hide_cursor = false;
-            }
+            app.commandline.buffer.cursor.hide_cursor = false;
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-                (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-                (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+            let (vp, buffer) = match app::get_focused_mut(app) {
+                (vp, Buffer::FileTree(it)) => (vp, it),
+                (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            cursor.hide_cursor = false;
+            buffer.current.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
-                Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
                 std::slice::from_ref(&msg),
@@ -71,18 +68,17 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
-            let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-                (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-                (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+            let (vp, buffer) = match app::get_focused_mut(app) {
+                (vp, Buffer::FileTree(it)) => (vp, it),
+                (_vp, Buffer::_Text(_)) => todo!(),
             };
 
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            cursor.hide_cursor = false;
+            buffer.current.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
-                Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
                 std::slice::from_ref(&msg),
@@ -91,16 +87,15 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             save::changes(app, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            let (vp, cursor, buffer) = match app::get_focused_mut(app) {
-                (vp, cursor, Buffer::FileTree(it)) => (vp, cursor, it),
-                (_vp, _cursor, Buffer::_Text(_)) => todo!(),
+            let (vp, buffer) = match app::get_focused_mut(app) {
+                (vp, Buffer::FileTree(it)) => (vp, it),
+                (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            cursor.hide_cursor = false;
+            buffer.current.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
-                Some(cursor),
                 &state.modes.current,
                 &mut buffer.current.buffer,
                 std::slice::from_ref(&msg),
@@ -129,7 +124,6 @@ fn update_commandline_on_mode_change(
                 let message = BufferMessage::SetContent(vec![]);
                 yeet_buffer::update(
                     Some(viewport),
-                    commandline.cursor.as_mut(),
                     &modes.current,
                     buffer,
                     std::slice::from_ref(&message),
@@ -144,7 +138,6 @@ fn update_commandline_on_mode_change(
             let message = BufferMessage::ResetCursor;
             yeet_buffer::update(
                 Some(viewport),
-                commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
                 std::slice::from_ref(&message),
@@ -165,7 +158,6 @@ fn update_commandline_on_mode_change(
             let message = BufferMessage::SetContent(vec![bufferline]);
             yeet_buffer::update(
                 Some(viewport),
-                commandline.cursor.as_mut(),
                 &modes.current,
                 buffer,
                 std::slice::from_ref(&message),
