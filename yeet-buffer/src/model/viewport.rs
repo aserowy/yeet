@@ -19,6 +19,8 @@ pub struct ViewPort {
     pub sign_column_width: usize,
     pub vertical_index: usize,
     pub width: u16,
+    pub x: u16,
+    pub y: u16,
 }
 
 // TODO: enable with settings

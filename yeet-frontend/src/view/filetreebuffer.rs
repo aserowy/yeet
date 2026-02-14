@@ -1,14 +1,11 @@
-use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    Frame,
-};
+use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
 use yeet_buffer::{
     model::{viewport::ViewPort, Mode},
     view as buffer_view,
 };
 
-use crate::model::{DirectoryBuffer, PreviewImageBuffer};
+use crate::model::{App, Buffer, DirectoryBuffer, PreviewImageBuffer, Window};
 
 pub enum PreviewView<'a> {
     Directory(&'a DirectoryBuffer),
@@ -16,47 +13,61 @@ pub enum PreviewView<'a> {
     None,
 }
 
-pub struct FileTreeView<'a> {
-    pub mode: &'a Mode,
-    pub parent_viewport: &'a ViewPort,
-    pub current_viewport: &'a ViewPort,
-    pub preview_viewport: &'a ViewPort,
-    pub parent_buffer: &'a DirectoryBuffer,
-    pub current_buffer: &'a DirectoryBuffer,
-    pub preview_buffer: PreviewView<'a>,
-    pub horizontal_offset: u16,
-    pub vertical_offset: u16,
-}
+pub fn view(
+    mode: &Mode,
+    app: &App,
+    frame: &mut Frame,
+    horizontal_offset: u16,
+    vertical_offset: u16,
+) {
+    let (parent_viewport, current_viewport, preview_viewport) = match &app.window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Directory(parent, current, preview) => (parent, current, preview),
+    };
 
-pub fn view(view: FileTreeView<'_>, frame: &mut Frame) {
-    let FileTreeView {
-        mode,
-        parent_viewport,
-        current_viewport,
-        preview_viewport,
-        parent_buffer,
-        current_buffer,
-        preview_buffer,
-        horizontal_offset,
-        vertical_offset,
-    } = view;
-    let layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
-        .split(Rect {
-            x: horizontal_offset,
-            y: vertical_offset,
-            width: current_viewport.width,
-            height: current_viewport.height,
-        });
+    let parent_buffer =
+        app.buffers
+            .get(&parent_viewport.buffer_id)
+            .and_then(|buffer| match buffer {
+                Buffer::Directory(it) => Some(it),
+                _ => None,
+            });
+    let current_buffer =
+        app.buffers
+            .get(&current_viewport.buffer_id)
+            .and_then(|buffer| match buffer {
+                Buffer::Directory(it) => Some(it),
+                _ => None,
+            });
+    let preview_buffer = app
+        .buffers
+        .get(&preview_viewport.buffer_id)
+        .map(|buffer| match buffer {
+            Buffer::Directory(it) => PreviewView::Directory(it),
+            Buffer::PreviewImage(it) => PreviewView::Image(it),
+            Buffer::_Text(_) => PreviewView::None,
+        })
+        .unwrap_or(PreviewView::None);
+
+    let (parent_buffer, current_buffer) = match (parent_buffer, current_buffer) {
+        (Some(parent), Some(current)) => (parent, current),
+        _ => return,
+    };
+
+    let parent_x = parent_viewport.x.saturating_add(horizontal_offset);
+    let parent_y = parent_viewport.y.saturating_add(vertical_offset);
+    let current_x = current_viewport.x.saturating_add(horizontal_offset);
+    let current_y = current_viewport.y.saturating_add(vertical_offset);
+    let preview_x = preview_viewport.x.saturating_add(horizontal_offset);
+    let preview_y = preview_viewport.y.saturating_add(vertical_offset);
 
     render_directory_buffer(
         mode,
         frame,
         parent_viewport,
         parent_buffer,
-        layout[0].x,
-        layout[0].y,
+        parent_x,
+        parent_y,
     );
 
     buffer_view(
@@ -64,25 +75,18 @@ pub fn view(view: FileTreeView<'_>, frame: &mut Frame) {
         mode,
         &current_buffer.buffer,
         frame,
-        layout[1].x,
-        layout[1].y,
+        current_x,
+        current_y,
     );
 
     match preview_buffer {
         PreviewView::Directory(buffer) => {
-            render_directory_buffer(
-                mode,
-                frame,
-                preview_viewport,
-                buffer,
-                layout[2].x,
-                layout[2].y,
-            );
+            render_directory_buffer(mode, frame, preview_viewport, buffer, preview_x, preview_y);
         }
         PreviewView::Image(buffer) => {
             let rect = Rect {
-                x: layout[2].x,
-                y: layout[2].y,
+                x: preview_x,
+                y: preview_y,
                 width: preview_viewport.width,
                 height: preview_viewport.height,
             };
@@ -95,8 +99,8 @@ pub fn view(view: FileTreeView<'_>, frame: &mut Frame) {
                 frame,
                 preview_viewport,
                 &DirectoryBuffer::default(),
-                layout[2].x,
-                layout[2].y,
+                preview_x,
+                preview_y,
             );
         }
     }

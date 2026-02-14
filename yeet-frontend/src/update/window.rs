@@ -37,12 +37,18 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
 
     parent_vp.height = parent_rect.height;
     parent_vp.width = parent_rect.width;
+    parent_vp.x = parent_rect.x;
+    parent_vp.y = parent_rect.y;
 
     current_vp.height = current_rect.height;
     current_vp.width = current_rect.width;
+    current_vp.x = current_rect.x;
+    current_vp.y = current_rect.y;
 
     preview_vp.height = preview_rect.height;
     preview_vp.width = preview_rect.width;
+    preview_vp.x = preview_rect.x;
+    preview_vp.y = preview_rect.y;
 
     Ok(())
 }
