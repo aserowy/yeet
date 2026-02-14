@@ -70,11 +70,11 @@ pub fn view(
         parent_y,
     );
 
-    buffer_view(
-        current_viewport,
+    render_directory_buffer(
         mode,
-        &current_buffer.buffer,
         frame,
+        current_viewport,
+        current_buffer,
         current_x,
         current_y,
     );
@@ -93,16 +93,7 @@ pub fn view(
 
             frame.render_widget(Image::new(&buffer.protocol), rect);
         }
-        PreviewView::None => {
-            render_directory_buffer(
-                mode,
-                frame,
-                preview_viewport,
-                &DirectoryBuffer::default(),
-                preview_x,
-                preview_y,
-            );
-        }
+        PreviewView::None => {}
     }
 }
 
