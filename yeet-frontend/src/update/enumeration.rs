@@ -1,4 +1,4 @@
-use std::{mem, path::PathBuf};
+use std::path::PathBuf;
 
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
@@ -8,7 +8,10 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{Buffer, DirectoryBufferState, FileTreeBuffer, FileTreeBufferSection, State},
+    model::{
+        Buffer, DirectoryBufferState, FileTreeBuffer, FileTreeBufferSection,
+        FileTreeBufferSectionBuffer, State,
+    },
     update::{
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
         history::get_selection_from_history,
@@ -44,6 +47,12 @@ fn change_filetree(
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
 ) {
+    if let FileTreeBufferSectionBuffer::Text(parent_path, _) = &mut buffer.parent {
+        if parent_path != path && buffer.parent_cursor.is_none() {
+            buffer.parent_cursor = Some(Default::default());
+        }
+    }
+
     let directories = buffer.get_mut_directories();
     if let Some((path, mut cursor, buffer)) = directories.into_iter().find(|(p, _, _)| p == path) {
         tracing::trace!("enumeration changed for buffer: {:?}", path);
