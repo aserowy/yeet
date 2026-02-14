@@ -344,13 +344,13 @@ pub fn reset_directory_buffer(
     let messages = [set_content, reset_cursor];
     yeet_buffer::update(None, mode, &mut text_buffer, &messages);
 
-    text_buffer.cursor.hide_cursor_line = true;
+    // cursor line hiding is now viewport-specific
 
     if path.is_dir() {
         cursor::set_cursor_index_with_history(history, None, mode, &mut text_buffer, path);
     }
 
-    text_buffer.cursor.hide_cursor_line = true;
+    // cursor line hiding is now viewport-specific
     buffer.buffer = text_buffer;
     buffer.path = path.to_path_buf();
 }

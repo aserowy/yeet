@@ -71,8 +71,6 @@ impl std::fmt::Debug for TextBuffer {
 
 #[derive(Clone, Debug, Default)]
 pub struct Cursor {
-    pub hide_cursor: bool,
-    pub hide_cursor_line: bool,
     pub horizontal_index: CursorPosition,
     pub vertical_index: usize,
 }

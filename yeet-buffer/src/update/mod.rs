@@ -31,7 +31,7 @@ pub fn update(
 }
 
 fn update_buffer(
-    viewport: Option<&mut ViewPort>,
+    mut viewport: Option<&mut ViewPort>,
     mode: &Mode,
     buffer: &mut TextBuffer,
     message: &BufferMessage,
@@ -140,7 +140,9 @@ fn update_buffer(
 
             if let Some((index, _)) = line {
                 buffer.cursor.vertical_index = index;
-                buffer.cursor.hide_cursor_line = false;
+                if let Some(viewport) = viewport.as_mut() {
+                    viewport.hide_cursor_line = false;
+                }
 
                 cursor::set_to_inbound_position(buffer, mode);
                 if let Some(viewport) = viewport {

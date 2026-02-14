@@ -29,14 +29,12 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
-            app.commandline.buffer.cursor.hide_cursor = true;
+            app.commandline.viewport.hide_cursor = true;
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (_, buffer) = app::get_focused_mut(app);
-            if let Buffer::Directory(it) = buffer {
-                it.buffer.cursor.hide_cursor = true;
-            }
+            let (vp, _buffer) = app::get_focused_mut(app);
+            vp.hide_cursor = true;
 
             vec![]
         }
@@ -47,7 +45,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
-            app.commandline.buffer.cursor.hide_cursor = false;
+            app.commandline.viewport.hide_cursor = false;
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
@@ -57,7 +55,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            buffer.buffer.cursor.hide_cursor = false;
+            vp.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
@@ -77,7 +75,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
 
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            buffer.buffer.cursor.hide_cursor = false;
+            vp.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
@@ -95,7 +93,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            buffer.buffer.cursor.hide_cursor = false;
+            vp.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),

@@ -10,6 +10,8 @@ pub struct WindowSettings {
 #[derive(Clone, Debug, Default)]
 pub struct ViewPort {
     pub buffer_id: usize,
+    pub hide_cursor: bool,
+    pub hide_cursor_line: bool,
     pub height: u16,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
     pub horizontal_index: usize,

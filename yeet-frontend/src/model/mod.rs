@@ -125,15 +125,17 @@ impl Default for CommandLine {
         Self {
             buffer: TextBuffer {
                 cursor: yeet_buffer::model::Cursor {
-                    hide_cursor: true,
-                    hide_cursor_line: true,
                     vertical_index: 0,
                     ..Default::default()
                 },
                 ..Default::default()
             },
             key_sequence: "".to_owned(),
-            viewport: Default::default(),
+            viewport: yeet_buffer::model::viewport::ViewPort {
+                hide_cursor: true,
+                hide_cursor_line: true,
+                ..Default::default()
+            },
         }
     }
 }

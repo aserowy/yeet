@@ -56,7 +56,7 @@ fn add_cursor_styles(
         };
 
         let repeat_count = content_width.saturating_sub(line_length);
-        if cursor.hide_cursor_line {
+        if vp.hide_cursor_line {
             content.append(" ".repeat(repeat_count).as_str());
         } else {
             content.prepend("\x1b[100m");
@@ -64,7 +64,7 @@ fn add_cursor_styles(
             content.append("\x1b[0m");
         };
 
-        if cursor.hide_cursor {
+        if vp.hide_cursor {
             return content;
         }
 
