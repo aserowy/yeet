@@ -241,6 +241,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
         if let Some(preview_cursor) = &mut buffer.preview_cursor {
             mem_swap_cursor(cursor, preview_cursor);
         } else {
+            cursor.vertical_index = 0;
             cursor.horizontal_index = CursorPosition::Absolute {
                 current: 0,
                 expanded: 0,
