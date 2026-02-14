@@ -39,7 +39,10 @@ impl Default for App {
             buffers,
             commandline: Default::default(),
             latest_buffer_id: 1,
-            window: Window::Content(Default::default(), 1),
+            window: Window::Content(ViewPort {
+                buffer_id: 1,
+                ..Default::default()
+            }),
         }
     }
 }
@@ -47,14 +50,14 @@ impl Default for App {
 #[allow(dead_code)]
 pub enum Window {
     Horizontal(Box<Window>, Box<Window>),
-    Content(ViewPort, usize),
+    Content(ViewPort),
 }
 
 impl Window {
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
             Window::Horizontal(_, _) => todo!(),
-            Window::Content(vp, _) => Ok(vp.height),
+            Window::Content(vp) => Ok(vp.height),
         }
     }
 }

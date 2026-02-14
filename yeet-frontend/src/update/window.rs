@@ -21,9 +21,9 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
 }
 
 fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
-    let (vp, _) = match window {
+    let vp = match window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, id) => (vp, id),
+        Window::Content(vp) => vp,
     };
 
     vp.height = area.height;

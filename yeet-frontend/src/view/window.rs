@@ -11,12 +11,12 @@ pub fn view(model: &Model, frame: &mut Frame) -> Result<u16, AppError> {
     // NOTE: extract current shown windows with vp/cursor and buffer id
     let single_window = &model.app.window;
 
-    let (vp, id) = match &single_window {
+    let vp = match &single_window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp, id) => (vp, id),
+        Window::Content(vp) => vp,
     };
 
-    let buffer = model.app.buffers.get(id).expect("buffer");
+    let buffer = model.app.buffers.get(&vp.buffer_id).expect("buffer");
     match buffer {
         Buffer::FileTree(it) => {
             filetreebuffer::view(&model.state.modes.current, vp, it, frame, 0, 0)
