@@ -12,6 +12,14 @@ pub fn get_current_selected_path(
     buffer: &FileTreeBuffer,
     cursor: Option<&yeet_buffer::model::Cursor>,
 ) -> Option<PathBuf> {
+    get_current_selected_path_with_exists(buffer, cursor, |path| path.exists())
+}
+
+pub fn get_current_selected_path_with_exists(
+    buffer: &FileTreeBuffer,
+    cursor: Option<&yeet_buffer::model::Cursor>,
+    exists: impl Fn(&std::path::Path) -> bool,
+) -> Option<PathBuf> {
     let current_buffer = &buffer.current.buffer;
     if current_buffer.lines.is_empty() {
         return None;
@@ -28,7 +36,7 @@ pub fn get_current_selected_path(
         .path
         .join(current.content.to_stripped_string());
 
-    if target.exists() {
+    if exists(&target) {
         Some(target)
     } else {
         None
