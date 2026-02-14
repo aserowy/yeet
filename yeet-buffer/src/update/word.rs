@@ -1,10 +1,11 @@
 use std::mem;
 
-use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
+use crate::model::{BufferLine, Cursor, CursorPosition, TextBuffer};
 
 use super::cursor;
 
-pub fn move_cursor_to_word_start_forward(cursor: &mut Cursor, buffer: &mut Buffer, is_upper: bool) {
+pub fn move_cursor_to_word_start_forward(buffer: &mut TextBuffer, is_upper: bool) {
+    let cursor = &mut buffer.cursor;
     let current = match buffer.lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return,
@@ -54,7 +55,8 @@ pub fn move_cursor_to_word_start_forward(cursor: &mut Cursor, buffer: &mut Buffe
     }
 }
 
-pub fn move_cursor_to_word_end_backward(cursor: &mut Cursor, buffer: &mut Buffer, is_upper: bool) {
+pub fn move_cursor_to_word_end_backward(buffer: &mut TextBuffer, is_upper: bool) {
+    let cursor = &mut buffer.cursor;
     let current = match buffer.lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return,
@@ -107,7 +109,8 @@ pub fn move_cursor_to_word_end_backward(cursor: &mut Cursor, buffer: &mut Buffer
     }
 }
 
-pub fn move_cursor_to_word_end_forward(cursor: &mut Cursor, buffer: &mut Buffer, is_upper: bool) {
+pub fn move_cursor_to_word_end_forward(buffer: &mut TextBuffer, is_upper: bool) {
+    let cursor = &mut buffer.cursor;
     let current = match buffer.lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return,
@@ -165,11 +168,8 @@ pub fn move_cursor_to_word_end_forward(cursor: &mut Cursor, buffer: &mut Buffer,
     }
 }
 
-pub fn move_cursor_to_word_start_backward(
-    cursor: &mut Cursor,
-    buffer: &mut Buffer,
-    is_upper: bool,
-) {
+pub fn move_cursor_to_word_start_backward(buffer: &mut TextBuffer, is_upper: bool) {
+    let cursor = &mut buffer.cursor;
     let current = match buffer.lines.get(cursor.vertical_index) {
         Some(line) => line,
         None => return,
@@ -365,489 +365,513 @@ fn get_cursor_on_word_previous_line(cursor: &Cursor, lines: &[BufferLine]) -> Re
 
 #[cfg(test)]
 mod test {
-    use crate::model::{Buffer, BufferLine, Cursor, CursorPosition};
+    use crate::model::{BufferLine, CursorPosition, TextBuffer};
 
     #[test]
     fn move_cursor_to_word_end_backward_starting_on_line_start() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello worldz"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello worldz"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 1;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 1;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 0,
             expanded: 0,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
 
-        super::move_cursor_to_word_end_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello world_");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello world_");
     }
 
     #[test]
     fn move_cursor_to_word_end_backward_starting_on_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello worldz"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello worldz"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 6,
             expanded: 6,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orldz");
 
-        super::move_cursor_to_word_end_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ worldz");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell_ worldz");
     }
 
     #[test]
     fn move_cursor_to_word_start_starting_on_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 0,
             expanded: 0,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
 
-        super::move_cursor_to_word_start_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orld");
     }
 
     #[test]
     fn move_cursor_to_word_start_starting_on_word_middle() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "h_llo world");
 
-        super::move_cursor_to_word_start_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orld");
     }
 
     #[test]
     fn move_cursor_to_word_start_starting_on_last_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 7,
             expanded: 7,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello w_rld");
 
-        super::move_cursor_to_word_start_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 1);
+        assert_eq!(buffer.cursor.vertical_index, 1);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
     }
 
     #[test]
     fn move_cursor_to_word_start_starting_on_last_word_with_whitespace() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world  "),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world  "),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 7,
             expanded: 7,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld  ");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello w_rld  ");
 
-        super::move_cursor_to_word_start_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 1);
+        assert_eq!(buffer.cursor.vertical_index, 1);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
     }
 
     #[test]
     fn move_cursor_to_word_start_changing_alphanumeric() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello!@#$!@#$"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello!@#$!@#$"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo!@#$!@#$");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "h_llo!@#$!@#$");
 
-        super::move_cursor_to_word_start_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello_@#$!@#$");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello_@#$!@#$");
     }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "h_llo world");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell_ world");
     }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_whitespace() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("    hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("    hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, " _  hello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, " _  hello world");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "    hell_ world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "    hell_ world");
     }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_wordend() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world "),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world "),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 4,
             expanded: 4,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world ");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell_ world ");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_ ");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello worl_ ");
     }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_wordend_at_lineend() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 10,
             expanded: 10,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello worl_");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 1);
+        assert_eq!(buffer.cursor.vertical_index, 1);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell_ world");
     }
 
     #[test]
     fn move_cursor_to_word_end_starting_on_wordend_at_lineend_with_whitespaces() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world   "),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world   "),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 10,
             expanded: 10,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello worl_   ");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello worl_   ");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 1);
+        assert_eq!(buffer.cursor.vertical_index, 1);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell_ world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell_ world");
     }
 
     #[test]
     fn move_cursor_to_word_end_jump_to_wordend_on_lineend() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("!@#- world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("!@#- world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 3,
             expanded: 3,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "!@#_ world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "!@#_ world");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "!@#- worl_");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "!@#- worl_");
     }
 
     #[test]
     fn move_cursor_to_word_end_two_words_without_whitespace() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hell#-world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hell#-world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 5,
             expanded: 5,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell#_world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell#_world");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_end_forward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell#-worl_");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell#-worl_");
     }
 
     #[test]
     fn move_cursor_to_word_end_within_upper_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hell#-world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hell#-world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 0,
             expanded: 0,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ell#-world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ell#-world");
 
-        super::move_cursor_to_word_end_forward(&mut cursor, &mut buffer, true);
+        super::move_cursor_to_word_end_forward(&mut buffer, true);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hell#-worl_");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hell#-worl_");
     }
 
     #[test]
     fn move_cursor_to_word_start_backward_starting_on_line_start() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello worldz"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello worldz"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 1;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 1;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 0,
             expanded: 0,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
 
-        super::move_cursor_to_word_start_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orldz");
     }
 
     #[test]
     fn move_cursor_to_word_start_backward_starting_on_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello worldz"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello worldz"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 6,
             expanded: 6,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orldz");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orldz");
 
-        super::move_cursor_to_word_start_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello worldz");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello worldz");
     }
 
     #[test]
     fn move_cursor_to_word_start_backward_starting_on_whitespace() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("    hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("    hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 1;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 1;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, " _  hello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, " _  hello world");
 
-        super::move_cursor_to_word_start_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orld");
     }
 
     #[test]
     fn move_cursor_to_word_start_backward_starting_on_word_middle() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 1,
             expanded: 1,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "h_llo world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "h_llo world");
 
-        super::move_cursor_to_word_start_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "_ello world");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "_ello world");
     }
 
     #[test]
     fn move_cursor_to_word_start_backward_starting_on_last_word() {
-        let mut buffer = Buffer::default();
-        buffer.lines = vec![
-            BufferLine::from("hello world"),
-            BufferLine::from("hello world"),
-        ];
+        let mut buffer = TextBuffer {
+            lines: vec![
+                BufferLine::from("hello world"),
+                BufferLine::from("hello world"),
+            ],
+            ..Default::default()
+        };
 
-        let mut cursor = Cursor::default();
-        cursor.vertical_index = 0;
-        cursor.horizontal_index = CursorPosition::Absolute {
+        buffer.cursor.vertical_index = 0;
+        buffer.cursor.horizontal_index = CursorPosition::Absolute {
             current: 7,
             expanded: 7,
         };
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello w_rld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello w_rld");
 
-        super::move_cursor_to_word_start_backward(&mut cursor, &mut buffer, false);
+        super::move_cursor_to_word_start_backward(&mut buffer, false);
 
-        assert_eq!(cursor.vertical_index, 0);
+        assert_eq!(buffer.cursor.vertical_index, 0);
 
-        assert_cursor_position_eq(&buffer.lines, &cursor, "hello _orld");
+        assert_cursor_position_eq(&buffer.lines, &buffer.cursor, "hello _orld");
     }
 
-    fn assert_cursor_position_eq(lines: &Vec<BufferLine>, cursor: &Cursor, expected: &str) {
+    fn assert_cursor_position_eq(
+        lines: &[BufferLine],
+        cursor: &crate::model::Cursor,
+        expected: &str,
+    ) {
         if let CursorPosition::Absolute {
             current: current_index,
             expanded: _,

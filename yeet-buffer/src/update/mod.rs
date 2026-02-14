@@ -1,20 +1,39 @@
 use crate::{
     message::{BufferMessage, CursorDirection},
-    model::{viewport::ViewPort, Buffer, BufferResult, Cursor, CursorPosition, Mode},
-    update::cursor::{set_outbound_cursor_to_inbound_position, update_cursor_by_direction},
+    model::{viewport::ViewPort, BufferResult, CursorPosition, Mode, TextBuffer},
 };
 
 mod cursor;
 mod find;
 mod modification;
-mod viewport;
+pub mod viewport;
 mod word;
 
-pub fn update_buffer(
-    viewport: &mut ViewPort,
-    cursor: &mut Option<Cursor>,
+pub fn update(
+    viewport: Option<&mut ViewPort>,
     mode: &Mode,
-    buffer: &mut Buffer,
+    buffer: &mut TextBuffer,
+    messages: &[BufferMessage],
+) -> Vec<BufferResult> {
+    let mut actions = Vec::new();
+
+    let mut viewport = viewport;
+    for message in messages.iter() {
+        actions.extend(update_buffer(
+            viewport.as_deref_mut(),
+            mode,
+            buffer,
+            message,
+        ));
+    }
+
+    actions
+}
+
+fn update_buffer(
+    mut viewport: Option<&mut ViewPort>,
+    mode: &Mode,
+    buffer: &mut TextBuffer,
     message: &BufferMessage,
 ) -> Vec<BufferResult> {
     tracing::debug!("handling buffer message: {:?}", message);
@@ -26,60 +45,73 @@ pub fn update_buffer(
             if from == &Mode::Insert && to != &Mode::Insert {
                 buffer.undo.close_transaction();
 
-                if let Some(cursor) = cursor {
-                    update_cursor_by_direction(cursor, mode, buffer, &1, &CursorDirection::Left);
+                cursor::update_by_direction(mode, buffer, &1, &CursorDirection::Left);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, buffer);
                 }
             }
             Vec::new()
         }
         BufferMessage::Modification(count, modification) => {
-            if let Some(cursor) = cursor {
-                let changes = modification::update(cursor, mode, buffer, count, modification);
-                if let Some(changes) = changes {
-                    buffer.undo.add(mode, changes);
-                }
+            let changes = modification::update(mode, buffer, count, modification);
+            if let Some(viewport) = viewport {
+                viewport::update_by_cursor(viewport, buffer);
+            }
+
+            if let Some(changes) = changes {
+                buffer.undo.add(mode, changes);
             }
             Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            if let Some(cursor) = cursor {
-                update_cursor_by_direction(cursor, mode, buffer, count, direction)
-            } else {
-                Vec::new()
+            let result = cursor::update_by_direction(mode, buffer, count, direction);
+            if let Some(viewport) = viewport {
+                viewport::update_by_cursor(viewport, buffer);
             }
+
+            result
             // TODO: history::add_history_entry(&mut model.history, selected.as_path());
         }
         BufferMessage::MoveViewPort(direction) => {
-            viewport::update_by_direction(viewport, cursor, buffer, direction);
+            let viewport = match viewport {
+                Some(it) => it,
+                None => return Vec::new(),
+            };
+
+            viewport::update_by_direction(viewport, buffer, direction);
+            viewport::update_by_cursor(viewport, buffer);
+
             Vec::new()
         }
         BufferMessage::RemoveLine(index) => {
             buffer.lines.remove(*index);
 
-            if let Some(cursor) = cursor {
-                set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
+            cursor::set_to_inbound_position(buffer, mode);
+            if let Some(viewport) = viewport {
+                viewport::update_by_cursor(viewport, buffer);
             }
 
             Vec::new()
         }
         BufferMessage::ResetCursor => {
-            viewport.horizontal_index = 0;
-            viewport.vertical_index = 0;
+            buffer.cursor.vertical_index = 0;
 
-            if let Some(cursor) = cursor {
-                cursor.vertical_index = 0;
+            buffer.cursor.horizontal_index = match &buffer.cursor.horizontal_index {
+                CursorPosition::Absolute {
+                    current: _,
+                    expanded: _,
+                } => CursorPosition::Absolute {
+                    current: 0,
+                    expanded: 0,
+                },
+                CursorPosition::End => CursorPosition::End,
+                CursorPosition::None => CursorPosition::None,
+            };
+            if let Some(viewport) = viewport {
+                viewport.horizontal_index = 0;
+                viewport.vertical_index = 0;
 
-                cursor.horizontal_index = match &cursor.horizontal_index {
-                    CursorPosition::Absolute {
-                        current: _,
-                        expanded: _,
-                    } => CursorPosition::Absolute {
-                        current: 0,
-                        expanded: 0,
-                    },
-                    CursorPosition::End => CursorPosition::End,
-                    CursorPosition::None => CursorPosition::None,
-                }
+                viewport::update_by_cursor(viewport, buffer);
             }
 
             Vec::new()
@@ -92,18 +124,14 @@ pub fn update_buffer(
             // TODO: optional selection?
             buffer.lines = content.to_vec();
 
-            if let Some(cursor) = cursor {
-                set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
+            cursor::set_to_inbound_position(buffer, mode);
+            if let Some(viewport) = viewport {
+                viewport::update_by_cursor(viewport, buffer);
             }
 
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
-            let cursor = match cursor {
-                Some(it) => it,
-                None => return Vec::new(),
-            };
-
             let line = buffer
                 .lines
                 .iter()
@@ -111,11 +139,15 @@ pub fn update_buffer(
                 .find(|(_, line)| &line.content.to_stripped_string() == content);
 
             if let Some((index, _)) = line {
-                cursor.vertical_index = index;
-                cursor.hide_cursor_line = false;
+                buffer.cursor.vertical_index = index;
+                if let Some(viewport) = viewport.as_mut() {
+                    viewport.hide_cursor_line = false;
+                }
 
-                set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
-                viewport::update_by_cursor(viewport, cursor, buffer);
+                cursor::set_to_inbound_position(buffer, mode);
+                if let Some(viewport) = viewport {
+                    viewport::update_by_cursor(viewport, buffer);
+                }
 
                 vec![BufferResult::CursorPositionChanged]
             } else {
@@ -125,29 +157,14 @@ pub fn update_buffer(
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             buffer.lines.sort_unstable_by(sort);
-            if let Some(cursor) = cursor {
-                set_outbound_cursor_to_inbound_position(cursor, mode, buffer);
+            cursor::set_to_inbound_position(buffer, mode);
+            if let Some(viewport) = viewport {
+                viewport::update_by_cursor(viewport, buffer);
             }
             Vec::new()
         }
         BufferMessage::UpdateViewPortByCursor => Vec::new(),
     };
 
-    if let Some(cursor) = cursor {
-        viewport::update_by_cursor(viewport, cursor, buffer);
-    }
-
     result
-}
-
-pub fn focus_buffer(cursor: &mut Option<Cursor>) {
-    if let Some(cursor) = cursor {
-        cursor.hide_cursor = false;
-    }
-}
-
-pub fn unfocus_buffer(cursor: &mut Option<Cursor>) {
-    if let Some(cursor) = cursor {
-        cursor.hide_cursor = true;
-    }
 }

@@ -3,7 +3,7 @@ use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, CursorPos
 pub fn add_line_styles(
     vp: &ViewPort,
     mode: &Mode,
-    cursor: &Option<Cursor>,
+    cursor: Option<&Cursor>,
     index: &usize,
     line: &mut BufferLine,
 ) -> Ansi {
@@ -35,7 +35,7 @@ fn add_search_styles(line: &BufferLine, ansi: &Ansi) -> Ansi {
 fn add_cursor_styles(
     vp: &ViewPort,
     mode: &Mode,
-    cursor: &Option<Cursor>,
+    cursor: Option<&Cursor>,
     index: &usize,
     content_width: usize,
     ansi: &Ansi,
@@ -56,7 +56,7 @@ fn add_cursor_styles(
         };
 
         let repeat_count = content_width.saturating_sub(line_length);
-        if cursor.hide_cursor_line {
+        if vp.hide_cursor_line {
             content.append(" ".repeat(repeat_count).as_str());
         } else {
             content.prepend("\x1b[100m");
@@ -64,7 +64,7 @@ fn add_cursor_styles(
             content.append("\x1b[0m");
         };
 
-        if cursor.hide_cursor {
+        if vp.hide_cursor {
             return content;
         }
 

@@ -1,31 +1,42 @@
-use ratatui::layout::Rect;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::viewport::ViewPort,
+    model::Mode,
 };
 
 use crate::{
     action::Action,
-    model::{Model, WindowType},
+    model::{history::History, App, Buffer, DirectoryPane},
+    update::app,
 };
 
 use super::{history, selection};
 
-pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Action> {
+pub fn relocate(
+    app: &mut App,
+    history: &History,
+    mode: &Mode,
+    direction: &ViewPortDirection,
+) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
-    super::update_current(model, &msg);
+
+    let (vp, buffer) = match app::get_focused_mut(app) {
+        (vp, Buffer::Directory(it)) => (vp, it),
+        (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
+        (_vp, Buffer::_Text(_)) => return Vec::new(),
+    };
+
+    yeet_buffer::update(
+        Some(vp),
+        mode,
+        &mut buffer.buffer,
+        std::slice::from_ref(&msg),
+    );
 
     let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection =
-            history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
+    if let Some(path) = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor)) {
+        let selection = history::get_selection_from_history(history, &path).map(|s| s.to_owned());
+        actions.push(Action::Load(DirectoryPane::Preview, path, selection));
     }
 
     actions
-}
-
-pub fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
-    vp.height = usize::from(rect.height);
-    vp.width = usize::from(rect.width);
 }
