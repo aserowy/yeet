@@ -17,26 +17,26 @@ use super::{app, junkyard::trash_to_junkyard};
 #[tracing::instrument(skip(app))]
 pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let (vp, buffer) = match app::get_focused_mut(app) {
-        (vp, Buffer::FileTree(it)) => (vp, it),
+        (vp, Buffer::Directory(it)) => (vp, it),
+        (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
         (_vp, Buffer::_Text(_)) => todo!(),
     };
 
-    let selected_index = buffer.current.buffer.cursor.vertical_index;
+    let selected_index = buffer.buffer.cursor.vertical_index;
     let selection = buffer
-        .current
         .buffer
         .lines
         .get(selected_index)
         .map(|line| line.content.clone());
 
-    let mut content: Vec<_> = buffer.current.buffer.lines.drain(..).collect();
+    let mut content: Vec<_> = buffer.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
     let message = BufferMessage::SetContent(content);
     yeet_buffer::update(
         Some(vp),
         mode,
-        &mut buffer.current.buffer,
+        &mut buffer.buffer,
         std::slice::from_ref(&message),
     );
 
@@ -45,7 +45,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         yeet_buffer::update(
             Some(vp),
             mode,
-            &mut buffer.current.buffer,
+            &mut buffer.buffer,
             std::slice::from_ref(&message),
         );
     }
@@ -54,14 +54,14 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let result = yeet_buffer::update(
         Some(vp),
         mode,
-        &mut buffer.current.buffer,
+        &mut buffer.buffer,
         std::slice::from_ref(&message),
     );
 
     let mut actions = Vec::new();
     for br in result {
         if let BufferResult::Changes(modifications) = br {
-            let path = &buffer.current.path;
+            let path = &buffer.path;
             let mut trashes = Vec::new();
             for modification in consolidate_modifications(&modifications) {
                 match modification {

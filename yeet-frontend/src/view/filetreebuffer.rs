@@ -8,107 +8,117 @@ use yeet_buffer::{
     view as buffer_view,
 };
 
-use crate::model::{FileTreeBuffer, FileTreeBufferSectionBuffer};
+use crate::model::{DirectoryBuffer, PreviewImageBuffer};
 
-pub fn view(
-    mode: &Mode,
-    viewport: &ViewPort,
-    buffer: &FileTreeBuffer,
-    frame: &mut Frame,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-) {
+pub enum PreviewView<'a> {
+    Directory(&'a DirectoryBuffer),
+    Image(&'a PreviewImageBuffer),
+    None,
+}
+
+pub struct FileTreeView<'a> {
+    pub mode: &'a Mode,
+    pub parent_viewport: &'a ViewPort,
+    pub current_viewport: &'a ViewPort,
+    pub preview_viewport: &'a ViewPort,
+    pub parent_buffer: &'a DirectoryBuffer,
+    pub current_buffer: &'a DirectoryBuffer,
+    pub preview_buffer: PreviewView<'a>,
+    pub horizontal_offset: u16,
+    pub vertical_offset: u16,
+}
+
+pub fn view(view: FileTreeView<'_>, frame: &mut Frame) {
+    let FileTreeView {
+        mode,
+        parent_viewport,
+        current_viewport,
+        preview_viewport,
+        parent_buffer,
+        current_buffer,
+        preview_buffer,
+        horizontal_offset,
+        vertical_offset,
+    } = view;
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
         .split(Rect {
             x: horizontal_offset,
             y: vertical_offset,
-            width: viewport.width,
-            height: viewport.height,
+            width: current_viewport.width,
+            height: current_viewport.height,
         });
 
-    render_buffer(
+    render_directory_buffer(
         mode,
         frame,
-        &buffer.parent,
+        parent_viewport,
+        parent_buffer,
         layout[0].x,
-        layout[0].width,
         layout[0].y,
-        layout[0].height,
     );
 
-    let mut viewport = viewport.clone();
-    viewport.height = layout[1].height;
-    viewport.width = layout[1].width;
-
     buffer_view(
-        &viewport,
+        current_viewport,
         mode,
-        &buffer.current.buffer,
+        &current_buffer.buffer,
         frame,
         layout[1].x,
         layout[1].y,
     );
 
-    render_buffer(
-        mode,
-        frame,
-        &buffer.preview,
-        layout[2].x,
-        layout[2].width,
-        layout[2].y,
-        layout[2].height,
-    );
-}
-
-fn render_buffer(
-    mode: &Mode,
-    frame: &mut Frame,
-    buffer_type: &FileTreeBufferSectionBuffer,
-    horizontal_offset: u16,
-    width: u16,
-    vertical_offset: u16,
-    height: u16,
-) {
-    let mut viewport = ViewPort {
-        height,
-        width,
-        ..Default::default()
-    };
-
-    match buffer_type {
-        FileTreeBufferSectionBuffer::Text(_, buffer) => {
-            yeet_buffer::update_viewport_by_cursor(&mut viewport, buffer);
-
-            buffer_view(
-                &viewport,
+    match preview_buffer {
+        PreviewView::Directory(buffer) => {
+            render_directory_buffer(
                 mode,
-                buffer,
                 frame,
-                horizontal_offset,
-                vertical_offset,
+                preview_viewport,
+                buffer,
+                layout[2].x,
+                layout[2].y,
             );
         }
-        FileTreeBufferSectionBuffer::Image(_, protocol) => {
+        PreviewView::Image(buffer) => {
             let rect = Rect {
-                x: horizontal_offset,
-                y: vertical_offset,
-                width: viewport.width,
-                height: viewport.height,
+                x: layout[2].x,
+                y: layout[2].y,
+                width: preview_viewport.width,
+                height: preview_viewport.height,
             };
 
-            frame.render_widget(Image::new(protocol), rect);
+            frame.render_widget(Image::new(&buffer.protocol), rect);
         }
-        FileTreeBufferSectionBuffer::None => {
-            buffer_view(
-                &viewport,
+        PreviewView::None => {
+            render_directory_buffer(
                 mode,
-                &Default::default(),
                 frame,
-                horizontal_offset,
-                vertical_offset,
+                preview_viewport,
+                &DirectoryBuffer::default(),
+                layout[2].x,
+                layout[2].y,
             );
         }
-    };
+    }
+}
+
+fn render_directory_buffer(
+    mode: &Mode,
+    frame: &mut Frame,
+    viewport: &ViewPort,
+    buffer: &DirectoryBuffer,
+    horizontal_offset: u16,
+    vertical_offset: u16,
+) {
+    let mut viewport = viewport.clone();
+    yeet_buffer::update_viewport_by_cursor(&mut viewport, &buffer.buffer);
+
+    buffer_view(
+        &viewport,
+        mode,
+        &buffer.buffer,
+        frame,
+        horizontal_offset,
+        vertical_offset,
+    );
 }

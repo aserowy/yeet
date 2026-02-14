@@ -7,20 +7,21 @@ use ratatui::{
 };
 use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::{Buffer, FileTreeBuffer};
+use crate::model::{Buffer, DirectoryBuffer};
 
 pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
     match current {
-        Buffer::FileTree(it) => filetree_status(it, frame, rect),
+        Buffer::Directory(it) => filetree_status(it, frame, rect),
+        Buffer::PreviewImage(_) => filetree_status(&DirectoryBuffer::default(), frame, rect),
         Buffer::_Text(_) => todo!(),
     }
 }
 
-fn filetree_status(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
+fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
     let changes = get_changes_content(buffer);
     let position = get_position_content(buffer);
 
-    let content = buffer.current.path.to_str().unwrap_or("");
+    let content = buffer.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
     let span = Span::styled(content, style);
     let path = Line::from(span);
@@ -44,9 +45,9 @@ fn filetree_status(buffer: &FileTreeBuffer, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(position), layout[3]);
 }
 
-fn get_position_content<'a>(buffer: &'a FileTreeBuffer) -> Line<'a> {
-    let count = buffer.current.buffer.lines.len();
-    let mut position = buffer.current.buffer.cursor.vertical_index + 1;
+fn get_position_content<'a>(buffer: &'a DirectoryBuffer) -> Line<'a> {
+    let count = buffer.buffer.lines.len();
+    let mut position = buffer.buffer.cursor.vertical_index + 1;
 
     let mut content = Vec::new();
     if count == 0 {
@@ -66,8 +67,8 @@ fn get_position_content<'a>(buffer: &'a FileTreeBuffer) -> Line<'a> {
     Line::from(content)
 }
 
-fn get_changes_content(buffer: &FileTreeBuffer) -> Line<'_> {
-    let modifications = buffer.current.buffer.undo.get_uncommited_changes();
+fn get_changes_content(buffer: &DirectoryBuffer) -> Line<'_> {
+    let modifications = buffer.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

@@ -2,24 +2,25 @@ use std::{mem, path::Path};
 
 use yeet_buffer::{
     message::ViewPortDirection,
-    model::{Cursor, CursorPosition, TextBuffer},
+    model::{Cursor, TextBuffer},
 };
 
 use crate::{
     action::Action,
-    model::{
-        history::History, mark::Marks, App, Buffer, FileTreeBuffer, FileTreeBufferSection,
-        FileTreeBufferSectionBuffer,
-    },
+    model::{history::History, mark::Marks, App, Buffer, DirectoryPane},
+    update::app,
 };
 
-use super::{app, history, selection};
+use super::{history, selection};
+
+use std::path::PathBuf;
 
 #[tracing::instrument(skip(app))]
 pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
-        (_, Buffer::FileTree(it)) => it,
-        (_, Buffer::_Text(_)) => todo!(),
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let _buffer = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
     };
 
     let path = match marks.entries.get(char) {
@@ -36,14 +37,15 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
         None => &path,
     };
 
-    navigate_to_path_with_selection(history, buffer, path, &selection)
+    navigate_to_path_with_selection(history, app, path, &selection)
 }
 
 #[tracing::instrument(skip(app, history))]
 pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
-        (_, Buffer::FileTree(it)) => it,
-        (_, Buffer::_Text(_)) => todo!(),
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let _buffer = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
     };
 
     let (path, selection) = if path.is_file() {
@@ -67,13 +69,14 @@ pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
         (path, None)
     };
 
-    navigate_to_path_with_selection(history, buffer, path, &selection)
+    navigate_to_path_with_selection(history, app, path, &selection)
 }
 
 pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
-        (_, Buffer::FileTree(it)) => it,
-        (_, Buffer::_Text(_)) => todo!(),
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let _buffer = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
     };
 
     let selection = path
@@ -85,13 +88,13 @@ pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Act
         None => path,
     };
 
-    navigate_to_path_with_selection(history, buffer, path, &selection)
+    navigate_to_path_with_selection(history, app, path, &selection)
 }
 
-#[tracing::instrument(skip(buffer, history))]
+#[tracing::instrument(skip(app, history))]
 pub fn navigate_to_path_with_selection(
     history: &History,
-    buffer: &mut FileTreeBuffer,
+    app: &mut App,
     path: &Path,
     selection: &Option<String>,
 ) -> Vec<Action> {
@@ -115,11 +118,15 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    buffer.preview = FileTreeBufferSectionBuffer::None;
+    let (_, _, preview_id) = app::directory_buffer_ids(app);
+    if let Some(Buffer::Directory(buffer)) = app.buffers.get_mut(&preview_id) {
+        buffer.buffer = TextBuffer::default();
+        buffer.path = PathBuf::default();
+    }
 
     let mut actions = Vec::new();
     actions.push(Action::Load(
-        FileTreeBufferSection::Current,
+        DirectoryPane::Current,
         path.to_path_buf(),
         selection.clone(),
     ));
@@ -128,7 +135,7 @@ pub fn navigate_to_path_with_selection(
     if let Some(parent) = parent {
         if parent != path {
             actions.push(Action::Load(
-                FileTreeBufferSection::Parent,
+                DirectoryPane::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
@@ -140,13 +147,14 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
-    let (vp, buffer) = match app::get_focused_mut(app) {
-        (vp, Buffer::FileTree(it)) => (vp, it),
-        (_vp, Buffer::_Text(_)) => todo!(),
+    let (parent_id, current_id, preview_id) = app::directory_buffer_ids(app);
+    let current_path = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it.path.clone(),
+        _ => return Vec::new(),
     };
 
-    if let Some(path) = buffer.current.path.clone().parent() {
-        if buffer.current.path == path {
+    if let Some(path) = current_path.parent() {
+        if current_path == path {
             return Vec::new();
         }
 
@@ -156,37 +164,54 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             tracing::trace!("loading parent: {:?}", parent);
 
             actions.push(Action::Load(
-                FileTreeBufferSection::Parent,
+                DirectoryPane::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
         }
 
-        let parent_buffer =
-            match mem::replace(&mut buffer.parent, FileTreeBufferSectionBuffer::None) {
-                FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
-                FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
-                    TextBuffer::default()
-                }
-            };
+        let parent_buffer = match app.buffers.remove(&parent_id) {
+            Some(Buffer::Directory(it)) => it,
+            _ => return Vec::new(),
+        };
+        let current_buffer = match app.buffers.remove(&current_id) {
+            Some(Buffer::Directory(it)) => it,
+            _ => return Vec::new(),
+        };
+        let preview_buffer = match app.buffers.remove(&preview_id) {
+            Some(Buffer::Directory(it)) => it,
+            _ => return Vec::new(),
+        };
 
-        let current_path = mem::replace(&mut buffer.current.path, path.to_path_buf());
-        let current_buffer = mem::replace(&mut buffer.current.buffer, parent_buffer);
+        let (mut parent_buffer, mut current_buffer, mut preview_buffer) =
+            (parent_buffer, current_buffer, preview_buffer);
 
-        buffer.preview = FileTreeBufferSectionBuffer::Text(current_path, current_buffer);
+        preview_buffer.path = mem::replace(&mut current_buffer.path, path.to_path_buf());
+        preview_buffer.buffer = mem::take(&mut current_buffer.buffer);
+        mem::swap(&mut preview_buffer.buffer, &mut parent_buffer.buffer);
 
-        if let FileTreeBufferSectionBuffer::Text(_, preview_buffer) = &buffer.preview {
-            buffer.preview_cursor = preview_buffer.cursor.clone();
-        }
+        mem_swap_cursor(
+            &mut current_buffer.buffer.cursor,
+            &mut parent_buffer.buffer.cursor,
+        );
 
-        mem_swap_cursor(&mut buffer.current.buffer.cursor, &mut buffer.parent_cursor);
-        mem_swap_cursor(&mut buffer.parent_cursor, &mut buffer.preview_cursor);
+        let mut vp = {
+            let (_, current, _) = app::directory_viewports(app);
+            current.clone()
+        };
 
         yeet_buffer::update_viewport_by_direction(
-            vp,
-            &mut buffer.current.buffer,
+            &mut vp,
+            &mut current_buffer.buffer,
             &ViewPortDirection::CenterOnCursor,
         );
+
+        app.buffers
+            .insert(parent_id, Buffer::Directory(parent_buffer));
+        app.buffers
+            .insert(current_id, Buffer::Directory(current_buffer));
+        app.buffers
+            .insert(preview_id, Buffer::Directory(preview_buffer));
 
         actions
     } else {
@@ -196,81 +221,71 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (vp, buffer) = match app::get_focused_mut(app) {
-        (vp, Buffer::FileTree(it)) => (vp, it),
-        (_vp, Buffer::_Text(_)) => todo!(),
+    let (parent_id, current_id, preview_id) = app::directory_buffer_ids(app);
+    let parent_buffer = match app.buffers.remove(&parent_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
+    };
+    let current_buffer = match app.buffers.remove(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
+    };
+    let preview_buffer = match app.buffers.remove(&preview_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
     };
 
+    let (mut parent_buffer, mut current_buffer, preview_buffer) =
+        (parent_buffer, current_buffer, preview_buffer);
+
     if let Some(selected) =
-        selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor))
+        selection::get_current_selected_path(&current_buffer, Some(&current_buffer.buffer.cursor))
     {
-        if buffer.current.path == selected || !selected.is_dir() {
+        if current_buffer.path == selected || !selected.is_dir() {
             return Vec::new();
         }
 
         history::add_history_entry(history, selected.as_path());
 
+        parent_buffer.path = mem::replace(&mut current_buffer.path, selected.to_path_buf());
+        parent_buffer.buffer = mem::take(&mut current_buffer.buffer);
+        mem::swap(&mut parent_buffer.buffer, &mut current_buffer.buffer);
+
         let mut actions = Vec::new();
-        let preview_buffer =
-            match mem::replace(&mut buffer.preview, FileTreeBufferSectionBuffer::None) {
-                FileTreeBufferSectionBuffer::Text(_, buffer) => buffer,
-                FileTreeBufferSectionBuffer::Image(_, _) | FileTreeBufferSectionBuffer::None => {
-                    let history = history::get_selection_from_history(history, selected.as_path())
-                        .map(|s| s.to_string());
+        let history =
+            history::get_selection_from_history(history, selected.as_path()).map(|s| s.to_string());
 
-                    actions.push(Action::Load(
-                        FileTreeBufferSection::Current,
-                        selected.to_path_buf(),
-                        history,
-                    ));
+        actions.push(Action::Load(
+            DirectoryPane::Current,
+            selected.to_path_buf(),
+            history,
+        ));
 
-                    TextBuffer::default()
-                }
-            };
-
-        buffer.parent = FileTreeBufferSectionBuffer::Text(
-            mem::replace(&mut buffer.current.path, selected.to_path_buf()),
-            mem::replace(&mut buffer.current.buffer, preview_buffer),
-        );
-
-        mem_swap_cursor(&mut buffer.current.buffer.cursor, &mut buffer.parent_cursor);
-
-        if buffer.preview_cursor.horizontal_index != CursorPosition::None {
-            mem_swap_cursor(
-                &mut buffer.current.buffer.cursor,
-                &mut buffer.preview_cursor,
-            );
-        } else {
-            buffer.current.buffer.cursor.vertical_index = 0;
-            buffer.current.buffer.cursor.horizontal_index = CursorPosition::Absolute {
-                current: 0,
-                expanded: 0,
-            };
-
-            if let Some(selected) =
-                selection::get_current_selected_path(buffer, Some(&buffer.current.buffer.cursor))
-            {
-                tracing::trace!("loading selection: {:?}", selected);
-
-                let history = history::get_selection_from_history(history, selected.as_path())
-                    .map(|s| s.to_string());
-
-                actions.push(Action::Load(
-                    FileTreeBufferSection::Preview,
-                    selected.to_path_buf(),
-                    history,
-                ));
-            }
-        }
-
+        let mut vp = {
+            let (_, current, _) = app::directory_viewports(app);
+            current.clone()
+        };
         yeet_buffer::update_viewport_by_direction(
-            vp,
-            &mut buffer.current.buffer,
+            &mut vp,
+            &mut current_buffer.buffer,
             &ViewPortDirection::CenterOnCursor,
         );
 
+        app.buffers
+            .insert(parent_id, Buffer::Directory(parent_buffer));
+        app.buffers
+            .insert(current_id, Buffer::Directory(current_buffer));
+        app.buffers
+            .insert(preview_id, Buffer::Directory(preview_buffer));
+
         actions
     } else {
+        app.buffers
+            .insert(parent_id, Buffer::Directory(parent_buffer));
+        app.buffers
+            .insert(current_id, Buffer::Directory(current_buffer));
+        app.buffers
+            .insert(preview_id, Buffer::Directory(preview_buffer));
         Vec::new()
     }
 }

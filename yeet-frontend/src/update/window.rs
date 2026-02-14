@@ -21,13 +21,28 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
 }
 
 fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
-    let vp = match window {
+    let layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
+        .split(area);
+
+    let parent_rect = layout[0];
+    let current_rect = layout[1];
+    let preview_rect = layout[2];
+
+    let (parent_vp, current_vp, preview_vp) = match window {
         Window::Horizontal(_, _) => todo!(),
-        Window::Content(vp) => vp,
+        Window::Directory(parent, current, preview) => (parent, current, preview),
     };
 
-    vp.height = area.height;
-    vp.width = area.width;
+    parent_vp.height = parent_rect.height;
+    parent_vp.width = parent_rect.width;
+
+    current_vp.height = current_rect.height;
+    current_vp.width = current_rect.width;
+
+    preview_vp.height = preview_rect.height;
+    preview_vp.width = preview_rect.width;
 
     Ok(())
 }

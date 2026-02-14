@@ -34,8 +34,8 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
             let (_, buffer) = app::get_focused_mut(app);
-            if let Buffer::FileTree(it) = buffer {
-                it.current.buffer.cursor.hide_cursor = true;
+            if let Buffer::Directory(it) = buffer {
+                it.buffer.cursor.hide_cursor = true;
             }
 
             vec![]
@@ -52,16 +52,17 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         }
         Mode::Insert => {
             let (vp, buffer) = match app::get_focused_mut(app) {
-                (vp, Buffer::FileTree(it)) => (vp, it),
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
                 (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            buffer.current.buffer.cursor.hide_cursor = false;
+            buffer.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
                 &state.modes.current,
-                &mut buffer.current.buffer,
+                &mut buffer.buffer,
                 std::slice::from_ref(&msg),
             );
 
@@ -69,18 +70,19 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         }
         Mode::Navigation => {
             let (vp, buffer) = match app::get_focused_mut(app) {
-                (vp, Buffer::FileTree(it)) => (vp, it),
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
                 (_vp, Buffer::_Text(_)) => todo!(),
             };
 
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            buffer.current.buffer.cursor.hide_cursor = false;
+            buffer.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
                 &state.modes.current,
-                &mut buffer.current.buffer,
+                &mut buffer.buffer,
                 std::slice::from_ref(&msg),
             );
 
@@ -88,16 +90,17 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         }
         Mode::Normal => {
             let (vp, buffer) = match app::get_focused_mut(app) {
-                (vp, Buffer::FileTree(it)) => (vp, it),
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
                 (_vp, Buffer::_Text(_)) => todo!(),
             };
 
-            buffer.current.buffer.cursor.hide_cursor = false;
+            buffer.buffer.cursor.hide_cursor = false;
 
             yeet_buffer::update(
                 Some(vp),
                 &state.modes.current,
-                &mut buffer.current.buffer,
+                &mut buffer.buffer,
                 std::slice::from_ref(&msg),
             );
 

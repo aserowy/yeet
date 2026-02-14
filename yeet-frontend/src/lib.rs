@@ -156,14 +156,10 @@ fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
         .buffers
         .values()
         .flat_map(|bffr| match bffr {
-            Buffer::FileTree(it) => vec![
-                Some(it.current.path.clone()),
-                it.parent.resolve_path().map(|p| p.to_path_buf()),
-                it.preview.resolve_path().map(|p| p.to_path_buf()),
-            ],
-            Buffer::_Text(_) => Vec::new(),
+            Buffer::Directory(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
+            Buffer::PreviewImage(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
+            Buffer::_Text(_) => None.into_iter(),
         })
-        .flatten()
         .collect::<Vec<_>>();
 
     let mut actions = Vec::new();

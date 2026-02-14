@@ -5,15 +5,12 @@ use yeet_keymap::message::KeymapMessage;
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{mark::Marks, FileTreeBuffer, FileTreeBufferSectionBuffer},
+    model::{mark::Marks, Buffer, DirectoryBuffer},
     task::Task,
+    update::app,
 };
 
-pub fn copy_selection(
-    marks: &Marks,
-    buffer: &FileTreeBufferSectionBuffer,
-    target: &str,
-) -> Vec<Action> {
+pub fn copy_selection(marks: &Marks, buffer: &DirectoryBuffer, target: &str) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = &buffer.resolve_path() {
         tracing::info!("copying path: {:?}", path);
@@ -27,7 +24,7 @@ pub fn copy_selection(
     actions
 }
 
-pub fn delete_selection(buffer: &FileTreeBufferSectionBuffer) -> Vec<Action> {
+pub fn delete_selection(buffer: &DirectoryBuffer) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = &buffer.resolve_path() {
         tracing::info!("deleting path: {:?}", path);
@@ -39,11 +36,7 @@ pub fn delete_selection(buffer: &FileTreeBufferSectionBuffer) -> Vec<Action> {
     actions
 }
 
-pub fn rename_selection(
-    marks: &Marks,
-    buffer: &FileTreeBufferSectionBuffer,
-    target: &str,
-) -> Vec<Action> {
+pub fn rename_selection(marks: &Marks, buffer: &DirectoryBuffer, target: &str) -> Vec<Action> {
     let mut actions = Vec::new();
     if let Some(path) = &buffer.resolve_path() {
         tracing::info!("renaming path: {:?}", path);
@@ -60,11 +53,20 @@ pub fn rename_selection(
     actions
 }
 
-pub fn refresh(buffer: &FileTreeBuffer) -> Vec<Action> {
-    let navigation = if let Some(path) = &buffer.preview.resolve_path() {
+pub fn refresh(app: &mut crate::model::App) -> Vec<Action> {
+    let (_, current, preview) = app::directory_buffers(app);
+    let preview_path = match preview {
+        Buffer::Directory(buffer) => buffer.resolve_path(),
+        Buffer::PreviewImage(buffer) => buffer.resolve_path(),
+        Buffer::_Text(_) => None,
+    };
+
+    let navigation = if let Some(path) = preview_path {
         KeymapMessage::NavigateToPathAsPreview(path.to_path_buf())
+    } else if let Buffer::Directory(buffer) = current {
+        KeymapMessage::NavigateToPath(buffer.path.clone())
     } else {
-        KeymapMessage::NavigateToPath(buffer.current.path.clone())
+        return Vec::new();
     };
 
     vec![action::emit_keymap(navigation)]

@@ -6,9 +6,8 @@ use crate::{
     event::Message,
     model::{App, Buffer, State},
     task::Task,
+    update::app,
 };
-
-use super::app;
 
 mod file;
 mod print;
@@ -45,26 +44,34 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
-            let (_, buffer) = app::get_focused_mut(app);
-            let buffer = match buffer {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => todo!(),
+            let (_, _, preview_id) = app::directory_buffer_ids(app);
+            let buffer = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it,
+                Some(Buffer::PreviewImage(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
+                Some(Buffer::_Text(_)) => todo!(),
+                None => return Vec::new(),
             };
 
             add_change_mode(
                 mode_before,
                 mode,
-                file::copy_selection(&state.marks, &buffer.preview, target),
+                file::copy_selection(&state.marks, buffer, target),
             )
         }
         ("d!", "") => {
-            let (_, buffer) = app::get_focused_mut(app);
-            let buffer = match buffer {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => todo!(),
+            let (_, _, preview_id) = app::directory_buffer_ids(app);
+            let buffer = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it,
+                Some(Buffer::PreviewImage(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
+                Some(Buffer::_Text(_)) => todo!(),
+                None => return Vec::new(),
             };
 
-            add_change_mode(mode_before, mode, file::delete_selection(&buffer.preview))
+            add_change_mode(mode_before, mode, file::delete_selection(buffer))
         }
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
@@ -89,27 +96,23 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("e!", "") => {
-            let (_, buffer) = app::get_focused_mut(app);
-            let buffer = match buffer {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => todo!(),
-            };
-
-            add_change_mode(mode_before, mode, file::refresh(buffer.as_ref()))
-        }
+        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(app)),
         ("fd", params) => {
-            let (_, buffer) = app::get_focused_mut(app);
-            let buffer = match buffer {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => todo!(),
+            let (_, current_id, _) = app::directory_buffer_ids(app);
+            let buffer = match app.buffers.get(&current_id) {
+                Some(Buffer::Directory(it)) => it,
+                Some(Buffer::PreviewImage(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
+                Some(Buffer::_Text(_)) => todo!(),
+                None => return Vec::new(),
             };
 
             add_change_mode(
                 mode_before,
                 mode,
                 vec![Action::Task(Task::ExecuteFd(
-                    buffer.current.path.clone(),
+                    buffer.path.clone(),
                     params.to_owned(),
                 ))],
             )
@@ -122,16 +125,20 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("junk", "") => print::junkyard(&state.junk),
         ("marks", "") => print::marks(&state.marks),
         ("mv", target) => {
-            let (_, buffer) = app::get_focused_mut(app);
-            let buffer = match buffer {
-                Buffer::FileTree(it) => it,
-                Buffer::_Text(_) => todo!(),
+            let (_, _, preview_id) = app::directory_buffer_ids(app);
+            let buffer = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it,
+                Some(Buffer::PreviewImage(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
+                Some(Buffer::_Text(_)) => todo!(),
+                None => return Vec::new(),
             };
 
             add_change_mode(
                 mode_before,
                 mode,
-                file::rename_selection(&state.marks, &buffer.preview, target),
+                file::rename_selection(&state.marks, buffer, target),
             )
         }
         ("noh", "") => add_change_mode(

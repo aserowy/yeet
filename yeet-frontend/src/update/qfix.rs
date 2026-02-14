@@ -13,12 +13,12 @@ use super::{app, selection, sign};
 pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
     let (_, buffer) = app::get_focused_mut(app);
     let buffer = match buffer {
-        Buffer::FileTree(it) => it,
+        Buffer::Directory(it) => it,
+        Buffer::PreviewImage(_) => return Vec::new(),
         Buffer::_Text(_) => return Vec::new(),
     };
 
-    let selected =
-        selection::get_current_selected_path(buffer.as_ref(), Some(&buffer.current.buffer.cursor));
+    let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));
     if let Some(selected) = selected {
         if qfix.entries.contains(&selected) {
             qfix.entries.retain(|p| p != &selected);

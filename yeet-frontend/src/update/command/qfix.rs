@@ -22,17 +22,18 @@ pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
 pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
     let (_, buffer) = app::get_focused_mut(app);
     let buffer = match buffer {
-        Buffer::FileTree(it) => it,
+        Buffer::Directory(it) => it,
+        Buffer::PreviewImage(_) => return Vec::new(),
         Buffer::_Text(_) => todo!(),
     };
 
     let path = Path::new(path);
-    let current_path = buffer.current.path.clone().join(path);
+    let current_path = buffer.path.clone().join(path);
 
     tracing::debug!("clearing current cl for path: {:?}", current_path);
 
     let mut removed_paths = Vec::new();
-    for bl in buffer.current.buffer.lines.iter_mut() {
+    for bl in buffer.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
             continue;
         }
@@ -133,15 +134,16 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
 pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
     let (_, buffer) = app::get_focused_mut(app);
     let buffer = match buffer {
-        Buffer::FileTree(it) => it,
+        Buffer::Directory(it) => it,
+        Buffer::PreviewImage(_) => return Vec::new(),
         Buffer::_Text(_) => todo!(),
     };
 
     let mut added_paths = Vec::new();
     let mut removed_paths = Vec::new();
 
-    let current_path = buffer.current.path.clone();
-    for bl in buffer.current.buffer.lines.iter_mut() {
+    let current_path = buffer.path.clone();
+    for bl in buffer.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
             continue;
         }

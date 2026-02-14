@@ -7,22 +7,22 @@ use yeet_buffer::model::BufferLine;
 use crate::{
     action::Action,
     event::Message,
-    model::{register::Register, FileTreeBuffer},
+    model::{register::Register, DirectoryBuffer},
 };
 
 pub fn get_current_selected_path(
-    buffer: &FileTreeBuffer,
+    buffer: &DirectoryBuffer,
     cursor: Option<&yeet_buffer::model::Cursor>,
 ) -> Option<PathBuf> {
     get_current_selected_path_with_exists(buffer, cursor, |path| path.exists())
 }
 
 pub fn get_current_selected_path_with_exists(
-    buffer: &FileTreeBuffer,
+    buffer: &DirectoryBuffer,
     cursor: Option<&yeet_buffer::model::Cursor>,
     exists: impl Fn(&std::path::Path) -> bool,
 ) -> Option<PathBuf> {
-    get_selected_path_with_base(&buffer.current.path, &buffer.current.buffer, cursor, exists)
+    get_selected_path_with_base(&buffer.path, &buffer.buffer, cursor, exists)
 }
 
 pub fn get_selected_path_with_base(
@@ -52,10 +52,10 @@ pub fn get_selected_path_with_base(
 
 #[allow(dead_code)]
 pub fn get_current_selected_bufferline<'a>(
-    buffer: &'a mut FileTreeBuffer,
+    buffer: &'a mut DirectoryBuffer,
     cursor: Option<&'a yeet_buffer::model::Cursor>,
 ) -> Option<&'a mut BufferLine> {
-    let current_buffer = &mut buffer.current.buffer;
+    let current_buffer = &mut buffer.buffer;
     if current_buffer.lines.is_empty() {
         return None;
     }
@@ -66,7 +66,7 @@ pub fn get_current_selected_bufferline<'a>(
 
 pub fn copy_to_clipboard(
     register: &mut Register,
-    buffer: &FileTreeBuffer,
+    buffer: &DirectoryBuffer,
     cursor: Option<&yeet_buffer::model::Cursor>,
 ) -> Vec<Action> {
     if let Some(path) = get_current_selected_path(buffer, cursor) {

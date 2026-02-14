@@ -11,12 +11,12 @@ use super::{app, selection, sign};
 
 pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
     let buffer = match app::get_focused_mut(app) {
-        (_, Buffer::FileTree(it)) => it,
+        (_, Buffer::Directory(it)) => it,
+        (_, Buffer::PreviewImage(_)) => return Vec::new(),
         (_, Buffer::_Text(_)) => return Vec::new(),
     };
 
-    let selected =
-        selection::get_current_selected_path(buffer.as_ref(), Some(&buffer.current.buffer.cursor));
+    let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));
     if let Some(selected) = selected {
         let removed = marks.entries.insert(char, selected.clone());
         if let Some(removed) = removed {

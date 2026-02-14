@@ -3,15 +3,16 @@ use std::{
     path::PathBuf,
 };
 
+use ratatui::layout::Rect;
 use tokio::fs;
-use yeet_buffer::message::BufferMessage;
+use yeet_buffer::{message::BufferMessage, model::TextBuffer};
 use yeet_keymap::message::{KeymapMessage, QuitMode};
 
 use crate::{
     error::AppError,
     event::{Emitter, Message},
     init::{history, mark, qfix},
-    model::{Buffer, DirectoryBufferState, FileTreeBufferSection, Model},
+    model::{Buffer, DirectoryBufferState, DirectoryPane, Model},
     open,
     task::Task,
     terminal::TerminalWrapper,
@@ -21,7 +22,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
-    Load(FileTreeBufferSection, PathBuf, Option<String>),
+    Load(DirectoryPane, PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(QuitMode, Option<String>),
@@ -100,12 +101,9 @@ async fn execute(
         ActionResult::Normal
     };
 
-    let (vp, buffer) = match app::get_focused_mut(&mut model.app) {
-        (vp, Buffer::FileTree(it)) => (vp, it),
-        (_vp, Buffer::_Text(_)) => todo!(),
-    };
-
     let mut remaining_actions = vec![];
+    let _focused_id = app::focused_id(&model.app);
+    let (parent_id, current_id, preview_id) = app::directory_buffer_ids(&model.app);
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
             remaining_actions.push(action);
@@ -120,43 +118,91 @@ async fn execute(
             }
             Action::Load(window_type, path, selection) => {
                 match window_type {
-                    FileTreeBufferSection::Current => {
-                        buffer.current.state = DirectoryBufferState::Loading;
-                        buffer.current.path = path.clone();
+                    DirectoryPane::Current => {
+                        let buffer = match model.app.buffers.get_mut(&current_id) {
+                            Some(Buffer::Directory(buffer)) => buffer,
+                            _ => todo!(),
+                        };
+
+                        buffer.state = DirectoryBufferState::Loading;
+                        buffer.path = path.clone();
 
                         let message = BufferMessage::SetContent(Vec::new());
                         yeet_buffer::update(
-                            Some(vp),
+                            None,
                             &model.state.modes.current,
-                            &mut buffer.current.buffer,
+                            &mut buffer.buffer,
                             std::slice::from_ref(&message),
                         );
 
                         let message = BufferMessage::ResetCursor;
                         yeet_buffer::update(
-                            Some(vp),
+                            None,
                             &model.state.modes.current,
-                            &mut buffer.current.buffer,
+                            &mut buffer.buffer,
                             std::slice::from_ref(&message),
                         );
 
                         emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                     }
-                    FileTreeBufferSection::Parent | FileTreeBufferSection::Preview => {
-                        update::buffer_type(
+                    DirectoryPane::Parent => {
+                        let buffer = match model.app.buffers.get_mut(&parent_id) {
+                            Some(Buffer::Directory(buffer)) => buffer,
+                            _ => todo!(),
+                        };
+
+                        update::reset_directory_buffer(
                             &model.state.history,
                             &model.state.modes.current,
-                            buffer.as_mut(),
-                            &window_type,
+                            buffer,
                             path.as_path(),
                             vec![],
                         );
 
-                        if path.is_dir() {
-                            emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                        } else {
-                            // TODO: add rect to load preview after layout concept is implemented
-                            // emitter.run(Task::LoadPreview(path.clone(), model.app.layout.preview));
+                        emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
+                    }
+                    DirectoryPane::Preview => {
+                        let buffer = model.app.buffers.get_mut(&preview_id);
+                        match buffer {
+                            Some(Buffer::Directory(buffer)) => {
+                                if path.as_os_str().is_empty() {
+                                    buffer.buffer = TextBuffer::default();
+                                    buffer.path = PathBuf::default();
+                                    continue;
+                                }
+
+                                update::reset_directory_buffer(
+                                    &model.state.history,
+                                    &model.state.modes.current,
+                                    buffer,
+                                    path.as_path(),
+                                    vec![],
+                                );
+
+                                if path.is_dir() {
+                                    emitter.run(Task::EnumerateDirectory(
+                                        path.clone(),
+                                        selection.clone(),
+                                    ));
+                                } else {
+                                    let (_, _, preview_vp) = app::directory_viewports(&model.app);
+                                    let rect = Rect {
+                                        x: 0,
+                                        y: 0,
+                                        width: preview_vp.width,
+                                        height: preview_vp.height,
+                                    };
+                                    emitter.run(Task::LoadPreview(path.clone(), rect));
+                                }
+                            }
+                            Some(Buffer::PreviewImage(buffer)) => {
+                                if path.as_os_str().is_empty() {
+                                    buffer.path = PathBuf::default();
+                                    continue;
+                                }
+                                buffer.path = path.clone();
+                            }
+                            Some(Buffer::_Text(_)) | None => todo!(),
                         }
                     }
                 };
@@ -209,7 +255,7 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(_path) = &buffer.preview.resolve_path() {
+                if let Some(Buffer::PreviewImage(_buffer)) = model.app.buffers.get(&preview_id) {
                     // TODO: add rect to load preview after layout concept is implemented
                     // emitter.run(Task::LoadPreview(
                     //     path.to_path_buf(),

@@ -8,11 +8,11 @@ use crate::{
     action::Action,
     model::{
         junkyard::{FileEntry, FileEntryStatus, FileEntryType, FileTransaction, JunkYard},
-        FileTreeBuffer,
+        Buffer,
     },
     task::Task,
+    update::app,
 };
-use yeet_buffer::model::Cursor;
 
 pub fn add(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
@@ -134,13 +134,19 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-pub fn paste(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<Action> {
+pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> Vec<Action> {
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let buffer = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
+    };
+
     if let Some(transaction) = get_junkyard_transaction(junk, entry_id) {
         let mut actions = Vec::new();
         for entry in transaction.entries.iter() {
             actions.push(Action::Task(Task::RestorePath(
                 entry.clone(),
-                buffer.current.path.clone(),
+                buffer.path.clone(),
             )));
         }
         actions
@@ -149,21 +155,22 @@ pub fn paste(junk: &JunkYard, buffer: &FileTreeBuffer, entry_id: &char) -> Vec<A
     }
 }
 
-pub fn yank(
-    junk: &mut JunkYard,
-    buffer: &FileTreeBuffer,
-    cursor: Option<&Cursor>,
-    repeat: &usize,
-) -> Vec<Action> {
-    let current_buffer = &buffer.current.buffer;
+pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) -> Vec<Action> {
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let buffer = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return Vec::new(),
+    };
+
+    let current_buffer = &buffer.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = cursor {
+    } else if let Some(cursor) = Some(&buffer.buffer.cursor) {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
             if let Some(line) = current_buffer.lines.get(line_index) {
-                let target = buffer.current.path.join(line.content.to_stripped_string());
+                let target = buffer.path.join(line.content.to_stripped_string());
 
                 paths.push(target);
             }
