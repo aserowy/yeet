@@ -73,13 +73,6 @@ pub fn get_next_buffer_id(app: &mut App) -> usize {
     next_id
 }
 
-pub fn set_focused_buffer(app: &mut App, id: usize) {
-    match &mut app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(_, vp, _) => vp.buffer_id = id,
-    };
-}
-
 pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
