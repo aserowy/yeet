@@ -17,7 +17,7 @@ use crate::{
     update::{app, selection},
 };
 
-use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
+use super::{enumeration, history, junkyard::remove_from_junkyard, navigate, sign};
 
 #[tracing::instrument(skip(app))]
 pub fn add(
@@ -170,79 +170,302 @@ fn update_directory_buffers_on_remove(
     app: &mut App,
     path: &Path,
 ) -> Vec<Action> {
-    let (parent, name) = match (path.parent(), path.file_name()) {
-        (Some(parent), Some(name)) => (parent, name.to_string_lossy().to_string()),
-        _ => return Vec::new(),
+    let parent_name = match (path.parent(), path.file_name()) {
+        (Some(parent), Some(name)) => Some((parent, name.to_string_lossy().to_string())),
+        _ => None,
     };
 
-    for buffer in app.buffers.values_mut() {
-        let Buffer::Directory(dir) = buffer else {
-            continue;
-        };
+    if let Some((parent, name)) = parent_name {
+        for buffer in app.buffers.values_mut() {
+            let Buffer::Directory(dir) = buffer else {
+                continue;
+            };
 
-        if dir.path != parent {
-            continue;
-        }
+            if dir.path != parent {
+                continue;
+            }
 
-        let mut indices: Vec<usize> = dir
-            .buffer
-            .lines
-            .iter()
-            .enumerate()
-            .filter_map(|(index, line)| {
-                if line.content.to_stripped_string() == name {
-                    Some(index)
-                } else {
-                    None
-                }
-            })
-            .collect();
+            let mut indices: Vec<usize> = dir
+                .buffer
+                .lines
+                .iter()
+                .enumerate()
+                .filter_map(|(index, line)| {
+                    if line.content.to_stripped_string() == name {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
 
-        if indices.is_empty() {
-            continue;
-        }
+            if indices.is_empty() {
+                continue;
+            }
 
-        indices.sort_unstable_by(|a, b| b.cmp(a));
-        for index in indices {
-            yeet_buffer::update(
-                None,
-                mode,
-                &mut dir.buffer,
-                slice::from_ref(&BufferMessage::RemoveLine(index)),
-            );
+            indices.sort_unstable_by(|a, b| b.cmp(a));
+            for index in indices {
+                yeet_buffer::update(
+                    None,
+                    mode,
+                    &mut dir.buffer,
+                    slice::from_ref(&BufferMessage::RemoveLine(index)),
+                );
+            }
         }
     }
 
     let (_, current_id, preview_id) = app::directory_buffer_ids(app);
-    let preview_buffer = match app.buffers.get(&preview_id) {
-        Some(Buffer::Directory(buffer)) => buffer,
-        _ => return Vec::new(),
+    let current_path = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
+        _ => None,
     };
+    let preview_path = app
+        .buffers
+        .get(&preview_id)
+        .and_then(buffer_path)
+        .map(|p| p.to_path_buf());
 
-    if !preview_buffer.path.eq(path) {
-        return Vec::new();
-    }
+    let current_removed = current_path
+        .as_ref()
+        .map(|current| current.starts_with(path))
+        .unwrap_or(false);
 
-    let current_buffer = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(buffer)) => buffer,
-        _ => return Vec::new(),
-    };
+    remove_buffers_under_path(app, path);
 
     let mut actions = Vec::new();
-    if let Some(selected_path) =
-        selection::get_current_selected_path(current_buffer, Some(&current_buffer.buffer.cursor))
+    if current_removed {
+        if let Some(existing) = find_existing_ancestor(path) {
+            actions.extend(navigate::path(app, history, &existing));
+        } else {
+            reset_directory_viewports_to_empty(app);
+        }
+
+        return actions;
+    }
+
+    if preview_path
+        .as_ref()
+        .map(|preview| preview.starts_with(path))
+        .unwrap_or(false)
     {
-        let selection =
-            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
+        let current_buffer = match app.buffers.get(&current_id) {
+            Some(Buffer::Directory(buffer)) => buffer,
+            _ => return actions,
+        };
 
-        actions.push(Action::Load(selected_path.clone(), selection));
+        if let Some(selected_path) = selection::get_current_selected_path(
+            current_buffer,
+            Some(&current_buffer.buffer.cursor),
+        ) {
+            let selection =
+                history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
 
-        let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-        if let Some(Buffer::Directory(_)) = app.buffers.get(&preview_id) {
+            actions.push(Action::Load(selected_path.clone(), selection));
+
+            let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
+            if let Some(Buffer::Directory(_)) = app.buffers.get(&preview_id) {
+                let (_, _, preview) = app::directory_viewports_mut(app);
+                preview.buffer_id = preview_id;
+            }
+        } else {
+            let preview_id = app::create_empty_buffer_with_id(app);
             let (_, _, preview) = app::directory_viewports_mut(app);
             preview.buffer_id = preview_id;
         }
     }
 
     actions
+}
+
+fn buffer_path(buffer: &Buffer) -> Option<&Path> {
+    match buffer {
+        Buffer::Directory(buffer) => buffer.resolve_path(),
+        Buffer::Content(buffer) => buffer.resolve_path(),
+        Buffer::Image(buffer) => buffer.resolve_path(),
+        Buffer::Empty => None,
+    }
+}
+
+fn remove_buffers_under_path(app: &mut App, path: &Path) {
+    app.buffers.retain(|_, buffer| {
+        buffer_path(buffer)
+            .map(|buffer_path| !buffer_path.starts_with(path))
+            .unwrap_or(true)
+    });
+}
+
+fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
+    let mut candidate = Some(path);
+    while let Some(path) = candidate {
+        if path.exists() {
+            return Some(path.to_path_buf());
+        }
+
+        candidate = path.parent();
+    }
+
+    None
+}
+
+fn reset_directory_viewports_to_empty(app: &mut App) {
+    let parent_id = app::get_next_buffer_id(app);
+    app.buffers.insert(parent_id, Buffer::Empty);
+
+    let current_id = app::get_next_buffer_id(app);
+    app.buffers.insert(current_id, Buffer::Empty);
+
+    let preview_id = app::get_next_buffer_id(app);
+    app.buffers.insert(preview_id, Buffer::Empty);
+
+    let (parent, current, preview) = app::directory_viewports_mut(app);
+    parent.buffer_id = parent_id;
+    current.buffer_id = current_id;
+    preview.buffer_id = preview_id;
+}
+
+#[cfg(test)]
+mod test {
+    use std::{fs, time::SystemTime};
+
+    use yeet_buffer::model::Mode;
+
+    use crate::model::{
+        history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, App, ContentBuffer,
+    };
+
+    use super::*;
+
+    fn unique_temp_dir() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("yeet-path-test-{}", nanos))
+    }
+
+    #[test]
+    fn removal_relocates_current_to_existing_ancestor_and_prunes_buffers() {
+        let base = unique_temp_dir();
+        let removed = base.join("removed");
+        let nested = removed.join("inner");
+        fs::create_dir_all(&nested).expect("create directories");
+
+        let file_path = removed.join("file.txt");
+        fs::write(&file_path, "content").expect("create file");
+
+        let mut app = App::default();
+        let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
+
+        if let Some(Buffer::Directory(buffer)) = app.buffers.get_mut(&current_id) {
+            buffer.path = nested.clone();
+        } else {
+            panic!("expected current directory buffer");
+        }
+
+        app.buffers.insert(
+            preview_id,
+            Buffer::Content(ContentBuffer {
+                path: file_path.clone(),
+                ..Default::default()
+            }),
+        );
+
+        let extra_id = app::get_next_buffer_id(&mut app);
+        app.buffers.insert(
+            extra_id,
+            Buffer::Content(ContentBuffer {
+                path: file_path.clone(),
+                ..Default::default()
+            }),
+        );
+
+        fs::remove_dir_all(&removed).expect("remove directory");
+
+        let mut history = History::default();
+        let mut marks = Marks::default();
+        let mut qfix = QuickFix::default();
+        let mut junk = JunkYard::default();
+
+        remove(
+            &mut history,
+            &mut marks,
+            &mut qfix,
+            &mut junk,
+            &Mode::Normal,
+            &mut app,
+            &removed,
+        );
+
+        let (_, current_id, _) = app::directory_buffer_ids(&app);
+        let current_path = match app.buffers.get(&current_id) {
+            Some(Buffer::Directory(buffer)) => buffer.path.clone(),
+            _ => PathBuf::new(),
+        };
+
+        assert_eq!(current_path, base);
+        assert!(app
+            .buffers
+            .values()
+            .filter_map(buffer_path)
+            .all(|path| !path.starts_with(&removed)));
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn preview_is_reset_when_removed_from_subtree() {
+        let base = unique_temp_dir();
+        let keep = base.join("keep");
+        let removed = base.join("removed");
+        fs::create_dir_all(&keep).expect("create keep");
+        fs::create_dir_all(&removed).expect("create removed");
+
+        let removed_file = removed.join("gone.txt");
+        fs::write(&removed_file, "content").expect("create file");
+
+        let mut app = App::default();
+        let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
+
+        if let Some(Buffer::Directory(buffer)) = app.buffers.get_mut(&current_id) {
+            buffer.path = keep.clone();
+        } else {
+            panic!("expected current directory buffer");
+        }
+
+        app.buffers.insert(
+            preview_id,
+            Buffer::Content(ContentBuffer {
+                path: removed_file.clone(),
+                ..Default::default()
+            }),
+        );
+
+        fs::remove_dir_all(&removed).expect("remove directory");
+
+        let mut history = History::default();
+        let mut marks = Marks::default();
+        let mut qfix = QuickFix::default();
+        let mut junk = JunkYard::default();
+
+        remove(
+            &mut history,
+            &mut marks,
+            &mut qfix,
+            &mut junk,
+            &Mode::Normal,
+            &mut app,
+            &removed,
+        );
+
+        let (_, _, preview_id) = app::directory_buffer_ids(&app);
+        let preview_buffer = app.buffers.get(&preview_id);
+        assert!(preview_buffer.is_some());
+
+        if let Some(path) = preview_buffer.and_then(buffer_path) {
+            assert!(!path.starts_with(&removed));
+        }
+
+        let _ = fs::remove_dir_all(&base);
+    }
 }
