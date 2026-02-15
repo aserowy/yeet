@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use std::path::Path;
 
-use yeet_buffer::model::BufferLine;
-
 use crate::{
     action::Action,
     event::Message,

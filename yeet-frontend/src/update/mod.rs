@@ -15,6 +15,7 @@ use crate::{
 };
 
 pub mod app;
+mod buffers;
 mod command;
 pub mod commandline;
 mod cursor;
@@ -79,6 +80,8 @@ pub fn model(terminal: &TerminalWrapper, model: &mut Model, envelope: Envelope) 
         Ok(_) => {}
         Err(err) => tracing::error!("window update failed with error: {}", err),
     };
+
+    buffers::update(&mut model.app);
 
     register::finish_scope(
         &model.state.modes.current,
