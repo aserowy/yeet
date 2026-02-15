@@ -82,3 +82,28 @@ pub fn get_selection_from_history<'a>(history: &'a History, path: &Path) -> Opti
         .max_by_key(|node| node.changed_at)
         .map(|node| node.component.as_str())
 }
+
+pub fn remove_entry(history: &mut History, path: &Path) {
+    let mut iter = path.components().peekable();
+    remove_component(&mut history.entries, &mut iter);
+}
+
+fn remove_component(
+    nodes: &mut HashMap<String, HistoryNode>,
+    component_iter: &mut std::iter::Peekable<Components<'_>>,
+) -> bool {
+    let Some(component) = component_iter.next() else {
+        return nodes.is_empty();
+    };
+    let Some(component_name) = component.as_os_str().to_str() else {
+        return nodes.is_empty();
+    };
+
+    if let Some(node) = nodes.get_mut(component_name) {
+        if component_iter.peek().is_none() || remove_component(&mut node.nodes, component_iter) {
+            nodes.remove(component_name);
+        }
+    }
+
+    nodes.is_empty()
+}

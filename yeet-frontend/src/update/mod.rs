@@ -117,28 +117,40 @@ fn update_with_message(
         }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => {
-            let mut actions = Vec::new();
-            actions.extend(path::remove(
-                &state.history,
-                &mut state.junk,
-                &state.modes.current,
-                app.buffers.values_mut().collect(),
-                &path,
-            ));
-            actions
+            if state.modes.current == Mode::Insert {
+                state
+                    .pending_path_events
+                    .push(crate::model::PendingPathEvent::Removed(path));
+                Vec::new()
+            } else {
+                path::remove(
+                    &mut state.history,
+                    &mut state.marks,
+                    &mut state.qfix,
+                    &mut state.junk,
+                    &state.modes.current,
+                    app,
+                    &path,
+                )
+            }
         }
         Message::PathsAdded(paths) => {
-            let mut actions = Vec::new();
-            actions.extend(path::add(
-                &state.history,
-                &state.marks,
-                &state.qfix,
-                &state.modes.current,
-                app.buffers.values_mut().collect(),
-                &paths,
-            ));
-            actions.extend(junkyard::add(&mut state.junk, &paths));
-            actions
+            if state.modes.current == Mode::Insert {
+                state
+                    .pending_path_events
+                    .push(crate::model::PendingPathEvent::Added(paths));
+                Vec::new()
+            } else {
+                path::add(
+                    &state.history,
+                    &state.marks,
+                    &state.qfix,
+                    &state.modes.current,
+                    app,
+                    &paths,
+                );
+                junkyard::add(&mut state.junk, &paths)
+            }
         }
         Message::PreviewLoaded(content) => update_preview(app, content),
         Message::Rerender => Vec::new(),
@@ -272,7 +284,8 @@ pub fn update_with_buffer_message(
         },
         BufferMessage::SaveBuffer => save::changes(app, &mut state.junk, &state.modes.current),
 
-        BufferMessage::RemoveLine(_)
+        BufferMessage::AddLine(_, _)
+        | BufferMessage::RemoveLine(_)
         | BufferMessage::ResetCursor
         | BufferMessage::SetContent(_)
         | BufferMessage::SetCursorToLineContent(_)

@@ -86,8 +86,14 @@ pub struct State {
     pub qfix: QuickFix,
     pub register: Register,
     pub remaining_keysequence: Option<String>,
+    pub pending_path_events: Vec<PendingPathEvent>,
     pub tasks: Tasks,
     pub watches: Vec<PathBuf>,
+}
+
+pub enum PendingPathEvent {
+    Added(Vec<PathBuf>),
+    Removed(PathBuf),
 }
 
 impl std::fmt::Debug for Model {

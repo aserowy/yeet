@@ -8,11 +8,11 @@ use crate::{
     action::Action,
     model::{
         register::{Register, RegisterScope},
-        App, Buffer, CommandLine, ModeState, State,
+        App, Buffer, CommandLine, ModeState, PendingPathEvent, State,
     },
 };
 
-use super::{app, commandline, register::get_macro_register, save};
+use super::{app, commandline, junkyard, path, register::get_macro_register, save};
 
 pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<Action> {
     match (from, to) {
@@ -109,6 +109,41 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         }
     });
 
+    if matches!(from, Mode::Insert) {
+        actions.extend(flush_pending_paths(state, app));
+    }
+
+    actions
+}
+
+fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
+    let mut actions = Vec::new();
+    for event in state.pending_path_events.drain(..) {
+        match event {
+            PendingPathEvent::Added(paths) => {
+                path::add(
+                    &state.history,
+                    &state.marks,
+                    &state.qfix,
+                    &state.modes.current,
+                    app,
+                    &paths,
+                );
+                actions.extend(junkyard::add(&mut state.junk, &paths));
+            }
+            PendingPathEvent::Removed(path) => {
+                path::remove(
+                    &mut state.history,
+                    &mut state.marks,
+                    &mut state.qfix,
+                    &mut state.junk,
+                    &state.modes.current,
+                    app,
+                    &path,
+                );
+            }
+        }
+    }
     actions
 }
 
@@ -199,4 +234,38 @@ pub fn print_mode(commandline: &mut CommandLine, modes: &mut ModeState) -> Vec<A
     let content = format!("--{}--", modes.current.to_string().to_uppercase());
     commandline::print(commandline, modes, &[PrintContent::Default(content)]);
     Vec::new()
+}
+
+#[cfg(test)]
+mod test {
+    use yeet_buffer::model::Mode;
+
+    use crate::{model::PendingPathEvent, update::mode};
+
+    #[test]
+    fn leaving_insert_flushes_pending_paths_in_order() {
+        let mut app = crate::model::App::default();
+        let mut state = crate::model::State::default();
+
+        let added_paths = vec![
+            std::path::PathBuf::from("/tmp/a"),
+            std::path::PathBuf::from("/tmp/b"),
+        ];
+        let removed_path = std::path::PathBuf::from("/tmp/c");
+
+        state
+            .pending_path_events
+            .push(PendingPathEvent::Added(added_paths));
+        state
+            .pending_path_events
+            .push(PendingPathEvent::Removed(removed_path));
+
+        state.modes.current = Mode::Insert;
+        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal);
+
+        assert!(actions
+            .iter()
+            .any(|action| matches!(action, crate::action::Action::ModeChanged)));
+        assert!(state.pending_path_events.is_empty());
+    }
 }

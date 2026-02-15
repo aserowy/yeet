@@ -41,6 +41,30 @@ fn update_buffer(
     let result = match message {
         // TODO: repeat actions by count when switching from insert to normal
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
+        BufferMessage::AddLine(line, sort) => {
+            let current_selection = buffer
+                .lines
+                .get(buffer.cursor.vertical_index)
+                .map(|line| line.content.to_stripped_string());
+
+            buffer.lines.push(line.clone());
+            update_buffer(
+                viewport.as_deref_mut(),
+                mode,
+                buffer,
+                &BufferMessage::SortContent(*sort),
+            );
+
+            if let Some(current_selection) = current_selection {
+                update_buffer(
+                    viewport.as_deref_mut(),
+                    mode,
+                    buffer,
+                    &BufferMessage::SetCursorToLineContent(current_selection),
+                );
+            }
+            Vec::new()
+        }
         BufferMessage::ChangeMode(from, to) => {
             if from == &Mode::Insert && to != &Mode::Insert {
                 buffer.undo.close_transaction();
@@ -84,6 +108,10 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::RemoveLine(index) => {
+            if *index < buffer.cursor.vertical_index {
+                buffer.cursor.vertical_index = buffer.cursor.vertical_index.saturating_sub(1);
+            }
+
             buffer.lines.remove(*index);
 
             cursor::set_to_inbound_position(buffer, mode);
@@ -121,7 +149,6 @@ fn update_buffer(
             vec![BufferResult::Changes(changes)]
         }
         BufferMessage::SetContent(content) => {
-            // TODO: optional selection?
             buffer.lines = content.to_vec();
 
             cursor::set_to_inbound_position(buffer, mode);
