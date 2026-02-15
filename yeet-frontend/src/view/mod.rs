@@ -23,7 +23,7 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
 
         let buffer = match model.app.buffers.get(focused_id) {
             Some(it) => it,
-            None => todo!(),
+            None => unreachable!(),
         };
 
         statusline::view(

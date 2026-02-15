@@ -246,7 +246,7 @@ fn update_directory_buffers_on_remove(
 
     if preview_path
         .as_ref()
-        .map(|preview| preview.starts_with(path))
+        .map(|preview| preview.eq(path))
         .unwrap_or(false)
     {
         let current_buffer = match app.buffers.get(&current_id) {
