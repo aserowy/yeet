@@ -246,7 +246,7 @@ fn update_directory_buffers_on_remove(
 
     if preview_path
         .as_ref()
-        .map(|preview| preview.eq(path))
+        .map(|preview| preview.starts_with(path))
         .unwrap_or(false)
     {
         let current_buffer = match app.buffers.get(&current_id) {
@@ -264,10 +264,8 @@ fn update_directory_buffers_on_remove(
             actions.push(Action::Load(selected_path.clone(), selection));
 
             let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-            if let Some(Buffer::Directory(_)) = app.buffers.get(&preview_id) {
-                let (_, _, preview) = app::directory_viewports_mut(app);
-                preview.buffer_id = preview_id;
-            }
+            let (_, _, preview) = app::directory_viewports_mut(app);
+            preview.buffer_id = preview_id;
         } else {
             let preview_id = app::create_empty_buffer_with_id(app);
             let (_, _, preview) = app::directory_viewports_mut(app);
