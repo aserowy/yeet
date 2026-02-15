@@ -12,8 +12,8 @@ use crate::model::{Buffer, DirectoryBuffer};
 pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
     match current {
         Buffer::Directory(it) => filetree_status(it, frame, rect),
-        Buffer::PreviewImage(_) => filetree_status(&DirectoryBuffer::default(), frame, rect),
-        Buffer::_Text(_) => todo!(),
+        Buffer::Image(_) => filetree_status(&DirectoryBuffer::default(), frame, rect),
+        Buffer::Content(_) | Buffer::Empty => {}
     }
 }
 

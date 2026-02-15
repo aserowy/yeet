@@ -1,41 +1,10 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::model::viewport::ViewPort;
 
-use crate::model::{App, Buffer, Window};
+use crate::model::{App, Buffer, DirectoryBuffer, Window};
 
-pub fn get_focused(app: &App) -> (&ViewPort, &Buffer) {
-    let (viewport, focused_id) = match &app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(_, vp, _) => (vp, &vp.buffer_id),
-    };
-
-    match app.buffers.get(focused_id) {
-        Some(it) => (viewport, it),
-        None => todo!(),
-    }
-}
-
-#[allow(dead_code)]
-pub fn focused_window_mut(app: &mut App) -> (&mut ViewPort, usize) {
-    match &mut app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(_, vp, _) => {
-            let id = vp.buffer_id;
-            (vp, id)
-        }
-    }
-}
-
-#[allow(dead_code)]
-pub fn focused_id(app: &App) -> usize {
-    match &app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(_, vp, _) => vp.buffer_id,
-    }
-}
-
-pub fn get_focused_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
+pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
     let (vp, focused_id) = match &mut app.window {
         Window::Horizontal(_, _) => todo!(),
         Window::Directory(_, vp, _) => {
@@ -103,4 +72,42 @@ pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
     let preview = app.buffers.get(&preview_id).expect("preview buffer");
 
     (parent, current, preview)
+}
+
+pub fn get_or_create_directory_buffer_with_id(app: &mut App, path: &Path) -> usize {
+    let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
+        Buffer::Directory(it) if it.path == path => Some(*id),
+        Buffer::Content(it) if it.path == path => Some(*id),
+        Buffer::Image(it) if it.path == path => Some(*id),
+        _ => None,
+    });
+
+    if let Some(id) = existing_id {
+        return id;
+    }
+
+    let id = get_next_buffer_id(app);
+    app.buffers.insert(
+        id,
+        Buffer::Directory(DirectoryBuffer {
+            path: path.to_path_buf(),
+            ..Default::default()
+        }),
+    );
+    id
+}
+
+pub fn create_empty_buffer_with_id(app: &mut App) -> usize {
+    let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
+        Buffer::Empty => Some(*id),
+        _ => None,
+    });
+
+    if let Some(id) = existing_id {
+        return id;
+    }
+
+    let id = get_next_buffer_id(app);
+    app.buffers.insert(id, Buffer::Empty);
+    id
 }

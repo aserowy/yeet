@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, path::Path};
+use std::cmp::Ordering;
 
 use yeet_buffer::{
     message::BufferMessage,
@@ -9,7 +9,7 @@ use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
 use crate::{
     action::Action,
     event::{Envelope, Message, Preview},
-    model::{history::History, App, Buffer, DirectoryBuffer, Model, PreviewImageBuffer, State},
+    model::{App, Buffer, ContentBuffer, Model, PreviewImageBuffer, State},
     settings::Settings,
     terminal::TerminalWrapper,
 };
@@ -137,9 +137,7 @@ fn update_with_message(
             actions.extend(junkyard::add(&mut state.junk, &paths));
             actions
         }
-        Message::PreviewLoaded(content) => {
-            update_preview(&state.history, &state.modes.current, app, content)
-        }
+        Message::PreviewLoaded(content) => update_preview(app, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
         Message::TaskStarted(id, cancellation) => task::add(&mut state.tasks, id, cancellation),
@@ -163,11 +161,7 @@ fn update_with_message(
             {
                 tracing::error!("Buffer with id {} already exists", parent_id);
             };
-            if app
-                .buffers
-                .insert(preview_id, Buffer::Directory(Default::default()))
-                .is_some()
-            {
+            if app.buffers.insert(preview_id, Buffer::Empty).is_some() {
                 tracing::error!("Buffer with id {} already exists", preview_id);
             };
 
@@ -284,12 +278,7 @@ pub fn update_with_buffer_message(
     }
 }
 
-pub fn update_preview(
-    history: &History,
-    mode: &Mode,
-    app: &mut App,
-    content: Preview,
-) -> Vec<Action> {
+pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
     let (_, _, preview_id) = app::directory_buffer_ids(app);
     match content {
         Preview::Content(path, content) => {
@@ -303,54 +292,31 @@ pub fn update_preview(
                 })
                 .collect();
 
-            let buffer = app.buffers.get_mut(&preview_id);
-            match buffer {
-                Some(Buffer::Directory(buffer)) => {
-                    reset_directory_buffer(history, mode, buffer, &path, content);
-                }
-                Some(Buffer::PreviewImage(_)) => {
-                    let mut buffer = DirectoryBuffer::default();
-                    reset_directory_buffer(history, mode, &mut buffer, &path, content);
-                    app.buffers.insert(preview_id, Buffer::Directory(buffer));
-                }
-                Some(Buffer::_Text(_)) | None => {}
-            }
+            app.buffers.insert(
+                preview_id,
+                Buffer::Content(ContentBuffer {
+                    path,
+                    buffer: TextBuffer {
+                        lines: content,
+                        ..Default::default()
+                    },
+                }),
+            );
         }
         Preview::Image(path, protocol) => {
             app.buffers.insert(
                 preview_id,
-                Buffer::PreviewImage(PreviewImageBuffer { path, protocol }),
+                Buffer::Image(PreviewImageBuffer { path, protocol }),
             );
         }
         Preview::None(_path) => {
-            app.buffers
-                .insert(preview_id, Buffer::Directory(DirectoryBuffer::default()));
+            app.buffers.insert(preview_id, Buffer::Empty);
         }
     }
+
+    let (_, _, preview) = app::directory_viewports_mut(app);
+    preview.hide_cursor = true;
+    preview.hide_cursor_line = true;
+
     Vec::new()
-}
-
-pub fn reset_directory_buffer(
-    history: &History,
-    mode: &Mode,
-    buffer: &mut DirectoryBuffer,
-    path: &Path,
-    content: Vec<BufferLine>,
-) {
-    let mut text_buffer = TextBuffer::default();
-
-    let set_content = BufferMessage::SetContent(content.to_vec());
-    let reset_cursor = BufferMessage::ResetCursor;
-    let messages = [set_content, reset_cursor];
-    yeet_buffer::update(None, mode, &mut text_buffer, &messages);
-
-    // cursor line hiding is now viewport-specific
-
-    if path.is_dir() {
-        cursor::set_cursor_index_with_history(history, None, mode, &mut text_buffer, path);
-    }
-
-    // cursor line hiding is now viewport-specific
-    buffer.buffer = text_buffer;
-    buffer.path = path.to_path_buf();
 }

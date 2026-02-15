@@ -20,11 +20,12 @@ pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
 }
 
 pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
-    let (_, buffer) = app::get_focused_mut(app);
+    let (_, buffer) = app::get_focused_current_mut(app);
     let buffer = match buffer {
         Buffer::Directory(it) => it,
-        Buffer::PreviewImage(_) => return Vec::new(),
-        Buffer::_Text(_) => todo!(),
+        Buffer::Image(_) => return Vec::new(),
+        Buffer::Content(_) => return Vec::new(),
+        Buffer::Empty => return Vec::new(),
     };
 
     let path = Path::new(path);
@@ -132,11 +133,12 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
 }
 
 pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let (_, buffer) = app::get_focused_mut(app);
+    let (_, buffer) = app::get_focused_current_mut(app);
     let buffer = match buffer {
         Buffer::Directory(it) => it,
-        Buffer::PreviewImage(_) => return Vec::new(),
-        Buffer::_Text(_) => todo!(),
+        Buffer::Image(_) => return Vec::new(),
+        Buffer::Content(_) => return Vec::new(),
+        Buffer::Empty => return Vec::new(),
     };
 
     let mut added_paths = Vec::new();

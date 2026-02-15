@@ -10,10 +10,11 @@ use crate::{
 use super::{app, selection, sign};
 
 pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
-    let buffer = match app::get_focused_mut(app) {
+    let buffer = match app::get_focused_current_mut(app) {
         (_, Buffer::Directory(it)) => it,
-        (_, Buffer::PreviewImage(_)) => return Vec::new(),
-        (_, Buffer::_Text(_)) => return Vec::new(),
+        (_, Buffer::Image(_)) => return Vec::new(),
+        (_, Buffer::Content(_)) => return Vec::new(),
+        (_, Buffer::Empty) => return Vec::new(),
     };
 
     let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));

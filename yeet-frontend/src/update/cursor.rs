@@ -7,7 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, App, Buffer, DirectoryPane, State},
+    model::{history::History, App, Buffer, State},
 };
 
 use super::{
@@ -55,19 +55,20 @@ pub fn relocate(
         search::search_in_buffers(app.buffers.values_mut().collect(), term);
     }
 
-    let (_parent_id, _current_id, preview_id) = app::directory_buffer_ids(app);
-    let preview_path = match app.buffers.get(&preview_id) {
+    let (_, _, preview_id) = app::directory_buffer_ids(app);
+    let premotion_preview_path = match app.buffers.get(&preview_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::PreviewImage(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::_Text(_)) | None => None,
+        Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
+        Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
+        Some(Buffer::Empty) | None => None,
     };
 
-    let (viewport, buffer) = match app::get_focused_mut(app) {
+    let (viewport, buffer) = match app::get_focused_current_mut(app) {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
-        (_, Buffer::PreviewImage(_)) => return Vec::new(),
-        (_, Buffer::_Text(_)) => todo!(),
+        (_, Buffer::Image(_)) => return Vec::new(),
+        (_, Buffer::Content(_)) => return Vec::new(),
+        (_, Buffer::Empty) => return Vec::new(),
     };
-    let premotion_preview_path = preview_path;
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(drctn) = mtn {
@@ -106,10 +107,19 @@ pub fn relocate(
         return actions;
     }
 
-    if let Some(path) = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor)) {
+    let preview_id = if let Some(path) = current_preview_path {
         let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(DirectoryPane::Preview, path, selection));
-    }
+        let preview_id = app::get_or_create_directory_buffer_with_id(app, &path);
+
+        actions.push(Action::Load(path, selection));
+
+        preview_id
+    } else {
+        app::create_empty_buffer_with_id(app)
+    };
+
+    let (_, _, preview_vp) = app::directory_viewports_mut(app);
+    preview_vp.buffer_id = preview_id;
 
     actions
 }

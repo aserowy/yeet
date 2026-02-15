@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
     action::Action,
-    model::{history::History, mark::Marks, App, Buffer, DirectoryBuffer, DirectoryPane},
+    model::{history::History, mark::Marks, App, Buffer},
     update::app,
 };
 
@@ -83,6 +83,8 @@ pub fn navigate_to_path_with_selection(
         return Vec::new();
     }
 
+    let mut actions = Vec::new();
+
     let selection = match selection {
         Some(it) => Some(it.to_owned()),
         None => {
@@ -93,44 +95,43 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    let current_id = get_or_create_directory_buffer_id(app, path);
-    let parent_id = path
-        .parent()
-        .filter(|parent| *parent != path)
-        .map(|parent| get_or_create_directory_buffer_id(app, parent))
-        .unwrap_or_else(|| get_or_create_empty_directory_buffer_id(app));
-    let preview_id = selection
-        .as_ref()
-        .map(|selection| path.join(selection))
-        .and_then(|preview_path| {
-            if preview_path.exists() {
-                Some(get_or_create_directory_buffer_id(
-                    app,
-                    preview_path.as_path(),
-                ))
-            } else {
-                None
-            }
-        })
-        .unwrap_or_else(|| get_or_create_empty_directory_buffer_id(app));
+    let current_id = app::get_or_create_directory_buffer_with_id(app, path);
+
+    let parent_id = match path.parent() {
+        Some(parent) => {
+            actions.push(Action::Load(path.to_path_buf(), selection.clone()));
+            app::get_or_create_directory_buffer_with_id(app, parent)
+        }
+        None => app::create_empty_buffer_with_id(app),
+    };
+
+    let preview_id = match &selection {
+        Some(selected_history) => {
+            let mut preview_path = path.to_path_buf();
+            preview_path.push(selected_history);
+
+            actions.push(Action::Load(
+                preview_path.to_path_buf(),
+                history::get_selection_from_history(history, preview_path.as_path())
+                    .map(|s| s.to_string()),
+            ));
+
+            app::get_or_create_directory_buffer_with_id(app, &preview_path)
+        }
+        None => app::create_empty_buffer_with_id(app),
+    };
 
     let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
     parent_vp.buffer_id = parent_id;
     current_vp.buffer_id = current_id;
     preview_vp.buffer_id = preview_id;
 
-    let mut actions = Vec::new();
-    actions.push(Action::Load(
-        DirectoryPane::Current,
-        path.to_path_buf(),
-        selection.clone(),
-    ));
+    actions.push(Action::Load(path.to_path_buf(), selection.clone()));
 
     let parent = path.parent();
     if let Some(parent) = parent {
         if parent != path {
             actions.push(Action::Load(
-                DirectoryPane::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
@@ -155,24 +156,21 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
         let mut actions = Vec::new();
 
-        let current_id = get_or_create_directory_buffer_id(app, path);
         let parent_id = path
             .parent()
             .filter(|parent| *parent != path)
-            .map(|parent| get_or_create_directory_buffer_id(app, parent))
-            .unwrap_or_else(|| get_or_create_empty_directory_buffer_id(app));
-        let preview_id = get_or_create_empty_directory_buffer_id(app);
+            .map(|parent| app::get_or_create_directory_buffer_with_id(app, parent))
+            .unwrap_or_else(|| app::create_empty_buffer_with_id(app));
 
         let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
+        preview_vp.buffer_id = current_vp.buffer_id;
+        current_vp.buffer_id = parent_vp.buffer_id;
         parent_vp.buffer_id = parent_id;
-        current_vp.buffer_id = current_id;
-        preview_vp.buffer_id = preview_id;
 
         if let Some(parent) = path.parent() {
             tracing::trace!("loading parent: {:?}", parent);
 
             actions.push(Action::Load(
-                DirectoryPane::Parent,
                 parent.to_path_buf(),
                 path.file_name().map(|it| it.to_string_lossy().to_string()),
             ));
@@ -195,70 +193,40 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     if let Some(selected) =
         selection::get_current_selected_path(current_buffer, Some(&current_buffer.buffer.cursor))
     {
+        let mut actions = Vec::new();
+
         if current_buffer.path == selected || !selected.is_dir() {
             return Vec::new();
         }
 
         history::add_history_entry(history, selected.as_path());
 
-        let current_id = get_or_create_directory_buffer_id(app, selected.as_path());
-        let parent_id = selected
-            .parent()
-            .filter(|parent| *parent != selected.as_path())
-            .map(|parent| get_or_create_directory_buffer_id(app, parent))
-            .unwrap_or_else(|| get_or_create_empty_directory_buffer_id(app));
-        let preview_id = get_or_create_empty_directory_buffer_id(app);
+        let selected_history =
+            history::get_selection_from_history(history, selected.as_path()).map(|s| s.to_string());
+        let preview_id = match &selected_history {
+            Some(selected_history) => {
+                let mut preview_path = selected.clone();
+                preview_path.push(selected_history);
+
+                actions.push(Action::Load(
+                    preview_path.to_path_buf(),
+                    history::get_selection_from_history(history, preview_path.as_path())
+                        .map(|s| s.to_string()),
+                ));
+
+                app::get_or_create_directory_buffer_with_id(app, &preview_path)
+            }
+            None => app::create_empty_buffer_with_id(app),
+        };
 
         let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
-        parent_vp.buffer_id = parent_id;
-        current_vp.buffer_id = current_id;
+
+        parent_vp.buffer_id = current_vp.buffer_id;
+        current_vp.buffer_id = preview_vp.buffer_id;
         preview_vp.buffer_id = preview_id;
-
-        let mut actions = Vec::new();
-        let history =
-            history::get_selection_from_history(history, selected.as_path()).map(|s| s.to_string());
-
-        actions.push(Action::Load(
-            DirectoryPane::Current,
-            selected.to_path_buf(),
-            history,
-        ));
 
         actions
     } else {
         Vec::new()
     }
-}
-
-fn get_or_create_directory_buffer_id(app: &mut App, path: &Path) -> usize {
-    if let Some((id, _)) = app.buffers.iter().find(|(_, buffer)| match buffer {
-        Buffer::Directory(it) => it.path.as_path() == path,
-        _ => false,
-    }) {
-        return *id;
-    }
-
-    let id = app::get_next_buffer_id(app);
-    app.buffers.insert(
-        id,
-        Buffer::Directory(DirectoryBuffer {
-            path: path.to_path_buf(),
-            ..Default::default()
-        }),
-    );
-    id
-}
-
-fn get_or_create_empty_directory_buffer_id(app: &mut App) -> usize {
-    if let Some((id, _)) = app.buffers.iter().find(|(_, buffer)| match buffer {
-        Buffer::Directory(it) => it.path.as_os_str().is_empty(),
-        _ => false,
-    }) {
-        return *id;
-    }
-
-    let id = app::get_next_buffer_id(app);
-    app.buffers
-        .insert(id, Buffer::Directory(DirectoryBuffer::default()));
-    id
 }

@@ -157,8 +157,9 @@ fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
         .values()
         .flat_map(|bffr| match bffr {
             Buffer::Directory(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::PreviewImage(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::_Text(_) => None.into_iter(),
+            Buffer::Image(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
+            Buffer::Content(_) => None.into_iter(),
+            Buffer::Empty => None.into_iter(),
         })
         .collect::<Vec<_>>();
 
@@ -262,7 +263,7 @@ fn is_message_queueing(action: &Action) -> bool {
     match action {
         Action::EmitMessages(_) => true,
 
-        Action::Load(_, _, _)
+        Action::Load(_, _)
         | Action::Open(_)
         | Action::Resize(_, _)
         | Action::Task(_)

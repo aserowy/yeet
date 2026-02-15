@@ -57,8 +57,9 @@ pub fn refresh(app: &mut crate::model::App) -> Vec<Action> {
     let (_, current, preview) = app::directory_buffers(app);
     let preview_path = match preview {
         Buffer::Directory(buffer) => buffer.resolve_path(),
-        Buffer::PreviewImage(buffer) => buffer.resolve_path(),
-        Buffer::_Text(_) => None,
+        Buffer::Image(buffer) => buffer.resolve_path(),
+        Buffer::Content(_) => None,
+        Buffer::Empty => None,
     };
 
     let navigation = if let Some(path) = preview_path {

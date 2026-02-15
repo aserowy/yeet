@@ -44,6 +44,7 @@ impl Default for App {
             window: Window::Directory(
                 ViewPort {
                     buffer_id: 2,
+                    hide_cursor: true,
                     ..Default::default()
                 },
                 ViewPort {
@@ -52,6 +53,8 @@ impl Default for App {
                 },
                 ViewPort {
                     buffer_id: 3,
+                    hide_cursor: true,
+                    hide_cursor_line: true,
                     ..Default::default()
                 },
             ),
@@ -59,7 +62,7 @@ impl Default for App {
     }
 }
 
-#[allow(dead_code)]
+#[allow(dead_code, clippy::large_enum_variant)]
 pub enum Window {
     Horizontal(Box<Window>, Box<Window>),
     Directory(ViewPort, ViewPort, ViewPort),
@@ -142,15 +145,25 @@ impl Default for CommandLine {
 
 pub enum Buffer {
     Directory(DirectoryBuffer),
-    PreviewImage(PreviewImageBuffer),
-    _Text(Box<TextBuffer>),
+    Image(PreviewImageBuffer),
+    Content(ContentBuffer),
+    Empty,
 }
 
-#[derive(Debug)]
-pub enum DirectoryPane {
-    Current,
-    Parent,
-    Preview,
+#[derive(Default)]
+pub struct ContentBuffer {
+    pub path: PathBuf,
+    pub buffer: TextBuffer,
+}
+
+impl ContentBuffer {
+    pub fn resolve_path(&self) -> Option<&Path> {
+        if self.path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(self.path.as_path())
+        }
+    }
 }
 
 pub struct PreviewImageBuffer {
@@ -187,7 +200,6 @@ impl DirectoryBuffer {
 
 #[derive(Debug, Default, PartialEq)]
 pub enum DirectoryBufferState {
-    Loading,
     PartiallyLoaded,
     Ready,
     #[default]

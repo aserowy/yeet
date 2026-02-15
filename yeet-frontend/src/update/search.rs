@@ -14,8 +14,9 @@ pub fn search_in_buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
     for buffer in buffers {
         let buffer = match buffer {
             Buffer::Directory(it) => it,
-            Buffer::PreviewImage(_) => continue,
-            Buffer::_Text(_) => continue,
+            Buffer::Image(_) => continue,
+            Buffer::Content(_) => continue,
+            Buffer::Empty => continue,
         };
         set_search_char_positions(&mut buffer.buffer, search.as_str());
     }
@@ -25,8 +26,9 @@ pub fn clear(buffers: Vec<&mut Buffer>) {
     for buffer in buffers {
         let buffer = match buffer {
             Buffer::Directory(it) => it,
-            Buffer::PreviewImage(_) => continue,
-            Buffer::_Text(_) => continue,
+            Buffer::Image(_) => continue,
+            Buffer::Content(_) => continue,
+            Buffer::Empty => continue,
         };
 
         for line in &mut buffer.buffer.lines {

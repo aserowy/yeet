@@ -50,20 +50,6 @@ pub fn get_selected_path_with_base(
     }
 }
 
-#[allow(dead_code)]
-pub fn get_current_selected_bufferline<'a>(
-    buffer: &'a mut DirectoryBuffer,
-    cursor: Option<&'a yeet_buffer::model::Cursor>,
-) -> Option<&'a mut BufferLine> {
-    let current_buffer = &mut buffer.buffer;
-    if current_buffer.lines.is_empty() {
-        return None;
-    }
-
-    let cursor = cursor?;
-    current_buffer.lines.get_mut(cursor.vertical_index)
-}
-
 pub fn copy_to_clipboard(
     register: &mut Register,
     buffer: &DirectoryBuffer,

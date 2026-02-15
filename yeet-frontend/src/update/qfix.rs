@@ -11,11 +11,12 @@ use crate::{
 use super::{app, selection, sign};
 
 pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let (_, buffer) = app::get_focused_mut(app);
+    let (_, buffer) = app::get_focused_current_mut(app);
     let buffer = match buffer {
         Buffer::Directory(it) => it,
-        Buffer::PreviewImage(_) => return Vec::new(),
-        Buffer::_Text(_) => return Vec::new(),
+        Buffer::Image(_) => return Vec::new(),
+        Buffer::Content(_) => return Vec::new(),
+        Buffer::Empty => return Vec::new(),
     };
 
     let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));

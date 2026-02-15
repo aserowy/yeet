@@ -1,21 +1,12 @@
 use ratatui::Frame;
 
-use crate::{
-    error::AppError,
-    model::{Model, Window},
-};
+use crate::{error::AppError, model::Model};
 
-use super::filetreebuffer;
+use super::buffer;
 
 pub fn view(model: &Model, frame: &mut Frame) -> Result<u16, AppError> {
-    let single_window = &model.app.window;
+    // NOTE: currently only one window is supported
+    buffer::view(&model.state.modes.current, &model.app, frame, 0, 0);
 
-    match &single_window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(_, _, _) => {
-            filetreebuffer::view(&model.state.modes.current, &model.app, frame, 0, 0)
-        }
-    };
-
-    single_window.get_height()
+    model.app.window.get_height()
 }

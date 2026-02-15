@@ -8,7 +8,7 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     event::ContentKind,
-    model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, DirectoryPane, State},
+    model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
     update::{
         app,
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
@@ -26,10 +26,18 @@ pub fn change(
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    for buffer in app.buffers.values_mut() {
+    let mut changed_buffer_ids = Vec::new();
+    for (id, buffer) in app.buffers.iter_mut() {
         if let Buffer::Directory(buffer) = buffer {
             change_directory(state, buffer, path, contents, selection);
+            changed_buffer_ids.push(*id);
         }
+    }
+
+    let (_, _, preview) = app::directory_viewports_mut(app);
+    if changed_buffer_ids.contains(&preview.buffer_id) {
+        preview.hide_cursor = true;
+        preview.hide_cursor_line = true;
     }
 
     Vec::new()
@@ -168,18 +176,14 @@ pub fn finish(
         {
             let preview_path = match app.buffers.get(&preview_id) {
                 Some(Buffer::Directory(buffer)) => buffer.resolve_path(),
-                Some(Buffer::PreviewImage(buffer)) => buffer.resolve_path(),
-                Some(Buffer::_Text(_)) | None => None,
+                Some(Buffer::Image(buffer)) => buffer.resolve_path(),
+                Some(Buffer::Content(_)) | Some(Buffer::Empty) | None => None,
             };
 
             if preview_path != Some(selected_path.as_path()) {
                 let selection =
                     get_selection_from_history(&state.history, path).map(|s| s.to_owned());
-                actions.push(Action::Load(
-                    DirectoryPane::Preview,
-                    selected_path,
-                    selection,
-                ));
+                actions.push(Action::Load(selected_path, selection));
             }
         }
     }

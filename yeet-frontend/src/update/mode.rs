@@ -33,7 +33,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (vp, _buffer) = app::get_focused_mut(app);
+            let (vp, _buffer) = app::get_focused_current_mut(app);
             vp.hide_cursor = true;
 
             vec![]
@@ -49,10 +49,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, buffer) = match app::get_focused_mut(app) {
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
                 (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
-                (_vp, Buffer::_Text(_)) => todo!(),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
             };
 
             vp.hide_cursor = false;
@@ -67,10 +68,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
-            let (vp, buffer) = match app::get_focused_mut(app) {
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
                 (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
-                (_vp, Buffer::_Text(_)) => todo!(),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
             };
 
             // TODO: handle file operations: show pending with gray, refresh on operation success
@@ -87,10 +89,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             save::changes(app, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            let (vp, buffer) = match app::get_focused_mut(app) {
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
                 (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
-                (_vp, Buffer::_Text(_)) => todo!(),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
             };
 
             vp.hide_cursor = false;

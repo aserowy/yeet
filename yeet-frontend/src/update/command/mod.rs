@@ -47,11 +47,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
             let buffer = match app.buffers.get(&preview_id) {
                 Some(Buffer::Directory(it)) => it,
-                Some(Buffer::PreviewImage(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
-                Some(Buffer::_Text(_)) => todo!(),
-                None => return Vec::new(),
+                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Empty) | None => return Vec::new(),
             };
 
             add_change_mode(
@@ -64,11 +62,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
             let buffer = match app.buffers.get(&preview_id) {
                 Some(Buffer::Directory(it)) => it,
-                Some(Buffer::PreviewImage(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
-                Some(Buffer::_Text(_)) => todo!(),
-                None => return Vec::new(),
+                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Empty) | None => return Vec::new(),
             };
 
             add_change_mode(mode_before, mode, file::delete_selection(buffer))
@@ -101,11 +97,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             let (_, current_id, _) = app::directory_buffer_ids(app);
             let buffer = match app.buffers.get(&current_id) {
                 Some(Buffer::Directory(it)) => it,
-                Some(Buffer::PreviewImage(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
-                Some(Buffer::_Text(_)) => todo!(),
-                None => return Vec::new(),
+                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Empty) | None => return Vec::new(),
             };
 
             add_change_mode(
@@ -128,11 +122,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
             let buffer = match app.buffers.get(&preview_id) {
                 Some(Buffer::Directory(it)) => it,
-                Some(Buffer::PreviewImage(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
-                Some(Buffer::_Text(_)) => todo!(),
-                None => return Vec::new(),
+                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::Empty) | None => return Vec::new(),
             };
 
             add_change_mode(

@@ -16,10 +16,11 @@ use super::{app, junkyard::trash_to_junkyard};
 
 #[tracing::instrument(skip(app))]
 pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
-    let (vp, buffer) = match app::get_focused_mut(app) {
+    let (vp, buffer) = match app::get_focused_current_mut(app) {
         (vp, Buffer::Directory(it)) => (vp, it),
-        (_vp, Buffer::PreviewImage(_)) => return Vec::new(),
-        (_vp, Buffer::_Text(_)) => todo!(),
+        (_vp, Buffer::Image(_)) => return Vec::new(),
+        (_vp, Buffer::Content(_)) => return Vec::new(),
+        (_vp, Buffer::Empty) => return Vec::new(),
     };
 
     let selected_index = buffer.buffer.cursor.vertical_index;
