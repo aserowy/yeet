@@ -34,13 +34,32 @@ pub fn change(
         }
     }
 
-    let (_, _, preview) = app::directory_viewports_mut(app);
-    if changed_buffer_ids.contains(&preview.buffer_id) {
-        preview.hide_cursor = true;
-        preview.hide_cursor_line = true;
+    let (_, current_id, preview_id) = app::directory_buffer_ids(app);
+    let current = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(buffer)) => buffer,
+        _ => return Vec::new(),
+    };
+    if current.path.as_path() != path {
+        return Vec::new();
     }
 
-    Vec::new()
+    let mut actions = Vec::new();
+
+    let preview_is_empty = matches!(app.buffers.get(&preview_id), Some(Buffer::Empty));
+    if preview_is_empty {
+        if let Some(selected_path) =
+            selection::get_current_selected_path(current, Some(&current.buffer.cursor))
+        {
+            let selection = get_selection_from_history(&state.history, path).map(|s| s.to_owned());
+            let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
+            let (_, _, preview) = app::directory_viewports_mut(app);
+            preview.buffer_id = preview_id;
+
+            actions.push(Action::Load(selected_path, selection));
+        }
+    }
+
+    actions
 }
 
 fn change_directory(
@@ -191,7 +210,6 @@ pub fn finish(
     actions
 }
 
-// TODO: move to ansi before
 pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
     let content = match kind {
         ContentKind::Directory => format!("\x1b[94m{}\x1b[39m", content),
@@ -201,5 +219,70 @@ pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
     BufferLine {
         content: Ansi::new(&content),
         ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use yeet_buffer::model::{ansi::Ansi, Cursor, TextBuffer};
+
+    use crate::{
+        action::Action,
+        model::{App, Buffer, DirectoryBuffer, Window},
+    };
+
+    use super::change;
+
+    #[test]
+    fn change_loads_preview_when_empty_for_current() {
+        let mut app = App::default();
+        let current_path = std::env::current_dir().expect("get current dir");
+        let selected_file = current_path.join("Cargo.toml");
+
+        let current_buffer = DirectoryBuffer {
+            path: current_path.clone(),
+            buffer: TextBuffer {
+                lines: vec![yeet_buffer::model::BufferLine {
+                    content: Ansi::new("Cargo.toml"),
+                    ..Default::default()
+                }],
+                cursor: Cursor {
+                    vertical_index: 0,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        app.buffers.insert(1, Buffer::Directory(current_buffer));
+        app.buffers.insert(2, Buffer::Directory(Default::default()));
+        app.buffers.insert(3, Buffer::Empty);
+        app.window = Window::Directory(Default::default(), Default::default(), Default::default());
+        if let Window::Directory(parent, current, preview) = &mut app.window {
+            parent.buffer_id = 2;
+            current.buffer_id = 1;
+            preview.buffer_id = 3;
+        }
+
+        let mut state = crate::model::State::default();
+        let actions = change(
+            &mut state,
+            &mut app,
+            &current_path,
+            &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
+            &None,
+        );
+
+        assert!(matches!(
+            actions.as_slice(),
+            [Action::Load(path, _)] if path == &selected_file
+        ));
+
+        let (_, _, preview_id) = crate::update::app::directory_buffer_ids(&app);
+        assert!(matches!(
+            app.buffers.get(&preview_id),
+            Some(Buffer::Directory(buffer)) if buffer.path == selected_file
+        ));
     }
 }
