@@ -6,7 +6,10 @@ use std::{
 use crate::{error::AppError, settings::Settings};
 use ratatui_image::protocol::Protocol;
 use tokio_util::sync::CancellationToken;
-use yeet_buffer::model::{viewport::ViewPort, Mode, TextBuffer};
+use yeet_buffer::model::{
+    viewport::{LineNumber, ViewPort},
+    Mode, TextBuffer,
+};
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
@@ -45,10 +48,14 @@ impl Default for App {
                 ViewPort {
                     buffer_id: 2,
                     hide_cursor: true,
+                    show_border: true,
                     ..Default::default()
                 },
                 ViewPort {
                     buffer_id: 1,
+                    line_number: LineNumber::Relative,
+                    line_number_width: 3,
+                    show_border: true,
                     ..Default::default()
                 },
                 ViewPort {
