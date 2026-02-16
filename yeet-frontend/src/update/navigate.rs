@@ -198,7 +198,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     ) {
         Some(selection) => selection,
         None => {
-            tracing::warn!("no selection in preview buffer, cannot navigate to selected");
+            tracing::warn!("no selection in current buffer, cannot navigate to selected");
             return Vec::new();
         }
     };

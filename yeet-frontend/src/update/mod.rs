@@ -157,35 +157,7 @@ fn update_with_message(
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
         Message::TaskStarted(id, cancellation) => task::add(&mut state.tasks, id, cancellation),
         Message::TaskEnded(id) => task::remove(&mut state.tasks, id),
-        Message::ZoxideResult(path) => {
-            let current_id = app::get_next_buffer_id(app);
-            let parent_id = app::get_next_buffer_id(app);
-            let preview_id = app::get_next_buffer_id(app);
-
-            if app
-                .buffers
-                .insert(current_id, Buffer::Directory(Default::default()))
-                .is_some()
-            {
-                tracing::error!("Buffer with id {} already exists", current_id);
-            };
-            if app
-                .buffers
-                .insert(parent_id, Buffer::Directory(Default::default()))
-                .is_some()
-            {
-                tracing::error!("Buffer with id {} already exists", parent_id);
-            };
-            if app.buffers.insert(preview_id, Buffer::Empty).is_some() {
-                tracing::error!("Buffer with id {} already exists", preview_id);
-            };
-
-            let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
-            parent_vp.buffer_id = parent_id;
-            current_vp.buffer_id = current_id;
-            preview_vp.buffer_id = preview_id;
-            navigate::path(app, &state.history, path.as_ref())
-        }
+        Message::ZoxideResult(path) => navigate::path(app, &state.history, path.as_ref()),
     }
 }
 

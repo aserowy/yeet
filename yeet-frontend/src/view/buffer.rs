@@ -19,17 +19,21 @@ pub fn view(
         Window::Directory(parent, current, preview) => (parent, current, preview),
     };
 
-    let parent_buffer =
-        app.buffers
-            .get(&parent_viewport.buffer_id)
-            .and_then(|buffer| match buffer {
-                Buffer::Directory(it) => Some(it),
-                _ => None,
-            });
+    let parent_buffer = app.buffers.get(&parent_viewport.buffer_id);
     let parent_x = parent_viewport.x.saturating_add(horizontal_offset);
     let parent_y = parent_viewport.y.saturating_add(vertical_offset);
-    if let Some(buffer) = parent_buffer {
-        render_directory_buffer(mode, frame, parent_viewport, buffer, parent_x, parent_y);
+    match parent_buffer {
+        Some(Buffer::Directory(buffer)) => {
+            render_directory_buffer(mode, frame, parent_viewport, buffer, parent_x, parent_y);
+        }
+        Some(Buffer::Empty) => {
+            let mut vp = parent_viewport.clone();
+            vp.hide_cursor = true;
+            vp.hide_cursor_line = true;
+
+            render_directory_buffer(mode, frame, &vp, &Default::default(), parent_x, parent_y);
+        }
+        _ => {}
     }
 
     let current_buffer =
