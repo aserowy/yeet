@@ -20,71 +20,70 @@ pub fn view(
     };
 
     let parent_buffer = app.buffers.get(&parent_viewport.buffer_id);
-    let parent_x = parent_viewport.x.saturating_add(horizontal_offset);
-    let parent_y = parent_viewport.y.saturating_add(vertical_offset);
-    match parent_buffer {
-        Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, parent_viewport, buffer, parent_x, parent_y);
+    render_buffer_slot(
+        mode,
+        frame,
+        parent_viewport,
+        parent_buffer,
+        horizontal_offset,
+        vertical_offset,
+    );
+
+    let current_buffer = app.buffers.get(&current_viewport.buffer_id);
+    render_buffer_slot(
+        mode,
+        frame,
+        current_viewport,
+        current_buffer,
+        horizontal_offset,
+        vertical_offset,
+    );
+
+    let preview_buffer = app.buffers.get(&preview_viewport.buffer_id);
+    render_buffer_slot(
+        mode,
+        frame,
+        preview_viewport,
+        preview_buffer,
+        horizontal_offset,
+        vertical_offset,
+    );
+}
+
+fn render_buffer_slot(
+    mode: &Mode,
+    frame: &mut Frame,
+    viewport: &ViewPort,
+    buffer: Option<&Buffer>,
+    horizontal_offset: u16,
+    vertical_offset: u16,
+) {
+    let x = viewport.x.saturating_add(horizontal_offset);
+    let y = viewport.y.saturating_add(vertical_offset);
+
+    match buffer {
+        Some(Buffer::Content(buffer)) => {
+            buffer_view(viewport, mode, &buffer.buffer, frame, x, y);
         }
-        Some(Buffer::Empty) => {
-            let mut vp = parent_viewport.clone();
+        Some(Buffer::Directory(buffer)) => {
+            render_directory_buffer(mode, frame, viewport, buffer, x, y);
+        }
+        Some(Buffer::Empty) | None => {
+            let mut vp = viewport.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 
-            render_directory_buffer(mode, frame, &vp, &Default::default(), parent_x, parent_y);
+            render_directory_buffer(mode, frame, &vp, &Default::default(), x, y);
         }
-        _ => {}
-    }
+        Some(Buffer::Image(buffer)) => {
+            let rect = Rect {
+                x,
+                y,
+                width: viewport.width,
+                height: viewport.height,
+            };
 
-    let current_buffer =
-        app.buffers
-            .get(&current_viewport.buffer_id)
-            .and_then(|buffer| match buffer {
-                Buffer::Directory(it) => Some(it),
-                _ => None,
-            });
-    let current_x = current_viewport.x.saturating_add(horizontal_offset);
-    let current_y = current_viewport.y.saturating_add(vertical_offset);
-    if let Some(buffer) = current_buffer {
-        render_directory_buffer(mode, frame, current_viewport, buffer, current_x, current_y);
-    }
-
-    let preview_buffer = app.buffers.get(&preview_viewport.buffer_id);
-    let preview_x = preview_viewport.x.saturating_add(horizontal_offset);
-    let preview_y = preview_viewport.y.saturating_add(vertical_offset);
-    if let Some(buffer) = preview_buffer {
-        match buffer {
-            Buffer::Directory(buffer) => {
-                render_directory_buffer(
-                    mode,
-                    frame,
-                    preview_viewport,
-                    buffer,
-                    preview_x,
-                    preview_y,
-                );
-            }
-            Buffer::Image(buffer) => {
-                let rect = Rect {
-                    x: preview_x,
-                    y: preview_y,
-                    width: preview_viewport.width,
-                    height: preview_viewport.height,
-                };
-
-                frame.render_widget(Image::new(&buffer.protocol), rect);
-            }
-            Buffer::Content(buffer) => {
-                buffer_view(
-                    preview_viewport,
-                    mode,
-                    &buffer.buffer,
-                    frame,
-                    preview_x,
-                    preview_y,
-                );
-            }
-            Buffer::Empty => {}
+            frame.render_widget(Image::new(&buffer.protocol), rect);
         }
     }
 }
