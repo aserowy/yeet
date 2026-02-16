@@ -38,7 +38,7 @@ pub fn view(
 ) {
     view::view(
         viewport,
-        Some(&buffer.cursor),
+        &buffer.cursor,
         mode,
         buffer,
         frame,

@@ -15,7 +15,7 @@ mod style;
 
 pub fn view(
     viewport: &ViewPort,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
     mode: &Mode,
     buffer: &TextBuffer,
     frame: &mut Frame,
@@ -62,7 +62,7 @@ fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLin
 fn get_styled_lines<'a>(
     vp: &ViewPort,
     mode: &Mode,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
     lines: Vec<BufferLine>,
 ) -> Vec<Line<'a>> {
     let lines = if lines.is_empty() {
