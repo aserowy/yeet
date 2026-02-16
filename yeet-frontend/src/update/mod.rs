@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::{
     message::BufferMessage,
@@ -296,31 +296,12 @@ pub fn update_with_buffer_message(
 
 pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
     let (_, current_id, preview_id) = app::directory_buffer_ids(app);
-    let current_selected_path = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(buffer)) => {
-            selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
-        }
-        _ => unreachable!(),
-    };
-
-    let current_selected_path = match current_selected_path {
-        Some(path) => path,
-        None => {
-            app.buffers.insert(preview_id, Buffer::Empty);
-            return Vec::new();
-        }
-    };
 
     match content {
         Preview::Content(path, content) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            if path != current_selected_path {
-                tracing::trace!(
-                    "preview path {:?} does not match current selected path {:?}, skipping update",
-                    path,
-                    current_selected_path
-                );
+            if !preview_matches_selection(app, current_id, preview_id, &path) {
                 return Vec::new();
             }
 
@@ -346,12 +327,7 @@ pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
         Preview::Image(path, protocol) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            if path != current_selected_path {
-                tracing::trace!(
-                    "preview path {:?} does not match current selected path {:?}, skipping update",
-                    path,
-                    current_selected_path
-                );
+            if !preview_matches_selection(app, current_id, preview_id, &path) {
                 return Vec::new();
             }
 
@@ -363,12 +339,7 @@ pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
         Preview::None(path) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            if path != current_selected_path {
-                tracing::trace!(
-                    "preview path {:?} does not match current selected path {:?}, skipping update",
-                    path,
-                    current_selected_path
-                );
+            if !preview_matches_selection(app, current_id, preview_id, &path) {
                 return Vec::new();
             }
 
@@ -381,4 +352,37 @@ pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
     preview.hide_cursor_line = true;
 
     Vec::new()
+}
+
+fn preview_matches_selection(
+    app: &mut App,
+    current_id: usize,
+    preview_id: usize,
+    path: &Path,
+) -> bool {
+    let current_selected_path = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(buffer)) => {
+            selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+        }
+        _ => unreachable!(),
+    };
+
+    let current_selected_path = match current_selected_path {
+        Some(path) => path,
+        None => {
+            app.buffers.insert(preview_id, Buffer::Empty);
+            return false;
+        }
+    };
+
+    if path != current_selected_path {
+        tracing::trace!(
+            "preview path {:?} does not match current selected path {:?}, skipping update",
+            path,
+            current_selected_path
+        );
+        return false;
+    }
+
+    true
 }
