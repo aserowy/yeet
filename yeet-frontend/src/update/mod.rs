@@ -295,10 +295,34 @@ pub fn update_with_buffer_message(
 }
 
 pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
-    let (_, _, preview_id) = app::directory_buffer_ids(app);
+    let (_, current_id, preview_id) = app::directory_buffer_ids(app);
+    let current_selected_path = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(buffer)) => {
+            selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+        }
+        _ => unreachable!(),
+    };
+
+    let current_selected_path = match current_selected_path {
+        Some(path) => path,
+        None => {
+            app.buffers.insert(preview_id, Buffer::Empty);
+            return Vec::new();
+        }
+    };
+
     match content {
         Preview::Content(path, content) => {
             tracing::trace!("updating preview buffer: {:?}", path);
+
+            if path != current_selected_path {
+                tracing::trace!(
+                    "preview path {:?} does not match current selected path {:?}, skipping update",
+                    path,
+                    current_selected_path
+                );
+                return Vec::new();
+            }
 
             let content: Vec<_> = content
                 .iter()
@@ -320,12 +344,34 @@ pub fn update_preview(app: &mut App, content: Preview) -> Vec<Action> {
             );
         }
         Preview::Image(path, protocol) => {
+            tracing::trace!("updating preview buffer: {:?}", path);
+
+            if path != current_selected_path {
+                tracing::trace!(
+                    "preview path {:?} does not match current selected path {:?}, skipping update",
+                    path,
+                    current_selected_path
+                );
+                return Vec::new();
+            }
+
             app.buffers.insert(
                 preview_id,
                 Buffer::Image(PreviewImageBuffer { path, protocol }),
             );
         }
-        Preview::None(_path) => {
+        Preview::None(path) => {
+            tracing::trace!("updating preview buffer: {:?}", path);
+
+            if path != current_selected_path {
+                tracing::trace!(
+                    "preview path {:?} does not match current selected path {:?}, skipping update",
+                    path,
+                    current_selected_path
+                );
+                return Vec::new();
+            }
+
             app.buffers.insert(preview_id, Buffer::Empty);
         }
     }
