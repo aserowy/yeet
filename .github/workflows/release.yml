@@ -26,9 +26,6 @@ jobs:
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-      - name: setup
-        run: sudo apt-get update && sudo apt-get -y install pkg-config libchafa-dev libglib2.0-dev
-
       - uses: actions/checkout@v6
 
       - name: setup rust
@@ -41,7 +38,7 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -yq gcc-aarch64-linux-gnu
+          sudo apt-get install -yq gcc-aarch64-linux-gnu pkg-config libchafa-dev libglib2.0-dev
 
       - name: setup rust cache
         uses: Swatinem/rust-cache@v2
