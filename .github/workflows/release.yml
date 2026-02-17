@@ -54,7 +54,7 @@ jobs:
       - name: setup build dependencies for windows
         if: matrix.os == 'windows-latest'
         run: |
-          winget install hpjansson.Chafa
+          winget install --id hpjansson.Chafa --accept-source-agreements --accept-package-agreements
 
       - name: setup rust cache
         uses: Swatinem/rust-cache@v2
