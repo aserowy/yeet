@@ -140,10 +140,6 @@ impl Default for CommandLine {
     fn default() -> Self {
         Self {
             buffer: TextBuffer {
-                cursor: yeet_buffer::model::Cursor {
-                    vertical_index: 0,
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             key_sequence: "".to_owned(),

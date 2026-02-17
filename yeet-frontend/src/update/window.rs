@@ -60,7 +60,7 @@ fn set_commandline_vp(
     commandline.viewport.height = rect.height;
 
     let key_sequence_offset = u16::try_from(commandline.key_sequence.chars().count())?;
-    commandline.viewport.width = rect.width - key_sequence_offset;
+    commandline.viewport.width = rect.width.saturating_sub(key_sequence_offset);
 
     Ok(())
 }
