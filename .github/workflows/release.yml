@@ -20,9 +20,9 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+          - os: ubuntu-24.04-arm
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
@@ -51,21 +51,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -yq gcc-aarch64-linux-gnu
 
-      - name: setup build dependencies for windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          winget install --id hpjansson.Chafa --accept-source-agreements --accept-package-agreements
-
       - name: setup rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: build target
+      - name: build target for linux/macos
+        if: matrix.target != 'x86_64-pc-windows-gnu' && matrix.target != 'aarch64-pc-windows-msvc'
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: /usr/bin/aarch64-linux-gnu-gcc
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: pack unix artifacts
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+      - name: build target for windows
+        if: matrix.target == 'x86_64-pc-windows-gnu' || matrix.target == 'aarch64-pc-windows-msvc'
+        run: |
+          cargo install cross
+          cross build --target ${{ matrix.target }} --release
+
+      - name: pack artifact
         env:
           TARGET_NAME: yeet-${{ matrix.target }}
         run: |
@@ -73,16 +74,6 @@ jobs:
           cp target/${{ matrix.target }}/release/yeet $TARGET_NAME
           cp README.md LICENSE $TARGET_NAME
           zip -r $TARGET_NAME.zip $TARGET_NAME
-
-      - name: pack win artifacts
-        if: matrix.os == 'windows-latest'
-        env:
-          TARGET_NAME: yeet-${{ matrix.target }}
-        run: |
-          New-Item -ItemType Directory -Path ${env:TARGET_NAME}
-          Copy-Item -Path "target\${{ matrix.target }}\release\yeet.exe" -Destination ${env:TARGET_NAME}
-          Copy-Item -Path "README.md", "LICENSE" -Destination ${env:TARGET_NAME}
-          Compress-Archive -Path ${env:TARGET_NAME} -DestinationPath "${env:TARGET_NAME}.zip"
 
       - name: release on gh
         uses: softprops/action-gh-release@v2
