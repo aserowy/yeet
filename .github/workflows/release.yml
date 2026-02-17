@@ -14,7 +14,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -35,13 +35,13 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: setup build dependencies for ubuntu-latest
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
         run: |
           sudo apt-get update
-          sudo apt-get install -yq pkg-config libchafa-dev libglib2.0-dev
+          sudo apt-get install -yq pkg-config libglib2.0-dev
 
       - name: install gcc for aarch64-unknown-linux-gnu
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        if: matrix.os == 'ubuntu-24.04-arm'
         run: |
           sudo apt-get update
           sudo apt-get install -yq gcc-aarch64-linux-gnu
