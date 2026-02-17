@@ -27,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: setup
-        run: sudo apt update && sudo apt -y install pkg-config libchafa-dev libglib2.0-dev
+        run: sudo apt-get update && sudo apt-get -y install pkg-config libchafa-dev libglib2.0-dev
 
       - uses: actions/checkout@v6
 
