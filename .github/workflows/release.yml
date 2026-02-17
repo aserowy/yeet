@@ -38,7 +38,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
         run: |
           sudo apt-get update
-          sudo apt-get install -yq pkg-config libglib2.0-dev
+          sudo apt-get install -yq pkg-config libchafa-dev libglib2.0-dev
 
       - name: install gcc for aarch64-unknown-linux-gnu
         if: matrix.os == 'ubuntu-24.04-arm'
