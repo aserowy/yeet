@@ -114,6 +114,7 @@ pub fn update(
         TextModification::Insert(raw) => {
             let line = get_line_or_create_on_empty(buffer);
             if let Some((cursor, line)) = line {
+                let is_newline = line.content.count_chars() == 0;
                 let index = get_cursor_index(cursor, line);
 
                 let next_index = index + raw.chars().count();
@@ -125,11 +126,11 @@ pub fn update(
                 let mut new = line.content.clone();
                 new.insert(index, raw);
 
-                let changed = BufferChanged::Content(
-                    cursor.vertical_index,
-                    line.content.clone(),
-                    new.clone(),
-                );
+                let changed = if is_newline {
+                    BufferChanged::LineAdded(cursor.vertical_index, new.clone())
+                } else {
+                    BufferChanged::Content(cursor.vertical_index, line.content.clone(), new.clone())
+                };
                 line.content = new;
 
                 Some(vec![changed])
