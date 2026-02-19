@@ -16,8 +16,6 @@ use tokio_util::sync::CancellationToken;
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, PrintContent, QuitMode};
 
-use crate::update::window;
-
 mod action;
 pub mod error;
 mod event;
@@ -72,9 +70,6 @@ pub async fn run(settings: Settings) -> Result<(), AppError> {
             KeymapMessage::Print(vec![PrintContent::Error("Failed to load qfix".to_string())]),
         )]));
     }
-
-    let size = terminal.size().expect("Failed to get terminal size");
-    window::update(&mut model.app, size).expect("Failed to update window on startup");
 
     tracing::debug!("starting with model state: {:?}", model);
 

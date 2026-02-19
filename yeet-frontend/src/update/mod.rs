@@ -81,6 +81,10 @@ pub fn model(terminal: &TerminalWrapper, model: &mut Model, envelope: Envelope) 
         Err(err) => tracing::error!("window update failed with error: {}", err),
     };
 
+    commandline::force_cursor_after_size_update(
+        &mut model.app.commandline,
+        &model.state.modes.current,
+    );
     buffers::update(&mut model.app);
 
     register::finish_scope(

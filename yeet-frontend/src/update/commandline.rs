@@ -39,6 +39,25 @@ pub fn update(
     Vec::new()
 }
 
+pub fn force_cursor_after_size_update(commandline: &mut CommandLine, mode: &Mode) {
+    if !matches!(mode, Mode::Command(CommandMode::PrintMultiline)) {
+        return;
+    }
+
+    yeet_buffer::update(
+        Some(&mut commandline.viewport),
+        mode,
+        &mut commandline.buffer,
+        std::slice::from_ref(&BufferMessage::MoveCursor(1, CursorDirection::Bottom)),
+    );
+    yeet_buffer::update(
+        Some(&mut commandline.viewport),
+        mode,
+        &mut commandline.buffer,
+        std::slice::from_ref(&BufferMessage::MoveCursor(1, CursorDirection::LineEnd)),
+    );
+}
+
 pub fn modify(
     app: &mut App,
     modes: &mut ModeState,
@@ -266,21 +285,6 @@ pub fn print(
     } else {
         Vec::new()
     };
-
-    let message = BufferMessage::MoveCursor(1, CursorDirection::Bottom);
-    yeet_buffer::update(
-        Some(&mut commandline.viewport),
-        &modes.current,
-        &mut commandline.buffer,
-        std::slice::from_ref(&message),
-    );
-    let message = BufferMessage::MoveCursor(1, CursorDirection::LineEnd);
-    yeet_buffer::update(
-        Some(&mut commandline.viewport),
-        &modes.current,
-        &mut commandline.buffer,
-        std::slice::from_ref(&message),
-    );
 
     actions
 }
