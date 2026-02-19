@@ -146,6 +146,18 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             continue;
         }
 
+        if path.is_dir() {
+            let index = dir.buffer.lines.iter().position(|line| {
+                line.content
+                    .to_stripped_string()
+                    .starts_with(&format!("{name}/"))
+            });
+
+            if let Some(index) = index {
+                dir.buffer.lines.remove(index);
+            }
+        }
+
         let kind = if path.is_dir() {
             crate::event::ContentKind::Directory
         } else {
