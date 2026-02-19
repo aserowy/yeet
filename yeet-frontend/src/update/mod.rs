@@ -153,7 +153,7 @@ fn update_with_message(
                     app,
                     &paths,
                 );
-                junkyard::add(&mut state.junk, &paths)
+                junkyard::cleanup_if_path_in_junkyard(&mut state.junk, &paths)
             }
         }
         Message::PreviewLoaded(content) => update_preview(app, content),

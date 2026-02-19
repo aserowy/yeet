@@ -14,7 +14,7 @@ use crate::{
     update::app,
 };
 
-pub fn add(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
+pub fn cleanup_if_path_in_junkyard(junk: &mut JunkYard, paths: &Vec<PathBuf>) -> Vec<Action> {
     let mut actions = Vec::new();
     for path in paths {
         if path.starts_with(&junk.path) {
