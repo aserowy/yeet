@@ -192,27 +192,33 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
 
     history::add_history_entry(history, preview_buffer.path.as_path());
 
-    let current_preview_selection = match selection::get_current_selected_path(
-        preview_buffer,
-        Some(&preview_buffer.buffer.cursor),
-    ) {
-        Some(selection) => selection,
+    let current_preview_selection =
+        selection::get_current_selected_path(preview_buffer, Some(&preview_buffer.buffer.cursor));
+
+    let mut actions = Vec::new();
+    let preview_id = match current_preview_selection {
+        Some(selection) => {
+            actions.push(Action::Load(
+                selection.to_path_buf(),
+                history::get_selection_from_history(history, selection.as_path())
+                    .map(|s| s.to_string()),
+            ));
+            app::get_or_create_directory_buffer_with_id(app, selection.as_path())
+        }
         None => {
-            tracing::warn!("no selection in current buffer, cannot navigate to selected");
-            return Vec::new();
+            if !preview_buffer.path.is_dir() {
+                tracing::warn!("no selection in current buffer, cannot navigate to selected");
+                return Vec::new();
+            }
+            app::create_empty_buffer_with_id(app)
         }
     };
 
-    let preview_id = app::get_or_create_directory_buffer_with_id(app, &current_preview_selection);
     let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
 
     parent_vp.buffer_id = current_vp.buffer_id;
     current_vp.buffer_id = preview_vp.buffer_id;
     preview_vp.buffer_id = preview_id;
 
-    vec![Action::Load(
-        current_preview_selection.to_path_buf(),
-        history::get_selection_from_history(history, current_preview_selection.as_path())
-            .map(|s| s.to_string()),
-    )]
+    actions
 }
