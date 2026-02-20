@@ -5,8 +5,10 @@ use std::path::Path;
 use crate::{
     action::Action,
     event::Message,
-    model::{register::Register, DirectoryBuffer},
+    model::{history::History, register::Register, App, Buffer, DirectoryBuffer},
 };
+
+use super::{app, history as history_update};
 
 pub fn get_current_selected_path(
     buffer: &DirectoryBuffer,
@@ -46,6 +48,50 @@ pub fn get_selected_path_with_base(
     } else {
         None
     }
+}
+
+pub fn refresh_preview_from_current_selection(
+    app: &mut App,
+    history: &History,
+    previous_selection: Option<PathBuf>,
+) -> Vec<Action> {
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let current_selection = match app.buffers.get(&current_id) {
+        Some(Buffer::Directory(buffer)) => {
+            get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+        }
+        _ => return Vec::new(),
+    };
+
+    if previous_selection.is_some() && previous_selection == current_selection {
+        return Vec::new();
+    }
+
+    refresh_preview_from_selection(app, history, current_selection)
+}
+
+fn refresh_preview_from_selection(
+    app: &mut App,
+    history: &History,
+    selection: Option<PathBuf>,
+) -> Vec<Action> {
+    let mut actions = Vec::new();
+    if let Some(selected_path) = selection {
+        let selection = history_update::get_selection_from_history(history, &selected_path)
+            .map(|s| s.to_owned());
+
+        actions.push(Action::Load(selected_path.clone(), selection));
+
+        let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
+        let (_, _, preview) = app::directory_viewports_mut(app);
+        preview.buffer_id = preview_id;
+    } else {
+        let preview_id = app::create_empty_buffer_with_id(app);
+        let (_, _, preview) = app::directory_viewports_mut(app);
+        preview.buffer_id = preview_id;
+    }
+
+    actions
 }
 
 pub fn copy_to_clipboard(

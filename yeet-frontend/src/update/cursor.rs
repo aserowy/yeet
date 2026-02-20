@@ -100,26 +100,5 @@ pub fn relocate(
         );
     };
 
-    let mut actions = Vec::new();
-    let current_preview_path =
-        selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));
-    if premotion_preview_path == current_preview_path {
-        return actions;
-    }
-
-    let preview_id = if let Some(path) = current_preview_path {
-        let selection = get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
-        let preview_id = app::get_or_create_directory_buffer_with_id(app, &path);
-
-        actions.push(Action::Load(path, selection));
-
-        preview_id
-    } else {
-        app::create_empty_buffer_with_id(app)
-    };
-
-    let (_, _, preview_vp) = app::directory_viewports_mut(app);
-    preview_vp.buffer_id = preview_id;
-
-    actions
+    selection::refresh_preview_from_current_selection(app, &state.history, premotion_preview_path)
 }

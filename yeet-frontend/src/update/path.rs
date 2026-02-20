@@ -65,37 +65,7 @@ pub fn add(
         sign::set_sign_for_paths(app.buffers.values_mut().collect(), qfix_paths, QFIX_SIGN_ID);
     }
 
-    let current_selection = app
-        .buffers
-        .get(&current_id)
-        .and_then(|buffer| match buffer {
-            Buffer::Directory(buffer) => {
-                selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
-            }
-            _ => None,
-        });
-
-    if previous_selection == current_selection {
-        return Vec::new();
-    }
-
-    let mut actions = Vec::new();
-    if let Some(selected_path) = current_selection {
-        let selection =
-            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
-
-        actions.push(Action::Load(selected_path.clone(), selection));
-
-        let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-        let (_, _, preview) = app::directory_viewports_mut(app);
-        preview.buffer_id = preview_id;
-    } else {
-        let preview_id = app::create_empty_buffer_with_id(app);
-        let (_, _, preview) = app::directory_viewports_mut(app);
-        preview.buffer_id = preview_id;
-    }
-
-    actions
+    selection::refresh_preview_from_current_selection(app, history, previous_selection)
 }
 
 #[tracing::instrument(skip(junk, app))]
@@ -302,28 +272,9 @@ fn update_directory_buffers_on_remove(
         .map(|preview| preview.starts_with(path))
         .unwrap_or(false)
     {
-        let current_buffer = match app.buffers.get(&current_id) {
-            Some(Buffer::Directory(buffer)) => buffer,
-            _ => return actions,
-        };
-
-        if let Some(selected_path) = selection::get_current_selected_path(
-            current_buffer,
-            Some(&current_buffer.buffer.cursor),
-        ) {
-            let selection =
-                history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
-
-            actions.push(Action::Load(selected_path.clone(), selection));
-
-            let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-            let (_, _, preview) = app::directory_viewports_mut(app);
-            preview.buffer_id = preview_id;
-        } else {
-            let preview_id = app::create_empty_buffer_with_id(app);
-            let (_, _, preview) = app::directory_viewports_mut(app);
-            preview.buffer_id = preview_id;
-        }
+        actions.extend(selection::refresh_preview_from_current_selection(
+            app, history, None,
+        ));
     }
 
     actions

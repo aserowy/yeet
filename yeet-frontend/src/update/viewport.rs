@@ -9,7 +9,7 @@ use crate::{
     update::app,
 };
 
-use super::{history, selection};
+use super::selection;
 
 pub fn relocate(
     app: &mut App,
@@ -33,11 +33,5 @@ pub fn relocate(
         std::slice::from_ref(&msg),
     );
 
-    let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor)) {
-        let selection = history::get_selection_from_history(history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(path, selection));
-    }
-
-    actions
+    selection::refresh_preview_from_current_selection(app, history, None)
 }

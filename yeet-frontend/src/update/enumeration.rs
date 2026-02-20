@@ -12,7 +12,6 @@ use crate::{
     update::{
         app,
         cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
-        history::get_selection_from_history,
         selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
@@ -47,16 +46,11 @@ pub fn change(
 
     let preview_is_empty = matches!(app.buffers.get(&preview_id), Some(Buffer::Empty));
     if preview_is_empty {
-        if let Some(selected_path) =
-            selection::get_current_selected_path(current, Some(&current.buffer.cursor))
-        {
-            let selection = get_selection_from_history(&state.history, path).map(|s| s.to_owned());
-            let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-            let (_, _, preview) = app::directory_viewports_mut(app);
-            preview.buffer_id = preview_id;
-
-            actions.push(Action::Load(selected_path, selection));
-        }
+        actions.extend(selection::refresh_preview_from_current_selection(
+            app,
+            &state.history,
+            None,
+        ));
     }
 
     actions
@@ -184,28 +178,11 @@ pub fn finish(
         );
     }
 
-    let (_, current_id, preview_id) = app::directory_buffer_ids(app);
-    let current = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(buffer)) => buffer,
-        _ => return actions,
-    };
-    if current.path.as_path() == path {
-        if let Some(selected_path) =
-            selection::get_current_selected_path(current, Some(&current.buffer.cursor))
-        {
-            let preview_path = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(buffer)) => buffer.resolve_path(),
-                Some(Buffer::Image(buffer)) => buffer.resolve_path(),
-                Some(Buffer::Content(_)) | Some(Buffer::Empty) | None => None,
-            };
-
-            if preview_path != Some(selected_path.as_path()) {
-                let selection =
-                    get_selection_from_history(&state.history, path).map(|s| s.to_owned());
-                actions.push(Action::Load(selected_path, selection));
-            }
-        }
-    }
+    actions.extend(selection::refresh_preview_from_current_selection(
+        app,
+        &state.history,
+        None,
+    ));
 
     actions
 }

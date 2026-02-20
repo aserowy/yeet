@@ -9,7 +9,7 @@ use crate::{
     update::app,
 };
 
-use super::{history, selection};
+use super::selection;
 
 pub fn buffer(
     app: &mut App,
@@ -29,14 +29,8 @@ pub fn buffer(
     }
 
     let (_, buffer) = app::get_focused_current_mut(app);
-    if let Buffer::Directory(buffer) = buffer {
-        if let Some(path) =
-            selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
-        {
-            let selection =
-                history::get_selection_from_history(&state.history, &path).map(|s| s.to_owned());
-            return vec![Action::Load(path, selection)];
-        }
+    if let Buffer::Directory(_buffer) = buffer {
+        return selection::refresh_preview_from_current_selection(app, &state.history, None);
     }
 
     Vec::new()
