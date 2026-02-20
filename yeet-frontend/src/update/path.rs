@@ -156,6 +156,13 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             .iter()
             .any(|line| line.content.to_stripped_string() == name)
         {
+            yeet_buffer::update(
+                None,
+                mode,
+                &mut dir.buffer,
+                std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+            );
+
             continue;
         }
 
@@ -176,6 +183,13 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             dir.buffer.lines.get_mut(index).map(|line| {
                 *line = bufferline;
             });
+
+            yeet_buffer::update(
+                None,
+                mode,
+                &mut dir.buffer,
+                std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+            );
         } else {
             yeet_buffer::update(
                 None,
