@@ -121,14 +121,14 @@ fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
     for event in state.pending_path_events.drain(..) {
         match event {
             PendingPathEvent::Added(paths) => {
-                path::add(
+                actions.extend(path::add(
                     &state.history,
                     &state.marks,
                     &state.qfix,
                     &state.modes.current,
                     app,
                     &paths,
-                );
+                ));
                 actions.extend(junkyard::cleanup_if_path_in_junkyard(
                     &mut state.junk,
                     &paths,

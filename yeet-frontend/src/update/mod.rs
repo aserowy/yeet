@@ -145,7 +145,7 @@ fn update_with_message(
                     .push(crate::model::PendingPathEvent::Added(paths));
                 Vec::new()
             } else {
-                path::add(
+                let mut actions = path::add(
                     &state.history,
                     &state.marks,
                     &state.qfix,
@@ -153,7 +153,11 @@ fn update_with_message(
                     app,
                     &paths,
                 );
-                junkyard::cleanup_if_path_in_junkyard(&mut state.junk, &paths)
+                actions.extend(junkyard::cleanup_if_path_in_junkyard(
+                    &mut state.junk,
+                    &paths,
+                ));
+                actions
             }
         }
         Message::PreviewLoaded(content) => update_preview(app, content),

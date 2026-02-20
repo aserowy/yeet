@@ -56,6 +56,7 @@ impl Default for App {
                     line_number: LineNumber::Relative,
                     line_number_width: 3,
                     show_border: true,
+                    sign_column_width: 2,
                     ..Default::default()
                 },
                 ViewPort {

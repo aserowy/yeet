@@ -27,7 +27,18 @@ pub fn add(
     mode: &Mode,
     app: &mut App,
     paths: &[PathBuf],
-) {
+) -> Vec<Action> {
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let previous_selection = app
+        .buffers
+        .get(&current_id)
+        .and_then(|buffer| match buffer {
+            Buffer::Directory(buffer) => {
+                selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+            }
+            _ => None,
+        });
+
     for path in paths {
         update_directory_buffers_on_add(mode, app, path);
     }
@@ -53,6 +64,38 @@ pub fn add(
     if !qfix_paths.is_empty() {
         sign::set_sign_for_paths(app.buffers.values_mut().collect(), qfix_paths, QFIX_SIGN_ID);
     }
+
+    let current_selection = app
+        .buffers
+        .get(&current_id)
+        .and_then(|buffer| match buffer {
+            Buffer::Directory(buffer) => {
+                selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+            }
+            _ => None,
+        });
+
+    if previous_selection == current_selection {
+        return Vec::new();
+    }
+
+    let mut actions = Vec::new();
+    if let Some(selected_path) = current_selection {
+        let selection =
+            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
+
+        actions.push(Action::Load(selected_path.clone(), selection));
+
+        let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
+        let (_, _, preview) = app::directory_viewports_mut(app);
+        preview.buffer_id = preview_id;
+    } else {
+        let preview_id = app::create_empty_buffer_with_id(app);
+        let (_, _, preview) = app::directory_viewports_mut(app);
+        preview.buffer_id = preview_id;
+    }
+
+    actions
 }
 
 #[tracing::instrument(skip(junk, app))]
@@ -146,17 +189,11 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             continue;
         }
 
-        if path.is_dir() {
-            let index = dir.buffer.lines.iter().position(|line| {
-                line.content
-                    .to_stripped_string()
-                    .starts_with(&format!("{name}/"))
-            });
-
-            if let Some(index) = index {
-                dir.buffer.lines.remove(index);
-            }
-        }
+        let added_existing_directory = dir.buffer.lines.iter().position(|line| {
+            line.content
+                .to_stripped_string()
+                .starts_with(&format!("{name}/"))
+        });
 
         let kind = if path.is_dir() {
             crate::event::ContentKind::Directory
@@ -164,15 +201,19 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             crate::event::ContentKind::File
         };
 
-        yeet_buffer::update(
-            None,
-            mode,
-            &mut dir.buffer,
-            std::slice::from_ref(&BufferMessage::AddLine(
-                enumeration::from_enumeration(&name, &kind),
-                super::SORT,
-            )),
-        );
+        let bufferline = enumeration::from_enumeration(&name, &kind);
+        if let Some(index) = added_existing_directory {
+            dir.buffer.lines.get_mut(index).map(|line| {
+                *line = bufferline;
+            });
+        } else {
+            yeet_buffer::update(
+                None,
+                mode,
+                &mut dir.buffer,
+                std::slice::from_ref(&BufferMessage::AddLine(bufferline, super::SORT)),
+            );
+        }
     }
 }
 
