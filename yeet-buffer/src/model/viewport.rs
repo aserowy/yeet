@@ -37,8 +37,9 @@ impl ViewPort {
     }
 
     pub fn get_content_width(&self, line: &BufferLine) -> usize {
-        let offset = self.get_offset_width(line);
-        usize::from(self.width).saturating_sub(offset)
+        usize::from(self.width)
+            .saturating_sub(self.get_offset_width(line))
+            .saturating_sub(self.get_border_width())
     }
 
     pub fn get_line_number_width(&self) -> usize {

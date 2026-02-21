@@ -11,7 +11,11 @@ pub fn add_line_styles(
     let ansi = line.content.skip_chars(vp.horizontal_index);
     let ansi = add_search_styles(line, &ansi);
 
-    add_cursor_styles(vp, mode, cursor, index, content_width, &ansi)
+    if cursor.vertical_index - vp.vertical_index != *index {
+        ansi
+    } else {
+        add_cursor_styles(vp, mode, cursor, content_width, &ansi)
+    }
 }
 
 fn add_search_styles(line: &BufferLine, ansi: &Ansi) -> Ansi {
@@ -36,15 +40,10 @@ fn add_cursor_styles(
     vp: &ViewPort,
     mode: &Mode,
     cursor: &Cursor,
-    index: &usize,
     content_width: usize,
     ansi: &Ansi,
 ) -> Ansi {
     let mut content = ansi.clone();
-    if cursor.vertical_index - vp.vertical_index != *index {
-        return content;
-    }
-
     let char_count = content.count_chars();
     let line_length = if char_count > content_width {
         content_width
@@ -68,12 +67,12 @@ fn add_cursor_styles(
     }
 
     let cursor_index = match &cursor.horizontal_index {
-        CursorPosition::End => line_length - 1,
+        CursorPosition::End => char_count.saturating_sub(1),
         CursorPosition::None => return content,
         CursorPosition::Absolute {
             current,
             expanded: _,
-        } => *current,
+        } => current.saturating_sub(vp.horizontal_index),
     };
 
     // FIX: reset should just use the ansi code for reset inverse (27)
