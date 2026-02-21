@@ -1,84 +1,48 @@
-use ratatui::{layout::Rect, Frame};
-use ratatui_image::Image;
-use yeet_buffer::{
-    model::{viewport::ViewPort, Cursor, Mode},
-    view,
-};
+use ratatui::layout::Rect;
 
 use crate::{
     error::AppError,
-    model::{BufferType, Model},
+    model::{Model, Window},
     terminal::TerminalWrapper,
 };
 
+mod buffer;
 mod commandline;
 mod statusline;
+mod window;
 
-pub fn render_model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
     terminal.draw(|frame| {
-        let layout = model.layout.clone();
+        tracing::debug!("Rendering with area: {}", frame.area());
 
-        commandline::view(model, frame);
+        let vertical_offset = window::view(model, frame).expect("Failed to render window view");
+        let focused_id = match &model.app.window {
+            Window::Horizontal(_, _) => todo!(),
+            Window::Directory(_, vp, _) => &vp.buffer_id,
+        };
 
-        view::view(
-            &model.files.current_vp,
-            &model.files.current_cursor,
-            &model.mode,
-            &model.files.current.buffer,
-            &model.files.show_border,
+        let buffer = match model.app.buffers.get(focused_id) {
+            Some(it) => it,
+            None => unreachable!(),
+        };
+
+        statusline::view(
+            buffer,
             frame,
-            layout.current,
+            Rect {
+                x: 0,
+                width: frame.area().width,
+                y: vertical_offset,
+                height: 1,
+            },
         );
 
-        render_buffer(
-            &model.files.parent_vp,
-            &model.files.parent_cursor,
-            &model.mode,
+        commandline::view(
+            &model.app.commandline,
+            &model.state.modes.current,
             frame,
-            layout.parent,
-            &model.files.parent,
-            &model.files.show_border,
-        );
-        render_buffer(
-            &model.files.preview_vp,
-            &model.files.preview_cursor,
-            &model.mode,
-            frame,
-            layout.preview,
-            &model.files.preview,
-            &false,
-        );
-
-        statusline::view(model, frame, layout.statusline);
+            vertical_offset + 1,
+        )
+        .expect("Failed to render commandline view");
     })
-}
-
-fn render_buffer(
-    viewport: &ViewPort,
-    cursor: &Option<Cursor>,
-    mode: &Mode,
-    frame: &mut Frame,
-    layout: Rect,
-    buffer_type: &BufferType,
-    show_border: &bool,
-) {
-    match buffer_type {
-        BufferType::Text(_, buffer) => {
-            view::view(viewport, cursor, mode, buffer, show_border, frame, layout);
-        }
-        BufferType::Image(_, protocol) => {
-            frame.render_widget(Image::new(protocol), layout);
-        }
-        BufferType::None => {
-            view::view(
-                viewport,
-                &None,
-                mode,
-                &Default::default(),
-                show_border,
-                frame,
-                layout,
-            );
-        }
-    };
 }

@@ -105,7 +105,41 @@ fn get_settings(args: &ArgMatches) -> Settings {
     Settings {
         selection_to_file_on_open: args.get_one("selection-to-file-on-open").cloned(),
         selection_to_stdout_on_open: args.get_flag("selection-to-stdout-on-open"),
-        startup_path: args.get_one("path").cloned(),
+        startup_path: expand_startup_path(args.get_one("path").cloned()),
         ..Default::default()
+    }
+}
+
+fn expand_startup_path(startup_path: Option<PathBuf>) -> Option<PathBuf> {
+    startup_path.map(|path| {
+        if path.is_absolute() {
+            path
+        } else {
+            std::env::current_dir()
+                .expect("Failed to get current directory")
+                .join(path)
+        }
+    })
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use super::expand_startup_path;
+
+    #[test]
+    fn expand_startup_path_keeps_absolute() {
+        let current = std::env::current_dir().expect("current dir");
+        let expanded = expand_startup_path(Some(current.clone()));
+        assert_eq!(expanded, Some(current));
+    }
+
+    #[test]
+    fn expand_startup_path_expands_relative() {
+        let current = std::env::current_dir().expect("current dir");
+        let relative = PathBuf::from("relative/path");
+        let expanded = expand_startup_path(Some(relative.clone()));
+        assert_eq!(expanded, Some(current.join(relative)));
     }
 }

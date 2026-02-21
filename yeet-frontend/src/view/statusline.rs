@@ -7,13 +7,20 @@ use ratatui::{
 };
 use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::Model;
+use crate::model::{Buffer, DirectoryBuffer};
 
-pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
-    let changes = get_changes_content(model);
-    let position = get_position_content(model);
+pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
+    match current {
+        Buffer::Directory(it) => filetree_status(it, frame, rect),
+        Buffer::Image(_) | Buffer::Content(_) | Buffer::Empty => {}
+    }
+}
 
-    let content = model.files.current.path.to_str().unwrap_or("");
+fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
+    let changes = get_changes_content(buffer);
+    let position = get_position_content(buffer);
+
+    let content = buffer.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
     let span = Span::styled(content, style);
     let path = Line::from(span);
@@ -38,25 +45,19 @@ pub fn view(model: &Model, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(position), layout[3]);
 }
 
-fn get_position_content(model: &Model) -> Line<'_> {
-    let count = model.files.current.buffer.lines.len();
-    let current_position = model
-        .files
-        .current_cursor
-        .as_ref()
-        .map(|crsr| crsr.vertical_index + 1);
+fn get_position_content<'a>(buffer: &'a DirectoryBuffer) -> Line<'a> {
+    let count = buffer.buffer.lines.len();
+    let mut position = buffer.buffer.cursor.vertical_index + 1;
 
     let mut content = Vec::new();
-    if let Some(mut position) = current_position {
-        if count == 0 {
-            position = 0;
-        }
-
-        content.push(Span::styled(
-            format!("{}/", position),
-            Style::default().fg(Color::Gray),
-        ));
+    if count == 0 {
+        position = 0;
     }
+
+    content.push(Span::styled(
+        format!("{}/", position),
+        Style::default().fg(Color::Gray),
+    ));
 
     content.push(Span::styled(
         format!("{}", count),
@@ -66,8 +67,8 @@ fn get_position_content(model: &Model) -> Line<'_> {
     Line::from(content)
 }
 
-fn get_changes_content(model: &Model) -> Line<'_> {
-    let modifications = model.files.current.buffer.undo.get_uncommited_changes();
+fn get_changes_content(buffer: &DirectoryBuffer) -> Line<'_> {
+    let modifications = buffer.buffer.undo.get_uncommited_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

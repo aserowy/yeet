@@ -3,25 +3,25 @@ use std::{
     path::PathBuf,
 };
 
+use ratatui::layout::Rect;
 use tokio::fs;
-use yeet_buffer::message::BufferMessage;
 use yeet_keymap::message::{KeymapMessage, QuitMode};
 
 use crate::{
     error::AppError,
     event::{Emitter, Message},
     init::{history, mark, qfix},
-    model::{DirectoryBufferState, Model, WindowType},
+    model::{Buffer, Model},
     open,
     task::Task,
     terminal::TerminalWrapper,
-    update::{self, viewport},
+    update::app,
 };
 
 #[derive(Debug)]
 pub enum Action {
     EmitMessages(Vec<Message>),
-    Load(WindowType, PathBuf, Option<String>),
+    Load(PathBuf, Option<String>),
     ModeChanged,
     Open(PathBuf),
     Quit(QuitMode, Option<String>),
@@ -69,7 +69,7 @@ pub async fn postview(
 
 fn is_preview_action(action: &Action) -> bool {
     match action {
-        Action::Load(_, _, _) | Action::Open(_) | Action::Resize(_, _) | Action::Task(_) => true,
+        Action::Load(_, _) | Action::Open(_) | Action::Resize(_, _) | Action::Task(_) => true,
 
         Action::EmitMessages(_)
         | Action::ModeChanged
@@ -101,6 +101,7 @@ async fn execute(
     };
 
     let mut remaining_actions = vec![];
+    let (_, _, preview_id) = app::directory_buffer_ids(&model.app);
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
             remaining_actions.push(action);
@@ -113,48 +114,24 @@ async fn execute(
             Action::EmitMessages(messages) => {
                 emitter.run(Task::EmitMessages(messages));
             }
-            Action::Load(window_type, path, selection) => {
-                match window_type {
-                    WindowType::Current => {
-                        model.files.current.state = DirectoryBufferState::Loading;
-                        model.files.current.path = path.clone();
-
-                        yeet_buffer::update::update_buffer(
-                            &mut model.files.current_vp,
-                            &mut model.files.current_cursor,
-                            &model.mode,
-                            &mut model.files.current.buffer,
-                            &BufferMessage::SetContent(Vec::new()),
-                        );
-
-                        viewport::set_viewport_dimensions(
-                            &mut model.files.current_vp,
-                            &model.layout.current,
-                        );
-
-                        yeet_buffer::update::update_buffer(
-                            &mut model.files.current_vp,
-                            &mut model.files.current_cursor,
-                            &model.mode,
-                            &mut model.files.current.buffer,
-                            &BufferMessage::ResetCursor,
-                        );
-
-                        emitter.run(Task::EnumerateDirectory(path, selection.clone()));
-                    }
-                    WindowType::Parent | WindowType::Preview => {
-                        update::buffer_type(&window_type, model, path.as_path(), vec![]);
-
-                        if path.is_dir() {
-                            emitter.run(Task::EnumerateDirectory(path.clone(), selection.clone()));
-                        } else {
-                            emitter.run(Task::LoadPreview(path.clone(), model.layout.preview));
-                        }
-                    }
-                };
+            Action::Load(path, selection) => {
+                if path.is_dir() {
+                    emitter.run(Task::EnumerateDirectory(path, selection.clone()));
+                } else {
+                    let (_, _, preview_vp) = app::directory_viewports(&model.app);
+                    let rect = Rect {
+                        x: 0,
+                        y: 0,
+                        width: preview_vp.width,
+                        height: preview_vp.height,
+                    };
+                    emitter.run(Task::LoadPreview(path.clone(), rect));
+                }
             }
             Action::ModeChanged => {
-                emitter.set_current_mode(model.mode.clone()).await;
+                emitter
+                    .set_current_mode(model.state.modes.current.clone())
+                    .await;
             }
             Action::Open(path) => {
                 // TODO: check with mime if suspend/resume is necessary?
@@ -182,14 +159,14 @@ async fn execute(
 
                 match mode {
                     QuitMode::FailOnRunningTasks => {
-                        if let Err(error) = history::save_history_to_file(&model.history) {
+                        if let Err(error) = history::save_history_to_file(&model.state.history) {
                             tracing::error!("Failed to save history to file: {:?}", error);
                         }
                         history::optimize_history_file()?;
-                        if let Err(error) = mark::save_marks_to_file(&model.marks) {
+                        if let Err(error) = mark::save_marks_to_file(&model.state.marks) {
                             tracing::error!("Failed to save marks to file: {:?}", error);
                         }
-                        if let Err(error) = qfix::save_qfix_to_files(&model.qfix) {
+                        if let Err(error) = qfix::save_qfix_to_files(&model.state.qfix) {
                             tracing::error!("Failed to save quick fix to file: {:?}", error);
                         }
                     }
@@ -199,8 +176,12 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(path) = &model.files.preview.resolve_path() {
-                    emitter.run(Task::LoadPreview(path.to_path_buf(), model.layout.preview));
+                if let Some(Buffer::Image(_buffer)) = model.app.buffers.get(&preview_id) {
+                    // TODO: add rect to load preview after layout concept is implemented
+                    // emitter.run(Task::LoadPreview(
+                    //     path.to_path_buf(),
+                    //     model.app.layout.preview,
+                    // ));
                 }
             }
             Action::Task(task) => emitter.run(task),
@@ -210,7 +191,9 @@ async fn execute(
                 }
 
                 if let Some(cancellation) = model
-                    .current_tasks
+                    .state
+                    .tasks
+                    .running
                     .get(&Task::EnumerateDirectory(path.clone(), None).to_string())
                 {
                     cancellation.token.cancel();

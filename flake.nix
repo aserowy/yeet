@@ -50,7 +50,7 @@
             gh
             nil
             nixpkgs-fmt
-            nodejs_20
+            nodejs_24
             nodePackages.markdownlint-cli
             nodePackages.prettier
 

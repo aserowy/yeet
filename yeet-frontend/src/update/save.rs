@@ -2,52 +2,67 @@ use yeet_buffer::{
     message::BufferMessage,
     model::{
         undo::{consolidate_modifications, BufferChanged},
-        BufferResult,
+        BufferResult, Mode,
     },
-    update::update_buffer,
 };
 
-use crate::{action::Action, model::Model, task::Task};
+use crate::{
+    action::Action,
+    model::{junkyard::JunkYard, App, Buffer},
+    task::Task,
+};
 
-use super::{junkyard::trash_to_junkyard, selection::get_current_selected_bufferline};
+use super::{app, junkyard::trash_to_junkyard};
 
-#[tracing::instrument(skip(model))]
-pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
-    let selection = get_current_selected_bufferline(model).map(|line| line.content.clone());
+#[tracing::instrument(skip(app))]
+pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
+    let (vp, buffer) = match app::get_focused_current_mut(app) {
+        (vp, Buffer::Directory(it)) => (vp, it),
+        (_vp, Buffer::Image(_)) => return Vec::new(),
+        (_vp, Buffer::Content(_)) => return Vec::new(),
+        (_vp, Buffer::Empty) => return Vec::new(),
+    };
 
-    let mut content: Vec<_> = model.files.current.buffer.lines.drain(..).collect();
+    let selected_index = buffer.buffer.cursor.vertical_index;
+    let selection = buffer
+        .buffer
+        .lines
+        .get(selected_index)
+        .map(|line| line.content.clone());
+
+    let mut content: Vec<_> = buffer.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
-    update_buffer(
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
-        &model.mode,
-        &mut model.files.current.buffer,
-        &BufferMessage::SetContent(content),
+    let message = BufferMessage::SetContent(content);
+    yeet_buffer::update(
+        Some(vp),
+        mode,
+        &mut buffer.buffer,
+        std::slice::from_ref(&message),
     );
 
     if let Some(selection) = selection {
-        update_buffer(
-            &mut model.files.current_vp,
-            &mut model.files.current_cursor,
-            &model.mode,
-            &mut model.files.current.buffer,
-            &BufferMessage::SetCursorToLineContent(selection.to_stripped_string()),
+        let message = BufferMessage::SetCursorToLineContent(selection.to_stripped_string());
+        yeet_buffer::update(
+            Some(vp),
+            mode,
+            &mut buffer.buffer,
+            std::slice::from_ref(&message),
         );
     }
 
-    let result = update_buffer(
-        &mut model.files.current_vp,
-        &mut model.files.current_cursor,
-        &model.mode,
-        &mut model.files.current.buffer,
-        &BufferMessage::SaveBuffer,
+    let message = BufferMessage::SaveBuffer;
+    let result = yeet_buffer::update(
+        Some(vp),
+        mode,
+        &mut buffer.buffer,
+        std::slice::from_ref(&message),
     );
 
     let mut actions = Vec::new();
     for br in result {
         if let BufferResult::Changes(modifications) = br {
-            let path = &model.files.current.path;
+            let path = &buffer.path;
             let mut trashes = Vec::new();
             for modification in consolidate_modifications(&modifications) {
                 match modification {
@@ -76,7 +91,7 @@ pub fn persist_path_changes(model: &mut Model) -> Vec<Action> {
             }
 
             if !trashes.is_empty() {
-                let (transaction, obsolete) = trash_to_junkyard(&mut model.junk, trashes);
+                let (transaction, obsolete) = trash_to_junkyard(junk, trashes);
                 for entry in transaction.entries {
                     actions.push(Action::Task(Task::TrashPath(entry)));
                 }

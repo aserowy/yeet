@@ -18,7 +18,7 @@ pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     }
 }
 
-pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> Ansi {
+pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
     if vp.line_number == LineNumber::None {
         return Ansi::new("");
     }
@@ -33,23 +33,17 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Option<Cursor>) -> 
         }
     };
 
-    if let Some(cursor) = cursor {
-        if cursor.vertical_index == index {
-            return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
-        }
+    if cursor.vertical_index == index {
+        return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
     }
 
     match vp.line_number {
         LineNumber::Absolute => Ansi::new(&format!("{:>width$} ", number)),
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
-            if let Some(cursor) = cursor {
-                let relative = cursor.vertical_index.abs_diff(index);
+            let relative = cursor.vertical_index.abs_diff(index);
 
-                Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
-            } else {
-                Ansi::new(&format!("{:>width$}", number))
-            }
+            Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
         }
     }
 }

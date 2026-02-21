@@ -5,62 +5,77 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 use crate::{
     action::{self, Action},
     model::{
-        qfix::{CdoState, QFIX_SIGN_ID},
-        Model,
+        qfix::{CdoState, QuickFix, QFIX_SIGN_ID},
+        App, Buffer,
     },
-    update::sign,
+    update::{app, sign},
 };
 
-pub fn reset(model: &mut Model) -> Vec<Action> {
-    model.qfix.entries.clear();
-    model.qfix.current_index = 0;
-    sign::unset_sign_on_all_buffers(model, QFIX_SIGN_ID);
+pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
+    qfix.entries.clear();
+    qfix.current_index = 0;
+    sign::unset_sign_on_all_buffers(buffers, QFIX_SIGN_ID);
 
     Vec::new()
 }
 
-pub fn clear_in(model: &mut Model, path: &str) -> Vec<Action> {
+pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
+    let (_, buffer) = app::get_focused_current_mut(app);
+    let buffer = match buffer {
+        Buffer::Directory(it) => it,
+        Buffer::Image(_) => return Vec::new(),
+        Buffer::Content(_) => return Vec::new(),
+        Buffer::Empty => return Vec::new(),
+    };
+
     let path = Path::new(path);
-    let current_path = model.files.current.path.clone().join(path);
+    let current_path = buffer.path.clone().join(path);
 
     tracing::debug!("clearing current cl for path: {:?}", current_path);
 
-    for bl in model.files.current.buffer.lines.iter_mut() {
+    let mut removed_paths = Vec::new();
+    for bl in buffer.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
             continue;
         }
 
         let path = current_path.join(bl.content.to_stripped_string());
-        if model.qfix.entries.contains(&path) {
-            model.qfix.entries.retain(|p| p != &path);
-            sign::unset(bl, QFIX_SIGN_ID);
+        if qfix.entries.contains(&path) {
+            qfix.entries.retain(|p| p != &path);
+            removed_paths.push(path);
         }
     }
+
+    sign::unset_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        removed_paths,
+        QFIX_SIGN_ID,
+    );
 
     Vec::new()
 }
 
-pub fn cdo(model: &mut Model, command: &str) -> Vec<Action> {
+pub fn cdo(qfix: &mut QuickFix, command: &str) -> Vec<Action> {
     tracing::debug!("cdo command set: {:?}", command);
 
-    model.qfix.cdo = CdoState::Cdo(None, command.to_owned());
+    qfix.cdo = CdoState::Cdo(None, command.to_owned());
 
     vec![action::emit_keymap(KeymapMessage::ExecuteCommandString(
         "cfirst".to_string(),
     ))]
 }
 
-pub fn select_first(model: &mut Model) -> Vec<Action> {
-    model.qfix.current_index = 0;
+pub fn select_first(qfix: &mut QuickFix) -> Vec<Action> {
+    qfix.current_index = 0;
 
-    match model.qfix.entries.first() {
+    match qfix.entries.first() {
         Some(it) => {
             if it.exists() {
                 vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
                     it.clone(),
                 ))]
             } else {
-                next(model)
+                next(qfix)
             }
         }
         None => vec![action::emit_keymap(KeymapMessage::Print(vec![
@@ -69,9 +84,57 @@ pub fn select_first(model: &mut Model) -> Vec<Action> {
     }
 }
 
-pub fn next(model: &mut Model) -> Vec<Action> {
-    let mut entry = model.qfix.entries.iter().enumerate().filter_map(|(i, p)| {
-        if i > model.qfix.current_index && p.exists() {
+pub fn next(qfix: &mut QuickFix) -> Vec<Action> {
+    tracing::debug!(
+        "qfix::next called, current_index: {}, entries_count: {}, entries: {:?}",
+        qfix.current_index,
+        qfix.entries.len(),
+        qfix.entries
+    );
+
+    let mut entry = qfix.entries.iter().enumerate().filter_map(|(i, p)| {
+        let exists = p.exists();
+        if i > qfix.current_index && exists {
+            tracing::trace!(
+                "qfix::next candidate: index={}, path={:?}, exists={}",
+                i,
+                p,
+                exists
+            );
+            Some((i, p))
+        } else {
+            if i > qfix.current_index {
+                tracing::trace!(
+                    "qfix::next skipping: index={}, path={:?}, exists={}",
+                    i,
+                    p,
+                    exists
+                );
+            }
+            None
+        }
+    });
+
+    match entry.next() {
+        Some((i, p)) => {
+            tracing::debug!("qfix::next found entry: index={}, path={:?}", i, p);
+            qfix.current_index = i;
+            vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
+                p.clone(),
+            ))]
+        }
+        None => {
+            tracing::debug!("qfix::next no more items found");
+            vec![action::emit_keymap(KeymapMessage::Print(vec![
+                PrintContent::Error("no more items".to_owned()),
+            ]))]
+        }
+    }
+}
+
+pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
+    let mut entry = qfix.entries.iter().enumerate().rev().filter_map(|(i, p)| {
+        if i < qfix.current_index && p.exists() {
             Some((i, p))
         } else {
             None
@@ -80,7 +143,7 @@ pub fn next(model: &mut Model) -> Vec<Action> {
 
     match entry.next() {
         Some((i, p)) => {
-            model.qfix.current_index = i;
+            qfix.current_index = i;
             vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
                 p.clone(),
             ))]
@@ -93,52 +156,45 @@ pub fn next(model: &mut Model) -> Vec<Action> {
     }
 }
 
-pub fn previous(model: &mut Model) -> Vec<Action> {
-    let mut entry = model
-        .qfix
-        .entries
-        .iter()
-        .enumerate()
-        .rev()
-        .filter_map(|(i, p)| {
-            if i < model.qfix.current_index && p.exists() {
-                Some((i, p))
-            } else {
-                None
-            }
-        });
+pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
+    let (_, buffer) = app::get_focused_current_mut(app);
+    let buffer = match buffer {
+        Buffer::Directory(it) => it,
+        Buffer::Image(_) => return Vec::new(),
+        Buffer::Content(_) => return Vec::new(),
+        Buffer::Empty => return Vec::new(),
+    };
 
-    match entry.next() {
-        Some((i, p)) => {
-            model.qfix.current_index = i;
-            vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
-                p.clone(),
-            ))]
-        }
-        None => {
-            vec![action::emit_keymap(KeymapMessage::Print(vec![
-                PrintContent::Error("no more items".to_owned()),
-            ]))]
-        }
-    }
-}
+    let mut added_paths = Vec::new();
+    let mut removed_paths = Vec::new();
 
-pub fn invert_in_current(model: &mut Model) -> Vec<Action> {
-    let current_path = model.files.current.path.clone();
-    for bl in model.files.current.buffer.lines.iter_mut() {
+    let current_path = buffer.path.clone();
+    for bl in buffer.buffer.lines.iter_mut() {
         if bl.content.is_empty() {
             continue;
         }
 
         let path = current_path.join(bl.content.to_stripped_string());
-        if model.qfix.entries.contains(&path) {
-            model.qfix.entries.retain(|p| p != &path);
-            sign::unset(bl, QFIX_SIGN_ID);
+        if qfix.entries.contains(&path) {
+            qfix.entries.retain(|p| p != &path);
+            removed_paths.push(path);
         } else {
-            model.qfix.entries.push(path.clone());
-            sign::set(bl, QFIX_SIGN_ID);
+            qfix.entries.push(path.clone());
+            added_paths.push(path);
         }
     }
+
+    sign::set_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        added_paths,
+        QFIX_SIGN_ID,
+    );
+
+    sign::unset_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        removed_paths,
+        QFIX_SIGN_ID,
+    );
 
     Vec::new()
 }

@@ -7,16 +7,22 @@ pub struct WindowSettings {
     pub sign_column_width: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ViewPort {
-    pub height: usize,
+    pub buffer_id: usize,
+    pub hide_cursor: bool,
+    pub hide_cursor_line: bool,
+    pub height: u16,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
     pub horizontal_index: usize,
     pub line_number: LineNumber,
     pub line_number_width: usize,
+    pub show_border: bool,
     pub sign_column_width: usize,
     pub vertical_index: usize,
-    pub width: usize,
+    pub width: u16,
+    pub x: u16,
+    pub y: u16,
 }
 
 // TODO: enable with settings
@@ -32,7 +38,7 @@ impl ViewPort {
 
     pub fn get_content_width(&self, line: &BufferLine) -> usize {
         let offset = self.get_offset_width(line);
-        self.width.saturating_sub(offset)
+        usize::from(self.width).saturating_sub(offset)
     }
 
     pub fn get_line_number_width(&self) -> usize {

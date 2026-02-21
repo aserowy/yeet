@@ -4,6 +4,7 @@ use crate::model::{BufferLine, Mode};
 
 #[derive(Clone, Eq)]
 pub enum BufferMessage {
+    AddLine(BufferLine, fn(&BufferLine, &BufferLine) -> Ordering),
     ChangeMode(Mode, Mode),
     Modification(usize, TextModification),
     MoveCursor(usize, CursorDirection),
@@ -20,6 +21,7 @@ pub enum BufferMessage {
 impl PartialEq for BufferMessage {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Self::AddLine(l0, _), Self::AddLine(r0, _)) => l0 == r0,
             (Self::ChangeMode(l0, l1), Self::ChangeMode(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::Modification(l0, l1), Self::Modification(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::MoveCursor(l0, l1), Self::MoveCursor(r0, r1)) => l0 == r0 && l1 == r1,
@@ -36,6 +38,9 @@ impl PartialEq for BufferMessage {
 impl std::fmt::Debug for BufferMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            BufferMessage::AddLine(line, sort) => {
+                f.debug_tuple("AddLine").field(line).field(sort).finish()
+            }
             BufferMessage::ChangeMode(from, to) => {
                 f.debug_tuple("ChangeMode").field(from).field(to).finish()
             }

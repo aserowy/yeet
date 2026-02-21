@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
@@ -9,7 +7,7 @@ use crate::{
         mark::Marks,
         qfix::QuickFix,
         register::Register,
-        CurrentTask,
+        Tasks,
     },
     update::junkyard::get_junkyard_transaction,
 };
@@ -35,9 +33,10 @@ pub fn marks(marks: &Marks) -> Vec<Action> {
     vec![action::emit_keymap(KeymapMessage::Print(content))]
 }
 
-pub fn tasks(tasks: &HashMap<String, CurrentTask>) -> Vec<Action> {
+pub fn tasks(tasks: &Tasks) -> Vec<Action> {
     let mut contents = vec![":tl".to_string(), "Id   Task".to_string()];
     let mut tasks: Vec<_> = tasks
+        .running
         .values()
         .map(|task| format!("{:<4} {}", task.id, task.external_id))
         .collect();
@@ -60,8 +59,11 @@ pub fn qfix(qfix: &QuickFix) -> Vec<Action> {
         .entries
         .iter()
         .enumerate()
-        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string()))
-        .map(|(i, path)| format!("{:>max_width$} {}", i, path))
+        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string(), path.exists()))
+        .map(|(i, path, exists)| {
+            let status = if exists { "" } else { "(removed)" };
+            format!("{:>max_width$} {} {}", i, path, status)
+        })
         .collect();
 
     let mut contents = vec![":cl".to_string()];

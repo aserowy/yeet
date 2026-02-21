@@ -1,22 +1,20 @@
 use yeet_buffer::{
     message::BufferMessage,
     model::{BufferLine, CommandMode, Mode, SearchDirection},
-    update::{focus_buffer, unfocus_buffer, update_buffer},
 };
 use yeet_keymap::message::PrintContent;
 
 use crate::{
     action::Action,
-    model::{register::RegisterScope, Model},
-    update::update_current,
+    model::{
+        register::{Register, RegisterScope},
+        App, Buffer, CommandLine, ModeState, PendingPathEvent, State,
+    },
 };
 
-use super::{
-    commandline::print_in_commandline, register::get_macro_register, save::persist_path_changes,
-    viewport::set_viewport_dimensions,
-};
+use super::{app, commandline, junkyard, path, register::get_macro_register, save};
 
-pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
+pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<Action> {
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
         | (Mode::Insert, Mode::Insert)
@@ -25,73 +23,152 @@ pub fn change_mode(model: &mut Model, from: &Mode, to: &Mode) -> Vec<Action> {
         _ => {}
     }
 
-    model.mode = to.clone();
-    model.mode_before = Some(from.clone());
+    state.modes.current = to.clone();
+    state.modes.previous = Some(from.clone());
 
     let mut actions = vec![Action::ModeChanged];
     actions.extend(match from {
         Mode::Command(_) => {
-            unfocus_buffer(&mut model.commandline.cursor);
-            update_commandline_on_mode_change(model)
+            app.commandline.viewport.hide_cursor = true;
+            update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            unfocus_buffer(&mut model.files.current_cursor);
+            let (vp, _buffer) = app::get_focused_current_mut(app);
+            vp.hide_cursor = true;
+
             vec![]
         }
     });
 
-    set_commandline_content_to_mode(model);
+    set_commandline_content_to_mode(&mut app.commandline, &state.register, &mut state.modes);
 
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
         Mode::Command(_) => {
-            focus_buffer(&mut model.commandline.cursor);
-            update_commandline_on_mode_change(model)
+            app.commandline.viewport.hide_cursor = false;
+            update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            focus_buffer(&mut model.files.current_cursor);
-            update_current(model, &msg);
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
+            };
+
+            vp.hide_cursor = false;
+
+            yeet_buffer::update(
+                Some(vp),
+                &state.modes.current,
+                &mut buffer.buffer,
+                std::slice::from_ref(&msg),
+            );
+
             vec![]
         }
         Mode::Navigation => {
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
+            };
+
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            focus_buffer(&mut model.files.current_cursor);
-            update_current(model, &msg);
-            persist_path_changes(model)
+            vp.hide_cursor = false;
+
+            yeet_buffer::update(
+                Some(vp),
+                &state.modes.current,
+                &mut buffer.buffer,
+                std::slice::from_ref(&msg),
+            );
+
+            save::changes(app, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            focus_buffer(&mut model.files.current_cursor);
-            update_current(model, &msg);
+            let (vp, buffer) = match app::get_focused_current_mut(app) {
+                (vp, Buffer::Directory(it)) => (vp, it),
+                (_vp, Buffer::Image(_)) => return Vec::new(),
+                (_vp, Buffer::Content(_)) => return Vec::new(),
+                (_vp, Buffer::Empty) => return Vec::new(),
+            };
+
+            vp.hide_cursor = false;
+
+            yeet_buffer::update(
+                Some(vp),
+                &state.modes.current,
+                &mut buffer.buffer,
+                std::slice::from_ref(&msg),
+            );
+
             vec![]
         }
     });
 
+    if matches!(from, Mode::Insert) {
+        actions.extend(flush_pending_paths(state, app));
+    }
+
     actions
 }
 
-fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
-    let commandline = &mut model.commandline;
+fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
+    let mut actions = Vec::new();
+    for event in state.pending_path_events.drain(..) {
+        match event {
+            PendingPathEvent::Added(paths) => {
+                actions.extend(path::add(
+                    &state.history,
+                    &state.marks,
+                    &state.qfix,
+                    &state.modes.current,
+                    app,
+                    &paths,
+                ));
+                actions.extend(junkyard::cleanup_if_path_in_junkyard(
+                    &mut state.junk,
+                    &paths,
+                ));
+            }
+            PendingPathEvent::Removed(path) => {
+                path::remove(
+                    &mut state.history,
+                    &mut state.marks,
+                    &mut state.qfix,
+                    &mut state.junk,
+                    &state.modes.current,
+                    app,
+                    &path,
+                );
+            }
+        }
+    }
+    actions
+}
+
+fn update_commandline_on_mode_change(
+    commandline: &mut CommandLine,
+    modes: &mut ModeState,
+) -> Vec<Action> {
     let buffer = &mut commandline.buffer;
     let viewport = &mut commandline.viewport;
 
-    set_viewport_dimensions(viewport, &commandline.layout.buffer);
-
-    let command_mode = match &model.mode {
+    let command_mode = match &modes.current {
         Mode::Command(it) => it,
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let from_command = model
-                .mode_before
-                .as_ref()
-                .is_some_and(|mode| mode.is_command());
+            let from_command = matches!(modes.previous.as_ref(), Some(mode) if mode.is_command());
 
             if from_command {
-                update_buffer(
-                    viewport,
-                    &mut commandline.cursor,
-                    &model.mode,
+                let message = BufferMessage::SetContent(vec![]);
+                yeet_buffer::update(
+                    Some(viewport),
+                    &modes.current,
                     buffer,
-                    &BufferMessage::SetContent(vec![]),
+                    std::slice::from_ref(&message),
                 );
             }
             return Vec::new();
@@ -100,12 +177,12 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
 
     match command_mode {
         CommandMode::Command | CommandMode::Search(_) => {
-            update_buffer(
-                viewport,
-                &mut commandline.cursor,
-                &model.mode,
+            let message = BufferMessage::ResetCursor;
+            yeet_buffer::update(
+                Some(viewport),
+                &modes.current,
                 buffer,
-                &BufferMessage::ResetCursor,
+                std::slice::from_ref(&message),
             );
 
             let prefix = match &command_mode {
@@ -120,12 +197,12 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
                 ..Default::default()
             };
 
-            update_buffer(
-                viewport,
-                &mut commandline.cursor,
-                &model.mode,
+            let message = BufferMessage::SetContent(vec![bufferline]);
+            yeet_buffer::update(
+                Some(viewport),
+                &modes.current,
                 buffer,
-                &BufferMessage::SetContent(vec![bufferline]),
+                std::slice::from_ref(&message),
             );
         }
         CommandMode::PrintMultiline => {}
@@ -134,22 +211,64 @@ fn update_commandline_on_mode_change(model: &mut Model) -> Vec<Action> {
     Vec::new()
 }
 
-fn set_commandline_content_to_mode(model: &mut Model) {
-    if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(&model.register) {
-        set_recording_in_commandline(model, *identifier);
+fn set_commandline_content_to_mode(
+    commandline: &mut CommandLine,
+    register: &Register,
+    modes: &mut ModeState,
+) {
+    if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(register) {
+        print_recording(commandline, modes, *identifier);
     } else {
-        set_mode_in_commandline(model);
+        print_mode(commandline, modes);
     };
 }
 
-pub fn set_recording_in_commandline(model: &mut Model, identifier: char) -> Vec<Action> {
+pub fn print_recording(
+    commandline: &mut CommandLine,
+    modes: &mut ModeState,
+    identifier: char,
+) -> Vec<Action> {
     let content = format!("recording @{}", identifier);
-    print_in_commandline(model, &[PrintContent::Default(content)]);
+    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
     Vec::new()
 }
 
-pub fn set_mode_in_commandline(model: &mut Model) -> Vec<Action> {
-    let content = format!("--{}--", model.mode.to_string().to_uppercase());
-    print_in_commandline(model, &[PrintContent::Default(content)]);
+pub fn print_mode(commandline: &mut CommandLine, modes: &mut ModeState) -> Vec<Action> {
+    let content = format!("--{}--", modes.current.to_string().to_uppercase());
+    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
     Vec::new()
+}
+
+#[cfg(test)]
+mod test {
+    use yeet_buffer::model::Mode;
+
+    use crate::{model::PendingPathEvent, update::mode};
+
+    #[test]
+    fn leaving_insert_flushes_pending_paths_in_order() {
+        let mut app = crate::model::App::default();
+        let mut state = crate::model::State::default();
+
+        let added_paths = vec![
+            std::path::PathBuf::from("/tmp/a"),
+            std::path::PathBuf::from("/tmp/b"),
+        ];
+        let removed_path = std::path::PathBuf::from("/tmp/c");
+
+        state
+            .pending_path_events
+            .push(PendingPathEvent::Added(added_paths));
+        state
+            .pending_path_events
+            .push(PendingPathEvent::Removed(removed_path));
+
+        state.modes.current = Mode::Insert;
+        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal);
+
+        assert!(actions
+            .iter()
+            .any(|action| matches!(action, crate::action::Action::ModeChanged)));
+        assert!(state.pending_path_events.is_empty());
+    }
 }

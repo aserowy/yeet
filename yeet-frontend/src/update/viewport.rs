@@ -1,31 +1,37 @@
-use ratatui::layout::Rect;
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::viewport::ViewPort,
+    model::Mode,
 };
 
 use crate::{
     action::Action,
-    model::{Model, WindowType},
+    model::{history::History, App, Buffer},
+    update::app,
 };
 
-use super::{history, selection};
+use super::selection;
 
-pub fn move_viewport(model: &mut Model, direction: &ViewPortDirection) -> Vec<Action> {
+pub fn relocate(
+    app: &mut App,
+    history: &History,
+    mode: &Mode,
+    direction: &ViewPortDirection,
+) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
-    super::update_current(model, &msg);
 
-    let mut actions = Vec::new();
-    if let Some(path) = selection::get_current_selected_path(model) {
-        let selection =
-            history::get_selection_from_history(&model.history, &path).map(|s| s.to_owned());
-        actions.push(Action::Load(WindowType::Preview, path, selection));
-    }
+    let (vp, buffer) = match app::get_focused_current_mut(app) {
+        (vp, Buffer::Directory(it)) => (vp, it),
+        (_vp, Buffer::Image(_)) => return Vec::new(),
+        (_vp, Buffer::Content(_)) => return Vec::new(),
+        (_vp, Buffer::Empty) => return Vec::new(),
+    };
 
-    actions
-}
+    yeet_buffer::update(
+        Some(vp),
+        mode,
+        &mut buffer.buffer,
+        std::slice::from_ref(&msg),
+    );
 
-pub fn set_viewport_dimensions(vp: &mut ViewPort, rect: &Rect) {
-    vp.height = usize::from(rect.height);
-    vp.width = usize::from(rect.width);
+    selection::refresh_preview_from_current_selection(app, history, None)
 }
