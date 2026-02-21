@@ -2,7 +2,10 @@ use std::{cmp::Ordering, path::Path};
 
 use yeet_buffer::model::viewport::ViewPort;
 
-use crate::model::{App, Buffer, DirectoryBuffer, Window};
+use crate::{
+    action::Action,
+    model::{App, Buffer, DirectoryBuffer, Window},
+};
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
     let (vp, focused_id) = match &mut app.window {
@@ -74,7 +77,11 @@ pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
     (parent, current, preview)
 }
 
-pub fn get_or_create_directory_buffer_with_id(app: &mut App, path: &Path) -> usize {
+pub fn get_or_create_directory_buffer(
+    app: &mut App,
+    path: &Path,
+    selection: &Option<String>,
+) -> (usize, Option<Action>) {
     let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
         Buffer::Directory(it) if it.path == path => Some(*id),
         Buffer::Content(it) if it.path == path => Some(*id),
@@ -83,7 +90,7 @@ pub fn get_or_create_directory_buffer_with_id(app: &mut App, path: &Path) -> usi
     });
 
     if let Some(id) = existing_id {
-        return id;
+        return (id, None);
     }
 
     let id = get_next_buffer_id(app);
@@ -94,10 +101,13 @@ pub fn get_or_create_directory_buffer_with_id(app: &mut App, path: &Path) -> usi
             ..Default::default()
         }),
     );
-    id
+    (
+        id,
+        Some(Action::Load(path.to_path_buf(), selection.clone())),
+    )
 }
 
-pub fn create_empty_buffer_with_id(app: &mut App) -> usize {
+pub fn create_empty_buffer(app: &mut App) -> usize {
     let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
         Buffer::Empty => Some(*id),
         _ => None,
@@ -106,7 +116,6 @@ pub fn create_empty_buffer_with_id(app: &mut App) -> usize {
     if let Some(id) = existing_id {
         return id;
     }
-
     let id = get_next_buffer_id(app);
     app.buffers.insert(id, Buffer::Empty);
     id

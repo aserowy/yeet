@@ -95,14 +95,16 @@ pub fn navigate_to_path_with_selection(
 
     tracing::trace!("resolved selection: {:?}", selection);
 
-    let current_id = app::get_or_create_directory_buffer_with_id(app, path);
+    let (current_id, load) = app::get_or_create_directory_buffer(app, path, &selection);
+    actions.extend(load);
 
-    let parent_id = match path.parent() {
-        Some(parent) => {
-            actions.push(Action::Load(path.to_path_buf(), selection.clone()));
-            app::get_or_create_directory_buffer_with_id(app, parent)
-        }
-        None => app::create_empty_buffer_with_id(app),
+    let parent_id = if let (Some(parent), selection) = (path.parent(), path.file_name()) {
+        let selection = selection.map(|selection| selection.to_string_lossy().to_string());
+        let (id, load) = app::get_or_create_directory_buffer(app, parent, &selection);
+        actions.extend(load);
+        id
+    } else {
+        app::create_empty_buffer(app)
     };
 
     let preview_id = match &selection {
@@ -110,33 +112,20 @@ pub fn navigate_to_path_with_selection(
             let mut preview_path = path.to_path_buf();
             preview_path.push(selected_history);
 
-            actions.push(Action::Load(
-                preview_path.to_path_buf(),
-                history::get_selection_from_history(history, preview_path.as_path())
-                    .map(|s| s.to_string()),
-            ));
+            let selection = history::get_selection_from_history(history, preview_path.as_path())
+                .map(|s| s.to_string());
 
-            app::get_or_create_directory_buffer_with_id(app, &preview_path)
+            let (id, load) = app::get_or_create_directory_buffer(app, &preview_path, &selection);
+            actions.extend(load);
+            id
         }
-        None => app::create_empty_buffer_with_id(app),
+        None => app::create_empty_buffer(app),
     };
 
     let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
     parent_vp.buffer_id = parent_id;
     current_vp.buffer_id = current_id;
     preview_vp.buffer_id = preview_id;
-
-    actions.push(Action::Load(path.to_path_buf(), selection.clone()));
-
-    let parent = path.parent();
-    if let Some(parent) = parent {
-        if parent != path {
-            actions.push(Action::Load(
-                parent.to_path_buf(),
-                path.file_name().map(|it| it.to_string_lossy().to_string()),
-            ));
-        }
-    }
 
     actions
 }
@@ -156,25 +145,19 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
         let mut actions = Vec::new();
 
-        let parent_id = path
-            .parent()
-            .filter(|parent| *parent != path)
-            .map(|parent| app::get_or_create_directory_buffer_with_id(app, parent))
-            .unwrap_or_else(|| app::create_empty_buffer_with_id(app));
+        let parent_id = if let (Some(parent), selection) = (path.parent(), path.file_name()) {
+            let selection = selection.map(|selection| selection.to_string_lossy().to_string());
+            let (id, load) = app::get_or_create_directory_buffer(app, parent, &selection);
+            actions.extend(load);
+            id
+        } else {
+            app::create_empty_buffer(app)
+        };
 
         let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
         preview_vp.buffer_id = current_vp.buffer_id;
         current_vp.buffer_id = parent_vp.buffer_id;
         parent_vp.buffer_id = parent_id;
-
-        if let Some(parent) = path.parent() {
-            tracing::trace!("loading parent: {:?}", parent);
-
-            actions.push(Action::Load(
-                parent.to_path_buf(),
-                path.file_name().map(|it| it.to_string_lossy().to_string()),
-            ));
-        }
 
         actions
     } else {
@@ -196,21 +179,21 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
         selection::get_current_selected_path(preview_buffer, Some(&preview_buffer.buffer.cursor));
 
     let mut actions = Vec::new();
-    let preview_id = match current_preview_selection {
-        Some(selection) => {
-            actions.push(Action::Load(
-                selection.to_path_buf(),
-                history::get_selection_from_history(history, selection.as_path())
-                    .map(|s| s.to_string()),
-            ));
-            app::get_or_create_directory_buffer_with_id(app, selection.as_path())
+    let preview_id = match &current_preview_selection {
+        Some(preview_path) => {
+            let selection = history::get_selection_from_history(history, preview_path.as_path())
+                .map(|s| s.to_string());
+
+            let (id, load) = app::get_or_create_directory_buffer(app, preview_path, &selection);
+            actions.extend(load);
+            id
         }
         None => {
             if !preview_buffer.path.is_dir() {
                 tracing::warn!("no selection in current buffer, cannot navigate to selected");
                 return Vec::new();
             }
-            app::create_empty_buffer_with_id(app)
+            app::create_empty_buffer(app)
         }
     };
 

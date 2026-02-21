@@ -67,29 +67,29 @@ pub fn refresh_preview_from_current_selection(
         return Vec::new();
     }
 
-    refresh_preview_from_selection(app, history, current_selection)
+    set_preview_buffer_for_selection(app, history, current_selection)
 }
 
-fn refresh_preview_from_selection(
+fn set_preview_buffer_for_selection(
     app: &mut App,
     history: &History,
     selection: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
-    if let Some(selected_path) = selection {
+    let preview_id = if let Some(selected_path) = selection {
         let selection = history_update::get_selection_from_history(history, &selected_path)
             .map(|s| s.to_owned());
 
-        actions.push(Action::Load(selected_path.clone(), selection));
+        let (id, load) = app::get_or_create_directory_buffer(app, &selected_path, &selection);
+        actions.extend(load);
 
-        let preview_id = app::get_or_create_directory_buffer_with_id(app, &selected_path);
-        let (_, _, preview) = app::directory_viewports_mut(app);
-        preview.buffer_id = preview_id;
+        id
     } else {
-        let preview_id = app::create_empty_buffer_with_id(app);
-        let (_, _, preview) = app::directory_viewports_mut(app);
-        preview.buffer_id = preview_id;
-    }
+        app::create_empty_buffer(app)
+    };
+
+    let (_, _, preview) = app::directory_viewports_mut(app);
+    preview.buffer_id = preview_id;
 
     actions
 }

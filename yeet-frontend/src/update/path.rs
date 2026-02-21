@@ -180,9 +180,9 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
 
         let bufferline = enumeration::from_enumeration(&name, &kind);
         if let Some(index) = added_existing_directory {
-            dir.buffer.lines.get_mut(index).map(|line| {
+            if let Some(line) = dir.buffer.lines.get_mut(index) {
                 *line = bufferline;
-            });
+            }
 
             yeet_buffer::update(
                 None,

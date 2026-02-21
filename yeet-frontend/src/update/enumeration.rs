@@ -102,13 +102,12 @@ fn change_directory(
 
     if path == &buffer.path {
         buffer.state = DirectoryBufferState::PartiallyLoaded;
+        tracing::trace!(
+            "changed enumeration for path {:?}, state is now {:?}",
+            path,
+            buffer.state,
+        );
     }
-
-    tracing::trace!(
-        "changed enumeration for path {:?} with current directory states: current is {:?}",
-        path,
-        buffer.state,
-    );
 }
 
 #[tracing::instrument(skip(state, app, contents))]
@@ -169,13 +168,12 @@ pub fn finish(
 
         if path == &buffer.path {
             buffer.state = DirectoryBufferState::Ready;
+            tracing::trace!(
+                "finished enumeration for path {:?}, state is now {:?}",
+                path,
+                buffer.state,
+            );
         }
-
-        tracing::trace!(
-            "finished enumeration for path {:?} with current directory states: current is {:?}",
-            path,
-            buffer.state,
-        );
     }
 
     actions.extend(selection::refresh_preview_from_current_selection(
