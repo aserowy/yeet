@@ -77,23 +77,72 @@ pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
     (parent, current, preview)
 }
 
+#[tracing::instrument(skip(app))]
 pub fn get_or_create_directory_buffer(
     app: &mut App,
     path: &Path,
     selection: &Option<String>,
 ) -> (usize, Option<Action>) {
-    let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
-        Buffer::Directory(it) if it.path == path => Some(*id),
-        Buffer::Content(it) if it.path == path => Some(*id),
-        Buffer::Image(it) if it.path == path => Some(*id),
-        _ => None,
-    });
+    let matching_ids: Vec<(usize, &'static str)> = app
+        .buffers
+        .iter()
+        .filter_map(|(id, buffer)| match buffer {
+            Buffer::Directory(it) if it.path == path => Some((*id, "Directory")),
+            Buffer::Content(it) if it.path == path => Some((*id, "Content")),
+            Buffer::Image(it) if it.path == path => Some((*id, "Image")),
+            _ => None,
+        })
+        .collect();
 
-    if let Some(id) = existing_id {
-        return (id, None);
+    tracing::trace!(
+        path = %path.display(),
+        total_buffers = app.buffers.len(),
+        matching_count = matching_ids.len(),
+        "checking for existing buffer"
+    );
+
+    if matching_ids.len() > 1 {
+        tracing::warn!(
+            path = %path.display(),
+            matching_ids = ?matching_ids,
+            "detected multiple buffers with the same path"
+        );
+    }
+
+    if let Some((id, buffer_type)) = matching_ids.first() {
+        tracing::trace!(
+            id = %id,
+            buffer_type = %buffer_type,
+            path = %path.display(),
+            "found existing buffer"
+        );
+        return (*id, None);
     }
 
     let id = get_next_buffer_id(app);
+
+    let existing_paths: Vec<_> = app
+        .buffers
+        .iter()
+        .filter_map(|(buf_id, buffer)| {
+            let path_str = match buffer {
+                Buffer::Directory(it) => Some(format!("{}:Dir:{}", buf_id, it.path.display())),
+                Buffer::Content(it) => Some(format!("{}:Content:{}", buf_id, it.path.display())),
+                Buffer::Image(it) => Some(format!("{}:Image:{}", buf_id, it.path.display())),
+                Buffer::Empty => None,
+            };
+            path_str
+        })
+        .collect();
+
+    tracing::debug!(
+        id = %id,
+        path = %path.display(),
+        total_buffers = app.buffers.len(),
+        existing_buffers = ?existing_paths,
+        "created new buffer"
+    );
+
     app.buffers.insert(
         id,
         Buffer::Directory(DirectoryBuffer {
@@ -101,6 +150,7 @@ pub fn get_or_create_directory_buffer(
             ..Default::default()
         }),
     );
+
     (
         id,
         Some(Action::Load(path.to_path_buf(), selection.clone())),

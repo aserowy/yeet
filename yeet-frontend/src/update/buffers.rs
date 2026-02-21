@@ -22,6 +22,15 @@ pub fn update(app: &mut App) {
         })
         .collect();
 
+    if !stale_images.is_empty() {
+        tracing::trace!(
+            stale_image_ids = ?stale_images,
+            referenced_ids = ?referenced,
+            total_buffers_before = app.buffers.len(),
+            "removing stale image buffers"
+        );
+    }
+
     for id in stale_images {
         app.buffers.remove(&id);
     }

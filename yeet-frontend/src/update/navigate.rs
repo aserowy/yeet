@@ -127,6 +127,10 @@ pub fn navigate_to_path_with_selection(
     current_vp.buffer_id = current_id;
     preview_vp.buffer_id = preview_id;
 
+    tracing::debug!(
+        "navigate_to_path_with_selection returning {} actions",
+        actions.len()
+    );
     actions
 }
 

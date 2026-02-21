@@ -50,6 +50,7 @@ pub fn get_selected_path_with_base(
     }
 }
 
+#[tracing::instrument(skip(app, history))]
 pub fn refresh_preview_from_current_selection(
     app: &mut App,
     history: &History,
@@ -64,9 +65,11 @@ pub fn refresh_preview_from_current_selection(
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
+        tracing::trace!("skipping preview refresh: selection unchanged");
         return Vec::new();
     }
 
+    tracing::debug!("refreshing preview for selection: {:?}", current_selection);
     set_preview_buffer_for_selection(app, history, current_selection)
 }
 
