@@ -45,18 +45,22 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let buffer = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it,
-                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Empty) | None => return Vec::new(),
+            let path = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it.resolve_path(),
+                Some(Buffer::Content(it)) => it.resolve_path(),
+                Some(Buffer::Image(it)) => it.resolve_path(),
+                Some(Buffer::Empty) | None => None,
             };
 
-            add_change_mode(
-                mode_before,
-                mode,
-                file::copy_selection(&state.marks, buffer, target),
-            )
+            let actions = match path {
+                Some(source_path) => file::copy_path(&state.marks, source_path, target),
+                None => {
+                    tracing::warn!("cp command failed: no path in preview buffer");
+                    Vec::new()
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("d!", "") => {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
@@ -120,18 +124,22 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("marks", "") => print::marks(&state.marks),
         ("mv", target) => {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let buffer = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it,
-                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Empty) | None => return Vec::new(),
+            let path = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it.resolve_path(),
+                Some(Buffer::Content(it)) => it.resolve_path(),
+                Some(Buffer::Image(it)) => it.resolve_path(),
+                Some(Buffer::Empty) | None => None,
             };
 
-            add_change_mode(
-                mode_before,
-                mode,
-                file::rename_selection(&state.marks, buffer, target),
-            )
+            let actions = match path {
+                Some(source_path) => file::rename_path(&state.marks, source_path, target),
+                None => {
+                    tracing::warn!("mv command failed: no path in preview buffer");
+                    Vec::new()
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("noh", "") => add_change_mode(
             mode_before,

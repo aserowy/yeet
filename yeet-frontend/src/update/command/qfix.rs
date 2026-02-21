@@ -85,22 +85,46 @@ pub fn select_first(qfix: &mut QuickFix) -> Vec<Action> {
 }
 
 pub fn next(qfix: &mut QuickFix) -> Vec<Action> {
+    tracing::debug!(
+        "qfix::next called, current_index: {}, entries_count: {}, entries: {:?}",
+        qfix.current_index,
+        qfix.entries.len(),
+        qfix.entries
+    );
+
     let mut entry = qfix.entries.iter().enumerate().filter_map(|(i, p)| {
-        if i > qfix.current_index && p.exists() {
+        let exists = p.exists();
+        if i > qfix.current_index && exists {
+            tracing::trace!(
+                "qfix::next candidate: index={}, path={:?}, exists={}",
+                i,
+                p,
+                exists
+            );
             Some((i, p))
         } else {
+            if i > qfix.current_index {
+                tracing::trace!(
+                    "qfix::next skipping: index={}, path={:?}, exists={}",
+                    i,
+                    p,
+                    exists
+                );
+            }
             None
         }
     });
 
     match entry.next() {
         Some((i, p)) => {
+            tracing::debug!("qfix::next found entry: index={}, path={:?}", i, p);
             qfix.current_index = i;
             vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
                 p.clone(),
             ))]
         }
         None => {
+            tracing::debug!("qfix::next no more items found");
             vec![action::emit_keymap(KeymapMessage::Print(vec![
                 PrintContent::Error("no more items".to_owned()),
             ]))]

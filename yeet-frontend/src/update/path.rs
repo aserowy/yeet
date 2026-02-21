@@ -95,14 +95,18 @@ pub fn remove(
         );
     }
 
-    let removed_qfix = remove_qfix_for_path(qfix, path);
-    if !removed_qfix.is_empty() {
-        sign::unset_sign_for_paths(
-            app.buffers.values_mut().collect(),
-            removed_qfix,
-            QFIX_SIGN_ID,
-        );
-    }
+    let removed_qfix: Vec<_> = qfix
+        .entries
+        .iter()
+        .filter(|entry| entry.starts_with(path))
+        .cloned()
+        .collect();
+
+    sign::unset_sign_for_paths(
+        app.buffers.values_mut().collect(),
+        removed_qfix,
+        QFIX_SIGN_ID,
+    );
 
     actions
 }
@@ -118,19 +122,6 @@ fn remove_marks_for_path(marks: &mut Marks, path: &Path) -> Vec<PathBuf> {
     }
     for mark in marks_to_remove {
         marks.entries.remove(&mark);
-    }
-    removed_paths
-}
-
-fn remove_qfix_for_path(qfix: &mut QuickFix, path: &Path) -> Vec<PathBuf> {
-    let removed_paths: Vec<_> = qfix
-        .entries
-        .iter()
-        .filter(|entry| entry.starts_with(path))
-        .cloned()
-        .collect();
-    if !removed_paths.is_empty() {
-        qfix.entries.retain(|entry| !entry.starts_with(path));
     }
     removed_paths
 }

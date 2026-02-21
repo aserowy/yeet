@@ -59,8 +59,11 @@ pub fn qfix(qfix: &QuickFix) -> Vec<Action> {
         .entries
         .iter()
         .enumerate()
-        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string()))
-        .map(|(i, path)| format!("{:>max_width$} {}", i, path))
+        .map(|(i, path)| (i + 1, path.to_string_lossy().to_string(), path.exists()))
+        .map(|(i, path, exists)| {
+            let status = if exists { "" } else { "(removed)" };
+            format!("{:>max_width$} {} {}", i, path, status)
+        })
         .collect();
 
     let mut contents = vec![":cl".to_string()];
