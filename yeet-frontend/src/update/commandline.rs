@@ -165,9 +165,6 @@ pub fn update_on_execute(
     let messages = match command_mode {
         CommandMode::Command => {
             if let Some(cmd) = app.commandline.buffer.lines.last() {
-                // TODO: add command history and show previous command not current (this enables g: as well)
-                register.command = Some(cmd.content.to_stripped_string());
-
                 vec![Message::Keymap(KeymapMessage::ExecuteCommandString(
                     cmd.content.to_stripped_string(),
                 ))]

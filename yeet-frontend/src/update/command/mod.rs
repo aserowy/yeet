@@ -27,7 +27,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
     let mode = get_mode_after_command(&state.modes.previous);
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
-    match cmd_with_args {
+    let result = match cmd_with_args {
         ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut state.qfix, command)),
         ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut state.qfix)),
         ("cl", "") => print::qfix(&state.qfix),
@@ -182,7 +182,11 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             }
             add_change_mode(mode_before, mode, actions)
         }
-    }
+    };
+
+    state.register.command = Some(cmd.to_string());
+
+    result
 }
 
 fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> Vec<Action> {
