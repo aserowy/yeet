@@ -39,8 +39,9 @@ pub fn update_by_cursor(viewport: &mut ViewPort, buffer: &TextBuffer) {
     let line = &buffer.lines[buffer.cursor.vertical_index];
     if viewport.horizontal_index > cursor_index {
         viewport.horizontal_index = cursor_index;
-    } else if viewport.horizontal_index + viewport.get_content_width(line) < cursor_index {
-        viewport.horizontal_index = cursor_index.saturating_sub(viewport.get_content_width(line))
+    } else if viewport.horizontal_index + viewport.get_content_width(line) <= cursor_index {
+        viewport.horizontal_index =
+            cursor_index.saturating_sub(viewport.get_content_width(line)) + 1;
     }
 }
 
