@@ -70,7 +70,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Image(it)) => it.resolve_path(),
                 Some(Buffer::Content(it)) => it.resolve_path(),
                 Some(Buffer::PathReference(it)) => Some(it.as_path()),
-                Some(Buffer::Empty) | None => return Vec::new(),
+                Some(Buffer::Empty) | None => None,
             };
 
             if let Some(path) = path {
@@ -84,7 +84,13 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             } else {
                 tracing::warn!("deleting path failed: no path in preview set");
 
-                Vec::new()
+                add_change_mode(
+                    mode_before,
+                    mode,
+                    vec![Action::EmitMessages(vec![Message::Error(
+                        "No path in preview buffer to delete".to_string(),
+                    )])],
+                )
             }
         }
         ("delm", args) if !args.is_empty() => {
