@@ -28,6 +28,7 @@ mod modify;
 mod navigate;
 mod open;
 mod path;
+mod preview;
 mod qfix;
 mod register;
 mod save;

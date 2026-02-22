@@ -14,7 +14,7 @@ use crate::{
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer,
     },
-    update::{app, selection},
+    update::{app, preview, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, navigate, sign};
@@ -316,19 +316,12 @@ fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
 }
 
 fn reset_directory_viewports_to_empty(app: &mut App) {
-    let parent_id = app::get_next_buffer_id(app);
-    app.buffers.insert(parent_id, Buffer::Empty);
+    let buffer_id = app::create_empty_buffer(app);
+    let (parent, current, _) = app::directory_viewports_mut(app);
+    parent.buffer_id = buffer_id;
+    current.buffer_id = buffer_id;
 
-    let current_id = app::get_next_buffer_id(app);
-    app.buffers.insert(current_id, Buffer::Empty);
-
-    let preview_id = app::get_next_buffer_id(app);
-    app.buffers.insert(preview_id, Buffer::Empty);
-
-    let (parent, current, preview) = app::directory_viewports_mut(app);
-    parent.buffer_id = parent_id;
-    current.buffer_id = current_id;
-    preview.buffer_id = preview_id;
+    preview::set_buffer_id(app, buffer_id);
 }
 
 #[cfg(test)]

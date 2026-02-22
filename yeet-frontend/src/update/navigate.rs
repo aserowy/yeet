@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{
     action::Action,
     model::{history::History, mark::Marks, App, Buffer},
-    update::app,
+    update::{app, preview},
 };
 
 use super::{history, selection};
@@ -122,10 +122,11 @@ pub fn navigate_to_path_with_selection(
         None => app::create_empty_buffer(app),
     };
 
-    let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
+    let (parent_vp, current_vp, _) = app::directory_viewports_mut(app);
     parent_vp.buffer_id = parent_id;
     current_vp.buffer_id = current_id;
-    preview_vp.buffer_id = preview_id;
+
+    preview::set_buffer_id(app, preview_id);
 
     tracing::debug!(
         "navigate_to_path_with_selection returning {} actions",
@@ -158,10 +159,12 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             app::create_empty_buffer(app)
         };
 
-        let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
-        preview_vp.buffer_id = current_vp.buffer_id;
+        let (parent_vp, current_vp, _) = app::directory_viewports_mut(app);
+        let preview_id = current_vp.buffer_id;
         current_vp.buffer_id = parent_vp.buffer_id;
         parent_vp.buffer_id = parent_id;
+
+        preview::set_buffer_id(app, preview_id);
 
         actions
     } else {
@@ -205,7 +208,8 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
 
     parent_vp.buffer_id = current_vp.buffer_id;
     current_vp.buffer_id = preview_vp.buffer_id;
-    preview_vp.buffer_id = preview_id;
+
+    preview::set_buffer_id(app, preview_id);
 
     actions
 }

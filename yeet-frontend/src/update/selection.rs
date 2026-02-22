@@ -2,13 +2,14 @@ use std::path::PathBuf;
 
 use std::path::Path;
 
+use crate::update::preview;
 use crate::{
     action::Action,
     event::Message,
     model::{history::History, register::Register, App, Buffer, DirectoryBuffer},
 };
 
-use super::{app, history as history_update};
+use super::{app, history};
 
 pub fn get_current_selected_path(
     buffer: &DirectoryBuffer,
@@ -80,8 +81,8 @@ fn set_preview_buffer_for_selection(
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     let preview_id = if let Some(selected_path) = selection {
-        let selection = history_update::get_selection_from_history(history, &selected_path)
-            .map(|s| s.to_owned());
+        let selection =
+            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
 
         let (id, load) = app::get_or_create_directory_buffer(app, &selected_path, &selection);
         actions.extend(load);
@@ -91,8 +92,7 @@ fn set_preview_buffer_for_selection(
         app::create_empty_buffer(app)
     };
 
-    let (_, _, preview) = app::directory_viewports_mut(app);
-    preview.buffer_id = preview_id;
+    preview::set_buffer_id(app, preview_id);
 
     actions
 }

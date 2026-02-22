@@ -83,12 +83,11 @@ pub fn finish(
 
         set_directory_content(state, buffer, path, contents, selection);
 
-        let message = BufferMessage::SortContent(super::SORT);
         yeet_buffer::update(
             None,
             &state.modes.current,
             &mut buffer.buffer,
-            std::slice::from_ref(&message),
+            std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
         );
 
         if let Some(selection) = selection {
