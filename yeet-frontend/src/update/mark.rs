@@ -14,6 +14,7 @@ pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
         (_, Buffer::Directory(it)) => it,
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
+        (_, Buffer::PathReference(_)) => return Vec::new(),
         (_, Buffer::Empty) => return Vec::new(),
     };
 

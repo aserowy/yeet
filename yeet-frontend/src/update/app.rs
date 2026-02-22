@@ -4,7 +4,7 @@ use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
-    model::{App, Buffer, DirectoryBuffer, Window},
+    model::{App, Buffer, Window},
 };
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
@@ -90,6 +90,7 @@ pub fn get_or_create_directory_buffer(
             Buffer::Directory(it) if it.path == path => Some((*id, "Directory")),
             Buffer::Content(it) if it.path == path => Some((*id, "Content")),
             Buffer::Image(it) if it.path == path => Some((*id, "Image")),
+            Buffer::PathReference(p) if p == path => Some((*id, "PathReference")),
             _ => None,
         })
         .collect();
@@ -116,6 +117,7 @@ pub fn get_or_create_directory_buffer(
             path = %path.display(),
             "found existing buffer"
         );
+
         return (*id, None);
     }
 
@@ -129,6 +131,7 @@ pub fn get_or_create_directory_buffer(
                 Buffer::Directory(it) => Some(format!("{}:Dir:{}", buf_id, it.path.display())),
                 Buffer::Content(it) => Some(format!("{}:Content:{}", buf_id, it.path.display())),
                 Buffer::Image(it) => Some(format!("{}:Image:{}", buf_id, it.path.display())),
+                Buffer::PathReference(p) => Some(format!("{}:PathRef:{}", buf_id, p.display())),
                 Buffer::Empty => None,
             };
             path_str
@@ -143,13 +146,8 @@ pub fn get_or_create_directory_buffer(
         "created new buffer"
     );
 
-    app.buffers.insert(
-        id,
-        Buffer::Directory(DirectoryBuffer {
-            path: path.to_path_buf(),
-            ..Default::default()
-        }),
-    );
+    app.buffers
+        .insert(id, Buffer::PathReference(path.to_path_buf()));
 
     (
         id,

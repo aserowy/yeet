@@ -158,7 +158,8 @@ fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
         .flat_map(|bffr| match bffr {
             Buffer::Directory(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
             Buffer::Image(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::Content(_) => None.into_iter(),
+            Buffer::Content(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
+            Buffer::PathReference(p) => { Some(p.to_path_buf()) }.into_iter(),
             Buffer::Empty => None.into_iter(),
         })
         .collect::<Vec<_>>();

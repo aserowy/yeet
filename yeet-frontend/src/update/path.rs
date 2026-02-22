@@ -14,7 +14,7 @@ use crate::{
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer,
     },
-    update::{app, selection},
+    update::{app, preview, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, navigate, sign};
@@ -290,6 +290,7 @@ fn buffer_path(buffer: &Buffer) -> Option<&Path> {
         Buffer::Directory(buffer) => buffer.resolve_path(),
         Buffer::Content(buffer) => buffer.resolve_path(),
         Buffer::Image(buffer) => buffer.resolve_path(),
+        Buffer::PathReference(path) => Some(path.as_path()),
         Buffer::Empty => None,
     }
 }
@@ -316,19 +317,12 @@ fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
 }
 
 fn reset_directory_viewports_to_empty(app: &mut App) {
-    let parent_id = app::get_next_buffer_id(app);
-    app.buffers.insert(parent_id, Buffer::Empty);
+    let buffer_id = app::create_empty_buffer(app);
+    let (parent, current, _) = app::directory_viewports_mut(app);
+    parent.buffer_id = buffer_id;
+    current.buffer_id = buffer_id;
 
-    let current_id = app::get_next_buffer_id(app);
-    app.buffers.insert(current_id, Buffer::Empty);
-
-    let preview_id = app::get_next_buffer_id(app);
-    app.buffers.insert(preview_id, Buffer::Empty);
-
-    let (parent, current, preview) = app::directory_viewports_mut(app);
-    parent.buffer_id = parent_id;
-    current.buffer_id = current_id;
-    preview.buffer_id = preview_id;
+    preview::set_buffer_id(app, buffer_id);
 }
 
 #[cfg(test)]
@@ -407,6 +401,7 @@ mod test {
         let (_, current_id, _) = app::directory_buffer_ids(&app);
         let current_path = match app.buffers.get(&current_id) {
             Some(Buffer::Directory(buffer)) => buffer.path.clone(),
+            Some(Buffer::PathReference(path)) => path.clone(),
             _ => PathBuf::new(),
         };
 

@@ -57,7 +57,8 @@ pub fn refresh(app: &mut crate::model::App) -> Vec<Action> {
     let preview_path = match preview {
         Buffer::Directory(buffer) => buffer.resolve_path(),
         Buffer::Image(buffer) => buffer.resolve_path(),
-        Buffer::Content(_) => None,
+        Buffer::Content(buffer) => buffer.resolve_path(),
+        Buffer::PathReference(path) => Some(path.as_path()),
         Buffer::Empty => None,
     };
 

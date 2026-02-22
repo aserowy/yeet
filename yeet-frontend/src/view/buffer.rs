@@ -68,7 +68,7 @@ fn render_buffer_slot(
         Some(Buffer::Directory(buffer)) => {
             render_directory_buffer(mode, frame, viewport, buffer, x, y);
         }
-        Some(Buffer::Empty) | None => {
+        Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = viewport.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
