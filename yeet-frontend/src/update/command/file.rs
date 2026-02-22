@@ -5,7 +5,7 @@ use yeet_keymap::message::KeymapMessage;
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{mark::Marks, Buffer, DirectoryBuffer},
+    model::{mark::Marks, Buffer},
     task::Task,
     update::app,
 };
@@ -23,18 +23,6 @@ pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action>
             vec![Action::EmitMessages(vec![Message::Error(err)])]
         }
     }
-}
-
-pub fn delete_selection(buffer: &DirectoryBuffer) -> Vec<Action> {
-    let mut actions = Vec::new();
-    if let Some(path) = &buffer.resolve_path() {
-        tracing::info!("deleting path: {:?}", path);
-        actions.push(Action::Task(Task::DeletePath(path.to_path_buf())));
-    } else {
-        tracing::warn!("deleting path failed: no path in preview set");
-    }
-
-    actions
 }
 
 pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action> {

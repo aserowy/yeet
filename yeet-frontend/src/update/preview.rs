@@ -45,7 +45,7 @@ pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
             tracing::trace!("updating preview buffer: {:?}", path);
 
             let (preview_id, _) = app::get_or_create_directory_buffer(app, &path, &None);
-            app.buffers.insert(preview_id, Buffer::Empty);
+            app.buffers.insert(preview_id, Buffer::PathReference(path));
         }
     }
 

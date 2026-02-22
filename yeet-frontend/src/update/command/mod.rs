@@ -65,17 +65,27 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         }
         ("d!", "") => {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let buffer = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it,
-                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::PathReference(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
+            let path = match app.buffers.get(&preview_id) {
+                Some(Buffer::Directory(it)) => it.resolve_path(),
+                Some(Buffer::Image(it)) => it.resolve_path(),
+                Some(Buffer::Content(it)) => it.resolve_path(),
+                Some(Buffer::PathReference(it)) => Some(it.as_path()),
                 Some(Buffer::Empty) | None => return Vec::new(),
             };
 
-            add_change_mode(mode_before, mode, file::delete_selection(buffer))
+            if let Some(path) = path {
+                tracing::info!("deleting path: {:?}", path);
+
+                add_change_mode(
+                    mode_before,
+                    mode,
+                    vec![Action::Task(Task::DeletePath(path.to_path_buf()))],
+                )
+            } else {
+                tracing::warn!("deleting path failed: no path in preview set");
+
+                Vec::new()
+            }
         }
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
