@@ -23,6 +23,7 @@ pub fn relocate(
         (vp, Buffer::Directory(it)) => (vp, it),
         (_vp, Buffer::Image(_)) => return Vec::new(),
         (_vp, Buffer::Content(_)) => return Vec::new(),
+        (_vp, Buffer::PathReference(_)) => return Vec::new(),
         (_vp, Buffer::Empty) => return Vec::new(),
     };
 

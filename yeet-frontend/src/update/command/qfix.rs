@@ -25,6 +25,7 @@ pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
         Buffer::Directory(it) => it,
         Buffer::Image(_) => return Vec::new(),
         Buffer::Content(_) => return Vec::new(),
+        Buffer::PathReference(_) => return Vec::new(),
         Buffer::Empty => return Vec::new(),
     };
 
@@ -162,6 +163,7 @@ pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
         Buffer::Directory(it) => it,
         Buffer::Image(_) => return Vec::new(),
         Buffer::Content(_) => return Vec::new(),
+        Buffer::PathReference(_) => return Vec::new(),
         Buffer::Empty => return Vec::new(),
     };
 

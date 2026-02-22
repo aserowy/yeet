@@ -26,6 +26,15 @@ pub fn change(
     selection: &Option<String>,
 ) -> Vec<Action> {
     for (_, buffer) in app.buffers.iter_mut() {
+        if let Buffer::PathReference(referenced_path) = buffer {
+            if referenced_path == path {
+                *buffer = Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                });
+            }
+        }
+
         if let Buffer::Directory(buffer) = buffer {
             if buffer.path.as_path() != path {
                 continue;
@@ -72,6 +81,15 @@ pub fn finish(
 
     let mut actions = Vec::new();
     for buffer in app.buffers.values_mut() {
+        if let Buffer::PathReference(referenced_path) = buffer {
+            if referenced_path == path {
+                *buffer = Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                });
+            }
+        }
+
         let buffer = match buffer {
             Buffer::Directory(it) => it,
             _ => continue,
@@ -262,7 +280,7 @@ mod test {
         let (_, _, preview_id) = crate::update::app::directory_buffer_ids(&app);
         assert!(matches!(
             app.buffers.get(&preview_id),
-            Some(Buffer::Directory(buffer)) if buffer.path == selected_file
+            Some(Buffer::PathReference(path)) if path == &selected_file
         ));
     }
 }

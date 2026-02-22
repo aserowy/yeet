@@ -16,6 +16,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
         Buffer::Directory(it) => it,
         Buffer::Image(_) => return Vec::new(),
         Buffer::Content(_) => return Vec::new(),
+        Buffer::PathReference(_) => return Vec::new(),
         Buffer::Empty => return Vec::new(),
     };
 

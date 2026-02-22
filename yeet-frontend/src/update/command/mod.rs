@@ -49,6 +49,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Directory(it)) => it.resolve_path(),
                 Some(Buffer::Content(it)) => it.resolve_path(),
                 Some(Buffer::Image(it)) => it.resolve_path(),
+                Some(Buffer::PathReference(path)) => Some(path.as_path()),
                 Some(Buffer::Empty) | None => None,
             };
 
@@ -68,6 +69,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Directory(it)) => it,
                 Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
                 Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::PathReference(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
                 Some(Buffer::Empty) | None => return Vec::new(),
             };
 
@@ -103,6 +107,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Directory(it)) => it,
                 Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
                 Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
+                Some(Buffer::PathReference(_)) => {
+                    return add_change_mode(mode_before, mode, Vec::new())
+                }
                 Some(Buffer::Empty) | None => return Vec::new(),
             };
 
@@ -128,6 +135,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Directory(it)) => it.resolve_path(),
                 Some(Buffer::Content(it)) => it.resolve_path(),
                 Some(Buffer::Image(it)) => it.resolve_path(),
+                Some(Buffer::PathReference(path)) => Some(path.as_path()),
                 Some(Buffer::Empty) | None => None,
             };
 

@@ -157,6 +157,7 @@ pub enum Buffer {
     Directory(DirectoryBuffer),
     Image(PreviewImageBuffer),
     Content(ContentBuffer),
+    PathReference(PathBuf),
     Empty,
 }
 

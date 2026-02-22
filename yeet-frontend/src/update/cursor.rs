@@ -60,6 +60,7 @@ pub fn relocate(
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
+        Some(Buffer::PathReference(path)) => Some(path.to_path_buf()),
         Some(Buffer::Empty) | None => None,
     };
 
@@ -67,6 +68,7 @@ pub fn relocate(
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
+        (_, Buffer::PathReference(_)) => return Vec::new(),
         (_, Buffer::Empty) => return Vec::new(),
     };
 

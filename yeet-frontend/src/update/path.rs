@@ -290,6 +290,7 @@ fn buffer_path(buffer: &Buffer) -> Option<&Path> {
         Buffer::Directory(buffer) => buffer.resolve_path(),
         Buffer::Content(buffer) => buffer.resolve_path(),
         Buffer::Image(buffer) => buffer.resolve_path(),
+        Buffer::PathReference(path) => Some(path.as_path()),
         Buffer::Empty => None,
     }
 }
@@ -400,6 +401,7 @@ mod test {
         let (_, current_id, _) = app::directory_buffer_ids(&app);
         let current_path = match app.buffers.get(&current_id) {
             Some(Buffer::Directory(buffer)) => buffer.path.clone(),
+            Some(Buffer::PathReference(path)) => path.clone(),
             _ => PathBuf::new(),
         };
 
