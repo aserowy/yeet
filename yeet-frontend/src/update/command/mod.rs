@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, QuitMode};
 
@@ -64,34 +66,23 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("d!", "") => {
-            let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let path = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it.resolve_path(),
-                Some(Buffer::Image(it)) => it.resolve_path(),
-                Some(Buffer::Content(it)) => it.resolve_path(),
-                Some(Buffer::PathReference(it)) => Some(it.as_path()),
-                Some(Buffer::Empty) | None => None,
-            };
+            let path = get_preview_path(app);
+            let actions = match path {
+                Some(path) => {
+                    tracing::info!("deleting path: {:?}", path);
 
-            if let Some(path) = path {
-                tracing::info!("deleting path: {:?}", path);
+                    vec![Action::Task(Task::DeletePath(path.to_path_buf()))]
+                }
+                _ => {
+                    tracing::warn!("deleting path failed: no path in preview set");
 
-                add_change_mode(
-                    mode_before,
-                    mode,
-                    vec![Action::Task(Task::DeletePath(path.to_path_buf()))],
-                )
-            } else {
-                tracing::warn!("deleting path failed: no path in preview set");
-
-                add_change_mode(
-                    mode_before,
-                    mode,
                     vec![Action::EmitMessages(vec![Message::Error(
                         "No path in preview buffer to delete".to_string(),
-                    )])],
-                )
-            }
+                    )])]
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("delm", args) if !args.is_empty() => {
             let mut marks = Vec::new();
@@ -118,25 +109,18 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         }
         ("e!", "") => add_change_mode(mode_before, mode, file::refresh(app)),
         ("fd", params) => {
-            let (_, current_id, _) = app::directory_buffer_ids(app);
-            let buffer = match app.buffers.get(&current_id) {
-                Some(Buffer::Directory(it)) => it,
-                Some(Buffer::Image(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::Content(_)) => return add_change_mode(mode_before, mode, Vec::new()),
-                Some(Buffer::PathReference(_)) => {
-                    return add_change_mode(mode_before, mode, Vec::new())
-                }
-                Some(Buffer::Empty) | None => return Vec::new(),
-            };
-
-            add_change_mode(
-                mode_before,
-                mode,
-                vec![Action::Task(Task::ExecuteFd(
-                    buffer.path.clone(),
+            let current_path = get_current_path(app);
+            let actions = match current_path {
+                Some(path) => vec![Action::Task(Task::ExecuteFd(
+                    path.to_path_buf(),
                     params.to_owned(),
                 ))],
-            )
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Fd failed. Current path could not be resolved.".to_string(),
+                )])],
+            };
+
+            add_change_mode(mode_before, mode, actions)
         }
         ("invertcl", "") => add_change_mode(
             mode_before,
@@ -146,21 +130,12 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("junk", "") => print::junkyard(&state.junk),
         ("marks", "") => print::marks(&state.marks),
         ("mv", target) => {
-            let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let path = match app.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it.resolve_path(),
-                Some(Buffer::Content(it)) => it.resolve_path(),
-                Some(Buffer::Image(it)) => it.resolve_path(),
-                Some(Buffer::PathReference(path)) => Some(path.as_path()),
-                Some(Buffer::Empty) | None => None,
-            };
-
-            let actions = match path {
+            let preview_path = get_preview_path(app);
+            let actions = match preview_path {
                 Some(source_path) => file::rename_path(&state.marks, source_path, target),
-                None => {
-                    tracing::warn!("mv command failed: no path in preview buffer");
-                    Vec::new()
-                }
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Mv failed. Preview path could not be resolved.".to_string(),
+                )])],
             };
 
             add_change_mode(mode_before, mode, actions)
@@ -177,6 +152,26 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ))],
         ("q!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
         ("reg", "") => print::register(&state.register),
+        ("rg", params) => {
+            let current_path = get_current_path(app);
+            let actions = match current_path {
+                Some(path) => {
+                    tracing::info!("executing rg in path: {:?}", path);
+
+                    vec![Action::Task(Task::ExecuteRg(
+                        path.to_path_buf(),
+                        params.to_owned(),
+                    ))]
+                }
+                None => {
+                    vec![Action::EmitMessages(vec![Message::Error(
+                        "Rg failed. Current path could not be resolved.".to_string(),
+                    )])]
+                }
+            };
+
+            add_change_mode(mode_before, mode, actions)
+        }
         ("tl", "") => print::tasks(&state.tasks),
         ("w", "") => add_change_mode(
             mode_before,
@@ -211,6 +206,26 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
     state.register.command = Some(cmd.to_string());
 
     result
+}
+
+fn get_current_path(app: &App) -> Option<&Path> {
+    let (_, current_id, _) = app::directory_buffer_ids(app);
+    get_buffer_path(app, current_id)
+}
+
+fn get_preview_path(app: &App) -> Option<&Path> {
+    let (_, _, preview_id) = app::directory_buffer_ids(app);
+    get_buffer_path(app, preview_id)
+}
+
+fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
+    match app.buffers.get(&buffer_id) {
+        Some(Buffer::Directory(it)) => it.resolve_path(),
+        Some(Buffer::Content(it)) => it.resolve_path(),
+        Some(Buffer::Image(it)) => it.resolve_path(),
+        Some(Buffer::PathReference(path)) => Some(path.as_path()),
+        Some(Buffer::Empty) | None => None,
+    }
 }
 
 fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> Vec<Action> {

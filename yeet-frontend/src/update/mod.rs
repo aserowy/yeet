@@ -117,7 +117,7 @@ fn update_with_message(
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) => {
+        Message::FdResult(paths) | Message::RgResult(paths) => {
             qfix::add(&mut state.qfix, app.buffers.values_mut().collect(), paths)
         }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
