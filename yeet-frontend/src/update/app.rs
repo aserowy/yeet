@@ -1,10 +1,11 @@
 use std::{cmp::Ordering, path::Path};
 
-use yeet_buffer::model::viewport::ViewPort;
+use yeet_buffer::model::{viewport::ViewPort, Mode};
 
 use crate::{
     action::Action,
     model::{App, Buffer, Window},
+    update::cursor,
 };
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
@@ -117,6 +118,18 @@ pub fn get_or_create_directory_buffer(
             path = %path.display(),
             "found existing buffer"
         );
+
+        if let Some(selection) = selection {
+            let mut buffer = app.buffers.get_mut(id).expect("buffer should exist");
+            if let Buffer::Directory(buffer) = &mut buffer {
+                cursor::set_cursor_index_to_selection(
+                    None,
+                    &Mode::Normal,
+                    &mut buffer.buffer,
+                    selection,
+                );
+            }
+        }
 
         return (*id, None);
     }

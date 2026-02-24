@@ -1,6 +1,7 @@
 # AGENTS.md
 
 This repository is a Rust workspace with these crates:
+
 - `yeet` (binary)
 - `yeet-frontend`
 - `yeet-buffer`
