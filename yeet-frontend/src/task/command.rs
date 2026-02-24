@@ -82,11 +82,11 @@ pub async fn rg(base_path: &Path, params: String) -> Result<Vec<PathBuf>, AppErr
     match result {
         Ok(output) => {
             if !output.status.success() {
-                let message = format!("fd failed: {:?}", output);
+                let message = format!("rg failed: {:?}", output);
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else if output.stdout.is_empty() {
-                let message = "fd failed: result is empty".to_string();
+                let message = "rg failed: result is empty".to_string();
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else {
@@ -107,7 +107,7 @@ pub async fn rg(base_path: &Path, params: String) -> Result<Vec<PathBuf>, AppErr
             }
         }
         Err(err) => {
-            let message = format!("fd failed: {:?}", err);
+            let message = format!("rg failed: {:?}", err);
             tracing::error!(message);
             Err(AppError::ExecutionFailed(message))
         }
