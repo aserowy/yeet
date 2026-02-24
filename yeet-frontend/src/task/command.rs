@@ -1,6 +1,7 @@
 use std::{
+    io::Error,
     path::{Path, PathBuf},
-    process::Stdio,
+    process::{Output, Stdio},
     str,
 };
 
@@ -79,15 +80,45 @@ pub async fn rg(base_path: &Path, params: String) -> Result<Vec<PathBuf>, AppErr
         .output()
         .await;
 
+    resolve_output_result("rg", result)
+}
+
+pub async fn zoxide(params: String) -> Result<PathBuf, AppError> {
+    tracing::debug!("executing zoxide with {:?} params", params);
+
+    let result = Command::new("zoxide")
+        .arg("query")
+        .arg(params)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .output()
+        .await;
+
+    let result = resolve_output_result("zoxide", result)?;
+    if let Some(target) = result.into_iter().next() {
+        Ok(target)
+    } else {
+        Err(AppError::ExecutionFailed(
+            "zoxide failed: no valid path found".to_string(),
+        ))
+    }
+}
+
+fn resolve_output_result(
+    prefix: &str,
+    result: Result<Output, Error>,
+) -> Result<Vec<PathBuf>, AppError> {
     match result {
         Ok(output) => {
             if !output.status.success() {
-                let message = format!("rg failed: {:?}", output);
+                let message = format!("{:?} failed: {:?}", prefix, output);
                 tracing::error!(message);
                 Err(AppError::ExecutionFailed(message))
             } else if output.stdout.is_empty() {
-                let message = "rg failed: result is empty".to_string();
-                tracing::error!(message);
+                let message = format!("{:?} returned no valid paths", prefix);
+                tracing::info!(message);
                 Err(AppError::ExecutionFailed(message))
             } else {
                 let result = str::from_utf8(&output.stdout).map_or(vec![], |s| {
@@ -107,62 +138,7 @@ pub async fn rg(base_path: &Path, params: String) -> Result<Vec<PathBuf>, AppErr
             }
         }
         Err(err) => {
-            let message = format!("rg failed: {:?}", err);
-            tracing::error!(message);
-            Err(AppError::ExecutionFailed(message))
-        }
-    }
-}
-
-pub async fn zoxide(params: String) -> Result<PathBuf, AppError> {
-    tracing::debug!("executing zoxide with {:?} params", params);
-
-    let result = Command::new("zoxide")
-        .arg("query")
-        .arg(params)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .output()
-        .await;
-
-    match result {
-        Ok(output) => {
-            if !output.status.success() {
-                let message = format!("zoxide failed: {:?}", output);
-                tracing::error!(message);
-                Err(AppError::ExecutionFailed(message))
-            } else if output.stdout.is_empty() {
-                let message = "zoxide failed: result is empty".to_string();
-                tracing::error!(message);
-                Err(AppError::ExecutionFailed(message))
-            } else {
-                let result = str::from_utf8(&output.stdout).map_or(vec![], |s| {
-                    s.lines()
-                        .map(|l| l.to_string())
-                        .filter_map(|s| {
-                            let path = PathBuf::from(s);
-                            if path.exists() {
-                                Some(path)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                });
-
-                if let Some(target) = result.into_iter().next() {
-                    Ok(target)
-                } else {
-                    Err(AppError::ExecutionFailed(
-                        "zoxide failed: no valid path found".to_string(),
-                    ))
-                }
-            }
-        }
-        Err(err) => {
-            let message = format!("zoxide failed: {:?}", err);
+            let message = format!("{:?} failed: {:?}", prefix, err);
             tracing::error!(message);
             Err(AppError::ExecutionFailed(message))
         }
