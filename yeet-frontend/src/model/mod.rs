@@ -8,7 +8,7 @@ use ratatui_image::protocol::Protocol;
 use tokio_util::sync::CancellationToken;
 use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
-    Mode, TextBuffer,
+    Cursor, Mode, TextBuffer,
 };
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
@@ -215,4 +215,33 @@ pub enum DirectoryBufferState {
     Ready,
     #[default]
     Uninitialized,
+}
+
+pub fn get_selected_path(buffer: &DirectoryBuffer, cursor: Option<&Cursor>) -> Option<PathBuf> {
+    get_selected_path_with_base(&buffer.path, &buffer.buffer, cursor, |path| path.exists())
+}
+
+pub fn get_selected_path_with_base(
+    base_path: &Path,
+    text_buffer: &TextBuffer,
+    cursor: Option<&Cursor>,
+    exists: impl Fn(&Path) -> bool,
+) -> Option<PathBuf> {
+    if text_buffer.lines.is_empty() {
+        return None;
+    }
+
+    let cursor = cursor?;
+    let current = &text_buffer.lines.get(cursor.vertical_index)?;
+    if current.content.is_empty() {
+        return None;
+    }
+
+    let target = base_path.join(current.content.to_stripped_string());
+
+    if exists(&target) {
+        Some(target)
+    } else {
+        None
+    }
 }

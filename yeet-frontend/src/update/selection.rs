@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
-use std::path::Path;
+use yeet_buffer::model::Cursor;
 
+use crate::model;
 use crate::update::preview;
 use crate::{
     action::Action,
@@ -10,46 +11,6 @@ use crate::{
 };
 
 use super::{app, history};
-
-pub fn get_current_selected_path(
-    buffer: &DirectoryBuffer,
-    cursor: Option<&yeet_buffer::model::Cursor>,
-) -> Option<PathBuf> {
-    get_current_selected_path_with_exists(buffer, cursor, |path| path.exists())
-}
-
-pub fn get_current_selected_path_with_exists(
-    buffer: &DirectoryBuffer,
-    cursor: Option<&yeet_buffer::model::Cursor>,
-    exists: impl Fn(&std::path::Path) -> bool,
-) -> Option<PathBuf> {
-    get_selected_path_with_base(&buffer.path, &buffer.buffer, cursor, exists)
-}
-
-pub fn get_selected_path_with_base(
-    base_path: &Path,
-    text_buffer: &yeet_buffer::model::TextBuffer,
-    cursor: Option<&yeet_buffer::model::Cursor>,
-    exists: impl Fn(&std::path::Path) -> bool,
-) -> Option<PathBuf> {
-    if text_buffer.lines.is_empty() {
-        return None;
-    }
-
-    let cursor = cursor?;
-    let current = &text_buffer.lines.get(cursor.vertical_index)?;
-    if current.content.is_empty() {
-        return None;
-    }
-
-    let target = base_path.join(current.content.to_stripped_string());
-
-    if exists(&target) {
-        Some(target)
-    } else {
-        None
-    }
-}
 
 #[tracing::instrument(skip(app, history))]
 pub fn refresh_preview_from_current_selection(
@@ -60,7 +21,7 @@ pub fn refresh_preview_from_current_selection(
     let (_, current_id, _) = app::directory_buffer_ids(app);
     let current_selection = match app.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => {
-            get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+            model::get_selected_path(buffer, Some(&buffer.buffer.cursor))
         }
         _ => return Vec::new(),
     };
@@ -100,9 +61,9 @@ fn set_preview_buffer_for_selection(
 pub fn copy_to_clipboard(
     register: &mut Register,
     buffer: &DirectoryBuffer,
-    cursor: Option<&yeet_buffer::model::Cursor>,
+    cursor: Option<&Cursor>,
 ) -> Vec<Action> {
-    if let Some(path) = get_current_selected_path(buffer, cursor) {
+    if let Some(path) = model::get_selected_path(buffer, cursor) {
         if let Some(clipboard) = register.clipboard.as_mut() {
             match clipboard.set_text(path.to_string_lossy()) {
                 Ok(_) => Vec::new(),

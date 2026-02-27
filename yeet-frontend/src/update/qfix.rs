@@ -3,12 +3,13 @@ use std::path::PathBuf;
 use crate::{
     action::Action,
     model::{
+        self,
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer,
     },
 };
 
-use super::{app, selection, sign};
+use super::{app, sign};
 
 pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
     let (_, buffer) = app::get_focused_current_mut(app);
@@ -20,7 +21,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
         Buffer::Empty => return Vec::new(),
     };
 
-    let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));
+    let selected = model::get_selected_path(buffer, Some(&buffer.buffer.cursor));
     if let Some(selected) = selected {
         if qfix.entries.contains(&selected) {
             qfix.entries.retain(|p| p != &selected);

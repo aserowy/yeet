@@ -2,11 +2,11 @@ use std::path::Path;
 
 use crate::{
     action::Action,
-    model::{history::History, mark::Marks, App, Buffer},
+    model::{self, history::History, mark::Marks, App, Buffer},
     update::{app, preview},
 };
 
-use super::{history, selection};
+use super::history;
 
 #[tracing::instrument(skip(app))]
 pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
@@ -183,7 +183,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     history::add_history_entry(history, preview_buffer.path.as_path());
 
     let current_preview_selection =
-        selection::get_current_selected_path(preview_buffer, Some(&preview_buffer.buffer.cursor));
+        model::get_selected_path(preview_buffer, Some(&preview_buffer.buffer.cursor));
 
     let mut actions = Vec::new();
     let preview_id = match &current_preview_selection {

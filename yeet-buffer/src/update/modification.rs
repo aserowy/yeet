@@ -113,8 +113,7 @@ pub fn update(
         }
         TextModification::Insert(raw) => {
             let line = get_line_or_create_on_empty(buffer);
-            if let Some((cursor, line)) = line {
-                let is_newline = line.content.count_chars() == 0;
+            if let Some((cursor, line, is_new_line)) = line {
                 let index = get_cursor_index(cursor, line);
 
                 let next_index = index + raw.chars().count();
@@ -126,7 +125,7 @@ pub fn update(
                 let mut new = line.content.clone();
                 new.insert(index, raw);
 
-                let changed = if is_newline {
+                let changed = if is_new_line {
                     BufferChanged::LineAdded(cursor.vertical_index, new.clone())
                 } else {
                     BufferChanged::Content(cursor.vertical_index, line.content.clone(), new.clone())
@@ -168,7 +167,7 @@ pub fn update(
         TextModification::InsertLineBreak => {
             let line = get_line_or_create_on_empty(buffer);
 
-            if let Some((cursor, line)) = line {
+            if let Some((cursor, line, _)) = line {
                 let horizontal = get_cursor_index(cursor, line);
 
                 let renamed = line.content.take_chars(horizontal);
@@ -270,7 +269,7 @@ fn is_line_delete(motion: &CursorDirection) -> bool {
 
 fn get_line_or_create_on_empty(
     buffer: &mut TextBuffer,
-) -> Option<(&mut crate::model::Cursor, &mut BufferLine)> {
+) -> Option<(&mut crate::model::Cursor, &mut BufferLine, bool)> {
     if buffer.cursor.horizontal_index == CursorPosition::None {
         return None;
     }
@@ -281,11 +280,11 @@ fn get_line_or_create_on_empty(
         let line = BufferLine::default();
         buffer.lines.push(line);
 
-        Some((&mut buffer.cursor, &mut buffer.lines[0]))
+        Some((&mut buffer.cursor, &mut buffer.lines[0], true))
     } else {
         let line = buffer.lines.get_mut(buffer.cursor.vertical_index)?;
 
-        Some((&mut buffer.cursor, line))
+        Some((&mut buffer.cursor, line, false))
     }
 }
 

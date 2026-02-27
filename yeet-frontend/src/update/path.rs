@@ -8,6 +8,7 @@ use yeet_buffer::{message::BufferMessage, model::Mode};
 use crate::{
     action::Action,
     model::{
+        self,
         history::History,
         junkyard::JunkYard,
         mark::{Marks, MARK_SIGN_ID},
@@ -34,7 +35,7 @@ pub fn add(
         .get(&current_id)
         .and_then(|buffer| match buffer {
             Buffer::Directory(buffer) => {
-                selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor))
+                model::get_selected_path(buffer, Some(&buffer.buffer.cursor))
             }
             _ => None,
         });
