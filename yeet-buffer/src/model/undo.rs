@@ -166,6 +166,7 @@ fn update_current(
     }
 }
 
+#[tracing::instrument]
 pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChanged> {
     let mut consolidated_changes = Vec::new();
     'changes: for change in changes {
@@ -250,11 +251,12 @@ pub fn consolidate_modifications(changes: &Vec<BufferChanged>) -> Vec<BufferChan
         };
     }
 
+    tracing::trace!("Consolidated changes: {:#?}", consolidated_changes);
+
     consolidated_changes
 }
 
 mod test {
-
     #[test]
     fn get_uncommited_changes() {
         use crate::model::ansi::Ansi;

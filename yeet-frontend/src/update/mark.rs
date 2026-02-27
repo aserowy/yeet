@@ -1,13 +1,14 @@
 use crate::{
     action::Action,
     model::{
+        self,
         mark::{Marks, MARK_SIGN_ID},
         App, Buffer,
     },
     task::Task,
 };
 
-use super::{app, selection, sign};
+use super::{app, sign};
 
 pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
     let buffer = match app::get_focused_current_mut(app) {
@@ -18,7 +19,7 @@ pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
         (_, Buffer::Empty) => return Vec::new(),
     };
 
-    let selected = selection::get_current_selected_path(buffer, Some(&buffer.buffer.cursor));
+    let selected = model::get_selected_path(buffer, Some(&buffer.buffer.cursor));
     if let Some(selected) = selected {
         let removed = marks.entries.insert(char, selected.clone());
         if let Some(removed) = removed {

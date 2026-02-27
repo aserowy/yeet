@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use ratatui::{
     prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -7,7 +9,7 @@ use ratatui::{
 };
 use yeet_buffer::model::undo::{self, BufferChanged};
 
-use crate::model::{Buffer, DirectoryBuffer};
+use crate::model::{self, Buffer, DirectoryBuffer};
 
 pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
     match current {
@@ -17,6 +19,9 @@ pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
 }
 
 fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
+    let selected = model::get_selected_path(buffer, Some(&buffer.buffer.cursor));
+    let permissions = get_permissions(&selected);
+
     let changes = get_changes_content(buffer);
     let position = get_position_content(buffer);
 
@@ -30,7 +35,10 @@ fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
         .constraints([
             Constraint::Length(path.width() as u16),
             Constraint::Length(3),
-            Constraint::Min(changes.width() as u16),
+            Constraint::Length(permissions.width() as u16),
+            Constraint::Length(3),
+            Constraint::Length(changes.width() as u16),
+            Constraint::Min(3),
             Constraint::Length(position.width() as u16),
         ])
         .split(rect);
@@ -41,8 +49,9 @@ fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
     );
 
     frame.render_widget(Paragraph::new(path), layout[0]);
-    frame.render_widget(Paragraph::new(changes), layout[2]);
-    frame.render_widget(Paragraph::new(position), layout[3]);
+    frame.render_widget(Paragraph::new(permissions), layout[2]);
+    frame.render_widget(Paragraph::new(changes), layout[4]);
+    frame.render_widget(Paragraph::new(position), layout[6]);
 }
 
 fn get_position_content<'a>(buffer: &'a DirectoryBuffer) -> Line<'a> {
@@ -103,4 +112,62 @@ fn get_changes_content(buffer: &DirectoryBuffer) -> Line<'_> {
     }
 
     Line::from(content)
+}
+
+#[cfg(target_os = "windows")]
+fn get_permissions(path: Option<PathBuf>) -> Line<'_> {
+    Ok(Line::from("".to_string()))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_permissions(path: &Option<PathBuf>) -> Line<'_> {
+    use std::{fs::File, os::unix::fs::PermissionsExt};
+
+    let empty = Line::from("---------".to_string());
+    let path = match path {
+        Some(it) => it,
+        None => return empty,
+    };
+
+    let file = match File::open(path) {
+        Ok(it) => it,
+        Err(_) => return empty,
+    };
+
+    let metadata = match file.metadata() {
+        Ok(it) => it,
+        Err(_) => return empty,
+    };
+
+    let permissions = metadata.permissions().mode();
+    let mut result = String::new();
+    for i in (0..9).rev() {
+        let bit = (permissions >> i) & 1;
+        let char = match i % 3 {
+            2 => {
+                if bit == 1 {
+                    'r'
+                } else {
+                    '-'
+                }
+            }
+            1 => {
+                if bit == 1 {
+                    'w'
+                } else {
+                    '-'
+                }
+            }
+            0 => {
+                if bit == 1 {
+                    'x'
+                } else {
+                    '-'
+                }
+            }
+            _ => unreachable!(),
+        };
+        result.push(char);
+    }
+    Line::from(result)
 }

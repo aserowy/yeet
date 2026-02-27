@@ -1,9 +1,12 @@
 use yeet_buffer::model::Mode;
 use yeet_keymap::message::QuitMode;
 
-use crate::{action::Action, model::Buffer, settings::Settings, update::app};
-
-use super::selection::get_selected_path_with_base;
+use crate::{
+    action::Action,
+    model::{self, Buffer},
+    settings::Settings,
+    update::app,
+};
 
 pub fn selected(settings: &Settings, mode: &Mode, app: &mut crate::model::App) -> Vec<Action> {
     if mode != &Mode::Navigation {
@@ -16,7 +19,7 @@ pub fn selected(settings: &Settings, mode: &Mode, app: &mut crate::model::App) -
         _ => return Vec::new(),
     };
 
-    if let Some(selected) = get_selected_path_with_base(
+    if let Some(selected) = model::get_selected_path_with_base(
         buffer.path.as_path(),
         &buffer.buffer,
         Some(&buffer.buffer.cursor),
