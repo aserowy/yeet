@@ -135,7 +135,10 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
         _ => return,
     };
 
-    for buffer in app.buffers.values_mut() {
+    let App {
+        buffers, window, ..
+    } = app;
+    for (buffer_id, buffer) in buffers.iter_mut() {
         let Buffer::Directory(dir) = buffer else {
             continue;
         };
@@ -144,6 +147,8 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             continue;
         }
 
+        let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+
         if dir
             .buffer
             .lines
@@ -151,7 +156,7 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             .any(|line| line.content.to_stripped_string() == name)
         {
             yeet_buffer::update(
-                None,
+                viewport,
                 mode,
                 &mut dir.buffer,
                 std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
@@ -179,14 +184,14 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
             }
 
             yeet_buffer::update(
-                None,
+                viewport.as_deref_mut(),
                 mode,
                 &mut dir.buffer,
                 std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
             );
         } else {
             yeet_buffer::update(
-                None,
+                viewport,
                 mode,
                 &mut dir.buffer,
                 std::slice::from_ref(&BufferMessage::AddLine(bufferline, super::SORT)),
@@ -207,7 +212,10 @@ fn update_directory_buffers_on_remove(
     };
 
     if let Some((parent, name)) = parent_name {
-        for buffer in app.buffers.values_mut() {
+        let App {
+            buffers, window, ..
+        } = &mut *app;
+        for (buffer_id, buffer) in buffers.iter_mut() {
             let Buffer::Directory(dir) = buffer else {
                 continue;
             };
@@ -234,10 +242,11 @@ fn update_directory_buffers_on_remove(
                 continue;
             }
 
+            let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
             indices.sort_unstable_by(|a, b| b.cmp(a));
             for index in indices {
                 yeet_buffer::update(
-                    None,
+                    viewport.as_deref_mut(),
                     mode,
                     &mut dir.buffer,
                     slice::from_ref(&BufferMessage::RemoveLine(index)),
