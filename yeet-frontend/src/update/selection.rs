@@ -19,10 +19,9 @@ pub fn refresh_preview_from_current_selection(
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
     let (_, current_id, _) = app::directory_buffer_ids(app);
-    let current_selection = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(buffer)) => {
-            model::get_selected_path(buffer, Some(&buffer.buffer.cursor))
-        }
+    let current_vp = app::get_viewport_by_buffer_id(app, current_id);
+    let current_selection = match (app.buffers.get(&current_id), current_vp) {
+        (Some(Buffer::Directory(buffer)), Some(vp)) => model::get_selected_path(buffer, &vp.cursor),
         _ => return Vec::new(),
     };
 
@@ -61,7 +60,7 @@ fn set_preview_buffer_for_selection(
 pub fn copy_to_clipboard(
     register: &mut Register,
     buffer: &DirectoryBuffer,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
 ) -> Vec<Action> {
     if let Some(path) = model::get_selected_path(buffer, cursor) {
         if let Some(clipboard) = register.clipboard.as_mut() {

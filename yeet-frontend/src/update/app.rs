@@ -65,6 +65,19 @@ pub fn directory_buffer_ids(app: &App) -> (usize, usize, usize) {
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
+pub fn get_viewport_by_buffer_id(app: &App, buffer_id: usize) -> Option<&ViewPort> {
+    let (parent, current, preview) = directory_viewports(app);
+    if parent.buffer_id == buffer_id {
+        Some(parent)
+    } else if current.buffer_id == buffer_id {
+        Some(current)
+    } else if preview.buffer_id == buffer_id {
+        Some(preview)
+    } else {
+        None
+    }
+}
+
 pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
     let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
     if parent_id == current_id || parent_id == preview_id || current_id == preview_id {

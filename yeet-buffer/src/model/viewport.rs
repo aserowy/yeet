@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::{BufferLine, SignIdentifier};
+use super::{BufferLine, Cursor, SignIdentifier};
 
 #[derive(Debug, Default)]
 pub struct WindowSettings {
@@ -10,6 +10,7 @@ pub struct WindowSettings {
 #[derive(Clone, Debug, Default)]
 pub struct ViewPort {
     pub buffer_id: usize,
+    pub cursor: Cursor,
     pub hide_cursor: bool,
     pub hide_cursor_line: bool,
     pub height: u16,

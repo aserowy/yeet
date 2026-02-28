@@ -244,10 +244,6 @@ mod test {
                     content: Ansi::new("Cargo.toml"),
                     ..Default::default()
                 }],
-                cursor: Cursor {
-                    vertical_index: 0,
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             ..Default::default()
@@ -260,6 +256,10 @@ mod test {
         if let Window::Directory(parent, current, preview) = &mut app.window {
             parent.buffer_id = 2;
             current.buffer_id = 1;
+            current.cursor = Cursor {
+                vertical_index: 0,
+                ..Default::default()
+            };
             preview.buffer_id = 3;
         }
 

@@ -25,7 +25,7 @@ pub fn update_viewport_by_direction(
     buffer: &mut TextBuffer,
     direction: &message::ViewPortDirection,
 ) {
-    update::viewport::update_by_direction(viewport, buffer, direction)
+    update::viewport::update_by_direction(viewport, buffer, direction);
 }
 
 pub fn view(
@@ -38,7 +38,7 @@ pub fn view(
 ) {
     view::view(
         viewport,
-        &buffer.cursor,
+        &viewport.cursor,
         mode,
         buffer,
         frame,

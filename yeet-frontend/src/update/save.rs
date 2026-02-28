@@ -24,7 +24,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         (_vp, Buffer::Empty) => return Vec::new(),
     };
 
-    let selected_index = buffer.buffer.cursor.vertical_index;
+    let selected_index = vp.cursor.vertical_index;
     let selection = buffer
         .buffer
         .lines

@@ -30,13 +30,15 @@ pub fn add(
     paths: &[PathBuf],
 ) -> Vec<Action> {
     let (_, current_id, _) = app::directory_buffer_ids(app);
+    let current_vp = app::get_viewport_by_buffer_id(app, current_id);
+    let current_cursor = current_vp.map(|vp| vp.cursor.clone());
     let previous_selection = app
         .buffers
         .get(&current_id)
         .and_then(|buffer| match buffer {
-            Buffer::Directory(buffer) => {
-                model::get_selected_path(buffer, Some(&buffer.buffer.cursor))
-            }
+            Buffer::Directory(buffer) => current_cursor
+                .as_ref()
+                .and_then(|cursor| model::get_selected_path(buffer, cursor)),
             _ => None,
         });
 

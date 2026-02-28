@@ -175,6 +175,8 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     let (_, _, preview_id) = app::directory_buffer_ids(app);
+    let preview_vp = app::get_viewport_by_buffer_id(app, preview_id);
+    let preview_cursor = preview_vp.map(|vp| vp.cursor.clone());
     let preview_buffer = match app.buffers.get(&preview_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
@@ -182,8 +184,9 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
 
     history::add_history_entry(history, preview_buffer.path.as_path());
 
-    let current_preview_selection =
-        model::get_selected_path(preview_buffer, Some(&preview_buffer.buffer.cursor));
+    let current_preview_selection = preview_cursor
+        .as_ref()
+        .and_then(|cursor| model::get_selected_path(preview_buffer, cursor));
 
     let mut actions = Vec::new();
     let preview_id = match &current_preview_selection {

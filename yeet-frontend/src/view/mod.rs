@@ -16,9 +16,9 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
         tracing::debug!("Rendering with area: {}", frame.area());
 
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
-        let focused_id = match &model.app.window {
+        let (focused_id, focused_vp) = match &model.app.window {
             Window::Horizontal(_, _) => todo!(),
-            Window::Directory(_, vp, _) => &vp.buffer_id,
+            Window::Directory(_, vp, _) => (&vp.buffer_id, vp),
         };
 
         let buffer = match model.app.buffers.get(focused_id) {
@@ -28,6 +28,7 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
 
         statusline::view(
             buffer,
+            focused_vp,
             frame,
             Rect {
                 x: 0,

@@ -217,21 +217,20 @@ pub enum DirectoryBufferState {
     Uninitialized,
 }
 
-pub fn get_selected_path(buffer: &DirectoryBuffer, cursor: Option<&Cursor>) -> Option<PathBuf> {
+pub fn get_selected_path(buffer: &DirectoryBuffer, cursor: &Cursor) -> Option<PathBuf> {
     get_selected_path_with_base(&buffer.path, &buffer.buffer, cursor, |path| path.exists())
 }
 
 pub fn get_selected_path_with_base(
     base_path: &Path,
     text_buffer: &TextBuffer,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
     exists: impl Fn(&Path) -> bool,
 ) -> Option<PathBuf> {
     if text_buffer.lines.is_empty() {
         return None;
     }
 
-    let cursor = cursor?;
     let current = &text_buffer.lines.get(cursor.vertical_index)?;
     if current.content.is_empty() {
         return None;
