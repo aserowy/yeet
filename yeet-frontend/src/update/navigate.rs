@@ -4,7 +4,7 @@ use yeet_buffer::model::{Cursor, Mode};
 
 use crate::{
     action::Action,
-    model::{self, history::History, mark::Marks, App, Buffer},
+    model::{self, history::History, mark::Marks, App, Buffer, Window},
     update::{app, cursor, preview},
 };
 
@@ -145,6 +145,8 @@ pub fn navigate_to_path_with_selection(
         set_cursor_for_existing_buffer(app, parent_id, &parent_selection, history, parent);
     }
 
+    sync_viewport_scroll_positions(app);
+
     tracing::debug!(
         "navigate_to_path_with_selection returning {} actions",
         actions.len()
@@ -190,6 +192,8 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         preview::set_buffer_id(app, preview_id);
         let (_, _, preview_vp) = app::directory_viewports_mut(app);
         preview_vp.cursor = old_current_cursor;
+
+        sync_viewport_scroll_positions(app);
 
         actions
     } else {
@@ -246,6 +250,8 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     let (_, _, preview_vp) = app::directory_viewports_mut(app);
     preview_vp.cursor = Cursor::default();
 
+    sync_viewport_scroll_positions(app);
+
     actions
 }
 
@@ -289,4 +295,26 @@ fn set_cursor_for_existing_buffer(
         &mut buffer.buffer,
         path,
     );
+}
+
+/// Syncs each directory viewport's scroll position with its cursor and buffer.
+/// Must be called after any operation that changes buffer_id or cursor on viewports.
+fn sync_viewport_scroll_positions(app: &mut App) {
+    let App {
+        buffers, window, ..
+    } = app;
+    let (parent_vp, current_vp, preview_vp) = match window {
+        Window::Horizontal(_, _) => return,
+        Window::Directory(parent, current, preview) => (parent, current, preview),
+    };
+
+    if let Some(Buffer::Directory(buf)) = buffers.get(&parent_vp.buffer_id) {
+        yeet_buffer::update_viewport_by_cursor(parent_vp, &buf.buffer);
+    }
+    if let Some(Buffer::Directory(buf)) = buffers.get(&current_vp.buffer_id) {
+        yeet_buffer::update_viewport_by_cursor(current_vp, &buf.buffer);
+    }
+    if let Some(Buffer::Directory(buf)) = buffers.get(&preview_vp.buffer_id) {
+        yeet_buffer::update_viewport_by_cursor(preview_vp, &buf.buffer);
+    }
 }
