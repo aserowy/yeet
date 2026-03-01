@@ -221,12 +221,18 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
+            // TODO: rework directory_buffer_ids and get_viewport_by_buffer_id to prevent the roundtrip
             let (_, current_id, _) = app::directory_buffer_ids(app);
+            let current_vp = app::get_viewport_by_buffer_id(app, current_id);
+            let cursor = match current_vp {
+                Some(vp) => vp.cursor.clone(),
+                None => return Vec::new(),
+            };
             let buffer = match app.buffers.get(&current_id) {
                 Some(Buffer::Directory(it)) => it,
                 _ => return Vec::new(),
             };
-            selection::copy_to_clipboard(&mut state.register, buffer, Some(&buffer.buffer.cursor))
+            selection::copy_to_clipboard(&mut state.register, buffer, &cursor)
         }
         KeymapMessage::YankToJunkYard(repeat) => junkyard::yank(app, &mut state.junk, repeat),
     }

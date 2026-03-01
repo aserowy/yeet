@@ -11,7 +11,12 @@ pub fn add_line_styles(
     let ansi = line.content.skip_chars(vp.horizontal_index);
     let ansi = add_search_styles(line, &ansi);
 
-    if cursor.vertical_index - vp.vertical_index != *index {
+    let cursor_line_offset = match cursor.vertical_index.checked_sub(vp.vertical_index) {
+        Some(offset) => offset,
+        None => return ansi,
+    };
+
+    if cursor_line_offset != *index {
         ansi
     } else {
         add_cursor_styles(vp, mode, cursor, content_width, &ansi)

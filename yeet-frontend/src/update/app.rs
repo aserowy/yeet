@@ -1,11 +1,10 @@
 use std::{cmp::Ordering, path::Path};
 
-use yeet_buffer::model::{viewport::ViewPort, Mode};
+use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
     model::{App, Buffer, Window},
-    update::cursor,
 };
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
@@ -65,6 +64,39 @@ pub fn directory_buffer_ids(app: &App) -> (usize, usize, usize) {
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
+pub fn get_viewport_by_buffer_id(app: &App, buffer_id: usize) -> Option<&ViewPort> {
+    let (parent, current, preview) = directory_viewports(app);
+    if parent.buffer_id == buffer_id {
+        Some(parent)
+    } else if current.buffer_id == buffer_id {
+        Some(current)
+    } else if preview.buffer_id == buffer_id {
+        Some(preview)
+    } else {
+        None
+    }
+}
+
+pub fn get_viewport_by_buffer_id_mut(
+    window: &mut Window,
+    buffer_id: usize,
+) -> Option<&mut ViewPort> {
+    match window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Directory(parent, current, preview) => {
+            if parent.buffer_id == buffer_id {
+                Some(parent)
+            } else if current.buffer_id == buffer_id {
+                Some(current)
+            } else if preview.buffer_id == buffer_id {
+                Some(preview)
+            } else {
+                None
+            }
+        }
+    }
+}
+
 pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
     let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
     if parent_id == current_id || parent_id == preview_id || current_id == preview_id {
@@ -118,18 +150,6 @@ pub fn get_or_create_directory_buffer(
             path = %path.display(),
             "found existing buffer"
         );
-
-        if let Some(selection) = selection {
-            let mut buffer = app.buffers.get_mut(id).expect("buffer should exist");
-            if let Buffer::Directory(buffer) = &mut buffer {
-                cursor::set_cursor_index_to_selection(
-                    None,
-                    &Mode::Normal,
-                    &mut buffer.buffer,
-                    selection,
-                );
-            }
-        }
 
         return (*id, None);
     }

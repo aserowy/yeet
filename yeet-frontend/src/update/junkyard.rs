@@ -157,6 +157,11 @@ pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> V
 
 pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) -> Vec<Action> {
     let (_, current_id, _) = app::directory_buffer_ids(app);
+    let current_vp = app::get_viewport_by_buffer_id(app, current_id);
+    let cursor = match current_vp {
+        Some(vp) => vp.cursor.clone(),
+        None => return Vec::new(),
+    };
     let buffer = match app.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
@@ -165,7 +170,7 @@ pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) ->
     let current_buffer = &buffer.buffer;
     if current_buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = Some(&buffer.buffer.cursor) {
+    } else {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
             let line_index = cursor.vertical_index + rpt;
@@ -189,8 +194,6 @@ pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) ->
         }
 
         actions
-    } else {
-        Vec::new()
     }
 }
 
