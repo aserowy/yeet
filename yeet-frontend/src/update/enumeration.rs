@@ -124,7 +124,7 @@ pub fn finish(
                 std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
             );
 
-            if let Some(viewport) = viewport {
+            if let Some(viewport) = viewport.as_deref_mut() {
                 cursor::set_cursor_index_for_directory(
                     buffer,
                     &state.history,
