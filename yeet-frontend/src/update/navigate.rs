@@ -217,8 +217,9 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     swap_viewport(parent_vp, preview_vp);
     swap_viewport(current_vp, parent_vp);
 
-    let actions = selection::refresh_preview_from_current_selection(app, history, None);
+    cursor::set_cursor_index(&mut app.contents, history, current_vp, &Mode::Normal, None);
 
+    let actions = selection::refresh_preview_from_current_selection(app, history, None);
     let (_, _, preview_vp) = app::directory_viewports_mut(&mut app.window);
     cursor::set_cursor_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
 
