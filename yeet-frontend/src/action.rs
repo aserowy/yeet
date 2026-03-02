@@ -176,7 +176,7 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(Buffer::Image(_buffer)) = model.app.buffers.get(&preview_id) {
+                if let Some(Buffer::Image(_buffer)) = model.app.contents.buffers.get(&preview_id) {
                     // TODO: add rect to load preview after layout concept is implemented
                     // emitter.run(Task::LoadPreview(
                     //     path.to_path_buf(),

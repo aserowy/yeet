@@ -20,7 +20,7 @@ pub fn refresh_preview_from_current_selection(
 ) -> Vec<Action> {
     let (_, current_id, _) = app::directory_buffer_ids(app);
     let current_vp = app::get_viewport_by_buffer_id(app, current_id);
-    let current_selection = match (app.buffers.get(&current_id), current_vp) {
+    let current_selection = match (app.contents.buffers.get(&current_id), current_vp) {
         (Some(Buffer::Directory(buffer)), Some(vp)) => model::get_selected_path(buffer, &vp.cursor),
         _ => return Vec::new(),
     };
@@ -34,7 +34,7 @@ pub fn refresh_preview_from_current_selection(
     set_preview_buffer_for_selection(app, history, current_selection)
 }
 
-fn set_preview_buffer_for_selection(
+pub fn set_preview_buffer_for_selection(
     app: &mut App,
     history: &History,
     selection: Option<PathBuf>,
@@ -44,15 +44,16 @@ fn set_preview_buffer_for_selection(
         let selection =
             history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
 
-        let (id, load) = app::get_or_create_directory_buffer(app, &selected_path, &selection);
+        let (id, load) =
+            app::resolve_directory_buffer(&mut app.contents, &selected_path, &selection);
         actions.extend(load);
 
         id
     } else {
-        app::create_empty_buffer(app)
+        app::get_empty_buffer(&mut app.contents)
     };
 
-    preview::set_buffer_id(app, preview_id);
+    preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
 
     actions
 }

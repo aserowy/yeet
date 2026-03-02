@@ -27,7 +27,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
             qfix.entries.retain(|p| p != &selected);
 
             sign::unset_sign_for_paths(
-                app.buffers.values_mut().collect(),
+                app.contents.buffers.values_mut().collect(),
                 vec![selected.clone()],
                 QFIX_SIGN_ID,
             );
@@ -35,7 +35,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
             qfix.entries.push(selected.clone());
 
             sign::set_sign_for_paths(
-                app.buffers.values_mut().collect(),
+                app.contents.buffers.values_mut().collect(),
                 vec![selected],
                 QFIX_SIGN_ID,
             );

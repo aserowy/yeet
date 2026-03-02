@@ -27,26 +27,25 @@ pub struct Model {
 }
 
 pub struct App {
-    pub buffers: HashMap<usize, Buffer>,
     pub commandline: CommandLine,
-    pub latest_buffer_id: usize,
+    pub contents: Contents,
     pub window: Window,
 }
 
 impl Default for App {
     fn default() -> Self {
         let mut buffers = HashMap::new();
-        buffers.insert(1, Buffer::Directory(Default::default()));
-        buffers.insert(2, Buffer::Directory(Default::default()));
-        buffers.insert(3, Buffer::Directory(Default::default()));
+        buffers.insert(1, Buffer::Empty);
 
         Self {
-            buffers,
             commandline: Default::default(),
-            latest_buffer_id: 3,
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 1,
+            },
             window: Window::Directory(
                 ViewPort {
-                    buffer_id: 2,
+                    buffer_id: 1,
                     hide_cursor: true,
                     show_border: true,
                     ..Default::default()
@@ -60,7 +59,7 @@ impl Default for App {
                     ..Default::default()
                 },
                 ViewPort {
-                    buffer_id: 3,
+                    buffer_id: 1,
                     hide_cursor: true,
                     hide_cursor_line: true,
                     ..Default::default()
@@ -68,6 +67,11 @@ impl Default for App {
             ),
         }
     }
+}
+
+pub struct Contents {
+    pub buffers: HashMap<usize, Buffer>,
+    pub latest_buffer_id: usize,
 }
 
 #[allow(dead_code, clippy::large_enum_variant)]

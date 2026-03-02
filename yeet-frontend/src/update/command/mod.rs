@@ -36,7 +36,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("clearcl", "") => add_change_mode(
             mode_before,
             mode,
-            qfix::reset(&mut state.qfix, app.buffers.values_mut().collect()),
+            qfix::reset(&mut state.qfix, app.contents.buffers.values_mut().collect()),
         ),
         ("clearcl", path) => add_change_mode(
             mode_before,
@@ -47,7 +47,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
             let (_, _, preview_id) = app::directory_buffer_ids(app);
-            let path = match app.buffers.get(&preview_id) {
+            let path = match app.contents.buffers.get(&preview_id) {
                 Some(Buffer::Directory(it)) => it.resolve_path(),
                 Some(Buffer::Content(it)) => it.resolve_path(),
                 Some(Buffer::Image(it)) => it.resolve_path(),
@@ -219,7 +219,7 @@ fn get_preview_path(app: &App) -> Option<&Path> {
 }
 
 fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
-    match app.buffers.get(&buffer_id) {
+    match app.contents.buffers.get(&buffer_id) {
         Some(Buffer::Directory(it)) => it.resolve_path(),
         Some(Buffer::Content(it)) => it.resolve_path(),
         Some(Buffer::Image(it)) => it.resolve_path(),

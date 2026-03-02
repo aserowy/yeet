@@ -32,15 +32,16 @@ pub fn add(
     let (_, current_id, _) = app::directory_buffer_ids(app);
     let current_vp = app::get_viewport_by_buffer_id(app, current_id);
     let current_cursor = current_vp.map(|vp| vp.cursor.clone());
-    let previous_selection = app
-        .buffers
-        .get(&current_id)
-        .and_then(|buffer| match buffer {
-            Buffer::Directory(buffer) => current_cursor
-                .as_ref()
-                .and_then(|cursor| model::get_selected_path(buffer, cursor)),
-            _ => None,
-        });
+    let previous_selection =
+        app.contents
+            .buffers
+            .get(&current_id)
+            .and_then(|buffer| match buffer {
+                Buffer::Directory(buffer) => current_cursor
+                    .as_ref()
+                    .and_then(|cursor| model::get_selected_path(buffer, cursor)),
+                _ => None,
+            });
 
     for path in paths {
         update_directory_buffers_on_add(mode, app, path);
@@ -53,7 +54,7 @@ pub fn add(
         .collect();
     if !marked_paths.is_empty() {
         sign::set_sign_for_paths(
-            app.buffers.values_mut().collect(),
+            app.contents.buffers.values_mut().collect(),
             marked_paths,
             MARK_SIGN_ID,
         );
@@ -65,7 +66,11 @@ pub fn add(
         .cloned()
         .collect();
     if !qfix_paths.is_empty() {
-        sign::set_sign_for_paths(app.buffers.values_mut().collect(), qfix_paths, QFIX_SIGN_ID);
+        sign::set_sign_for_paths(
+            app.contents.buffers.values_mut().collect(),
+            qfix_paths,
+            QFIX_SIGN_ID,
+        );
     }
 
     selection::refresh_preview_from_current_selection(app, history, previous_selection)
@@ -92,7 +97,7 @@ pub fn remove(
     let removed_marks = remove_marks_for_path(marks, path);
     if !removed_marks.is_empty() {
         sign::unset_sign_for_paths(
-            app.buffers.values_mut().collect(),
+            app.contents.buffers.values_mut().collect(),
             removed_marks,
             MARK_SIGN_ID,
         );
@@ -106,7 +111,7 @@ pub fn remove(
         .collect();
 
     sign::unset_sign_for_paths(
-        app.buffers.values_mut().collect(),
+        app.contents.buffers.values_mut().collect(),
         removed_qfix,
         QFIX_SIGN_ID,
     );
@@ -136,9 +141,9 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
     };
 
     let App {
-        buffers, window, ..
+        contents, window, ..
     } = app;
-    for (buffer_id, buffer) in buffers.iter_mut() {
+    for (buffer_id, buffer) in contents.buffers.iter_mut() {
         let Buffer::Directory(dir) = buffer else {
             continue;
         };
@@ -213,9 +218,9 @@ fn update_directory_buffers_on_remove(
 
     if let Some((parent, name)) = parent_name {
         let App {
-            buffers, window, ..
+            contents, window, ..
         } = &mut *app;
-        for (buffer_id, buffer) in buffers.iter_mut() {
+        for (buffer_id, buffer) in contents.buffers.iter_mut() {
             let Buffer::Directory(dir) = buffer else {
                 continue;
             };
@@ -256,11 +261,12 @@ fn update_directory_buffers_on_remove(
     }
 
     let (_, current_id, preview_id) = app::directory_buffer_ids(app);
-    let current_path = match app.buffers.get(&current_id) {
+    let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         _ => None,
     };
     let preview_path = app
+        .contents
         .buffers
         .get(&preview_id)
         .and_then(buffer_path)
@@ -308,7 +314,7 @@ fn buffer_path(buffer: &Buffer) -> Option<&Path> {
 }
 
 fn remove_buffers_under_path(app: &mut App, path: &Path) {
-    app.buffers.retain(|_, buffer| {
+    app.contents.buffers.retain(|_, buffer| {
         buffer_path(buffer)
             .map(|buffer_path| !buffer_path.starts_with(path))
             .unwrap_or(true)
@@ -329,12 +335,12 @@ fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
 }
 
 fn reset_directory_viewports_to_empty(app: &mut App) {
-    let buffer_id = app::create_empty_buffer(app);
-    let (parent, current, _) = app::directory_viewports_mut(app);
+    let buffer_id = app::get_empty_buffer(&mut app.contents);
+    let (parent, current, _) = app::directory_viewports_mut(&mut app.window);
     parent.buffer_id = buffer_id;
     current.buffer_id = buffer_id;
 
-    preview::set_buffer_id(app, buffer_id);
+    preview::set_buffer_id(&mut app.contents, &mut app.window, buffer_id);
 }
 
 #[cfg(test)]
@@ -370,13 +376,13 @@ mod test {
         let mut app = App::default();
         let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
 
-        if let Some(Buffer::Directory(buffer)) = app.buffers.get_mut(&current_id) {
+        if let Some(Buffer::Directory(buffer)) = app.contents.buffers.get_mut(&current_id) {
             buffer.path = nested.clone();
         } else {
             panic!("expected current directory buffer");
         }
 
-        app.buffers.insert(
+        app.contents.buffers.insert(
             preview_id,
             Buffer::Content(ContentBuffer {
                 path: file_path.clone(),
@@ -384,8 +390,8 @@ mod test {
             }),
         );
 
-        let extra_id = app::get_next_buffer_id(&mut app);
-        app.buffers.insert(
+        let extra_id = app::get_next_buffer_id(&mut app.contents);
+        app.contents.buffers.insert(
             extra_id,
             Buffer::Content(ContentBuffer {
                 path: file_path.clone(),
@@ -411,7 +417,7 @@ mod test {
         );
 
         let (_, current_id, _) = app::directory_buffer_ids(&app);
-        let current_path = match app.buffers.get(&current_id) {
+        let current_path = match app.contents.buffers.get(&current_id) {
             Some(Buffer::Directory(buffer)) => buffer.path.clone(),
             Some(Buffer::PathReference(path)) => path.clone(),
             _ => PathBuf::new(),
@@ -419,6 +425,7 @@ mod test {
 
         assert_eq!(current_path, base);
         assert!(app
+            .contents
             .buffers
             .values()
             .filter_map(buffer_path)
@@ -441,13 +448,13 @@ mod test {
         let mut app = App::default();
         let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
 
-        if let Some(Buffer::Directory(buffer)) = app.buffers.get_mut(&current_id) {
+        if let Some(Buffer::Directory(buffer)) = app.contents.buffers.get_mut(&current_id) {
             buffer.path = keep.clone();
         } else {
             panic!("expected current directory buffer");
         }
 
-        app.buffers.insert(
+        app.contents.buffers.insert(
             preview_id,
             Buffer::Content(ContentBuffer {
                 path: removed_file.clone(),
@@ -473,7 +480,7 @@ mod test {
         );
 
         let (_, _, preview_id) = app::directory_buffer_ids(&app);
-        let preview_buffer = app.buffers.get(&preview_id);
+        let preview_buffer = app.contents.buffers.get(&preview_id);
         assert!(preview_buffer.is_some());
 
         if let Some(path) = preview_buffer.and_then(buffer_path) {

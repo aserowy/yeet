@@ -21,7 +21,7 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
             Window::Directory(_, vp, _) => (&vp.buffer_id, vp),
         };
 
-        let buffer = match model.app.buffers.get(focused_id) {
+        let buffer = match model.app.contents.buffers.get(focused_id) {
             Some(it) => it,
             None => unreachable!(),
         };

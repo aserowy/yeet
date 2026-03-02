@@ -1,11 +1,11 @@
-use std::path::Path;
+use std::{mem, path::Path};
 
-use yeet_buffer::model::{Cursor, Mode};
+use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
 
 use crate::{
     action::Action,
-    model::{self, history::History, mark::Marks, App, Buffer, Window},
-    update::{app, cursor, preview},
+    model::{self, history::History, mark::Marks, App, Buffer},
+    update::{app, cursor, preview, selection},
 };
 
 use super::history;
@@ -20,13 +20,12 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
-
-    let path = match path.parent() {
+    match path.parent() {
         Some(parent) => parent,
         None => &path,
     };
 
-    navigate_to_path_with_selection(history, app, path, &selection)
+    navigate_to_path_with_selection(history, app, path.as_path(), &selection)
 }
 
 #[tracing::instrument(skip(app, history))]
@@ -37,7 +36,6 @@ pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
         let selection = path
             .file_name()
             .map(|oss| oss.to_string_lossy().to_string());
-
         match path.parent() {
             Some(parent) => (parent, selection),
             None => {
@@ -80,14 +78,11 @@ pub fn navigate_to_path_with_selection(
         return Vec::new();
     }
 
-    if !path.exists() {
-        tracing::warn!("path does not exist: {:?}", path);
-        return Vec::new();
-    }
+    if !path.exists() {}
 
     let mut actions = Vec::new();
 
-    let selection = match selection {
+    let current_selection = match selection {
         Some(it) => Some(it.to_owned()),
         None => {
             tracing::trace!("getting selection from history for path: {:?}", path);
@@ -95,21 +90,22 @@ pub fn navigate_to_path_with_selection(
         }
     };
 
-    tracing::trace!("resolved selection: {:?}", selection);
+    tracing::trace!("resolved selection: {:?}", current_selection);
 
-    let (current_id, load) = app::get_or_create_directory_buffer(app, path, &selection);
+    let (current_id, load) =
+        app::resolve_directory_buffer(&mut app.contents, path, &current_selection);
     actions.extend(load);
 
     let parent_id = if let (Some(parent), selection) = (path.parent(), path.file_name()) {
         let selection = selection.map(|selection| selection.to_string_lossy().to_string());
-        let (id, load) = app::get_or_create_directory_buffer(app, parent, &selection);
+        let (id, load) = app::resolve_directory_buffer(&mut app.contents, parent, &selection);
         actions.extend(load);
         id
     } else {
-        app::create_empty_buffer(app)
+        app::get_empty_buffer(&mut app.contents)
     };
 
-    let preview_id = match &selection {
+    let preview_id = match &current_selection {
         Some(selected_history) => {
             let mut preview_path = path.to_path_buf();
             preview_path.push(selected_history);
@@ -117,47 +113,54 @@ pub fn navigate_to_path_with_selection(
             let selection = history::get_selection_from_history(history, preview_path.as_path())
                 .map(|s| s.to_string());
 
-            let (id, load) = app::get_or_create_directory_buffer(app, &preview_path, &selection);
+            let (id, load) =
+                app::resolve_directory_buffer(&mut app.contents, &preview_path, &selection);
             actions.extend(load);
             id
         }
-        None => app::create_empty_buffer(app),
+        None => app::get_empty_buffer(&mut app.contents),
     };
 
-    let (parent_vp, current_vp, _) = app::directory_viewports_mut(app);
+    let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
     parent_vp.buffer_id = parent_id;
     parent_vp.cursor = Cursor::default();
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
 
-    preview::set_buffer_id(app, preview_id);
-    let (_, _, preview_vp) = app::directory_viewports_mut(app);
-    preview_vp.cursor = Cursor::default();
-
-    // Set cursors to selection for already-loaded buffers.
-    // For buffers pending load, enumeration::finish will handle cursor positioning.
-    set_cursor_for_existing_buffer(app, current_id, &selection, history, path);
+    cursor::set_cursor_index(
+        &mut app.contents,
+        history,
+        current_vp,
+        &Mode::Normal,
+        current_selection.as_deref(),
+    );
 
     let parent_selection = path
         .file_name()
         .map(|name| name.to_string_lossy().to_string());
-    if let Some(parent) = path.parent() {
-        set_cursor_for_existing_buffer(app, parent_id, &parent_selection, history, parent);
-    }
+    cursor::set_cursor_index(
+        &mut app.contents,
+        history,
+        parent_vp,
+        &Mode::Normal,
+        parent_selection.as_deref(),
+    );
 
-    sync_viewport_scroll_positions(app);
+    preview_vp.cursor = Cursor::default();
+    preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
 
     tracing::debug!(
         "navigate_to_path_with_selection returning {} actions",
         actions.len()
     );
+
     actions
 }
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
     let (_, current_id, _) = app::directory_buffer_ids(app);
-    let current_path = match app.buffers.get(&current_id) {
+    let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
         _ => return Vec::new(),
     };
@@ -169,31 +172,31 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
         let mut actions = Vec::new();
 
-        let parent_id = if let (Some(parent), selection) = (path.parent(), path.file_name()) {
-            let selection = selection.map(|selection| selection.to_string_lossy().to_string());
-            let (id, load) = app::get_or_create_directory_buffer(app, parent, &selection);
+        let selection = path
+            .file_name()
+            .map(|oss| oss.to_string_lossy().to_string());
+
+        let parent_id = if let Some(parent) = path.parent() {
+            let (id, load) = app::resolve_directory_buffer(&mut app.contents, parent, &selection);
             actions.extend(load);
             id
         } else {
-            app::create_empty_buffer(app)
+            app::get_empty_buffer(&mut app.contents)
         };
 
-        let (parent_vp, current_vp, _) = app::directory_viewports_mut(app);
-        let preview_id = current_vp.buffer_id;
-        let old_current_cursor = current_vp.cursor.clone();
-        let old_parent_cursor = parent_vp.cursor.clone();
-
-        current_vp.buffer_id = parent_vp.buffer_id;
-        current_vp.cursor = old_parent_cursor;
+        let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
+        swap_viewport(parent_vp, preview_vp);
+        swap_viewport(current_vp, preview_vp);
 
         parent_vp.buffer_id = parent_id;
-        parent_vp.cursor = Cursor::default();
+        let directory = match app.contents.buffers.get_mut(&parent_vp.buffer_id) {
+            Some(Buffer::Directory(it)) => it,
+            _ => return actions,
+        };
 
-        preview::set_buffer_id(app, preview_id);
-        let (_, _, preview_vp) = app::directory_viewports_mut(app);
-        preview_vp.cursor = old_current_cursor;
-
-        sync_viewport_scroll_positions(app);
+        if let Some(selection) = selection {
+            cursor::set_cursor_index_to_selection(parent_vp, &Mode::Normal, directory, &selection);
+        }
 
         actions
     } else {
@@ -203,118 +206,28 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (_, _, preview_id) = app::directory_buffer_ids(app);
-    let preview_vp = app::get_viewport_by_buffer_id(app, preview_id);
-    let preview_cursor = preview_vp.map(|vp| vp.cursor.clone());
-    let preview_buffer = match app.buffers.get(&preview_id) {
+    let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
+    let preview_buffer = match app.contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
     };
 
     history::add_history_entry(history, preview_buffer.path.as_path());
 
-    let current_preview_selection = preview_cursor
-        .as_ref()
-        .and_then(|cursor| model::get_selected_path(preview_buffer, cursor));
+    swap_viewport(parent_vp, preview_vp);
+    swap_viewport(current_vp, parent_vp);
 
-    let mut actions = Vec::new();
-    let preview_id = match &current_preview_selection {
-        Some(preview_path) => {
-            let selection = history::get_selection_from_history(history, preview_path.as_path())
-                .map(|s| s.to_string());
+    let actions = selection::refresh_preview_from_current_selection(app, history, None);
 
-            let (id, load) = app::get_or_create_directory_buffer(app, preview_path, &selection);
-            actions.extend(load);
-            id
-        }
-        None => {
-            if !preview_buffer.path.is_dir() {
-                tracing::warn!("no selection in current buffer, cannot navigate to selected");
-                return Vec::new();
-            }
-            app::create_empty_buffer(app)
-        }
-    };
-
-    let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(app);
-    let old_current_cursor = current_vp.cursor.clone();
-    let old_preview_cursor = preview_vp.cursor.clone();
-
-    parent_vp.buffer_id = current_vp.buffer_id;
-    parent_vp.cursor = old_current_cursor;
-
-    current_vp.buffer_id = preview_vp.buffer_id;
-    current_vp.cursor = old_preview_cursor;
-
-    preview::set_buffer_id(app, preview_id);
-    let (_, _, preview_vp) = app::directory_viewports_mut(app);
-    preview_vp.cursor = Cursor::default();
-
-    sync_viewport_scroll_positions(app);
+    let (_, _, preview_vp) = app::directory_viewports_mut(&mut app.window);
+    cursor::set_cursor_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
 
     actions
 }
 
-/// Sets the cursor on the viewport for `buffer_id` to the given selection (or history fallback).
-/// This is a no-op if the buffer is not yet loaded (empty lines) or has no matching viewport.
-fn set_cursor_for_existing_buffer(
-    app: &mut App,
-    buffer_id: usize,
-    selection: &Option<String>,
-    history: &History,
-    path: &Path,
-) {
-    let App {
-        buffers, window, ..
-    } = app;
-    let mut viewport = app::get_viewport_by_buffer_id_mut(window, buffer_id);
-    let buffer = match buffers.get_mut(&buffer_id) {
-        Some(Buffer::Directory(it)) => it,
-        _ => return,
-    };
-
-    if buffer.buffer.lines.is_empty() {
-        return;
-    }
-
-    if let Some(selection) = selection {
-        if cursor::set_cursor_index_to_selection(
-            viewport.as_deref_mut(),
-            &Mode::Navigation,
-            &mut buffer.buffer,
-            selection,
-        ) {
-            return;
-        }
-    }
-
-    cursor::set_cursor_index_with_history(
-        history,
-        viewport,
-        &Mode::Navigation,
-        &mut buffer.buffer,
-        path,
-    );
-}
-
-/// Syncs each directory viewport's scroll position with its cursor and buffer.
-/// Must be called after any operation that changes buffer_id or cursor on viewports.
-fn sync_viewport_scroll_positions(app: &mut App) {
-    let App {
-        buffers, window, ..
-    } = app;
-    let (parent_vp, current_vp, preview_vp) = match window {
-        Window::Horizontal(_, _) => return,
-        Window::Directory(parent, current, preview) => (parent, current, preview),
-    };
-
-    if let Some(Buffer::Directory(buf)) = buffers.get(&parent_vp.buffer_id) {
-        yeet_buffer::update_viewport_by_cursor(parent_vp, &buf.buffer);
-    }
-    if let Some(Buffer::Directory(buf)) = buffers.get(&current_vp.buffer_id) {
-        yeet_buffer::update_viewport_by_cursor(current_vp, &buf.buffer);
-    }
-    if let Some(Buffer::Directory(buf)) = buffers.get(&preview_vp.buffer_id) {
-        yeet_buffer::update_viewport_by_cursor(preview_vp, &buf.buffer);
-    }
+fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {
+    mem::swap(&mut vp1.buffer_id, &mut vp2.buffer_id);
+    mem::swap(&mut vp1.cursor, &mut vp2.cursor);
+    mem::swap(&mut vp1.horizontal_index, &mut vp2.horizontal_index);
+    mem::swap(&mut vp1.vertical_index, &mut vp2.vertical_index);
 }

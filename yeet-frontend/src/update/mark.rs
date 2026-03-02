@@ -24,14 +24,14 @@ pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
         let removed = marks.entries.insert(char, selected.clone());
         if let Some(removed) = removed {
             sign::unset_sign_for_paths(
-                app.buffers.values_mut().collect(),
+                app.contents.buffers.values_mut().collect(),
                 vec![removed],
                 MARK_SIGN_ID,
             );
         }
 
         sign::set_sign_for_paths(
-            app.buffers.values_mut().collect(),
+            app.contents.buffers.values_mut().collect(),
             vec![selected],
             MARK_SIGN_ID,
         );

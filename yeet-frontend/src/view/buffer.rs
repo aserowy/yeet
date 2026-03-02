@@ -19,7 +19,7 @@ pub fn view(
         Window::Directory(parent, current, preview) => (parent, current, preview),
     };
 
-    let parent_buffer = app.buffers.get(&parent_viewport.buffer_id);
+    let parent_buffer = app.contents.buffers.get(&parent_viewport.buffer_id);
     render_buffer_slot(
         mode,
         frame,
@@ -29,7 +29,7 @@ pub fn view(
         vertical_offset,
     );
 
-    let current_buffer = app.buffers.get(&current_viewport.buffer_id);
+    let current_buffer = app.contents.buffers.get(&current_viewport.buffer_id);
     render_buffer_slot(
         mode,
         frame,
@@ -39,7 +39,7 @@ pub fn view(
         vertical_offset,
     );
 
-    let preview_buffer = app.buffers.get(&preview_viewport.buffer_id);
+    let preview_buffer = app.contents.buffers.get(&preview_viewport.buffer_id);
     render_buffer_slot(
         mode,
         frame,

@@ -153,6 +153,7 @@ fn get_initial_path(initial_selection: &Option<PathBuf>) -> PathBuf {
 #[tracing::instrument(skip(app))]
 fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
     let current = app
+        .contents
         .buffers
         .values()
         .flat_map(|bffr| match bffr {

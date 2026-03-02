@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, slice};
 
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
@@ -7,7 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
-    model::{history::History, App, Buffer, State},
+    model::{history::History, App, Buffer, Contents, DirectoryBuffer, State},
 };
 
 use super::{
@@ -18,30 +18,63 @@ use super::{
 
 use crate::update::app;
 
-pub fn set_cursor_index_to_selection(
-    viewport: Option<&mut ViewPort>,
+pub fn set_cursor_index(
+    contents: &mut Contents,
+    history: &History,
+    viewport: &mut ViewPort,
     mode: &Mode,
-    text_buffer: &mut TextBuffer,
-    selection: &str,
+    selection: Option<&str>,
 ) -> bool {
-    let message = BufferMessage::SetCursorToLineContent(selection.to_string());
-    let result = yeet_buffer::update(viewport, mode, text_buffer, std::slice::from_ref(&message));
+    let directory = match contents.buffers.get_mut(&viewport.buffer_id) {
+        Some(Buffer::Directory(it)) => it,
+        _ => return false,
+    };
 
-    result.contains(&BufferResult::CursorPositionChanged)
+    set_cursor_index_for_directory(directory, history, viewport, mode, selection)
+}
+
+pub fn set_cursor_index_for_directory(
+    directory: &mut DirectoryBuffer,
+    history: &History,
+    viewport: &mut ViewPort,
+    mode: &Mode,
+    selection: Option<&str>,
+) -> bool {
+    if let Some(selection) = selection {
+        set_cursor_index_to_selection(viewport, mode, directory, selection)
+    } else {
+        set_cursor_index_with_history(history, viewport, mode, directory)
+    }
 }
 
 pub fn set_cursor_index_with_history(
     history: &History,
-    viewport: Option<&mut ViewPort>,
+    viewport: &mut ViewPort,
     mode: &Mode,
-    buffer: &mut TextBuffer,
-    path: &Path,
+    directory: &mut DirectoryBuffer,
 ) -> bool {
-    if let Some(history) = get_selection_from_history(history, path) {
-        set_cursor_index_to_selection(viewport, mode, buffer, history)
+    if let Some(history) = get_selection_from_history(history, directory.path.as_path()) {
+        set_cursor_index_to_selection(viewport, mode, directory, history)
     } else {
         false
     }
+}
+
+pub fn set_cursor_index_to_selection(
+    viewport: &mut ViewPort,
+    mode: &Mode,
+    directory: &mut DirectoryBuffer,
+    selection: &str,
+) -> bool {
+    let message = BufferMessage::SetCursorToLineContent(selection.to_string());
+    let result = yeet_buffer::update(
+        Some(viewport),
+        mode,
+        &mut directory.buffer,
+        slice::from_ref(&message),
+    );
+
+    result.contains(&BufferResult::CursorPositionChanged)
 }
 
 pub fn relocate(
@@ -52,11 +85,11 @@ pub fn relocate(
 ) -> Vec<Action> {
     if matches!(*mtn, CursorDirection::Search(_)) {
         let term = get_register(&state.register, &'/');
-        search::search_in_buffers(app.buffers.values_mut().collect(), term);
+        search::search_in_buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
     let (_, _, preview_id) = app::directory_buffer_ids(app);
-    let premotion_preview_path = match app.buffers.get(&preview_id) {
+    let premotion_preview_path = match app.contents.buffers.get(&preview_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),

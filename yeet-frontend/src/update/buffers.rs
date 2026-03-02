@@ -11,6 +11,7 @@ pub fn update(app: &mut App) {
     };
 
     let stale_images: Vec<usize> = app
+        .contents
         .buffers
         .iter()
         .filter_map(|(id, buffer)| {
@@ -26,13 +27,13 @@ pub fn update(app: &mut App) {
         tracing::trace!(
             stale_image_ids = ?stale_images,
             referenced_ids = ?referenced,
-            total_buffers_before = app.buffers.len(),
+            total_buffers_before = app.contents.buffers.len(),
             "removing stale image buffers"
         );
     }
 
     for id in stale_images {
-        app.buffers.remove(&id);
+        app.contents.buffers.remove(&id);
     }
 }
 
@@ -51,7 +52,7 @@ mod test {
         let mut app = App::default();
 
         let image_id = 42;
-        app.buffers.insert(
+        app.contents.buffers.insert(
             image_id,
             Buffer::Image(PreviewImageBuffer {
                 path: PathBuf::from("/tmp/image.png"),
@@ -61,7 +62,7 @@ mod test {
 
         update(&mut app);
 
-        assert!(!app.buffers.contains_key(&image_id));
+        assert!(!app.contents.buffers.contains_key(&image_id));
     }
 
     #[test]
@@ -69,7 +70,7 @@ mod test {
         let mut app = App::default();
         let (_, _, preview_id) = crate::update::app::directory_buffer_ids(&app);
 
-        app.buffers.insert(
+        app.contents.buffers.insert(
             preview_id,
             Buffer::Image(PreviewImageBuffer {
                 path: PathBuf::from("/tmp/preview.png"),
@@ -80,7 +81,7 @@ mod test {
         update(&mut app);
 
         assert!(matches!(
-            app.buffers.get(&preview_id),
+            app.contents.buffers.get(&preview_id),
             Some(Buffer::Image(_))
         ));
     }
@@ -90,7 +91,7 @@ mod test {
         let mut app = App::default();
 
         let content_id = 77;
-        app.buffers.insert(
+        app.contents.buffers.insert(
             content_id,
             Buffer::Content(ContentBuffer {
                 path: PathBuf::from("/tmp/file.txt"),
@@ -99,17 +100,18 @@ mod test {
         );
 
         let directory_id = 78;
-        app.buffers
+        app.contents
+            .buffers
             .insert(directory_id, Buffer::Directory(DirectoryBuffer::default()));
 
         update(&mut app);
 
         assert!(matches!(
-            app.buffers.get(&content_id),
+            app.contents.buffers.get(&content_id),
             Some(Buffer::Content(_))
         ));
         assert!(matches!(
-            app.buffers.get(&directory_id),
+            app.contents.buffers.get(&directory_id),
             Some(Buffer::Directory(_))
         ));
     }

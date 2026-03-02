@@ -4,7 +4,7 @@ use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
-    model::{App, Buffer, Window},
+    model::{App, Buffer, Contents, Window},
 };
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
@@ -16,20 +16,20 @@ pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
         }
     };
 
-    match app.buffers.get_mut(&focused_id) {
+    match app.contents.buffers.get_mut(&focused_id) {
         Some(it) => (vp, it),
         None => todo!(),
     }
 }
 
-pub fn get_next_buffer_id(app: &mut App) -> usize {
-    let mut next_id = if app.latest_buffer_id >= 9999 {
+pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
+    let mut next_id = if contents.latest_buffer_id >= 9999 {
         1
     } else {
-        app.latest_buffer_id + 1
+        contents.latest_buffer_id + 1
     };
 
-    let mut running_ids: Vec<_> = app.buffers.keys().collect();
+    let mut running_ids: Vec<_> = contents.buffers.keys().collect();
     running_ids.sort();
 
     for id in running_ids {
@@ -40,7 +40,7 @@ pub fn get_next_buffer_id(app: &mut App) -> usize {
         }
     }
 
-    app.latest_buffer_id = next_id;
+    contents.latest_buffer_id = next_id;
 
     next_id
 }
@@ -52,8 +52,10 @@ pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     }
 }
 
-pub fn directory_viewports_mut(app: &mut App) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
-    match &mut app.window {
+pub fn directory_viewports_mut(
+    window: &mut Window,
+) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
+    match window {
         Window::Horizontal(_, _) => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
     }
@@ -103,20 +105,28 @@ pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
         todo!()
     }
 
-    let parent = app.buffers.get(&parent_id).expect("parent buffer");
-    let current = app.buffers.get(&current_id).expect("current buffer");
-    let preview = app.buffers.get(&preview_id).expect("preview buffer");
+    let parent = app.contents.buffers.get(&parent_id).expect("parent buffer");
+    let current = app
+        .contents
+        .buffers
+        .get(&current_id)
+        .expect("current buffer");
+    let preview = app
+        .contents
+        .buffers
+        .get(&preview_id)
+        .expect("preview buffer");
 
     (parent, current, preview)
 }
 
-#[tracing::instrument(skip(app))]
-pub fn get_or_create_directory_buffer(
-    app: &mut App,
+#[tracing::instrument(skip(contents))]
+pub fn resolve_directory_buffer(
+    contents: &mut Contents,
     path: &Path,
     selection: &Option<String>,
 ) -> (usize, Option<Action>) {
-    let matching_ids: Vec<(usize, &'static str)> = app
+    let matching_ids: Vec<(usize, &'static str)> = contents
         .buffers
         .iter()
         .filter_map(|(id, buffer)| match buffer {
@@ -130,7 +140,7 @@ pub fn get_or_create_directory_buffer(
 
     tracing::trace!(
         path = %path.display(),
-        total_buffers = app.buffers.len(),
+        total_buffers = contents.buffers.len(),
         matching_count = matching_ids.len(),
         "checking for existing buffer"
     );
@@ -154,9 +164,9 @@ pub fn get_or_create_directory_buffer(
         return (*id, None);
     }
 
-    let id = get_next_buffer_id(app);
+    let id = get_next_buffer_id(contents);
 
-    let existing_paths: Vec<_> = app
+    let existing_paths: Vec<_> = contents
         .buffers
         .iter()
         .filter_map(|(buf_id, buffer)| {
@@ -174,12 +184,13 @@ pub fn get_or_create_directory_buffer(
     tracing::debug!(
         id = %id,
         path = %path.display(),
-        total_buffers = app.buffers.len(),
+        total_buffers = contents.buffers.len(),
         existing_buffers = ?existing_paths,
         "created new buffer"
     );
 
-    app.buffers
+    contents
+        .buffers
         .insert(id, Buffer::PathReference(path.to_path_buf()));
 
     (
@@ -188,16 +199,19 @@ pub fn get_or_create_directory_buffer(
     )
 }
 
-pub fn create_empty_buffer(app: &mut App) -> usize {
-    let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
-        Buffer::Empty => Some(*id),
-        _ => None,
-    });
+pub fn get_empty_buffer(contents: &mut Contents) -> usize {
+    let existing_id = contents
+        .buffers
+        .iter()
+        .find_map(|(id, buffer)| match buffer {
+            Buffer::Empty => Some(*id),
+            _ => None,
+        });
 
     if let Some(id) = existing_id {
         return id;
     }
-    let id = get_next_buffer_id(app);
-    app.buffers.insert(id, Buffer::Empty);
+    let id = get_next_buffer_id(contents);
+    contents.buffers.insert(id, Buffer::Empty);
     id
 }

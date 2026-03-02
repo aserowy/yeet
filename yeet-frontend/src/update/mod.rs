@@ -118,7 +118,7 @@ fn update_with_message(
             &[PrintContent::Error(error.to_string())],
         ),
         Message::FdResult(paths) | Message::RgResult(paths) => {
-            qfix::add(&mut state.qfix, app.buffers.values_mut().collect(), paths)
+            qfix::add(&mut state.qfix, app.contents.buffers.values_mut().collect(), paths)
         }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => {
@@ -180,11 +180,11 @@ pub fn update_with_keymap_message(
     match msg {
         KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, msg),
         KeymapMessage::ClearSearchHighlight => {
-            search::clear(app.buffers.values_mut().collect());
+            search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
         }
         KeymapMessage::DeleteMarks(mrks) => {
-            mark::delete(&mut state.marks, app.buffers.values_mut().collect(), mrks)
+            mark::delete(&mut state.marks, app.contents.buffers.values_mut().collect(), mrks)
         }
         KeymapMessage::ExecuteCommand => {
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
@@ -228,7 +228,7 @@ pub fn update_with_keymap_message(
                 Some(vp) => vp.cursor.clone(),
                 None => return Vec::new(),
             };
-            let buffer = match app.buffers.get(&current_id) {
+            let buffer = match app.contents.buffers.get(&current_id) {
                 Some(Buffer::Directory(it)) => it,
                 _ => return Vec::new(),
             };
