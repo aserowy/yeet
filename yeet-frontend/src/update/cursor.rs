@@ -1,8 +1,8 @@
-use std::{path::Path, slice};
+use std::slice;
 
 use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
-    model::{viewport::ViewPort, BufferResult, Mode, SearchDirection, TextBuffer},
+    model::{viewport::ViewPort, BufferResult, Mode, SearchDirection},
 };
 
 use crate::{

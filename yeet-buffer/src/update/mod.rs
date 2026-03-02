@@ -31,7 +31,7 @@ pub fn update(
 }
 
 // TODO: try to get rid of as_deref_mut() by passing viewport as &mut Option<&mut ViewPort> and re-borrowing it when needed. It is currently needed for passing viewport to multiple messages in a row without having to clone it.
-#[allow(clippy::needless_option_as_deref)] // as_deref_mut() is needed for re-borrowing
+#[allow(clippy::needless_option_as_deref)]
 fn update_buffer(
     mut viewport: Option<&mut ViewPort>,
     mode: &Mode,

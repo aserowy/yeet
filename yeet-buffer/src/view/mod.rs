@@ -11,7 +11,6 @@ use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, Tex
 
 mod line;
 mod prefix;
-mod style;
 
 pub fn view(
     viewport: &ViewPort,

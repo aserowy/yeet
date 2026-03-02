@@ -4,7 +4,7 @@ use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
 
 use crate::{
     action::Action,
-    model::{self, history::History, mark::Marks, App, Buffer},
+    model::{history::History, mark::Marks, App, Buffer},
     update::{app, cursor, preview, selection},
 };
 
@@ -77,8 +77,6 @@ pub fn navigate_to_path_with_selection(
         tracing::warn!("path is a file, not a directory: {:?}", path);
         return Vec::new();
     }
-
-    if !path.exists() {}
 
     let mut actions = Vec::new();
 

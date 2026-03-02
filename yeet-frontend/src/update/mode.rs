@@ -253,6 +253,12 @@ mod test {
         let mut app = crate::model::App::default();
         let mut state = crate::model::State::default();
 
+        let (_, current_id, _) = crate::update::app::directory_buffer_ids(&app);
+        app.contents.buffers.insert(
+            current_id,
+            crate::model::Buffer::Directory(crate::model::DirectoryBuffer::default()),
+        );
+
         let added_paths = vec![
             std::path::PathBuf::from("/tmp/a"),
             std::path::PathBuf::from("/tmp/b"),

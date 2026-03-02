@@ -365,6 +365,9 @@ mod test {
 
     #[test]
     fn removal_relocates_current_to_existing_ancestor_and_prunes_buffers() {
+        use crate::model::{DirectoryBuffer, Window};
+        use yeet_buffer::model::viewport::ViewPort;
+
         let base = unique_temp_dir();
         let removed = base.join("removed");
         let nested = removed.join("inner");
@@ -374,20 +377,42 @@ mod test {
         fs::write(&file_path, "content").expect("create file");
 
         let mut app = App::default();
-        let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
 
-        if let Some(Buffer::Directory(buffer)) = app.contents.buffers.get_mut(&current_id) {
-            buffer.path = nested.clone();
-        } else {
-            panic!("expected current directory buffer");
-        }
+        let parent_id = 1;
+        let current_id = app::get_next_buffer_id(&mut app.contents);
+        let preview_id = app::get_next_buffer_id(&mut app.contents);
 
+        app.contents
+            .buffers
+            .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
+        app.contents.buffers.insert(
+            current_id,
+            Buffer::Directory(DirectoryBuffer {
+                path: nested.clone(),
+                ..Default::default()
+            }),
+        );
         app.contents.buffers.insert(
             preview_id,
             Buffer::Content(ContentBuffer {
                 path: file_path.clone(),
                 ..Default::default()
             }),
+        );
+
+        app.window = Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                ..Default::default()
+            },
         );
 
         let extra_id = app::get_next_buffer_id(&mut app.contents);
@@ -436,6 +461,9 @@ mod test {
 
     #[test]
     fn preview_is_reset_when_removed_from_subtree() {
+        use crate::model::{DirectoryBuffer, Window};
+        use yeet_buffer::model::viewport::ViewPort;
+
         let base = unique_temp_dir();
         let keep = base.join("keep");
         let removed = base.join("removed");
@@ -446,20 +474,42 @@ mod test {
         fs::write(&removed_file, "content").expect("create file");
 
         let mut app = App::default();
-        let (_, current_id, preview_id) = app::directory_buffer_ids(&app);
 
-        if let Some(Buffer::Directory(buffer)) = app.contents.buffers.get_mut(&current_id) {
-            buffer.path = keep.clone();
-        } else {
-            panic!("expected current directory buffer");
-        }
+        let parent_id = 1;
+        let current_id = app::get_next_buffer_id(&mut app.contents);
+        let preview_id = app::get_next_buffer_id(&mut app.contents);
 
+        app.contents
+            .buffers
+            .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
+        app.contents.buffers.insert(
+            current_id,
+            Buffer::Directory(DirectoryBuffer {
+                path: keep.clone(),
+                ..Default::default()
+            }),
+        );
         app.contents.buffers.insert(
             preview_id,
             Buffer::Content(ContentBuffer {
                 path: removed_file.clone(),
                 ..Default::default()
             }),
+        );
+
+        app.window = Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                ..Default::default()
+            },
         );
 
         fs::remove_dir_all(&removed).expect("remove directory");
