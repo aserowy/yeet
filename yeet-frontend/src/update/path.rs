@@ -29,19 +29,11 @@ pub fn add(
     app: &mut App,
     paths: &[PathBuf],
 ) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let current_vp = app::get_viewport_by_buffer_id(app, current_id);
-    let current_cursor = current_vp.map(|vp| vp.cursor.clone());
-    let previous_selection =
-        app.contents
-            .buffers
-            .get(&current_id)
-            .and_then(|buffer| match buffer {
-                Buffer::Directory(buffer) => current_cursor
-                    .as_ref()
-                    .and_then(|cursor| model::get_selected_path(buffer, cursor)),
-                _ => None,
-            });
+    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let previous_selection = match current_buffer {
+        Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
+        _ => None,
+    };
 
     for path in paths {
         update_directory_buffers_on_add(mode, app, path);

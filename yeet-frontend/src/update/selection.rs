@@ -18,9 +18,9 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let current_vp = app::directory_viewports_mut(&mut app.window).1;
-    let current_selection = match app.contents.buffers.get(&current_vp.buffer_id) {
-        Some(Buffer::Directory(buffer)) => model::get_selected_path(buffer, &current_vp.cursor),
+    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let current_selection = match current_buffer {
+        Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
     };
 

@@ -14,7 +14,6 @@ mod prefix;
 
 pub fn view(
     viewport: &ViewPort,
-    cursor: &Cursor,
     mode: &Mode,
     buffer: &TextBuffer,
     frame: &mut Frame,
@@ -22,7 +21,7 @@ pub fn view(
     vertical_offset: u16,
 ) {
     let rendered = get_rendered_lines(viewport, buffer);
-    let styled = get_styled_lines(viewport, mode, cursor, rendered);
+    let styled = get_styled_lines(viewport, mode, &viewport.cursor, rendered);
 
     let rect = Rect {
         x: horizontal_offset,
