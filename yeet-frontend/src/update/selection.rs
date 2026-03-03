@@ -18,7 +18,7 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let (_, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
+    let current_vp = app::directory_viewports_mut(&mut app.window).1;
     let current_selection = match app.contents.buffers.get(&current_vp.buffer_id) {
         Some(Buffer::Directory(buffer)) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
@@ -29,30 +29,20 @@ pub fn refresh_preview_from_current_selection(
         return Vec::new();
     }
 
-    preview_vp.cursor = Cursor::default();
-    preview_vp.hide_cursor_line = true;
-    preview_vp.horizontal_index = 0;
-    preview_vp.vertical_index = 0;
-
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
 
-    let actions = set_preview_buffer_for_selection(app, history, current_selection);
-
-    let (_, _, preview_vp) = app::directory_viewports_mut(&mut app.window);
-    cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
-
-    actions
+    set_preview_buffer_for_selection(app, history, current_selection)
 }
 
-fn set_preview_buffer_for_selection(
+pub fn set_preview_buffer_for_selection(
     app: &mut App,
     history: &History,
-    selection: Option<PathBuf>,
+    path_to_preview: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
-    let preview_id = if let Some(selected_path) = selection {
-        let selection = history::selection(history, &selected_path).map(|s| s.to_owned());
-        let (id, load) = app::resolve_buffer(&mut app.contents, &selected_path, &selection);
+    let preview_id = if let Some(path_to_preview) = path_to_preview {
+        let selection = history::selection(history, &path_to_preview).map(|s| s.to_owned());
+        let (id, load) = app::resolve_buffer(&mut app.contents, &path_to_preview, &selection);
         actions.extend(load);
 
         id
@@ -61,6 +51,14 @@ fn set_preview_buffer_for_selection(
     };
 
     preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
+
+    let preview_vp = app::directory_viewports_mut(&mut app.window).2;
+    preview_vp.cursor = Cursor::default();
+    preview_vp.hide_cursor_line = true;
+    preview_vp.horizontal_index = 0;
+    preview_vp.vertical_index = 0;
+
+    cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
 
     actions
 }

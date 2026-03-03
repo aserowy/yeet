@@ -5,7 +5,7 @@ use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
 use crate::{
     action::Action,
     model::{history::History, mark::Marks, App, Buffer},
-    update::{app, cursor, preview, selection},
+    update::{app, cursor, selection},
 };
 
 use super::history;
@@ -102,24 +102,8 @@ pub fn navigate_to_path_with_selection(
         app::get_empty_buffer(&mut app.contents)
     };
 
-    let preview_id = match &current_selection {
-        Some(selected_history) => {
-            let mut preview_path = path.to_path_buf();
-            preview_path.push(selected_history);
+    let (parent_vp, current_vp, _) = app::directory_viewports_mut(&mut app.window);
 
-            let selection =
-                history::selection(history, preview_path.as_path()).map(|s| s.to_string());
-
-            let (id, load) = app::resolve_buffer(&mut app.contents, &preview_path, &selection);
-            actions.extend(load);
-            id
-        }
-        None => app::get_empty_buffer(&mut app.contents),
-    };
-
-    let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
-    parent_vp.buffer_id = parent_id;
-    parent_vp.cursor = Cursor::default();
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
 
@@ -134,6 +118,10 @@ pub fn navigate_to_path_with_selection(
     let parent_selection = path
         .file_name()
         .map(|name| name.to_string_lossy().to_string());
+
+    parent_vp.buffer_id = parent_id;
+    parent_vp.cursor = Cursor::default();
+
     cursor::set_index(
         &mut app.contents,
         history,
@@ -142,8 +130,17 @@ pub fn navigate_to_path_with_selection(
         parent_selection.as_deref(),
     );
 
-    preview_vp.cursor = Cursor::default();
-    preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
+    let preview_path = current_selection.as_ref().map(|selection| {
+        let mut preview_path = path.to_path_buf();
+        preview_path.push(selection);
+        preview_path
+    });
+
+    actions.extend(selection::set_preview_buffer_for_selection(
+        app,
+        history,
+        preview_path,
+    ));
 
     tracing::debug!(
         "navigate_to_path_with_selection returning {} actions",
