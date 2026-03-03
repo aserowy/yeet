@@ -61,7 +61,7 @@ pub fn set_buffer_id(contents: &mut Contents, window: &mut Window, buffer_id: us
         false
     };
 
-    let preview = app::directory_viewports_mut(window).2;
+    let preview = app::get_focused_directory_viewports_mut(window).2;
     preview.buffer_id = buffer_id;
     preview.hide_cursor_line = !is_directory;
 }

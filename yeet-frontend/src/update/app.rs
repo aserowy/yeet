@@ -22,14 +22,14 @@ pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
     }
 }
 
-pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
+pub fn get_focused_directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
     }
 }
 
-pub fn directory_viewports_mut(
+pub fn get_focused_directory_viewports_mut(
     window: &mut Window,
 ) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
     match window {
@@ -38,13 +38,13 @@ pub fn directory_viewports_mut(
     }
 }
 
-pub fn directory_buffer_ids(app: &App) -> (usize, usize, usize) {
-    let (parent, current, preview) = directory_viewports(app);
+pub fn get_focused_directory_buffer_ids(app: &App) -> (usize, usize, usize) {
+    let (parent, current, preview) = get_focused_directory_viewports(app);
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
-pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
-    let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
+pub fn get_focused_directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
+    let (parent_id, current_id, preview_id) = get_focused_directory_buffer_ids(app);
 
     let parent = app.contents.buffers.get(&parent_id).expect("parent buffer");
     let current = app

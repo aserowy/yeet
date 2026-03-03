@@ -68,7 +68,7 @@ mod test {
     #[test]
     fn keeps_referenced_image() {
         let mut app = App::default();
-        let (_, _, preview_id) = crate::update::app::directory_buffer_ids(&app);
+        let (_, _, preview_id) = crate::update::app::get_focused_directory_buffer_ids(&app);
 
         app.contents.buffers.insert(
             preview_id,

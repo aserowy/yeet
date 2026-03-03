@@ -135,7 +135,7 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
 }
 
 pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
+    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
     let buffer = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),

@@ -88,7 +88,7 @@ pub fn relocate(
         search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
-    let (_, _, preview_id) = app::directory_buffer_ids(app);
+    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
     let premotion_preview_path = match app.contents.buffers.get(&preview_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
