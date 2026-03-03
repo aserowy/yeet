@@ -43,24 +43,6 @@ pub fn get_focused_directory_buffer_ids(app: &App) -> (usize, usize, usize) {
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
-pub fn get_focused_directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
-    let (parent_id, current_id, preview_id) = get_focused_directory_buffer_ids(app);
-
-    let parent = app.contents.buffers.get(&parent_id).expect("parent buffer");
-    let current = app
-        .contents
-        .buffers
-        .get(&current_id)
-        .expect("current buffer");
-    let preview = app
-        .contents
-        .buffers
-        .get(&preview_id)
-        .expect("preview buffer");
-
-    (parent, current, preview)
-}
-
 pub fn get_viewport_by_buffer_id_mut(
     window: &mut Window,
     buffer_id: usize,
