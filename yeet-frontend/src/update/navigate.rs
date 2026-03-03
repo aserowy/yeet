@@ -163,6 +163,10 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             return Vec::new();
         }
 
+        let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
+        swap_viewport(parent_vp, preview_vp);
+        swap_viewport(current_vp, preview_vp);
+
         let mut actions = Vec::new();
 
         let selection = path
@@ -176,10 +180,6 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         } else {
             app::get_empty_buffer(&mut app.contents)
         };
-
-        let (parent_vp, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
-        swap_viewport(parent_vp, preview_vp);
-        swap_viewport(current_vp, preview_vp);
 
         parent_vp.buffer_id = parent_id;
         let directory = match app.contents.buffers.get_mut(&parent_vp.buffer_id) {
@@ -210,12 +210,15 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     swap_viewport(parent_vp, preview_vp);
     swap_viewport(current_vp, parent_vp);
 
+    current_vp.hide_cursor_line = false;
+
     selection::refresh_preview_from_current_selection(app, history, None)
 }
 
 fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {
     mem::swap(&mut vp1.buffer_id, &mut vp2.buffer_id);
     mem::swap(&mut vp1.cursor, &mut vp2.cursor);
+    mem::swap(&mut vp1.hide_cursor_line, &mut vp2.hide_cursor_line);
     mem::swap(&mut vp1.horizontal_index, &mut vp2.horizontal_index);
     mem::swap(&mut vp1.vertical_index, &mut vp2.vertical_index);
 }
