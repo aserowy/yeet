@@ -8,17 +8,17 @@ use yeet_buffer::{
 use crate::{
     action::Action,
     model::{history::History, App, Buffer, Contents, DirectoryBuffer, State},
+    update::history,
 };
 
 use super::{
-    history::get_selection_from_history,
     register::{get_direction_from_search_register, get_register},
     search, selection,
 };
 
 use crate::update::app;
 
-pub fn set_cursor_index(
+pub fn set_index(
     contents: &mut Contents,
     history: &History,
     viewport: &mut ViewPort,
@@ -53,7 +53,7 @@ pub fn set_cursor_index_with_history(
     mode: &Mode,
     directory: &mut DirectoryBuffer,
 ) -> bool {
-    if let Some(history) = get_selection_from_history(history, directory.path.as_path()) {
+    if let Some(history) = history::selection(history, directory.path.as_path()) {
         set_cursor_index_to_selection(viewport, mode, directory, history)
     } else {
         false
@@ -85,7 +85,7 @@ pub fn relocate(
 ) -> Vec<Action> {
     if matches!(*mtn, CursorDirection::Search(_)) {
         let term = get_register(&state.register, &'/');
-        search::search_in_buffers(app.contents.buffers.values_mut().collect(), term);
+        search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
     let (_, _, preview_id) = app::directory_buffer_ids(app);
@@ -112,26 +112,26 @@ pub fn relocate(
             None => return Vec::new(),
         };
 
-        let dr = match (drctn, current_drctn) {
+        let direction = match (drctn, current_drctn) {
             (Search::Next, SearchDirection::Down) => Search::Next,
             (Search::Next, SearchDirection::Up) => Search::Previous,
             (Search::Previous, SearchDirection::Down) => Search::Previous,
             (Search::Previous, SearchDirection::Up) => Search::Next,
         };
 
-        let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(dr.clone()));
+        let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(direction.clone()));
         yeet_buffer::update(
             Some(viewport),
             &state.modes.current,
             &mut buffer.buffer,
-            std::slice::from_ref(&msg),
+            slice::from_ref(&msg),
         );
     } else {
         yeet_buffer::update(
             Some(viewport),
             &state.modes.current,
             &mut buffer.buffer,
-            std::slice::from_ref(&msg),
+            slice::from_ref(&msg),
         );
     };
 

@@ -20,7 +20,7 @@ pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
                 })
                 .collect();
 
-            let (preview_id, _) = app::resolve_directory_buffer(&mut app.contents, &path, &None);
+            let (preview_id, _) = app::resolve_buffer(&mut app.contents, &path, &None);
             app.contents.buffers.insert(
                 preview_id,
                 Buffer::Content(ContentBuffer {
@@ -35,7 +35,7 @@ pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
         Preview::Image(path, protocol) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            let (preview_id, _) = app::resolve_directory_buffer(&mut app.contents, &path, &None);
+            let (preview_id, _) = app::resolve_buffer(&mut app.contents, &path, &None);
             app.contents.buffers.insert(
                 preview_id,
                 Buffer::Image(PreviewImageBuffer { path, protocol }),
@@ -44,7 +44,7 @@ pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
         Preview::None(path) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
-            let (preview_id, _) = app::resolve_directory_buffer(&mut app.contents, &path, &None);
+            let (preview_id, _) = app::resolve_buffer(&mut app.contents, &path, &None);
             app.contents
                 .buffers
                 .insert(preview_id, Buffer::PathReference(path));

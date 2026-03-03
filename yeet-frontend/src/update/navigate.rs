@@ -84,19 +84,18 @@ pub fn navigate_to_path_with_selection(
         Some(it) => Some(it.to_owned()),
         None => {
             tracing::trace!("getting selection from history for path: {:?}", path);
-            history::get_selection_from_history(history, path).map(|history| history.to_owned())
+            history::selection(history, path).map(|history| history.to_owned())
         }
     };
 
     tracing::trace!("resolved selection: {:?}", current_selection);
 
-    let (current_id, load) =
-        app::resolve_directory_buffer(&mut app.contents, path, &current_selection);
+    let (current_id, load) = app::resolve_buffer(&mut app.contents, path, &current_selection);
     actions.extend(load);
 
     let parent_id = if let (Some(parent), selection) = (path.parent(), path.file_name()) {
         let selection = selection.map(|selection| selection.to_string_lossy().to_string());
-        let (id, load) = app::resolve_directory_buffer(&mut app.contents, parent, &selection);
+        let (id, load) = app::resolve_buffer(&mut app.contents, parent, &selection);
         actions.extend(load);
         id
     } else {
@@ -108,11 +107,10 @@ pub fn navigate_to_path_with_selection(
             let mut preview_path = path.to_path_buf();
             preview_path.push(selected_history);
 
-            let selection = history::get_selection_from_history(history, preview_path.as_path())
-                .map(|s| s.to_string());
+            let selection =
+                history::selection(history, preview_path.as_path()).map(|s| s.to_string());
 
-            let (id, load) =
-                app::resolve_directory_buffer(&mut app.contents, &preview_path, &selection);
+            let (id, load) = app::resolve_buffer(&mut app.contents, &preview_path, &selection);
             actions.extend(load);
             id
         }
@@ -125,7 +123,7 @@ pub fn navigate_to_path_with_selection(
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
 
-    cursor::set_cursor_index(
+    cursor::set_index(
         &mut app.contents,
         history,
         current_vp,
@@ -136,7 +134,7 @@ pub fn navigate_to_path_with_selection(
     let parent_selection = path
         .file_name()
         .map(|name| name.to_string_lossy().to_string());
-    cursor::set_cursor_index(
+    cursor::set_index(
         &mut app.contents,
         history,
         parent_vp,
@@ -175,7 +173,7 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             .map(|oss| oss.to_string_lossy().to_string());
 
         let parent_id = if let Some(parent) = path.parent() {
-            let (id, load) = app::resolve_directory_buffer(&mut app.contents, parent, &selection);
+            let (id, load) = app::resolve_buffer(&mut app.contents, parent, &selection);
             actions.extend(load);
             id
         } else {
@@ -215,13 +213,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     swap_viewport(parent_vp, preview_vp);
     swap_viewport(current_vp, parent_vp);
 
-    cursor::set_cursor_index(&mut app.contents, history, current_vp, &Mode::Normal, None);
-
-    let actions = selection::refresh_preview_from_current_selection(app, history, None);
-    let (_, _, preview_vp) = app::directory_viewports_mut(&mut app.window);
-    cursor::set_cursor_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
-
-    actions
+    selection::refresh_preview_from_current_selection(app, history, None)
 }
 
 fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {

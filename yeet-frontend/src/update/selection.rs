@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use yeet_buffer::model::Cursor;
+use yeet_buffer::model::{Cursor, Mode};
 
 use crate::model;
-use crate::update::preview;
+use crate::update::{cursor, preview};
 use crate::{
     action::Action,
     event::Message,
@@ -18,10 +18,9 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let current_vp = app::get_viewport_by_buffer_id(app, current_id);
-    let current_selection = match (app.contents.buffers.get(&current_id), current_vp) {
-        (Some(Buffer::Directory(buffer)), Some(vp)) => model::get_selected_path(buffer, &vp.cursor),
+    let (_, current_vp, preview_vp) = app::directory_viewports_mut(&mut app.window);
+    let current_selection = match app.contents.buffers.get(&current_vp.buffer_id) {
+        Some(Buffer::Directory(buffer)) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
     };
 
@@ -30,22 +29,30 @@ pub fn refresh_preview_from_current_selection(
         return Vec::new();
     }
 
+    preview_vp.cursor = Cursor::default();
+    preview_vp.hide_cursor_line = true;
+    preview_vp.horizontal_index = 0;
+    preview_vp.vertical_index = 0;
+
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
-    set_preview_buffer_for_selection(app, history, current_selection)
+
+    let actions = set_preview_buffer_for_selection(app, history, current_selection);
+
+    let (_, _, preview_vp) = app::directory_viewports_mut(&mut app.window);
+    cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
+
+    actions
 }
 
-pub fn set_preview_buffer_for_selection(
+fn set_preview_buffer_for_selection(
     app: &mut App,
     history: &History,
     selection: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     let preview_id = if let Some(selected_path) = selection {
-        let selection =
-            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
-
-        let (id, load) =
-            app::resolve_directory_buffer(&mut app.contents, &selected_path, &selection);
+        let selection = history::selection(history, &selected_path).map(|s| s.to_owned());
+        let (id, load) = app::resolve_buffer(&mut app.contents, &selected_path, &selection);
         actions.extend(load);
 
         id

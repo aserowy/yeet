@@ -44,7 +44,6 @@ pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
 
     next_id
 }
-
 pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
@@ -121,7 +120,7 @@ pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
 }
 
 #[tracing::instrument(skip(contents))]
-pub fn resolve_directory_buffer(
+pub fn resolve_buffer(
     contents: &mut Contents,
     path: &Path,
     selection: &Option<String>,

@@ -65,7 +65,7 @@ pub fn add_history_component(
     }
 }
 
-pub fn get_selection_from_history<'a>(history: &'a History, path: &Path) -> Option<&'a str> {
+pub fn selection<'a>(history: &'a History, path: &Path) -> Option<&'a str> {
     let mut current_nodes = &history.entries;
     for component in path.components() {
         if let Some(current_name) = component.as_os_str().to_str() {

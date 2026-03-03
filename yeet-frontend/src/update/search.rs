@@ -2,7 +2,7 @@ use yeet_buffer::model::TextBuffer;
 
 use crate::model::Buffer;
 
-pub fn search_in_buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
+pub fn buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
     let search = match search {
         Some(it) => it,
         None => {
