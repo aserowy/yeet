@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, slice};
 
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
@@ -23,28 +23,26 @@ pub fn change(
     content: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    {
-        let App {
-            contents, window, ..
-        } = app;
-        for (buffer_id, buffer) in contents.buffers.iter_mut() {
-            if let Buffer::PathReference(referenced_path) = buffer {
-                if referenced_path == path {
-                    *buffer = Buffer::Directory(DirectoryBuffer {
-                        path: path.clone(),
-                        ..Default::default()
-                    });
-                }
+    let App {
+        contents, window, ..
+    } = app;
+    for (buffer_id, buffer) in contents.buffers.iter_mut() {
+        if let Buffer::PathReference(referenced_path) = buffer {
+            if referenced_path == path {
+                *buffer = Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                });
+            }
+        }
+
+        if let Buffer::Directory(buffer) = buffer {
+            if buffer.path.as_path() != path {
+                continue;
             }
 
-            if let Buffer::Directory(buffer) = buffer {
-                if buffer.path.as_path() != path {
-                    continue;
-                }
-
-                let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-                set_directory_content(state, viewport, buffer, path, content, selection);
-            }
+            let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+            set_directory_content(state, viewport, buffer, path, content, selection);
         }
     }
 
@@ -84,71 +82,69 @@ pub fn finish(
     }
 
     let mut actions = Vec::new();
-    {
-        let App {
-            contents, window, ..
-        } = app;
-        for (buffer_id, buffer) in contents.buffers.iter_mut() {
-            if let Buffer::PathReference(referenced_path) = buffer {
-                if referenced_path == path {
-                    *buffer = Buffer::Directory(DirectoryBuffer {
-                        path: path.clone(),
-                        ..Default::default()
-                    });
-                }
+    let App {
+        contents, window, ..
+    } = app;
+    for (buffer_id, buffer) in contents.buffers.iter_mut() {
+        if let Buffer::PathReference(referenced_path) = buffer {
+            if referenced_path == path {
+                *buffer = Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                });
             }
+        }
 
-            let buffer = match buffer {
-                Buffer::Directory(it) => it,
-                _ => continue,
-            };
+        let buffer = match buffer {
+            Buffer::Directory(it) => it,
+            _ => continue,
+        };
 
-            if buffer.path.as_path() != path {
-                continue;
-            }
+        if buffer.path.as_path() != path {
+            continue;
+        }
 
-            let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            set_directory_content(
-                state,
-                viewport.as_deref_mut(),
+        let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+        set_directory_content(
+            state,
+            viewport.as_deref_mut(),
+            buffer,
+            path,
+            content,
+            selection,
+        );
+
+        yeet_buffer::update(
+            viewport.as_deref_mut(),
+            &state.modes.current,
+            &mut buffer.buffer,
+            slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+        );
+
+        if let Some(viewport) = viewport.as_deref_mut() {
+            cursor::set_cursor_index_for_directory(
                 buffer,
-                path,
-                content,
-                selection,
-            );
-
-            yeet_buffer::update(
-                viewport.as_deref_mut(),
-                &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
-            );
-
-            if let Some(viewport) = viewport.as_deref_mut() {
-                cursor::set_cursor_index_for_directory(
-                    buffer,
-                    &state.history,
-                    viewport,
-                    &state.modes.current,
-                    selection.as_deref(),
-                );
-            }
-
-            let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
-            yeet_buffer::update(
+                &state.history,
                 viewport,
                 &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&message),
-            );
-
-            buffer.state = DirectoryBufferState::Ready;
-            tracing::trace!(
-                "finished enumeration for path {:?}, state is now {:?}",
-                path,
-                buffer.state,
+                selection.as_deref(),
             );
         }
+
+        let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
+        yeet_buffer::update(
+            viewport,
+            &state.modes.current,
+            &mut buffer.buffer,
+            slice::from_ref(&message),
+        );
+
+        buffer.state = DirectoryBufferState::Ready;
+        tracing::trace!(
+            "finished enumeration for path {:?}, state is now {:?}",
+            path,
+            buffer.state,
+        );
     }
 
     let (_, current_id, _) = app::directory_buffer_ids(app);
@@ -195,7 +191,7 @@ fn set_directory_content(
         viewport.as_deref_mut(),
         &state.modes.current,
         &mut buffer.buffer,
-        std::slice::from_ref(&message),
+        slice::from_ref(&message),
     );
 
     if is_first_changed_event {
@@ -234,6 +230,8 @@ pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
 
 #[cfg(test)]
 mod test {
+    use std::env;
+
     use yeet_buffer::model::{ansi::Ansi, Cursor, TextBuffer};
 
     use crate::{
@@ -246,7 +244,7 @@ mod test {
     #[test]
     fn change_loads_preview_when_empty_for_current() {
         let mut app = App::default();
-        let current_path = std::env::current_dir().expect("get current dir");
+        let current_path = env::current_dir().expect("get current dir");
         let selected_file = current_path.join("Cargo.toml");
 
         let current_buffer = DirectoryBuffer {

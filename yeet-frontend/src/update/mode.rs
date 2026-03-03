@@ -244,9 +244,14 @@ pub fn print_mode(commandline: &mut CommandLine, modes: &mut ModeState) -> Vec<A
 
 #[cfg(test)]
 mod test {
+    use std::path::PathBuf;
+
     use yeet_buffer::model::Mode;
 
-    use crate::{model::PendingPathEvent, update::mode};
+    use crate::{
+        model::{Buffer, DirectoryBuffer, PendingPathEvent},
+        update::mode,
+    };
 
     #[test]
     fn leaving_insert_flushes_pending_paths_in_order() {
@@ -254,16 +259,12 @@ mod test {
         let mut state = crate::model::State::default();
 
         let (_, current_id, _) = crate::update::app::directory_buffer_ids(&app);
-        app.contents.buffers.insert(
-            current_id,
-            crate::model::Buffer::Directory(crate::model::DirectoryBuffer::default()),
-        );
+        app.contents
+            .buffers
+            .insert(current_id, Buffer::Directory(DirectoryBuffer::default()));
 
-        let added_paths = vec![
-            std::path::PathBuf::from("/tmp/a"),
-            std::path::PathBuf::from("/tmp/b"),
-        ];
-        let removed_path = std::path::PathBuf::from("/tmp/c");
+        let added_paths = vec![PathBuf::from("/tmp/a"), PathBuf::from("/tmp/b")];
+        let removed_path = PathBuf::from("/tmp/c");
 
         state
             .pending_path_events

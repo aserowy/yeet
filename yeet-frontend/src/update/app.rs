@@ -22,28 +22,6 @@ pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
     }
 }
 
-pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
-    let mut next_id = if contents.latest_buffer_id >= 9999 {
-        1
-    } else {
-        contents.latest_buffer_id + 1
-    };
-
-    let mut running_ids: Vec<_> = contents.buffers.keys().collect();
-    running_ids.sort();
-
-    for id in running_ids {
-        match next_id.cmp(id) {
-            Ordering::Equal => next_id += 1,
-            Ordering::Greater => break,
-            Ordering::Less => {}
-        }
-    }
-
-    contents.latest_buffer_id = next_id;
-
-    next_id
-}
 pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
@@ -65,6 +43,24 @@ pub fn directory_buffer_ids(app: &App) -> (usize, usize, usize) {
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
+pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
+    let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
+
+    let parent = app.contents.buffers.get(&parent_id).expect("parent buffer");
+    let current = app
+        .contents
+        .buffers
+        .get(&current_id)
+        .expect("current buffer");
+    let preview = app
+        .contents
+        .buffers
+        .get(&preview_id)
+        .expect("preview buffer");
+
+    (parent, current, preview)
+}
+
 pub fn get_viewport_by_buffer_id_mut(
     window: &mut Window,
     buffer_id: usize,
@@ -83,27 +79,6 @@ pub fn get_viewport_by_buffer_id_mut(
             }
         }
     }
-}
-
-pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
-    let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
-    if parent_id == current_id || parent_id == preview_id || current_id == preview_id {
-        todo!()
-    }
-
-    let parent = app.contents.buffers.get(&parent_id).expect("parent buffer");
-    let current = app
-        .contents
-        .buffers
-        .get(&current_id)
-        .expect("current buffer");
-    let preview = app
-        .contents
-        .buffers
-        .get(&preview_id)
-        .expect("preview buffer");
-
-    (parent, current, preview)
 }
 
 #[tracing::instrument(skip(contents))]
@@ -200,4 +175,27 @@ pub fn get_empty_buffer(contents: &mut Contents) -> usize {
     let id = get_next_buffer_id(contents);
     contents.buffers.insert(id, Buffer::Empty);
     id
+}
+
+pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
+    let mut next_id = if contents.latest_buffer_id >= 9999 {
+        1
+    } else {
+        contents.latest_buffer_id + 1
+    };
+
+    let mut running_ids: Vec<_> = contents.buffers.keys().collect();
+    running_ids.sort();
+
+    for id in running_ids {
+        match next_id.cmp(id) {
+            Ordering::Equal => next_id += 1,
+            Ordering::Greater => break,
+            Ordering::Less => {}
+        }
+    }
+
+    contents.latest_buffer_id = next_id;
+
+    next_id
 }
