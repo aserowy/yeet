@@ -30,8 +30,6 @@ pub fn update(
     actions
 }
 
-// TODO: try to get rid of as_deref_mut() by passing viewport as &mut Option<&mut ViewPort> and re-borrowing it when needed. It is currently needed for passing viewport to multiple messages in a row without having to clone it.
-#[allow(clippy::needless_option_as_deref)]
 fn update_buffer(
     mut viewport: Option<&mut ViewPort>,
     mode: &Mode,
@@ -61,7 +59,7 @@ fn update_buffer(
 
             if let Some(current_selection) = current_selection {
                 update_buffer(
-                    viewport.as_deref_mut(),
+                    viewport,
                     mode,
                     buffer,
                     &BufferMessage::SetCursorToLineContent(current_selection),
@@ -73,7 +71,7 @@ fn update_buffer(
             if from == &Mode::Insert && to != &Mode::Insert {
                 buffer.undo.close_transaction();
 
-                if let Some(viewport) = viewport.as_deref_mut() {
+                if let Some(viewport) = viewport {
                     cursor::update_by_direction(
                         mode,
                         &mut viewport.cursor,
@@ -87,7 +85,7 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::Modification(count, modification) => {
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 let changes =
                     modification::update(mode, &mut viewport.cursor, buffer, count, modification);
                 viewport::update_by_cursor(viewport, buffer);
@@ -99,7 +97,7 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 let result = cursor::update_by_direction(
                     mode,
                     &mut viewport.cursor,
@@ -136,7 +134,7 @@ fn update_buffer(
 
             buffer.lines.remove(*index);
 
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
@@ -144,7 +142,7 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::ResetCursor => {
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 viewport.cursor.vertical_index = 0;
 
                 viewport.cursor.horizontal_index = match &viewport.cursor.horizontal_index {
@@ -174,7 +172,7 @@ fn update_buffer(
         BufferMessage::SetContent(content) => {
             buffer.lines = content.to_vec();
 
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
@@ -182,7 +180,7 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 let line = buffer
                     .lines
                     .iter()
@@ -207,7 +205,7 @@ fn update_buffer(
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             buffer.lines.sort_unstable_by(sort);
-            if let Some(viewport) = viewport.as_deref_mut() {
+            if let Some(viewport) = viewport {
                 cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
