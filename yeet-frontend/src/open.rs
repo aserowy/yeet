@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-
 use std::{
     ffi::{OsStr, OsString},
     io,

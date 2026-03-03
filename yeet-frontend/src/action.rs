@@ -101,7 +101,7 @@ async fn execute(
     };
 
     let mut remaining_actions = vec![];
-    let (_, _, preview_id) = app::directory_buffer_ids(&model.app);
+    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&model.app);
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
             remaining_actions.push(action);
@@ -118,7 +118,7 @@ async fn execute(
                 if path.is_dir() {
                     emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                 } else {
-                    let (_, _, preview_vp) = app::directory_viewports(&model.app);
+                    let (_, _, preview_vp) = app::get_focused_directory_viewports(&model.app);
                     let rect = Rect {
                         x: 0,
                         y: 0,
@@ -176,7 +176,7 @@ async fn execute(
             Action::Resize(x, y) => {
                 terminal.resize(x, y)?;
 
-                if let Some(Buffer::Image(_buffer)) = model.app.buffers.get(&preview_id) {
+                if let Some(Buffer::Image(_buffer)) = model.app.contents.buffers.get(&preview_id) {
                     // TODO: add rect to load preview after layout concept is implemented
                     // emitter.run(Task::LoadPreview(
                     //     path.to_path_buf(),

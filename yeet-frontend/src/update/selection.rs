@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use yeet_buffer::model::Cursor;
+use yeet_buffer::model::{Cursor, Mode};
 
 use crate::model;
-use crate::update::preview;
+use crate::update::{cursor, preview};
 use crate::{
     action::Action,
     event::Message,
@@ -18,11 +18,9 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let current_selection = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(buffer)) => {
-            model::get_selected_path(buffer, Some(&buffer.buffer.cursor))
-        }
+    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let current_selection = match current_buffer {
+        Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
     };
 
@@ -32,28 +30,35 @@ pub fn refresh_preview_from_current_selection(
     }
 
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
+
     set_preview_buffer_for_selection(app, history, current_selection)
 }
 
-fn set_preview_buffer_for_selection(
+pub fn set_preview_buffer_for_selection(
     app: &mut App,
     history: &History,
-    selection: Option<PathBuf>,
+    path_to_preview: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
-    let preview_id = if let Some(selected_path) = selection {
-        let selection =
-            history::get_selection_from_history(history, &selected_path).map(|s| s.to_owned());
-
-        let (id, load) = app::get_or_create_directory_buffer(app, &selected_path, &selection);
+    let preview_id = if let Some(path_to_preview) = path_to_preview {
+        let selection = history::selection(history, &path_to_preview).map(|s| s.to_owned());
+        let (id, load) = app::resolve_buffer(&mut app.contents, &path_to_preview, &selection);
         actions.extend(load);
 
         id
     } else {
-        app::create_empty_buffer(app)
+        app::get_empty_buffer(&mut app.contents)
     };
 
-    preview::set_buffer_id(app, preview_id);
+    preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
+
+    let preview_vp = app::get_focused_directory_viewports_mut(&mut app.window).2;
+    preview_vp.cursor = Cursor::default();
+    preview_vp.hide_cursor_line = true;
+    preview_vp.horizontal_index = 0;
+    preview_vp.vertical_index = 0;
+
+    cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
 
     actions
 }
@@ -61,7 +66,7 @@ fn set_preview_buffer_for_selection(
 pub fn copy_to_clipboard(
     register: &mut Register,
     buffer: &DirectoryBuffer,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
 ) -> Vec<Action> {
     if let Some(path) = model::get_selected_path(buffer, cursor) {
         if let Some(clipboard) = register.clipboard.as_mut() {

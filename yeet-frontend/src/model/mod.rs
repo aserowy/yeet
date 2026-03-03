@@ -27,26 +27,25 @@ pub struct Model {
 }
 
 pub struct App {
-    pub buffers: HashMap<usize, Buffer>,
     pub commandline: CommandLine,
-    pub latest_buffer_id: usize,
+    pub contents: Contents,
     pub window: Window,
 }
 
 impl Default for App {
     fn default() -> Self {
         let mut buffers = HashMap::new();
-        buffers.insert(1, Buffer::Directory(Default::default()));
-        buffers.insert(2, Buffer::Directory(Default::default()));
-        buffers.insert(3, Buffer::Directory(Default::default()));
+        buffers.insert(1, Buffer::Empty);
 
         Self {
-            buffers,
             commandline: Default::default(),
-            latest_buffer_id: 3,
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 1,
+            },
             window: Window::Directory(
                 ViewPort {
-                    buffer_id: 2,
+                    buffer_id: 1,
                     hide_cursor: true,
                     show_border: true,
                     ..Default::default()
@@ -60,7 +59,7 @@ impl Default for App {
                     ..Default::default()
                 },
                 ViewPort {
-                    buffer_id: 3,
+                    buffer_id: 1,
                     hide_cursor: true,
                     hide_cursor_line: true,
                     ..Default::default()
@@ -68,6 +67,11 @@ impl Default for App {
             ),
         }
     }
+}
+
+pub struct Contents {
+    pub buffers: HashMap<usize, Buffer>,
+    pub latest_buffer_id: usize,
 }
 
 #[allow(dead_code, clippy::large_enum_variant)]
@@ -217,21 +221,20 @@ pub enum DirectoryBufferState {
     Uninitialized,
 }
 
-pub fn get_selected_path(buffer: &DirectoryBuffer, cursor: Option<&Cursor>) -> Option<PathBuf> {
+pub fn get_selected_path(buffer: &DirectoryBuffer, cursor: &Cursor) -> Option<PathBuf> {
     get_selected_path_with_base(&buffer.path, &buffer.buffer, cursor, |path| path.exists())
 }
 
 pub fn get_selected_path_with_base(
     base_path: &Path,
     text_buffer: &TextBuffer,
-    cursor: Option<&Cursor>,
+    cursor: &Cursor,
     exists: impl Fn(&Path) -> bool,
 ) -> Option<PathBuf> {
     if text_buffer.lines.is_empty() {
         return None;
     }
 
-    let cursor = cursor?;
     let current = &text_buffer.lines.get(cursor.vertical_index)?;
     if current.content.is_empty() {
         return None;

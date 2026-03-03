@@ -48,7 +48,7 @@ pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
     }
 
     sign::unset_sign_for_paths(
-        app.buffers.values_mut().collect(),
+        app.contents.buffers.values_mut().collect(),
         removed_paths,
         QFIX_SIGN_ID,
     );
@@ -187,13 +187,13 @@ pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
     }
 
     sign::set_sign_for_paths(
-        app.buffers.values_mut().collect(),
+        app.contents.buffers.values_mut().collect(),
         added_paths,
         QFIX_SIGN_ID,
     );
 
     sign::unset_sign_for_paths(
-        app.buffers.values_mut().collect(),
+        app.contents.buffers.values_mut().collect(),
         removed_paths,
         QFIX_SIGN_ID,
     );

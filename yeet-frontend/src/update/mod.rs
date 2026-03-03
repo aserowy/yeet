@@ -117,9 +117,11 @@ fn update_with_message(
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) | Message::RgResult(paths) => {
-            qfix::add(&mut state.qfix, app.buffers.values_mut().collect(), paths)
-        }
+        Message::FdResult(paths) | Message::RgResult(paths) => qfix::add(
+            &mut state.qfix,
+            app.contents.buffers.values_mut().collect(),
+            paths,
+        ),
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => {
             if state.modes.current == Mode::Insert {
@@ -180,12 +182,14 @@ pub fn update_with_keymap_message(
     match msg {
         KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, msg),
         KeymapMessage::ClearSearchHighlight => {
-            search::clear(app.buffers.values_mut().collect());
+            search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
         }
-        KeymapMessage::DeleteMarks(mrks) => {
-            mark::delete(&mut state.marks, app.buffers.values_mut().collect(), mrks)
-        }
+        KeymapMessage::DeleteMarks(mrks) => mark::delete(
+            &mut state.marks,
+            app.contents.buffers.values_mut().collect(),
+            mrks,
+        ),
         KeymapMessage::ExecuteCommand => {
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
@@ -221,12 +225,13 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
-            let (_, current_id, _) = app::directory_buffer_ids(app);
-            let buffer = match app.buffers.get(&current_id) {
-                Some(Buffer::Directory(it)) => it,
+            let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+            let directory = match current_buffer {
+                Buffer::Directory(directory) => directory,
                 _ => return Vec::new(),
             };
-            selection::copy_to_clipboard(&mut state.register, buffer, Some(&buffer.buffer.cursor))
+
+            selection::copy_to_clipboard(&mut state.register, directory, &current_vp.cursor)
         }
         KeymapMessage::YankToJunkYard(repeat) => junkyard::yank(app, &mut state.junk, repeat),
     }

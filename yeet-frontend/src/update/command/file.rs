@@ -5,7 +5,7 @@ use yeet_keymap::message::KeymapMessage;
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{mark::Marks, Buffer},
+    model::{mark::Marks, App, Buffer},
     task::Task,
     update::app,
 };
@@ -40,9 +40,9 @@ pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Actio
     }
 }
 
-pub fn refresh(app: &mut crate::model::App) -> Vec<Action> {
-    let (_, current, preview) = app::directory_buffers(app);
-    let preview_path = match preview {
+pub fn refresh(app: &mut App) -> Vec<Action> {
+    let (_, buffer) = app::get_focused_current_mut(app);
+    let path = match buffer {
         Buffer::Directory(buffer) => buffer.resolve_path(),
         Buffer::Image(buffer) => buffer.resolve_path(),
         Buffer::Content(buffer) => buffer.resolve_path(),
@@ -50,10 +50,8 @@ pub fn refresh(app: &mut crate::model::App) -> Vec<Action> {
         Buffer::Empty => None,
     };
 
-    let navigation = if let Some(path) = preview_path {
-        KeymapMessage::NavigateToPathAsPreview(path.to_path_buf())
-    } else if let Buffer::Directory(buffer) = current {
-        KeymapMessage::NavigateToPath(buffer.path.clone())
+    let navigation = if let Some(path) = path {
+        KeymapMessage::NavigateToPath(path.to_path_buf())
     } else {
         return Vec::new();
     };

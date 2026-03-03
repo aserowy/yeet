@@ -104,7 +104,7 @@ pub fn modify(
                     .last()
                     .map(|bl| bl.content.to_stripped_string());
 
-                search::search_in_buffers(app.buffers.values_mut().collect(), term);
+                search::buffers(app.contents.buffers.values_mut().collect(), term);
             }
 
             actions
@@ -189,7 +189,7 @@ pub fn update_on_execute(
                 .map(|bl| (direction.clone(), bl.content.to_stripped_string()));
 
             if register.searched.is_none() {
-                search::clear(app.buffers.values_mut().collect());
+                search::clear(app.contents.buffers.values_mut().collect());
             }
 
             vec![
@@ -219,7 +219,7 @@ pub fn update_on_execute(
 pub fn leave(app: &mut App, register: &mut Register, modes: &ModeState) -> Vec<Action> {
     if matches!(modes.current, Mode::Command(CommandMode::Search(_))) {
         let content = get_register(register, &'/');
-        search::search_in_buffers(app.buffers.values_mut().collect(), content);
+        search::buffers(app.contents.buffers.values_mut().collect(), content);
     }
 
     let message = BufferMessage::SetContent(vec![]);

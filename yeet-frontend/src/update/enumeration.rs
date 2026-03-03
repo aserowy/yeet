@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, slice};
 
 use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
-    model::{ansi::Ansi, BufferLine, Mode},
+    model::{ansi::Ansi, viewport::ViewPort, BufferLine, Mode},
 };
 
 use crate::{
@@ -10,22 +10,23 @@ use crate::{
     event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
     update::{
-        app,
-        cursor::{set_cursor_index_to_selection, set_cursor_index_with_history},
-        selection,
+        app, cursor, selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
 
-#[tracing::instrument(skip(state, app, contents))]
+#[tracing::instrument(skip(state, app, content))]
 pub fn change(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    contents: &[(ContentKind, String)],
+    content: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    for (_, buffer) in app.buffers.iter_mut() {
+    let App {
+        contents, window, ..
+    } = app;
+    for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
                 *buffer = Buffer::Directory(DirectoryBuffer {
@@ -40,12 +41,13 @@ pub fn change(
                 continue;
             }
 
-            set_directory_content(state, buffer, path, contents, selection);
+            let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+            set_directory_content(state, viewport, buffer, path, content, selection);
         }
     }
 
-    let (_, current_id, preview_id) = app::directory_buffer_ids(app);
-    let current = match app.buffers.get(&current_id) {
+    let (_, current_id, preview_id) = app::get_focused_directory_buffer_ids(app);
+    let current = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer,
         _ => return Vec::new(),
     };
@@ -55,7 +57,7 @@ pub fn change(
 
     let mut actions = Vec::new();
 
-    let preview_is_empty = matches!(app.buffers.get(&preview_id), Some(Buffer::Empty));
+    let preview_is_empty = matches!(app.contents.buffers.get(&preview_id), Some(Buffer::Empty));
     if preview_is_empty {
         actions.extend(selection::refresh_preview_from_current_selection(
             app,
@@ -67,12 +69,12 @@ pub fn change(
     actions
 }
 
-#[tracing::instrument(skip(state, app, contents))]
+#[tracing::instrument(skip(state, app, content))]
 pub fn finish(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    contents: &[(ContentKind, String)],
+    content: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
     if state.modes.current != Mode::Navigation {
@@ -80,7 +82,10 @@ pub fn finish(
     }
 
     let mut actions = Vec::new();
-    for buffer in app.buffers.values_mut() {
+    let App {
+        contents, window, ..
+    } = app;
+    for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
                 *buffer = Buffer::Directory(DirectoryBuffer {
@@ -99,38 +104,39 @@ pub fn finish(
             continue;
         }
 
-        set_directory_content(state, buffer, path, contents, selection);
-
-        yeet_buffer::update(
-            None,
-            &state.modes.current,
-            &mut buffer.buffer,
-            std::slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+        let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+        set_directory_content(
+            state,
+            viewport.as_deref_mut(),
+            buffer,
+            path,
+            content,
+            selection,
         );
 
-        if let Some(selection) = selection {
-            if !set_cursor_index_to_selection(
-                None,
+        yeet_buffer::update(
+            viewport.as_deref_mut(),
+            &state.modes.current,
+            &mut buffer.buffer,
+            slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+        );
+
+        if let Some(viewport) = viewport.as_deref_mut() {
+            cursor::set_cursor_index_for_directory(
+                buffer,
+                &state.history,
+                viewport,
                 &state.modes.current,
-                &mut buffer.buffer,
-                selection,
-            ) {
-                set_cursor_index_with_history(
-                    &state.history,
-                    None,
-                    &state.modes.current,
-                    &mut buffer.buffer,
-                    path,
-                );
-            }
+                selection.as_deref(),
+            );
         }
 
         let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
         yeet_buffer::update(
-            None,
+            viewport,
             &state.modes.current,
             &mut buffer.buffer,
-            std::slice::from_ref(&message),
+            slice::from_ref(&message),
         );
 
         buffer.state = DirectoryBufferState::Ready;
@@ -141,8 +147,8 @@ pub fn finish(
         );
     }
 
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let is_current_buffer = match app.buffers.get(&current_id) {
+    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
+    let is_current_buffer = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer.path.as_path() == path,
         _ => false,
     };
@@ -160,6 +166,7 @@ pub fn finish(
 
 fn set_directory_content(
     state: &mut State,
+    mut viewport: Option<&mut ViewPort>,
     buffer: &mut DirectoryBuffer,
     path: &PathBuf,
     contents: &[(ContentKind, String)],
@@ -181,19 +188,20 @@ fn set_directory_content(
 
     let message = BufferMessage::SetContent(content);
     yeet_buffer::update(
-        None,
+        viewport.as_deref_mut(),
         &state.modes.current,
         &mut buffer.buffer,
-        std::slice::from_ref(&message),
+        slice::from_ref(&message),
     );
 
     if is_first_changed_event {
-        if let Some(selection) = selection {
-            if set_cursor_index_to_selection(
-                None,
+        if let Some(viewport) = viewport {
+            if cursor::set_cursor_index_for_directory(
+                buffer,
+                &state.history,
+                viewport,
                 &state.modes.current,
-                &mut buffer.buffer,
-                selection,
+                selection.as_deref(),
             ) {
                 tracing::trace!("setting cursor index from selection: {:?}", selection);
             }
@@ -222,6 +230,8 @@ pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
 
 #[cfg(test)]
 mod test {
+    use std::env;
+
     use yeet_buffer::model::{ansi::Ansi, Cursor, TextBuffer};
 
     use crate::{
@@ -234,7 +244,7 @@ mod test {
     #[test]
     fn change_loads_preview_when_empty_for_current() {
         let mut app = App::default();
-        let current_path = std::env::current_dir().expect("get current dir");
+        let current_path = env::current_dir().expect("get current dir");
         let selected_file = current_path.join("Cargo.toml");
 
         let current_buffer = DirectoryBuffer {
@@ -244,22 +254,26 @@ mod test {
                     content: Ansi::new("Cargo.toml"),
                     ..Default::default()
                 }],
-                cursor: Cursor {
-                    vertical_index: 0,
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             ..Default::default()
         };
 
-        app.buffers.insert(1, Buffer::Directory(current_buffer));
-        app.buffers.insert(2, Buffer::Directory(Default::default()));
-        app.buffers.insert(3, Buffer::Empty);
+        app.contents
+            .buffers
+            .insert(1, Buffer::Directory(current_buffer));
+        app.contents
+            .buffers
+            .insert(2, Buffer::Directory(Default::default()));
+        app.contents.buffers.insert(3, Buffer::Empty);
         app.window = Window::Directory(Default::default(), Default::default(), Default::default());
         if let Window::Directory(parent, current, preview) = &mut app.window {
             parent.buffer_id = 2;
             current.buffer_id = 1;
+            current.cursor = Cursor {
+                vertical_index: 0,
+                ..Default::default()
+            };
             preview.buffer_id = 3;
         }
 
@@ -277,9 +291,9 @@ mod test {
             [Action::Load(path, _)] if path == &selected_file
         ));
 
-        let (_, _, preview_id) = crate::update::app::directory_buffer_ids(&app);
+        let (_, _, preview_id) = crate::update::app::get_focused_directory_buffer_ids(&app);
         assert!(matches!(
-            app.buffers.get(&preview_id),
+            app.contents.buffers.get(&preview_id),
             Some(Buffer::PathReference(path)) if path == &selected_file
         ));
     }

@@ -135,8 +135,8 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
 }
 
 pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let buffer = match app.buffers.get(&current_id) {
+    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
+    let buffer = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
     };
@@ -156,21 +156,21 @@ pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> V
 }
 
 pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) -> Vec<Action> {
-    let (_, current_id, _) = app::directory_buffer_ids(app);
-    let buffer = match app.buffers.get(&current_id) {
-        Some(Buffer::Directory(it)) => it,
+    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let directory = match current_buffer {
+        Buffer::Directory(directory) => directory,
         _ => return Vec::new(),
     };
 
-    let current_buffer = &buffer.buffer;
-    if current_buffer.lines.is_empty() {
+    let buffer = &directory.buffer;
+    if buffer.lines.is_empty() {
         Vec::new()
-    } else if let Some(cursor) = Some(&buffer.buffer.cursor) {
+    } else {
         let mut paths = Vec::new();
         for rpt in 0..*repeat {
-            let line_index = cursor.vertical_index + rpt;
-            if let Some(line) = current_buffer.lines.get(line_index) {
-                let target = buffer.path.join(line.content.to_stripped_string());
+            let line_index = current_vp.cursor.vertical_index + rpt;
+            if let Some(line) = buffer.lines.get(line_index) {
+                let target = directory.path.join(line.content.to_stripped_string());
 
                 paths.push(target);
             }
@@ -189,8 +189,6 @@ pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) ->
         }
 
         actions
-    } else {
-        Vec::new()
     }
 }
 

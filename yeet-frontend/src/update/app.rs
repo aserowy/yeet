@@ -1,11 +1,10 @@
 use std::{cmp::Ordering, path::Path};
 
-use yeet_buffer::model::{viewport::ViewPort, Mode};
+use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
-    model::{App, Buffer, Window},
-    update::cursor,
+    model::{App, Buffer, Contents, Window},
 };
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
@@ -17,74 +16,60 @@ pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
         }
     };
 
-    match app.buffers.get_mut(&focused_id) {
+    match app.contents.buffers.get_mut(&focused_id) {
         Some(it) => (vp, it),
         None => todo!(),
     }
 }
 
-pub fn get_next_buffer_id(app: &mut App) -> usize {
-    let mut next_id = if app.latest_buffer_id >= 9999 {
-        1
-    } else {
-        app.latest_buffer_id + 1
-    };
-
-    let mut running_ids: Vec<_> = app.buffers.keys().collect();
-    running_ids.sort();
-
-    for id in running_ids {
-        match next_id.cmp(id) {
-            Ordering::Equal => next_id += 1,
-            Ordering::Greater => break,
-            Ordering::Less => {}
-        }
-    }
-
-    app.latest_buffer_id = next_id;
-
-    next_id
-}
-
-pub fn directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
+pub fn get_focused_directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
         Window::Horizontal(_, _) => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
     }
 }
 
-pub fn directory_viewports_mut(app: &mut App) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
-    match &mut app.window {
+pub fn get_focused_directory_viewports_mut(
+    window: &mut Window,
+) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
+    match window {
         Window::Horizontal(_, _) => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
     }
 }
 
-pub fn directory_buffer_ids(app: &App) -> (usize, usize, usize) {
-    let (parent, current, preview) = directory_viewports(app);
+pub fn get_focused_directory_buffer_ids(app: &App) -> (usize, usize, usize) {
+    let (parent, current, preview) = get_focused_directory_viewports(app);
     (parent.buffer_id, current.buffer_id, preview.buffer_id)
 }
 
-pub fn directory_buffers(app: &App) -> (&Buffer, &Buffer, &Buffer) {
-    let (parent_id, current_id, preview_id) = directory_buffer_ids(app);
-    if parent_id == current_id || parent_id == preview_id || current_id == preview_id {
-        todo!()
+pub fn get_viewport_by_buffer_id_mut(
+    window: &mut Window,
+    buffer_id: usize,
+) -> Option<&mut ViewPort> {
+    match window {
+        Window::Horizontal(_, _) => todo!(),
+        Window::Directory(parent, current, preview) => {
+            if parent.buffer_id == buffer_id {
+                Some(parent)
+            } else if current.buffer_id == buffer_id {
+                Some(current)
+            } else if preview.buffer_id == buffer_id {
+                Some(preview)
+            } else {
+                None
+            }
+        }
     }
-
-    let parent = app.buffers.get(&parent_id).expect("parent buffer");
-    let current = app.buffers.get(&current_id).expect("current buffer");
-    let preview = app.buffers.get(&preview_id).expect("preview buffer");
-
-    (parent, current, preview)
 }
 
-#[tracing::instrument(skip(app))]
-pub fn get_or_create_directory_buffer(
-    app: &mut App,
+#[tracing::instrument(skip(contents))]
+pub fn resolve_buffer(
+    contents: &mut Contents,
     path: &Path,
     selection: &Option<String>,
 ) -> (usize, Option<Action>) {
-    let matching_ids: Vec<(usize, &'static str)> = app
+    let matching_ids: Vec<(usize, &'static str)> = contents
         .buffers
         .iter()
         .filter_map(|(id, buffer)| match buffer {
@@ -98,7 +83,7 @@ pub fn get_or_create_directory_buffer(
 
     tracing::trace!(
         path = %path.display(),
-        total_buffers = app.buffers.len(),
+        total_buffers = contents.buffers.len(),
         matching_count = matching_ids.len(),
         "checking for existing buffer"
     );
@@ -119,24 +104,12 @@ pub fn get_or_create_directory_buffer(
             "found existing buffer"
         );
 
-        if let Some(selection) = selection {
-            let mut buffer = app.buffers.get_mut(id).expect("buffer should exist");
-            if let Buffer::Directory(buffer) = &mut buffer {
-                cursor::set_cursor_index_to_selection(
-                    None,
-                    &Mode::Normal,
-                    &mut buffer.buffer,
-                    selection,
-                );
-            }
-        }
-
         return (*id, None);
     }
 
-    let id = get_next_buffer_id(app);
+    let id = get_next_buffer_id(contents);
 
-    let existing_paths: Vec<_> = app
+    let existing_paths: Vec<_> = contents
         .buffers
         .iter()
         .filter_map(|(buf_id, buffer)| {
@@ -154,12 +127,13 @@ pub fn get_or_create_directory_buffer(
     tracing::debug!(
         id = %id,
         path = %path.display(),
-        total_buffers = app.buffers.len(),
+        total_buffers = contents.buffers.len(),
         existing_buffers = ?existing_paths,
         "created new buffer"
     );
 
-    app.buffers
+    contents
+        .buffers
         .insert(id, Buffer::PathReference(path.to_path_buf()));
 
     (
@@ -168,16 +142,42 @@ pub fn get_or_create_directory_buffer(
     )
 }
 
-pub fn create_empty_buffer(app: &mut App) -> usize {
-    let existing_id = app.buffers.iter().find_map(|(id, buffer)| match buffer {
-        Buffer::Empty => Some(*id),
-        _ => None,
-    });
+pub fn get_empty_buffer(contents: &mut Contents) -> usize {
+    let existing_id = contents
+        .buffers
+        .iter()
+        .find_map(|(id, buffer)| match buffer {
+            Buffer::Empty => Some(*id),
+            _ => None,
+        });
 
     if let Some(id) = existing_id {
         return id;
     }
-    let id = get_next_buffer_id(app);
-    app.buffers.insert(id, Buffer::Empty);
+    let id = get_next_buffer_id(contents);
+    contents.buffers.insert(id, Buffer::Empty);
     id
+}
+
+pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
+    let mut next_id = if contents.latest_buffer_id >= 9999 {
+        1
+    } else {
+        contents.latest_buffer_id + 1
+    };
+
+    let mut running_ids: Vec<_> = contents.buffers.keys().collect();
+    running_ids.sort();
+
+    for id in running_ids {
+        match next_id.cmp(id) {
+            Ordering::Equal => next_id += 1,
+            Ordering::Greater => break,
+            Ordering::Less => {}
+        }
+    }
+
+    contents.latest_buffer_id = next_id;
+
+    next_id
 }

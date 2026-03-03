@@ -42,10 +42,12 @@ fn update_buffer(
         // TODO: repeat actions by count when switching from insert to normal
         // count is entered before going into insert. ChangeMode with count? Or Insert with count?
         BufferMessage::AddLine(line, sort) => {
-            let current_selection = buffer
-                .lines
-                .get(buffer.cursor.vertical_index)
-                .map(|line| line.content.to_stripped_string());
+            let current_selection = viewport.as_deref().and_then(|vp| {
+                buffer
+                    .lines
+                    .get(vp.cursor.vertical_index)
+                    .map(|line| line.content.to_stripped_string())
+            });
 
             buffer.lines.push(line.clone());
             update_buffer(
@@ -57,7 +59,7 @@ fn update_buffer(
 
             if let Some(current_selection) = current_selection {
                 update_buffer(
-                    viewport.as_deref_mut(),
+                    viewport,
                     mode,
                     buffer,
                     &BufferMessage::SetCursorToLineContent(current_selection),
@@ -69,31 +71,46 @@ fn update_buffer(
             if from == &Mode::Insert && to != &Mode::Insert {
                 buffer.undo.close_transaction();
 
-                cursor::update_by_direction(mode, buffer, &1, &CursorDirection::Left);
                 if let Some(viewport) = viewport {
+                    cursor::update_by_direction(
+                        mode,
+                        &mut viewport.cursor,
+                        buffer,
+                        &1,
+                        &CursorDirection::Left,
+                    );
                     viewport::update_by_cursor(viewport, buffer);
                 }
             }
             Vec::new()
         }
         BufferMessage::Modification(count, modification) => {
-            let changes = modification::update(mode, buffer, count, modification);
             if let Some(viewport) = viewport {
+                let changes =
+                    modification::update(mode, &mut viewport.cursor, buffer, count, modification);
                 viewport::update_by_cursor(viewport, buffer);
-            }
 
-            if let Some(changes) = changes {
-                buffer.undo.add(mode, changes);
+                if let Some(changes) = changes {
+                    buffer.undo.add(mode, changes);
+                }
             }
             Vec::new()
         }
         BufferMessage::MoveCursor(count, direction) => {
-            let result = cursor::update_by_direction(mode, buffer, count, direction);
             if let Some(viewport) = viewport {
+                let result = cursor::update_by_direction(
+                    mode,
+                    &mut viewport.cursor,
+                    buffer,
+                    count,
+                    direction,
+                );
                 viewport::update_by_cursor(viewport, buffer);
-            }
 
-            result
+                result
+            } else {
+                Vec::new()
+            }
             // TODO: history::add_history_entry(&mut model.history, selected.as_path());
         }
         BufferMessage::MoveViewPort(direction) => {
@@ -108,34 +125,38 @@ fn update_buffer(
             Vec::new()
         }
         BufferMessage::RemoveLine(index) => {
-            if *index < buffer.cursor.vertical_index {
-                buffer.cursor.vertical_index = buffer.cursor.vertical_index.saturating_sub(1);
+            if let Some(viewport) = viewport.as_deref_mut() {
+                if *index < viewport.cursor.vertical_index {
+                    viewport.cursor.vertical_index =
+                        viewport.cursor.vertical_index.saturating_sub(1);
+                }
             }
 
             buffer.lines.remove(*index);
 
-            cursor::set_to_inbound_position(buffer, mode);
             if let Some(viewport) = viewport {
+                cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
 
             Vec::new()
         }
         BufferMessage::ResetCursor => {
-            buffer.cursor.vertical_index = 0;
-
-            buffer.cursor.horizontal_index = match &buffer.cursor.horizontal_index {
-                CursorPosition::Absolute {
-                    current: _,
-                    expanded: _,
-                } => CursorPosition::Absolute {
-                    current: 0,
-                    expanded: 0,
-                },
-                CursorPosition::End => CursorPosition::End,
-                CursorPosition::None => CursorPosition::None,
-            };
             if let Some(viewport) = viewport {
+                viewport.cursor.vertical_index = 0;
+
+                viewport.cursor.horizontal_index = match &viewport.cursor.horizontal_index {
+                    CursorPosition::Absolute {
+                        current: _,
+                        expanded: _,
+                    } => CursorPosition::Absolute {
+                        current: 0,
+                        expanded: 0,
+                    },
+                    CursorPosition::End => CursorPosition::End,
+                    CursorPosition::None => CursorPosition::None,
+                };
+
                 viewport.horizontal_index = 0;
                 viewport.vertical_index = 0;
 
@@ -151,32 +172,32 @@ fn update_buffer(
         BufferMessage::SetContent(content) => {
             buffer.lines = content.to_vec();
 
-            cursor::set_to_inbound_position(buffer, mode);
             if let Some(viewport) = viewport {
+                cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
 
             Vec::new()
         }
         BufferMessage::SetCursorToLineContent(content) => {
-            let line = buffer
-                .lines
-                .iter()
-                .enumerate()
-                .find(|(_, line)| &line.content.to_stripped_string() == content);
+            if let Some(viewport) = viewport {
+                let line = buffer
+                    .lines
+                    .iter()
+                    .enumerate()
+                    .find(|(_, line)| &line.content.to_stripped_string() == content);
 
-            if let Some((index, _)) = line {
-                buffer.cursor.vertical_index = index;
-                if let Some(viewport) = viewport.as_mut() {
+                if let Some((index, _)) = line {
+                    viewport.cursor.vertical_index = index;
                     viewport.hide_cursor_line = false;
-                }
 
-                cursor::set_to_inbound_position(buffer, mode);
-                if let Some(viewport) = viewport {
+                    cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                     viewport::update_by_cursor(viewport, buffer);
-                }
 
-                vec![BufferResult::CursorPositionChanged]
+                    vec![BufferResult::CursorPositionChanged]
+                } else {
+                    Vec::new()
+                }
             } else {
                 Vec::new()
             }
@@ -184,8 +205,8 @@ fn update_buffer(
         BufferMessage::SortContent(sort) => {
             // TODO: cursor should stay on current selection
             buffer.lines.sort_unstable_by(sort);
-            cursor::set_to_inbound_position(buffer, mode);
             if let Some(viewport) = viewport {
+                cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
                 viewport::update_by_cursor(viewport, buffer);
             }
             Vec::new()

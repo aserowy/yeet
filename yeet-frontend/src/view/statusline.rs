@@ -7,23 +7,26 @@ use ratatui::{
     widgets::{Block, Paragraph},
     Frame,
 };
-use yeet_buffer::model::undo::{self, BufferChanged};
+use yeet_buffer::model::{
+    undo::{self, BufferChanged},
+    viewport::ViewPort,
+};
 
 use crate::model::{self, Buffer, DirectoryBuffer};
 
-pub fn view(current: &Buffer, frame: &mut Frame, rect: Rect) {
+pub fn view(current: &Buffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
     match current {
-        Buffer::Directory(it) => filetree_status(it, frame, rect),
+        Buffer::Directory(it) => filetree_status(it, viewport, frame, rect),
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
 }
 
-fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
-    let selected = model::get_selected_path(buffer, Some(&buffer.buffer.cursor));
+fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
+    let selected = model::get_selected_path(buffer, &viewport.cursor);
     let permissions = get_permissions(&selected);
 
     let changes = get_changes_content(buffer);
-    let position = get_position_content(buffer);
+    let position = get_position_content(buffer, viewport);
 
     let content = buffer.path.to_str().unwrap_or("");
     let style = Style::default().fg(Color::Gray);
@@ -54,9 +57,9 @@ fn filetree_status(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
     frame.render_widget(Paragraph::new(position), layout[6]);
 }
 
-fn get_position_content<'a>(buffer: &'a DirectoryBuffer) -> Line<'a> {
+fn get_position_content<'a>(buffer: &'a DirectoryBuffer, viewport: &ViewPort) -> Line<'a> {
     let count = buffer.buffer.lines.len();
-    let mut position = buffer.buffer.cursor.vertical_index + 1;
+    let mut position = viewport.cursor.vertical_index + 1;
 
     let mut content = Vec::new();
     if count == 0 {

@@ -11,27 +11,27 @@ use crate::{
 use super::{app, sign};
 
 pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
-    let buffer = match app::get_focused_current_mut(app) {
-        (_, Buffer::Directory(it)) => it,
+    let (vp, buffer) = match app::get_focused_current_mut(app) {
+        (vp, Buffer::Directory(it)) => (vp, it),
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
         (_, Buffer::PathReference(_)) => return Vec::new(),
         (_, Buffer::Empty) => return Vec::new(),
     };
 
-    let selected = model::get_selected_path(buffer, Some(&buffer.buffer.cursor));
+    let selected = model::get_selected_path(buffer, &vp.cursor);
     if let Some(selected) = selected {
         let removed = marks.entries.insert(char, selected.clone());
         if let Some(removed) = removed {
             sign::unset_sign_for_paths(
-                app.buffers.values_mut().collect(),
+                app.contents.buffers.values_mut().collect(),
                 vec![removed],
                 MARK_SIGN_ID,
             );
         }
 
         sign::set_sign_for_paths(
-            app.buffers.values_mut().collect(),
+            app.contents.buffers.values_mut().collect(),
             vec![selected],
             MARK_SIGN_ID,
         );
