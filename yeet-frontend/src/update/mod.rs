@@ -271,7 +271,7 @@ pub fn update_with_buffer_message(
                 viewport::relocate(app, &state.history, &state.modes.current, mtn)
             }
         },
-        BufferMessage::SaveBuffer => save::changes(app, &mut state.junk, &state.modes.current),
+        BufferMessage::SaveBuffer => save::current(app, &mut state.junk, &state.modes.current),
 
         BufferMessage::AddLine(_, _)
         | BufferMessage::RemoveLine(_)

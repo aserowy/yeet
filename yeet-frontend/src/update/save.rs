@@ -16,7 +16,7 @@ use crate::{
 use super::{app, junkyard::trash_to_junkyard};
 
 #[tracing::instrument(skip(app))]
-pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
+pub fn current(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     let (vp, buffer) = match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
         (vp, Buffer::Directory(it)) => (vp, it),
         (_vp, Buffer::Image(_)) => return Vec::new(),
