@@ -908,19 +908,20 @@ focus::change(&mut app, &FocusDirection::Down);
 
 # Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit
 
-**Goal**: `:q` closes the focused window in a split (collapsing the `Horizontal`). If only one window remains, `:q` shuts down yeet. `:qa` quits regardless of windows. `:qa!` force-quits.
+**Goal**: `:q` closes the focused window in a split (collapsing the `Horizontal`). If only one window remains, `:q` shuts down yeet. `:qa` quits regardless of windows. `:qa!` force-quits. Like vim, `:q` refuses to close or quit when there are unsaved changes in any directory buffer — the user must use `:q!` to force it.
 
 **State**: `planned`
 
-**Motivation**: Users need a way to close the task window and return to the normal single-pane view. The `:q` semantics match vim's behavior — close current window, or quit if it's the last one.
+**Motivation**: Users need a way to close the task window and return to the normal single-pane view. The `:q` semantics match vim's behavior — close current window, or quit if it's the last one. The unsaved changes guard prevents accidental data loss (matching vim's `E37: No write since last change` behavior).
 
 ## Requirements
 
 - `:q` on a `Horizontal` split: close the focused child, collapse to the remaining child, clean up closed window's buffers.
 - `:q` on a single window: emit `Quit(FailOnRunningTasks)` (existing behavior).
-- `:qa` always emits `Quit(FailOnRunningTasks)` regardless of window count.
-- `:qa!` always emits `Quit(Force)`.
-- `:q!` force-closes focused window if split, otherwise force quits.
+- **`:q` refuses to close or quit if any `Buffer::Directory` in `contents.buffers` has pending changes** (i.e., `directory_buffer.buffer.undo.get_uncommited_changes()` is non-empty). Instead, print an error message (e.g., `"No write since last change (add ! to override)"`) and return without closing.
+- `:q!` force-closes focused window if split, otherwise force quits. **`:q!` bypasses the unsaved changes check.**
+- `:qa` always emits `Quit(FailOnRunningTasks)` regardless of window count. **`:qa` also refuses if any directory buffer has unsaved changes** — same guard as `:q`.
+- `:qa!` always emits `Quit(Force)`. **`:qa!` bypasses the unsaved changes check.**
 - `Window` has a `Default` impl for `std::mem::take`.
 - If task window is removed, remove task buffer from `app.contents.buffers` (without removing buffers still referenced by the kept window).
 - Other buffer types should still get handled like they are currently implemented!
@@ -933,9 +934,13 @@ focus::change(&mut app, &FocusDirection::Down);
 ## Context
 
 - @yeet-frontend/src/update/command/mod.rs — `execute` function, existing `("q", "")` and `("q!", "")` arms.
-- @yeet-frontend/src/model/mod.rs — `App`, `Window`, `Contents`, `SplitFocus`.
+- @yeet-frontend/src/model/mod.rs — `App`, `Window`, `Contents`, `SplitFocus`, `DirectoryBuffer`.
 - @yeet-frontend/src/action.rs — `Action`, `action::emit_keymap`.
 - @yeet-keymap/src/message.rs — `KeymapMessage::Quit(QuitMode)`, `QuitMode`.
+- @yeet-buffer/src/model/undo.rs — `Undo::get_uncommited_changes()` returns `Vec<BufferChanged>`, empty means no unsaved changes.
+- @yeet-buffer/src/model/mod.rs — `TextBuffer.undo` field.
+- @yeet-frontend/src/update/save.rs — `save::all()` and `save::current()`, `save_directory_buffer()` which calls `undo.save()`.
+- @yeet-frontend/src/view/statusline.rs — `get_changes_content()` already uses `get_uncommited_changes()` for display — reference for the pattern.
 - @AGENTS.md — build/test/lint commands.
 
 ## Implementation Plan
@@ -950,13 +955,39 @@ focus::change(&mut app, &FocusDirection::Down);
    }
    ```
 
-2. **Modify `:q` dispatch** in `yeet-frontend/src/update/command/mod.rs`:
-   - Check if `app.window` is `Horizontal`. If so, call `close_focused_window(app)`. Otherwise, emit `Quit(FailOnRunningTasks)`.
-
-3. **Add `close_focused_window` helper**:
+2. **Add `has_unsaved_changes` helper** in `yeet-frontend/src/update/command/mod.rs` (or a suitable shared location):
 
    ```rust
-   fn close_focused_window(app: &mut App) -> Vec<Action> {
+   fn has_unsaved_changes(contents: &Contents) -> bool {
+       contents.buffers.values().any(|buf| {
+           if let Buffer::Directory(dir) = buf {
+               !dir.buffer.undo.get_uncommited_changes().is_empty()
+           } else {
+               false
+           }
+       })
+   }
+   ```
+
+   This iterates all buffers in the content map and checks if any `Directory` buffer has uncommitted changes. Only `Buffer::Directory` is checked — `Buffer::Tasks` and other types have no save semantics.
+
+3. **Modify `:q` dispatch** in `yeet-frontend/src/update/command/mod.rs`:
+   - First check `has_unsaved_changes(&app.contents)`. If true, print the error message and return early (do not close or quit).
+   - Otherwise, check if `app.window` is `Horizontal`. If so, call `close_focused_window(app)`. Otherwise, emit `Quit(FailOnRunningTasks)`.
+
+   ```rust
+   ("q", "") => {
+       if has_unsaved_changes(&app.contents) {
+           return print_error("No write since last change (add ! to override)");
+       }
+       close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks)
+   }
+   ```
+
+4. **Add `close_focused_window_or_quit` helper**:
+
+   ```rust
+   fn close_focused_window_or_quit(app: &mut App, quit_mode: QuitMode) -> Vec<Action> {
        let old_window = std::mem::take(&mut app.window);
        match old_window {
            Window::Horizontal { first, second, focus } => {
@@ -966,52 +997,91 @@ focus::change(&mut app, &FocusDirection::Down);
                };
                cleanup_window_buffers(&mut app.contents, &closed);
                app.window = kept;
-               // Show cursor on new focused leaf
                Vec::new()
            }
            other => {
                app.window = other;
-               vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks))]
+               vec![action::emit_keymap(KeymapMessage::Quit(quit_mode))]
            }
        }
    }
    ```
 
-4. **Implement `cleanup_window_buffers`**:
+5. **Implement `cleanup_window_buffers`**:
    - For `Window::Tasks(vp)`: remove `vp.buffer_id` from `app.contents.buffers`.
    - For `Window::Directory(p, c, pr)`: remove all three buffer_ids. Be careful not to remove buffers still referenced by the kept window — check the kept window's buffer_ids first.
 
-5. **Add `:qa` and `:qa!`** match arms:
-   - `("qa", "")` → emit `Quit(FailOnRunningTasks)`.
-   - `("qa!", "")` → emit `Quit(Force)`.
-   - Keep `("q!", "")` behavior: force-close focused window if split, otherwise force quit.
+6. **Add `:q!`, `:qa`, and `:qa!`** match arms:
+   - `("q!", "")` → **skip unsaved changes check**, force-close focused window if split, otherwise force quit.
+   - `("qa", "")` → check `has_unsaved_changes`; if true, print error, else emit `Quit(FailOnRunningTasks)`.
+   - `("qa!", "")` → emit `Quit(Force)` unconditionally.
 
-6. **Add tests**:
+   ```rust
+   ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force),
+   ("qa", "") => {
+       if has_unsaved_changes(&app.contents) {
+           return print_error("No write since last change (add ! to override)");
+       }
+       vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks))]
+   }
+   ("qa!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
+   ```
+
+7. **Add `print_error` helper** (or use existing `commandline::print` pattern):
+
+   ```rust
+   fn print_error(msg: &str) -> Vec<Action> {
+       vec![Action::EmitMessages(vec![Message::Error(
+           anyhow::anyhow!(msg.to_string()),
+       )])]
+   }
+   ```
+
+   Note: Check how errors are currently printed in the command dispatch (look for existing `Message::Error` usage patterns) and follow that style.
+
+8. **Add tests**:
    - `:q` on `Horizontal { Directory, Tasks, focus: Second }` → collapses to `Directory`, task buffer removed.
    - `:q` on `Horizontal { Directory, Tasks, focus: First }` → collapses to `Tasks`, directory buffers removed.
    - `:q` on single `Directory` → returns `Quit` action.
    - `:qa` returns `Quit` action even when in a split.
    - `:qa!` returns `Quit(Force)`.
    - Buffer cleanup: closed window's buffers removed, kept window's buffers remain.
+   - **`:q` with unsaved changes prints error, does NOT close or quit.**
+   - **`:q!` with unsaved changes closes/quits anyway.**
+   - **`:qa` with unsaved changes prints error, does NOT quit.**
+   - **`:qa!` with unsaved changes quits anyway.**
 
-7. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+9. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
 
 ## Examples
 
 ```rust
-// :q closes focused window in split
+// :q closes focused window in split (no unsaved changes)
 // Before: Horizontal { Directory, Tasks, focus: Second }
 // After:  Directory (task buffer cleaned up)
 
-// :q on single window quits
+// :q on single window quits (no unsaved changes)
 // Before: Directory
 // After:  Quit(FailOnRunningTasks) action emitted
+
+// :q with unsaved changes → error, no close
+// Before: Horizontal { Directory(modified), Tasks, focus: Second }
+// User sees: "No write since last change (add ! to override)"
+// After:  Window unchanged, mode returns to Navigation
+
+// :q! with unsaved changes → force close
+// Before: Horizontal { Directory(modified), Tasks, focus: Second }
+// After:  Directory (task buffer cleaned up, changes discarded)
 ```
 
 ## Notes
 
-- The `close_focused_window` helper swaps focus semantics: the *kept* window is the one that was NOT focused. This is correct — `:q` closes the current (focused) window.
+- The `close_focused_window_or_quit` helper swaps focus semantics: the *kept* window is the one that was NOT focused. This is correct — `:q` closes the current (focused) window.
 - Buffer cleanup must account for shared buffer_ids (unlikely but possible in future).
+- The unsaved changes check iterates **all** directory buffers in `contents.buffers`, not just the focused one. This matches vim behavior where `:q` refuses if any buffer has unsaved changes, not just the active one.
+- `has_unsaved_changes` only checks `Buffer::Directory` — other buffer types (`Tasks`, `Image`, `Content`, `PathReference`, `Empty`) have no save semantics and are ignored.
+- The error message `"No write since last change (add ! to override)"` mirrors vim's `E37`. Adjust the exact wording to match the project's style if needed.
+- Unsaved changes are tracked by `Undo::get_uncommited_changes()` on each `DirectoryBuffer.buffer.undo`. The `get_uncommited_changes()` method returns the list of changes between `current_save_index` and `current_transaction_index`. An empty result means the buffer is clean. This is already used in `statusline.rs:get_changes_content()` for rendering change counts.
 
 ---
 
