@@ -164,6 +164,10 @@ pub fn get_empty_buffer(contents: &mut Contents) -> usize {
     id
 }
 
+pub fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
+    app.contents.buffers.get(&buffer_id)?.resolve_path()
+}
+
 pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
     let mut next_id = if contents.latest_buffer_id >= 9999 {
         1

@@ -179,6 +179,24 @@ pub enum Buffer {
     Empty,
 }
 
+impl Buffer {
+    pub fn resolve_path(&self) -> Option<&Path> {
+        match self {
+            Buffer::Directory(it) => it.resolve_path(),
+            Buffer::Content(it) => it.resolve_path(),
+            Buffer::Image(it) => it.resolve_path(),
+            Buffer::PathReference(path) => {
+                if path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(path.as_path())
+                }
+            }
+            Buffer::Tasks(_) | Buffer::Empty => None,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct TasksBuffer {
     pub buffer: TextBuffer,

@@ -89,13 +89,12 @@ pub fn relocate(
     }
 
     let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
-    let premotion_preview_path = match app.contents.buffers.get(&preview_id) {
-        Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::PathReference(path)) => Some(path.to_path_buf()),
-        Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
-    };
+    let premotion_preview_path = app
+        .contents
+        .buffers
+        .get(&preview_id)
+        .and_then(|b| b.resolve_path())
+        .map(|p| p.to_path_buf());
 
     let (viewport, buffer) = match app::get_focused_current_mut(app) {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),

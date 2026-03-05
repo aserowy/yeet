@@ -261,7 +261,7 @@ fn update_directory_buffers_on_remove(
         .contents
         .buffers
         .get(&preview_id)
-        .and_then(buffer_path)
+        .and_then(|b| b.resolve_path())
         .map(|p| p.to_path_buf());
 
     let current_removed = current_path
@@ -295,20 +295,10 @@ fn update_directory_buffers_on_remove(
     actions
 }
 
-fn buffer_path(buffer: &Buffer) -> Option<&Path> {
-    match buffer {
-        Buffer::Directory(buffer) => buffer.resolve_path(),
-        Buffer::Content(buffer) => buffer.resolve_path(),
-        Buffer::Image(buffer) => buffer.resolve_path(),
-        Buffer::PathReference(path) => Some(path.as_path()),
-        Buffer::Tasks(_) => None,
-        Buffer::Empty => None,
-    }
-}
-
 fn remove_buffers_under_path(app: &mut App, path: &Path) {
     app.contents.buffers.retain(|_, buffer| {
-        buffer_path(buffer)
+        buffer
+            .resolve_path()
             .map(|buffer_path| !buffer_path.starts_with(path))
             .unwrap_or(true)
     });
@@ -446,7 +436,7 @@ mod test {
             .contents
             .buffers
             .values()
-            .filter_map(buffer_path)
+            .filter_map(|b| b.resolve_path())
             .all(|path| !path.starts_with(&removed)));
 
         let _ = fs::remove_dir_all(&base);
@@ -526,7 +516,7 @@ mod test {
         let preview_buffer = app.contents.buffers.get(&preview_id);
         assert!(preview_buffer.is_some());
 
-        if let Some(path) = preview_buffer.and_then(buffer_path) {
+        if let Some(path) = preview_buffer.and_then(|b| b.resolve_path()) {
             assert!(!path.starts_with(&removed));
         }
 

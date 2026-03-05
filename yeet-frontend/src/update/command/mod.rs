@@ -6,7 +6,7 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{App, Buffer, State},
+    model::{App, State},
     task::Task,
     update::app,
 };
@@ -46,15 +46,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
-            let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
-            let path = match app.contents.buffers.get(&preview_id) {
-                Some(Buffer::Directory(it)) => it.resolve_path(),
-                Some(Buffer::Content(it)) => it.resolve_path(),
-                Some(Buffer::Image(it)) => it.resolve_path(),
-                Some(Buffer::PathReference(path)) => Some(path.as_path()),
-                Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
-            };
-
+            let path = get_preview_path(app);
             let actions = match path {
                 Some(source_path) => file::copy_path(&state.marks, source_path, target),
                 None => {
@@ -210,22 +202,12 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
 fn get_current_path(app: &App) -> Option<&Path> {
     let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
-    get_buffer_path(app, current_id)
+    app::get_buffer_path(app, current_id)
 }
 
 fn get_preview_path(app: &App) -> Option<&Path> {
     let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
-    get_buffer_path(app, preview_id)
-}
-
-fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
-    match app.contents.buffers.get(&buffer_id) {
-        Some(Buffer::Directory(it)) => it.resolve_path(),
-        Some(Buffer::Content(it)) => it.resolve_path(),
-        Some(Buffer::Image(it)) => it.resolve_path(),
-        Some(Buffer::PathReference(path)) => Some(path.as_path()),
-        Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
-    }
+    app::get_buffer_path(app, preview_id)
 }
 
 fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> Vec<Action> {
