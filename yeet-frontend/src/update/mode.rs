@@ -49,70 +49,54 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, buffer) =
-                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
-                    (vp, Buffer::Directory(it)) => (vp, it),
-                    (_vp, Buffer::Image(_)) => return Vec::new(),
-                    (_vp, Buffer::Content(_)) => return Vec::new(),
-                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                    (_vp, Buffer::Empty) => return Vec::new(),
-                };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                vp.hide_cursor = false;
 
-            vp.hide_cursor = false;
-
-            yeet_buffer::update(
-                Some(vp),
-                &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
             vec![]
         }
         Mode::Navigation => {
-            let (vp, buffer) =
-                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
-                    (vp, Buffer::Directory(it)) => (vp, it),
-                    (_vp, Buffer::Image(_)) => return Vec::new(),
-                    (_vp, Buffer::Content(_)) => return Vec::new(),
-                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                    (_vp, Buffer::Empty) => return Vec::new(),
-                };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                // TODO: handle file operations: show pending with gray, refresh on operation success
+                // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
+                vp.hide_cursor = false;
 
-            // TODO: handle file operations: show pending with gray, refresh on operation success
-            // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            vp.hide_cursor = false;
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
-            yeet_buffer::update(
-                Some(vp),
+            save::all(
+                &mut app.window,
+                &mut app.contents,
+                &mut state.junk,
                 &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
-
-            save::changes(app, &mut state.junk, &state.modes.current)
+            )
         }
         Mode::Normal => {
-            let (vp, buffer) =
-                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
-                    (vp, Buffer::Directory(it)) => (vp, it),
-                    (_vp, Buffer::Image(_)) => return Vec::new(),
-                    (_vp, Buffer::Content(_)) => return Vec::new(),
-                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                    (_vp, Buffer::Empty) => return Vec::new(),
-                };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                vp.hide_cursor = false;
 
-            vp.hide_cursor = false;
-
-            yeet_buffer::update(
-                Some(vp),
-                &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
             vec![]
         }

@@ -2,13 +2,14 @@ use yeet_buffer::{
     message::BufferMessage,
     model::{
         undo::{consolidate_modifications, BufferChanged},
+        viewport::ViewPort,
         BufferResult, Mode,
     },
 };
 
 use crate::{
     action::Action,
-    model::{junkyard::JunkYard, App, Buffer},
+    model::{junkyard::JunkYard, App, Buffer, Contents, DirectoryBuffer, Window},
     task::Task,
 };
 
@@ -25,19 +26,56 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
         (_vp, Buffer::Empty) => return Vec::new(),
     };
 
-    let selected_index = vp.cursor.vertical_index;
-    let selection = buffer
-        .buffer
-        .lines
-        .get(selected_index)
-        .map(|line| line.content.clone());
+    save_directory_buffer(Some(vp), buffer, junk, mode)
+}
+
+pub fn all(
+    window: &mut Window,
+    contents: &mut Contents,
+    junk: &mut JunkYard,
+    mode: &Mode,
+) -> Vec<Action> {
+    let dir_ids: Vec<usize> = contents
+        .buffers
+        .iter()
+        .filter_map(|(id, buf)| matches!(buf, Buffer::Directory(_)).then_some(*id))
+        .collect();
+
+    let mut actions = Vec::new();
+    for id in dir_ids {
+        let vp = app::get_viewport_by_buffer_id_mut(window, id);
+        if let Some(Buffer::Directory(dir)) = contents.buffers.get_mut(&id) {
+            actions.extend(save_directory_buffer(vp, dir, junk, mode));
+        }
+    }
+    actions
+}
+
+fn save_directory_buffer(
+    viewport: Option<&mut ViewPort>,
+    buffer: &mut DirectoryBuffer,
+    junk: &mut JunkYard,
+    mode: &Mode,
+) -> Vec<Action> {
+    let selection = viewport
+        .as_deref()
+        .map(|vp| vp.cursor.vertical_index)
+        .and_then(|idx| {
+            buffer
+                .buffer
+                .lines
+                .get(idx)
+                .map(|line| line.content.clone())
+        });
 
     let mut content: Vec<_> = buffer.buffer.lines.drain(..).collect();
     content.retain(|line| !line.content.is_empty());
 
+    let mut viewport = viewport;
+
     let message = BufferMessage::SetContent(content);
     yeet_buffer::update(
-        Some(vp),
+        viewport.as_deref_mut(),
         mode,
         &mut buffer.buffer,
         std::slice::from_ref(&message),
@@ -46,7 +84,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
     if let Some(selection) = selection {
         let message = BufferMessage::SetCursorToLineContent(selection.to_stripped_string());
         yeet_buffer::update(
-            Some(vp),
+            viewport.as_deref_mut(),
             mode,
             &mut buffer.buffer,
             std::slice::from_ref(&message),
@@ -55,7 +93,7 @@ pub fn changes(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
 
     let message = BufferMessage::SaveBuffer;
     let result = yeet_buffer::update(
-        Some(vp),
+        viewport,
         mode,
         &mut buffer.buffer,
         std::slice::from_ref(&message),
