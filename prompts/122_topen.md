@@ -1,0 +1,874 @@
+# Overview
+
+The `:topen` feature adds a task window to yeet — a split pane that lists running tasks, supports cancellation via `dd`, and live-updates as tasks start and end. The user types `:topen` to open a horizontal split with directory panes on top and a task list on the bottom, navigates between panes with `Ctrl+h/j/k/l`, and closes the task window with `:q` or `:tclose`.
+
+The implementation is split into 9 sequential prompts, each leaving the program in a compilable and functional state:
+
+1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `planned`
+2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `planned`
+3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `planned`
+4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
+5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
+6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `planned`
+7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `planned`
+8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `planned`
+9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `planned`
+
+---
+
+# Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model
+
+**Goal**: Introduce the new data types for the task window feature without any behavior changes.
+
+**State**: `planned`
+
+**Motivation**: The `:topen` command needs a way to represent a task window in the window tree and a task-specific buffer type. Adding the types first — with all match arms compiling — isolates model changes from logic changes, keeping each step reviewable and the program functional.
+
+## Requirements
+
+- Add a `SplitFocus` enum with `First` (default) and `Second` variants.
+- Change `Window::Horizontal` from a tuple variant to a struct variant with `first`, `second`, and `focus` fields.
+- Add `Window::Tasks(ViewPort)` as a new leaf variant.
+- Add a `TasksBuffer` struct wrapping a `TextBuffer`.
+- Add `Buffer::Tasks(TasksBuffer)` to the `Buffer` enum.
+- Update every `Window::Horizontal(_, _)` pattern match to the new struct syntax (`Window::Horizontal { .. }`), keeping existing `todo!()` bodies.
+- Add `Window::Tasks(_)` arms with `todo!()` to every exhaustive match on `Window`.
+- Handle `Buffer::Tasks` in every exhaustive match on `Buffer` (same as `Buffer::Empty` — return early / no-op).
+- All existing tests continue to pass. New tests verify type construction and pattern matching.
+
+## Exclusions
+
+- Do NOT implement any `Horizontal` or `Tasks` logic (leave `todo!()`).
+- Do NOT add commands, keybindings, or rendering.
+- Do NOT change runtime behavior — this is a types-only change.
+
+## Context
+
+- @yeet-frontend/src/model/mod.rs — `Window` enum (line ~78), `Buffer` enum (line ~160), `ViewPort`, `TextBuffer`, `Contents`.
+- @yeet-frontend/src/update/app.rs — `get_focused_current_mut`, `get_focused_directory_viewports`, `get_focused_directory_viewports_mut`, `get_viewport_by_buffer_id_mut`.
+- @yeet-frontend/src/update/window.rs — `set_buffer_vp`.
+- @yeet-frontend/src/update/buffers.rs — `update`.
+- @yeet-frontend/src/view/mod.rs — `model`.
+- @yeet-frontend/src/view/buffer.rs — `view`, `render_buffer_slot`.
+- @yeet-frontend/src/view/statusline.rs — `view()`.
+- @yeet-frontend/src/update/save.rs — exhaustive `Buffer` match.
+- @yeet-frontend/src/update/mode.rs — `match app::get_focused_current_mut(app)` destructuring `Buffer`.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Add `SplitFocus` enum** in `yeet-frontend/src/model/mod.rs`:
+
+   ```rust
+   #[derive(Clone, Debug, Default, PartialEq, Eq)]
+   pub enum SplitFocus {
+       #[default]
+       First,
+       Second,
+   }
+   ```
+
+2. **Change `Window::Horizontal`** from a tuple variant to a struct variant and add `Window::Tasks`:
+
+   ```rust
+   pub enum Window {
+       Horizontal {
+           first: Box<Window>,
+           second: Box<Window>,
+           focus: SplitFocus,
+       },
+       Directory(ViewPort, ViewPort, ViewPort),
+        Tasks(ViewPort),
+    }
+    ```
+
+   Remove the `#[allow(dead_code)]` attribute since `Horizontal` will no longer be dead code once the feature is complete.
+
+3. **Add `TasksBuffer`** struct:
+
+   ```rust
+   pub struct TasksBuffer {
+       pub buffer: TextBuffer,
+   }
+   ```
+
+4. **Add `Buffer::Tasks(TasksBuffer)`** variant to the existing `Buffer` enum.
+
+5. **Update `Window::Horizontal` pattern matches** — all 8 `todo!()` sites change syntax only:
+   - `yeet-frontend/src/model/mod.rs` — `get_height()`
+   - `yeet-frontend/src/update/app.rs` — `get_focused_current_mut`, `get_focused_directory_viewports`, `get_focused_directory_viewports_mut`, `get_viewport_by_buffer_id_mut`
+   - `yeet-frontend/src/update/window.rs` — `set_buffer_vp`
+   - `yeet-frontend/src/update/buffers.rs` — `update`
+   - `yeet-frontend/src/view/mod.rs` — `model`
+   - `yeet-frontend/src/view/buffer.rs` — `view`
+
+6. **Add `Window::Tasks(_)` arms** with `todo!()` to every exhaustive match listed in step 5.
+
+7. **Handle `Buffer::Tasks`** in every exhaustive match on `Buffer` (treat as `Buffer::Empty` — early return / no-op):
+   - `yeet-frontend/src/view/buffer.rs` — `render_buffer_slot`
+   - `yeet-frontend/src/view/statusline.rs` — `view()`
+   - `yeet-frontend/src/update/save.rs`
+   - `yeet-frontend/src/update/mode.rs` — every `match` that destructures `Buffer`
+   - Any other exhaustive match — grep for `Buffer::Directory`, `Buffer::Empty`, etc.
+
+8. **Add tests**:
+   - `SplitFocus::default() == SplitFocus::First`
+   - Construct `Window::Tasks(ViewPort::default())` and pattern-match it back.
+   - Construct `Window::Horizontal { first: Box::new(Window::Directory(...)), second: Box::new(Window::Tasks(...)), focus: SplitFocus::First }` — verify the recursive tree compiles.
+   - Construct `TasksBuffer` with a default `TextBuffer`, wrap in `Buffer::Tasks(...)`, pattern-match.
+
+9. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// SplitFocus default
+assert_eq!(SplitFocus::default(), SplitFocus::First);
+
+// Window::Tasks construction
+let task_window = Window::Tasks(ViewPort::default());
+assert!(matches!(task_window, Window::Tasks(_)));
+
+// Horizontal tree
+let tree = Window::Horizontal {
+    first: Box::new(Window::Directory(
+        ViewPort::default(), ViewPort::default(), ViewPort::default(),
+    )),
+    second: Box::new(Window::Tasks(ViewPort::default())),
+    focus: SplitFocus::First,
+};
+assert!(matches!(tree, Window::Horizontal { .. }));
+
+// Buffer::Tasks
+let buf = Buffer::Tasks(TasksBuffer { buffer: TextBuffer::default() });
+assert!(matches!(buf, Buffer::Tasks(_)));
+```
+
+## Notes
+
+- The `#[allow(dead_code)]` on the `Window` enum exists because `Horizontal` was never constructed. Removing it now is safe since the variant will be constructed in Prompt 4.
+- Pattern match updates are purely mechanical — change `Horizontal(a, b)` to `Horizontal { .. }` and keep the `todo!()` body.
+
+---
+
+# Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites
+
+**Goal**: Replace every `todo!()` on `Window::Horizontal` and `Window::Tasks` with real implementations, making the window tree fully functional for recursive splits and task windows.
+
+**State**: `planned`
+
+**Motivation**: The window tree must support splits and task leaves before any user-facing feature (`:topen`, focus switching) can work. Implementing all `todo!()` sites in one prompt ensures the infrastructure is complete and testable end-to-end.
+
+## Requirements
+
+- Replace all 9 `todo!()` sites with working logic for both `Horizontal` and `Tasks` arms.
+- `Horizontal` layout splits the area vertically (top/bottom, 50/50).
+- `Tasks` viewport behaves like a single-pane leaf (height, width, x, y from area).
+- Focus-aware functions recurse into the focused child of `Horizontal`.
+- Buffer-id collection recursively walks the entire tree.
+- All existing tests continue to pass.
+
+## Exclusions
+
+- Do NOT add commands, keybindings, or the `:topen` command.
+- Do NOT add rendering for `Buffer::Tasks` content (that is Prompt 5).
+- This prompt only makes the window tree infrastructure work.
+
+## Context
+
+- @yeet-frontend/src/model/mod.rs — `Window` enum, `SplitFocus`, `get_height()`.
+- @yeet-frontend/src/update/app.rs — `get_focused_current_mut`, `get_focused_directory_viewports`, `get_focused_directory_viewports_mut`, `get_viewport_by_buffer_id_mut`.
+- @yeet-frontend/src/update/window.rs — `set_buffer_vp`, uses `ratatui::layout::{Layout, Direction, Constraint}`.
+- @yeet-frontend/src/update/buffers.rs — `update`, uses `HashSet<usize>` for referenced buffer ids.
+- @yeet-frontend/src/view/mod.rs — `model` function (status line context).
+- @yeet-frontend/src/view/buffer.rs — `view` function (recursive rendering).
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **`Window::get_height`** in `yeet-frontend/src/model/mod.rs`:
+   - `Horizontal { first, second, .. }` → `first.get_height()? + second.get_height()?` (top/bottom split).
+   - `Tasks(vp)` → `Ok(vp.height)`.
+
+2. **`get_focused_current_mut`** in `yeet-frontend/src/update/app.rs`:
+   - `Horizontal { first, second, focus }` → recurse into the focused child based on `focus` (`SplitFocus::First` → `first`, `Second` → `second`). Restructure to avoid borrow conflicts — extract the focused viewport reference and `buffer_id` from the window tree first, then look up the buffer.
+   - `Tasks(vp)` → return `(vp, &mut contents.buffers[vp.buffer_id])`.
+   - Fix `None => todo!()` to `None => panic!("Buffer not found for focused viewport")`.
+
+3. **`get_focused_directory_viewports`** in `yeet-frontend/src/update/app.rs`:
+   - `Horizontal { first, second, focus }` → recurse into the focused child.
+   - `Tasks(_)` → this function returns 3 directory viewports. If the focused window is a Tasks leaf, this is an error. Panic with a descriptive message, or use `Option` if callers can handle it gracefully. Check all callers to decide.
+
+4. **`get_focused_directory_viewports_mut`** in `yeet-frontend/src/update/app.rs`:
+   - Same approach as the immutable version.
+
+5. **`get_viewport_by_buffer_id_mut`** in `yeet-frontend/src/update/app.rs`:
+   - `Horizontal { first, second, .. }` → try `first`, if `None` try `second`.
+   - `Tasks(vp)` → if `vp.buffer_id == buffer_id` return `Some(vp)`, else `None`.
+
+6. **`set_buffer_vp`** in `yeet-frontend/src/update/window.rs`:
+   - `Horizontal { first, second, .. }` → split the `area` Rect vertically using `Layout::default().direction(Direction::Vertical).constraints([Constraint::Percentage(50), Constraint::Percentage(50)])`. Recurse into each child with its sub-rect.
+   - `Tasks(vp)` → set `vp.height`, `vp.width`, `vp.x`, `vp.y` from the area Rect (same pattern as individual viewports in the `Directory` arm).
+
+7. **`view::model`** in `yeet-frontend/src/view/mod.rs`:
+   - Add a helper `fn get_focused_leaf(window: &Window) -> &ViewPort` that recursively follows `SplitFocus` to the focused leaf (for `Directory`: middle viewport; for `Tasks`: the single viewport).
+   - Use this to get `focused_id` and `focused_vp` for the status line.
+
+8. **`view::buffer::view`** in `yeet-frontend/src/view/buffer.rs`:
+   - `Horizontal { first, second, .. }` → recursively call `view` for each child. Offsets are encoded in each viewport's `x`/`y` fields (set by `set_buffer_vp`).
+   - `Tasks(vp)` → look up the buffer and call `render_buffer_slot`.
+
+9. **`buffers::update`** in `yeet-frontend/src/update/buffers.rs`:
+   - `Horizontal { first, second, .. }` → recursively collect buffer_ids from both children. Add `fn collect_buffer_ids(window: &Window) -> HashSet<usize>`.
+   - `Tasks(vp)` → add `vp.buffer_id` to the set.
+
+10. **Add tests**:
+    - `get_height` for `Horizontal { Tasks(h=10), Directory(h=15) }` → returns 25.
+    - `set_buffer_vp` with a `Horizontal` tree: verify both children get correct y-offsets (first starts at `area.y`, second at `area.y + area.height/2`).
+    - `get_viewport_by_buffer_id_mut` recursively finds a viewport in the second child.
+    - `collect_buffer_ids` on a nested tree returns all buffer_ids.
+    - `get_focused_current_mut` on `Horizontal { Directory, Tasks, focus: Second }` returns the tasks viewport.
+
+11. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// get_height with horizontal split
+let tree = Window::Horizontal {
+    first: Box::new(Window::Tasks(ViewPort { height: 10, ..Default::default() })),
+    second: Box::new(Window::Directory(
+        ViewPort::default(),
+        ViewPort { height: 15, ..Default::default() },
+        ViewPort::default(),
+    )),
+    focus: SplitFocus::First,
+};
+assert_eq!(tree.get_height().unwrap(), 25);
+
+// set_buffer_vp layout
+// Given area { x: 0, y: 0, width: 80, height: 40 }:
+// first child gets  { x: 0, y: 0,  width: 80, height: 20 }
+// second child gets { x: 0, y: 20, width: 80, height: 20 }
+```
+
+## Notes
+
+- The `get_focused_directory_viewports` function is the trickiest — a `Tasks` leaf has no directory viewports. Decide between panicking and returning `Option` based on caller analysis. If callers always expect directory viewports, panicking is acceptable since callers should guard against this.
+- The 50/50 split ratio in `set_buffer_vp` may be adjusted in Prompt 5 after visual verification.
+
+---
+
+# Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic
+
+**Goal**: Add keybindings and logic to move focus between windows in a split layout.
+
+**State**: `planned`
+
+**Motivation**: Once splits exist (Prompt 4), users need a way to move focus between the directory panes and the task window. Wiring this up now — while no splits exist yet — keeps the change isolated and testable.
+
+## Requirements
+
+- Add `FocusDirection` enum (`Up`, `Down`, `Left`, `Right`) to `yeet-keymap`.
+- Add `FocusDirection(FocusDirection)` variant to `KeymapMessage`.
+- Bind `Ctrl+h/j/k/l` in Navigation and Normal modes to the corresponding directions.
+- Implement `focus::change` in `yeet-frontend` that updates `SplitFocus` and toggles cursor visibility.
+- For a single-level `Horizontal` (top/bottom): `Down` → `Second`, `Up` → `First`, `Left`/`Right` → no-op.
+- For non-split windows (`Directory` or `Tasks` at root): all directions are no-ops.
+
+## Exclusions
+
+- Do NOT handle nested/multi-level splits beyond one level of `Horizontal`.
+- Do NOT add `:topen` or any other commands.
+
+## Context
+
+- @yeet-keymap/src/message.rs — `KeymapMessage` enum, `QuitMode`, derive conventions.
+- @yeet-keymap/src/map.rs — keybinding definitions, shared Navigation + Normal section.
+- @yeet-frontend/src/update/mod.rs — message dispatch, `mod` declarations.
+- @yeet-frontend/src/model/mod.rs — `App`, `Window`, `SplitFocus`, `ViewPort`.
+- @yeet-keymap/tests/lib_tests.rs — existing keymap tests (test naming conventions, mode setup).
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Add `FocusDirection`** in `yeet-keymap/src/message.rs`:
+
+   ```rust
+   #[derive(Clone, Debug, Eq, PartialEq)]
+   pub enum FocusDirection {
+       Up,
+       Down,
+       Left,
+       Right,
+   }
+   ```
+
+   Add `FocusDirection(FocusDirection)` variant to `KeymapMessage`.
+
+2. **Add keybindings** in `yeet-keymap/src/map.rs` (shared Navigation + Normal section):
+   - `Ctrl+h` → `KeymapMessage::FocusDirection(FocusDirection::Left)`
+   - `Ctrl+j` → `KeymapMessage::FocusDirection(FocusDirection::Down)`
+   - `Ctrl+k` → `KeymapMessage::FocusDirection(FocusDirection::Up)`
+   - `Ctrl+l` → `KeymapMessage::FocusDirection(FocusDirection::Right)`
+   - Check for existing `Ctrl+h/j/k/l` bindings. Resolve conflicts if any.
+
+3. **Create `yeet-frontend/src/update/focus.rs`**:
+
+   ```rust
+   pub fn change(app: &mut App, direction: &FocusDirection) -> Vec<Action>
+   ```
+
+   - `Window::Horizontal` at root: `Down` → focus `Second`, `Up` → focus `First`. `Left`/`Right` → no-op.
+   - When changing focus: hide cursor on old focused leaf, show cursor on new one.
+   - `Window::Directory` or `Window::Tasks` at root: all directions are no-ops.
+   - Only handle one level of `Horizontal` (`:topen` creates at most one split).
+
+4. **Wire into dispatch** in `yeet-frontend/src/update/mod.rs`:
+   - Add `mod focus;`.
+   - Add handler: `KeymapMessage::FocusDirection(direction) => focus::change(app, direction)`.
+
+5. **Add tests**:
+   - In `yeet-keymap/tests/lib_tests.rs`: `Ctrl+j` in Navigation mode → `FocusDirection(Down)`.
+   - In `yeet-keymap/tests/lib_tests.rs`: `Ctrl+k` in Normal mode → `FocusDirection(Up)`.
+   - In `yeet-frontend/src/update/focus.rs`:
+     - `change` on `Horizontal { Directory, Tasks, focus: First }` with `Down` → focus becomes `Second`.
+     - `change` on same with `Up` → no change (already on First).
+     - `change` on a plain `Directory` root → no change for any direction.
+     - Cursor visibility toggles correctly on focus change.
+
+6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// Focus change: Down on Horizontal moves to Second
+let mut app = App::with_window(Window::Horizontal {
+    first: Box::new(directory_window()),
+    second: Box::new(task_window()),
+    focus: SplitFocus::First,
+});
+focus::change(&mut app, &FocusDirection::Down);
+// app.window is now Horizontal { ..., focus: SplitFocus::Second }
+```
+
+## Notes
+
+- Since no splits can be created yet, these keybindings are inert in practice. They become active once Prompt 4 adds `:topen`.
+- Check for existing `Ctrl+h/j/k/l` conflicts carefully — these are common bindings.
+
+---
+
+# Prompt 4: Implement `:topen` command
+
+**Goal**: Add the `:topen` command that creates a task buffer, wraps the current window in a `Window::Horizontal` split with a `Window::Tasks` as the second child, and focuses the task window.
+
+**State**: `planned`
+
+**Motivation**: This is the core user-facing entry point for the task window feature. The user types `:topen` and sees a split appear with a list of running tasks.
+
+## Requirements
+
+- `:topen` creates a `Buffer::Tasks` with lines built from `tasks.running` (sorted by id, formatted as `"{id:<4} {external_id}"`).
+- The current window is wrapped in `Window::Horizontal { first: old_window, second: Window::Tasks(...), focus: SplitFocus::Second }`.
+- Cursor is hidden on the old window's focused leaf and shown on the task viewport.
+- If a `Window::Tasks` already exists in the tree, `:topen` switches focus to it instead of creating a duplicate.
+- The task buffer is properly registered in `app.contents.buffers`.
+
+## Exclusions
+
+- Do NOT implement rendering (Prompt 5).
+- Do NOT implement `dd` cancellation (Prompt 6).
+- Do NOT implement live updates on `TaskStarted`/`TaskEnded` (Prompt 7).
+
+## Context
+
+- @yeet-frontend/src/update/command/task.rs — existing `delete` function (task cancellation by ID).
+- @yeet-frontend/src/update/command/mod.rs — command dispatch (`execute` function, match arms).
+- @yeet-frontend/src/model/mod.rs — `App`, `Window`, `Buffer`, `TasksBuffer`, `Tasks`, `CurrentTask`, `Contents`, `ViewPort`, `SplitFocus`.
+- @yeet-buffer — `TextBuffer`, `BufferLine`, `Ansi`.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Add `task::open`** in `yeet-frontend/src/update/command/task.rs`:
+
+   ```rust
+   pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action>
+   ```
+
+   - Build task lines from `tasks.running`: sort by `task.id`, format each as `"{id:<4} {external_id}"` using `BufferLine { content: Ansi::new(&formatted), ..Default::default() }`.
+   - Allocate a new buffer_id from `app.contents`, insert `Buffer::Tasks(TasksBuffer { buffer: TextBuffer { lines, ..Default::default() } })`.
+   - Create a `ViewPort`: `ViewPort { buffer_id, hide_cursor: false, show_border: true, ..Default::default() }`.
+   - Take the current `app.window` (via `std::mem::take` or `std::mem::replace`), wrap it:
+
+     ```rust
+     app.window = Window::Horizontal {
+         first: Box::new(old_window),
+         second: Box::new(Window::Tasks(task_viewport)),
+         focus: SplitFocus::Second,
+     };
+     ```
+
+   - Hide cursor on the old window's focused leaf viewport, show cursor on the task viewport.
+   - If the window tree already contains a `Window::Tasks` (check recursively), just switch focus to it instead of creating a new one.
+
+2. **Add command dispatch** in `yeet-frontend/src/update/command/mod.rs`:
+   - Add match arm: `("topen", "") => task::open(app, &state.tasks)` wrapped in `add_change_mode`.
+
+3. **Add tests**:
+   - `open` creates a `Horizontal { Directory, Tasks }` tree with correct focus.
+   - `open` with tasks: task buffer lines match `"{id:<4} {external_id}"` formatting.
+   - `open` with no running tasks: task window created with empty buffer.
+   - `open` when task window already exists: focus switches without creating duplicates.
+   - Task buffer is in `app.contents.buffers` with the correct buffer_id.
+
+4. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// Task line formatting
+// Given tasks: [CurrentTask { id: 1, external_id: "rg foo" }, CurrentTask { id: 12, external_id: "fd bar" }]
+// Sorted by id, formatted lines:
+// "1    rg foo"
+// "12   fd bar"
+
+// Window tree after :topen
+// Window::Horizontal {
+//     first: Box::new(Window::Directory(parent_vp, current_vp, preview_vp)),
+//     second: Box::new(Window::Tasks(task_vp)),
+//     focus: SplitFocus::Second,
+// }
+```
+
+## Notes
+
+- `Window` needs a `Default` impl for `std::mem::take` to work. If not already added, add `impl Default for Window` returning `Window::Directory(Default::default(), Default::default(), Default::default())`. (This may be deferred to Prompt 8 if `:q` needs it first — check if needed here.)
+- The idempotency check (don't create nested splits) is important — users may reflexively type `:topen` again.
+
+---
+
+# Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types
+
+**Goal**: Make the task window visible when `:topen` is run — directory panes on top, task list on the bottom.
+
+**State**: `planned`
+
+**Motivation**: After Prompt 4, `:topen` creates the split in the model but nothing renders. This prompt connects the model to the view so the user actually sees the task window.
+
+## Requirements
+
+- `render_buffer_slot` handles `Buffer::Tasks` by rendering it the same way as `Buffer::Content` (via `yeet_buffer::view()`).
+- The status line shows a "Tasks" label (or "Tasks: N running") when the task window is focused.
+- The `Horizontal` split renders both children with correct layout (directory panes on top, task list on bottom).
+- Layout dimensions are visually correct — consider adjusting the 50/50 ratio to 70/30 or a fixed height for the task pane.
+
+## Exclusions
+
+- Do NOT add task cancellation (`dd`) — that is Prompt 6.
+- Do NOT add live updates — that is Prompt 7.
+
+## Context
+
+- @yeet-frontend/src/view/buffer.rs — `render_buffer_slot`, `view` function, `buffer_view` helper.
+- @yeet-frontend/src/view/statusline.rs — `view()`, match on `Buffer` variants.
+- @yeet-frontend/src/update/window.rs — `set_buffer_vp` (layout constraints from Prompt 2).
+- @yeet-frontend/src/view/mod.rs — `model` function (focus context for status line).
+- @yeet-buffer — `yeet_buffer::view()` for rendering `TextBuffer`.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Render task buffer** in `yeet-frontend/src/view/buffer.rs`:
+   - In `render_buffer_slot`, add handling for `Buffer::Tasks(tasks_buf)`: render using `yeet_buffer::view()` on `tasks_buf.buffer`, same pattern as `Buffer::Content`.
+
+2. **Status line** in `yeet-frontend/src/view/statusline.rs`:
+   - Add `Buffer::Tasks(_)` to the match in `view()`. Render a simple "Tasks" label or "Tasks: N running".
+
+3. **Verify recursive rendering**: `view::buffer::view` (from Prompt 2) should correctly render both children of the `Horizontal` split. Directory panes appear in the top half, task list in the bottom half.
+
+4. **Verify/adjust layout**: `set_buffer_vp` (from Prompt 2) splits 50/50. Visually verify this. Consider whether the task window should be smaller (e.g., 70/30). Adjust constraints in `set_buffer_vp` if needed.
+
+5. **Add tests**:
+   - After `open` + `window::update(app, area)`, all viewports (directory parent/current/preview + task) have non-zero dimensions.
+   - Task viewport's `y` offset is greater than directory viewports' `y` offset (it is below).
+   - `Window::get_height()` on the `Horizontal` tree returns the full area height.
+
+6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```
++-----------------------------------------------+
+|  parent  |   current    |      preview         |  <- Directory panes (top)
+|          |              |                      |
++-----------------------------------------------+
+|  1    rg foo                                   |  <- Task list (bottom)
+|  12   fd bar                                   |
++-----------------------------------------------+
+```
+
+## Notes
+
+- At this point `:topen` should produce a visible split with the task list rendered.
+- The split ratio (50/50 vs 70/30) is a UX decision — adjust based on how it looks.
+
+---
+
+# Prompt 6: Handle `dd` in the task window to cancel tasks
+
+**Goal**: When the task window is focused and `dd` is pressed, cancel the task at the cursor and mark it visually with dim/strikethrough text.
+
+**State**: `planned`
+
+**Motivation**: Users need a way to cancel running tasks directly from the task window. The `dd` keybinding is natural (delete the line = cancel the task). The cancelled line stays visible until `TaskEnded` removes it, providing visual feedback.
+
+## Requirements
+
+- `dd` on a task buffer line cancels the corresponding task (`token.cancel()`) and sets `cancelled = true`.
+- Cancelled tasks are displayed with ANSI strikethrough + dim styling.
+- All other text modifications on the task buffer are blocked (no-op).
+- The `cancelled` field is added to `CurrentTask`.
+- Mode change from Navigation → Normal (triggered by `dd`'s `force`) handles `Buffer::Tasks` gracefully (early return).
+
+## Exclusions
+
+- Do NOT implement live updates on `TaskStarted`/`TaskEnded` — that is Prompt 7.
+- Do NOT implement `:tclose` — that is Prompt 9.
+
+## Context
+
+- @yeet-frontend/src/model/mod.rs — `CurrentTask` struct (add `cancelled` field), `Tasks`.
+- @yeet-frontend/src/update/modify.rs — `buffer()` function, `TextModification::DeleteLine`.
+- @yeet-frontend/src/update/task.rs — `add()` (update `CurrentTask` construction).
+- @yeet-frontend/src/update/mode.rs — `change()`, `Buffer::Directory` arms.
+- @yeet-buffer — `TextBuffer`, `BufferLine`, `Ansi`, cursor `vertical_index`.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Add `cancelled` field** to `CurrentTask` in `yeet-frontend/src/model/mod.rs`:
+   - Add `pub cancelled: bool` defaulting to `false`.
+   - Update `CurrentTask` construction in `yeet-frontend/src/update/task.rs` `add()`.
+
+2. **Handle `dd` in task buffer** in `yeet-frontend/src/update/modify.rs`:
+   - In `buffer()`, after getting focused buffer via `get_focused_current_mut`, check buffer type:
+     - `Buffer::Tasks(_)` + `TextModification::DeleteLine`: extract cursor `vertical_index`, map to task ID (tasks sorted by id), find in `state.tasks.running`, call `token.cancel()`, set `cancelled = true`. Rebuild buffer lines. Return `Vec::new()`.
+     - `Buffer::Tasks(_)` + any other modification: return `Vec::new()` (block all edits).
+     - `Buffer::Directory(_)`: existing logic unchanged.
+   - **Borrow checker**: extract cursor index and buffer type first, release borrow, then modify tasks and refresh buffer.
+
+3. **Add `refresh_tasks_buffer` helper**:
+
+   ```rust
+   pub fn refresh_tasks_buffer(contents: &mut Contents, window: &Window, tasks: &Tasks)
+   ```
+
+   - Walk the window tree to find `Window::Tasks(vp)`, get the `buffer_id`.
+   - Rebuild lines: cancelled tasks use `"\x1b[9;90m{id:<4} {external_id}\x1b[0m"` (ANSI strikethrough + dim), normal tasks use plain text.
+   - Clamp viewport cursor to new line count.
+
+4. **Handle mode change** in `yeet-frontend/src/update/mode.rs`:
+   - Navigation mode `dd` has `force: Some(Mode::Normal)` which triggers `ChangeMode`. The `to: Normal` arm matches `Buffer::Directory`. Add `Buffer::Tasks(_)` to the early-return arms (no `yeet_buffer` update needed).
+
+5. **Add tests**:
+   - `dd` on task buffer with 3 tasks, cursor at index 1: task at index 1 is cancelled, buffer line has ANSI escape codes.
+   - `dd` on empty task buffer: no panic.
+   - Non-`DeleteLine` modifications on task buffer are blocked.
+   - `cancelled` field is set correctly.
+
+6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// Normal task line
+"1    rg foo"
+
+// Cancelled task line (ANSI strikethrough + dim)
+"\x1b[9;90m1    rg foo\x1b[0m"
+```
+
+## Notes
+
+- The borrow checker is the main challenge in `modify.rs` — extract what you need from the focused buffer before mutating tasks.
+- The cancelled line stays in the buffer until `TaskEnded` removes it (Prompt 7). This is intentional — it provides visual feedback that the cancel was registered.
+
+---
+
+# Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`
+
+**Goal**: The task window automatically refreshes when tasks start or end.
+
+**State**: `planned`
+
+**Motivation**: Without live updates, the task window becomes stale. Users expect to see new tasks appear and completed/cancelled tasks disappear in real time.
+
+## Requirements
+
+- `task::add()` refreshes the task buffer after registering a new task.
+- `task::remove()` refreshes the task buffer after removing a completed task.
+- Cursor is clamped if tasks are removed and the cursor was past the end.
+- If no task window exists, add/remove operations do not panic or cause buffer changes.
+
+## Exclusions
+
+- Do NOT change the `:topen` command behavior.
+- Do NOT add `:q` / `:qa` / `:tclose` logic — those are Prompts 8 and 9.
+
+## Context
+
+- @yeet-frontend/src/update/task.rs — `add()`, `remove()`.
+- @yeet-frontend/src/update/mod.rs — `Message::TaskStarted`, `Message::TaskEnded` handlers.
+- @yeet-frontend/src/model/mod.rs — `App`, `Contents`, `Window`, `Tasks`.
+- The `refresh_tasks_buffer` helper from Prompt 6.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Modify `add()`** in `yeet-frontend/src/update/task.rs`:
+   - Accept `&mut Contents` and `&Window` (or `&mut App`). After registering the task, call `refresh_tasks_buffer(...)`.
+
+2. **Modify `remove()`** similarly:
+   - After removing the task, call `refresh_tasks_buffer(...)`.
+
+3. **Update dispatch** in `yeet-frontend/src/update/mod.rs`:
+   - Update `Message::TaskStarted` handler to pass the additional arguments.
+   - Update `Message::TaskEnded` handler similarly.
+
+4. **Cursor clamping** in `refresh_tasks_buffer`:
+   - Clamp cursor if tasks were removed and cursor was at the end.
+
+5. **Add tests**:
+   - Add a task while task window is open → buffer gains a line.
+   - Remove a task while task window is open → buffer loses a line and cancelled task is gone.
+   - Cursor clamping when removing the last task while cursor is on it.
+   - Add/remove when no task window exists → no panic, no buffer changes.
+
+6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```
+// Before: 2 tasks running
+1    rg foo
+12   fd bar
+
+// Task "rg foo" ends → buffer refreshes
+12   fd bar
+
+// New task starts → buffer refreshes
+12   fd bar
+13   grep baz
+```
+
+## Notes
+
+- The function signatures of `add()` and `remove()` change — update all call sites.
+- Cursor clamping prevents panics when the user had the cursor on the last line and that task ends.
+
+---
+
+# Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit
+
+**Goal**: `:q` closes the focused window in a split (collapsing the `Horizontal`). If only one window remains, `:q` shuts down yeet. `:qa` quits regardless of windows. `:qa!` force-quits.
+
+**State**: `planned`
+
+**Motivation**: Users need a way to close the task window and return to the normal single-pane view. The `:q` semantics match vim's behavior — close current window, or quit if it's the last one.
+
+## Requirements
+
+- `:q` on a `Horizontal` split: close the focused child, collapse to the remaining child, clean up closed window's buffers.
+- `:q` on a single window: emit `Quit(FailOnRunningTasks)` (existing behavior).
+- `:qa` always emits `Quit(FailOnRunningTasks)` regardless of window count.
+- `:qa!` always emits `Quit(Force)`.
+- `:q!` force-closes focused window if split, otherwise force quits.
+- `Window` has a `Default` impl for `std::mem::take`.
+- Closed window's buffers are removed from `app.contents.buffers` (without removing buffers still referenced by the kept window).
+
+## Exclusions
+
+- Do NOT add `:tclose` — that is Prompt 9.
+- Do NOT change any other existing command behavior.
+
+## Context
+
+- @yeet-frontend/src/update/command/mod.rs — `execute` function, existing `("q", "")` and `("q!", "")` arms.
+- @yeet-frontend/src/model/mod.rs — `App`, `Window`, `Contents`, `SplitFocus`.
+- @yeet-frontend/src/action.rs — `Action`, `action::emit_keymap`.
+- @yeet-keymap/src/message.rs — `KeymapMessage::Quit(QuitMode)`, `QuitMode`.
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Add `Default` for `Window`** in `yeet-frontend/src/model/mod.rs`:
+
+   ```rust
+   impl Default for Window {
+       fn default() -> Self {
+           Window::Directory(Default::default(), Default::default(), Default::default())
+       }
+   }
+   ```
+
+2. **Modify `:q` dispatch** in `yeet-frontend/src/update/command/mod.rs`:
+   - Check if `app.window` is `Horizontal`. If so, call `close_focused_window(app)`. Otherwise, emit `Quit(FailOnRunningTasks)`.
+
+3. **Add `close_focused_window` helper**:
+
+   ```rust
+   fn close_focused_window(app: &mut App) -> Vec<Action> {
+       let old_window = std::mem::take(&mut app.window);
+       match old_window {
+           Window::Horizontal { first, second, focus } => {
+               let (kept, closed) = match focus {
+                   SplitFocus::First => (*second, *first),
+                   SplitFocus::Second => (*first, *second),
+               };
+               cleanup_window_buffers(&mut app.contents, &closed);
+               app.window = kept;
+               // Show cursor on new focused leaf
+               Vec::new()
+           }
+           other => {
+               app.window = other;
+               vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks))]
+           }
+       }
+   }
+   ```
+
+4. **Implement `cleanup_window_buffers`**:
+   - For `Window::Tasks(vp)`: remove `vp.buffer_id` from `app.contents.buffers`.
+   - For `Window::Directory(p, c, pr)`: remove all three buffer_ids. Be careful not to remove buffers still referenced by the kept window — check the kept window's buffer_ids first.
+
+5. **Add `:qa` and `:qa!`** match arms:
+   - `("qa", "")` → emit `Quit(FailOnRunningTasks)`.
+   - `("qa!", "")` → emit `Quit(Force)`.
+   - Keep `("q!", "")` behavior: force-close focused window if split, otherwise force quit.
+
+6. **Add tests**:
+   - `:q` on `Horizontal { Directory, Tasks, focus: Second }` → collapses to `Directory`, task buffer removed.
+   - `:q` on `Horizontal { Directory, Tasks, focus: First }` → collapses to `Tasks`, directory buffers removed.
+   - `:q` on single `Directory` → returns `Quit` action.
+   - `:qa` returns `Quit` action even when in a split.
+   - `:qa!` returns `Quit(Force)`.
+   - Buffer cleanup: closed window's buffers removed, kept window's buffers remain.
+
+7. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// :q closes focused window in split
+// Before: Horizontal { Directory, Tasks, focus: Second }
+// After:  Directory (task buffer cleaned up)
+
+// :q on single window quits
+// Before: Directory
+// After:  Quit(FailOnRunningTasks) action emitted
+```
+
+## Notes
+
+- The `close_focused_window` helper swaps focus semantics: the *kept* window is the one that was NOT focused. This is correct — `:q` closes the current (focused) window.
+- Buffer cleanup must account for shared buffer_ids (unlikely but possible in future).
+
+---
+
+# Prompt 9: Edge cases, polish, and safety
+
+**Goal**: Handle remaining edge cases to make the task window feature production-quality.
+
+**State**: `planned`
+
+**Motivation**: Individual prompts focused on core functionality. This prompt sweeps up all the edge cases, safety checks, and convenience features that make the difference between a prototype and a robust feature.
+
+## Requirements
+
+- Dangerous operations (navigate, open, quickfix toggle) safely no-op when the task window is focused.
+- Insert mode (`i`/`a`/`s`/`I`/`A`) is blocked on the task buffer.
+- `:topen` when a split already exists with a `Tasks` child switches focus (no nested splits).
+- `:tclose` command closes the task window specifically (convenience alternative to focusing task + `:q`).
+- Empty task list works without panics (cursor handling on empty buffer).
+- `collect_buffer_ids` (from Prompt 2) includes the task buffer (no garbage collection).
+- `save::changes` returns early for `Buffer::Tasks`.
+
+## Exclusions
+
+- Do NOT refactor the window tree structure.
+- Do NOT add new task buffer features beyond what is specified.
+
+## Context
+
+- @yeet-frontend/src/update/navigate.rs — `parent`, `selected`.
+- @yeet-frontend/src/update/open.rs — `selected`.
+- @yeet-frontend/src/update/qfix.rs — `toggle`.
+- @yeet-frontend/src/update/mode.rs — `change()`, Insert mode arms.
+- @yeet-frontend/src/update/command/mod.rs — command dispatch (for `:tclose`).
+- @yeet-frontend/src/update/buffers.rs — `update`, `collect_buffer_ids`.
+- @yeet-frontend/src/update/save.rs — `changes`.
+- @yeet-frontend/src/update/command/task.rs — `open` (idempotency check).
+- @AGENTS.md — build/test/lint commands.
+
+## Implementation Plan
+
+1. **Prevent dangerous operations in task window**:
+   - Audit `navigate::parent`, `navigate::selected`, `open::selected`, `qfix::toggle` — they call `get_focused_current_mut` and check for `Buffer::Directory`. Verify `Buffer::Tasks` causes early return.
+   - In `mode::change()`, add `Buffer::Tasks(_)` to early-return arms in the `to: Insert` branch to block entering Insert mode on the task buffer.
+
+2. **`:topen` idempotency**: if the window tree already contains a `Window::Tasks` child inside a `Horizontal`, switch focus to it. Don't create nested splits. (This should already be handled in Prompt 4 — verify and fix if needed.)
+
+3. **Add `:tclose` command**: find and remove the `Tasks` child from the `Horizontal`, collapse the split. This is a convenience alternative to focusing the task window then pressing `:q`.
+
+4. **Empty task list UX**: verify `:topen` with no running tasks creates a task buffer with zero lines and cursor handling doesn't panic.
+
+5. **Buffer cleanup verification**: verify `collect_buffer_ids` from Prompt 2 correctly includes the task buffer's id so it doesn't get garbage-collected.
+
+6. **`save::changes` safety**: verify it returns early for `Buffer::Tasks` (it checks `Buffer::Directory`).
+
+7. **Add tests**:
+   - Insert mode is blocked when task window is focused.
+   - `navigate::parent` is a no-op when task window is focused.
+   - `:topen` when split already exists → no nested split, focus switches.
+   - `:tclose` collapses the split.
+   - `dd` on empty task buffer → no panic.
+   - `buffers::update` doesn't remove the task buffer.
+   - `save::changes` returns empty when task window is focused.
+
+8. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+
+## Examples
+
+```rust
+// :tclose when split exists
+// Before: Horizontal { Directory, Tasks, focus: First }
+// After:  Directory (task buffer cleaned up, focus on directory)
+
+// :topen when split already exists
+// Before: Horizontal { Directory, Tasks, focus: First }
+// After:  Horizontal { Directory, Tasks, focus: Second }  // just switch focus
+```
+
+## Notes
+
+- The audit in step 1 is important — any function that assumes `Buffer::Directory` will panic or misbehave if it encounters `Buffer::Tasks`. Grep for all `Buffer::Directory` matches and verify each one.
+- `:tclose` shares cleanup logic with `:q` from Prompt 8. Reuse `close_focused_window` or `cleanup_window_buffers` where possible.
+
+---
+
+## Summary
+
+| Prompt | What it adds | Program state after |
+|--------|-------------|-------------------|
+| 1 | Model types: `Window::Tasks`, `Buffer::Tasks`, `SplitFocus`, struct-field `Horizontal` | Compiles, no behavior change |
+| 2 | All `todo!()` replaced with real `Horizontal`/`Tasks` implementations | Window tree infrastructure works end-to-end |
+| 3 | `Ctrl+h/j/k/l` keybindings + focus switching logic | Focus navigation wired (inert — no splits exist yet) |
+| 4 | `:topen` command creates split + task buffer | `:topen` creates the split in the model |
+| 5 | Rendering for `Window::Tasks` and `Buffer::Tasks` | Task window is visible on screen |
+| 6 | `dd` cancels tasks with visual feedback | Users can cancel tasks |
+| 7 | Live updates on `TaskStarted`/`TaskEnded` | Task list auto-refreshes |
+| 8 | `:q` closes focused window, `:qa`/`:qa!` quit app | Window management complete |
+| 9 | Edge cases: blocked ops, `:tclose`, empty buffer, safety | Production-quality feature |
