@@ -14,7 +14,7 @@ use crate::{
 mod file;
 mod print;
 mod qfix;
-mod task;
+pub mod task;
 
 #[tracing::instrument(skip_all)]
 pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {

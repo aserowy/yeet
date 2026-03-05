@@ -9,7 +9,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `done`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `done`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `done`
-6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `planned`
+6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `done`
 7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `planned`
 8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `planned`
 9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `planned`
@@ -758,16 +758,16 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: When the task window is focused and `dd` is pressed, cancel the task at the cursor and mark it visually with dim/strikethrough text.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Users need a way to cancel running tasks directly from the task window. The `dd` keybinding is natural (delete the line = cancel the task). The cancelled line stays visible until `TaskEnded` removes it, providing visual feedback.
 
 ## Requirements
 
-- `dd` on a task buffer line cancels the corresponding task (`token.cancel()`) and sets `cancelled = true`.
-- Cancelled tasks are displayed with ANSI strikethrough + dim styling.
+- `dd` on a task buffer line cancels the corresponding task via `token.cancel()`.
+- Cancelled tasks are detected via `token.is_cancelled()` and displayed with ANSI strikethrough + dim styling.
 - All other text modifications on the task buffer are blocked (no-op).
-- The `cancelled` field is added to `CurrentTask`.
+- No model changes needed — cancellation state is derived from `CancellationToken::is_cancelled()`.
 - Mode change from Navigation → Normal (triggered by `dd`'s `force`) handles `Buffer::Tasks` gracefully (early return).
 
 ## Exclusions
@@ -777,46 +777,41 @@ focus::change(&mut app, &FocusDirection::Down);
 
 ## Context
 
-- @yeet-frontend/src/model/mod.rs — `CurrentTask` struct (add `cancelled` field), `Tasks`.
+- @yeet-frontend/src/model/mod.rs — `CurrentTask` struct, `Tasks`.
 - @yeet-frontend/src/update/modify.rs — `buffer()` function, `TextModification::DeleteLine`.
-- @yeet-frontend/src/update/task.rs — `add()` (update `CurrentTask` construction).
 - @yeet-frontend/src/update/mode.rs — `change()`, `Buffer::Directory` arms.
 - @yeet-buffer — `TextBuffer`, `BufferLine`, `Ansi`, cursor `vertical_index`.
 - @AGENTS.md — build/test/lint commands.
 
 ## Implementation Plan
 
-1. **Add `cancelled` field** to `CurrentTask` in `yeet-frontend/src/model/mod.rs`:
-   - Add `pub cancelled: bool` defaulting to `false`.
-   - Update `CurrentTask` construction in `yeet-frontend/src/update/task.rs` `add()`.
-
-2. **Handle `dd` in task buffer** in `yeet-frontend/src/update/modify.rs`:
-   - In `buffer()`, after getting focused buffer via `get_focused_current_mut`, check buffer type:
-     - `Buffer::Tasks(_)` + `TextModification::DeleteLine`: extract cursor `vertical_index`, map to task ID (tasks sorted by id), find in `state.tasks.running`, call `token.cancel()`, set `cancelled = true`. Rebuild buffer lines. Return `Vec::new()`.
+1. **Handle `dd` in task buffer** in `yeet-frontend/src/update/modify.rs`:
+   - Change `buffer()` signature to take `&mut State` (drop separate `mode` parameter, read `state.modes.current` internally).
+   - In `buffer()`, match on focused buffer type:
+     - `Buffer::Tasks(_)` + `TextModification::DeleteLine`: extract cursor `vertical_index`, sort tasks by id, find the task at that index, call `token.cancel()`. Call `refresh_tasks_buffer` to rebuild buffer lines. Return `Vec::new()`.
      - `Buffer::Tasks(_)` + any other modification: return `Vec::new()` (block all edits).
      - `Buffer::Directory(_)`: existing logic unchanged.
    - **Borrow checker**: extract cursor index and buffer type first, release borrow, then modify tasks and refresh buffer.
 
-3. **Add `refresh_tasks_buffer` helper**:
+2. **Add `refresh_tasks_buffer` helper** in `yeet-frontend/src/update/command/task.rs`:
 
    ```rust
-   pub fn refresh_tasks_buffer(contents: &mut Contents, window: &Window, tasks: &Tasks)
+   pub fn refresh_tasks_buffer(window: &Window, contents: &mut Contents, tasks: &Tasks)
    ```
 
    - Walk the window tree to find `Window::Tasks(vp)`, get the `buffer_id`.
-   - Rebuild lines: cancelled tasks use `"\x1b[9;90m{id:<4} {external_id}\x1b[0m"` (ANSI strikethrough + dim), normal tasks use plain text.
-   - Clamp viewport cursor to new line count.
+   - Rebuild lines: cancelled tasks (where `token.is_cancelled()`) use `"\x1b[9;90m{id:<4} {external_id}\x1b[0m"` (ANSI strikethrough + dim), normal tasks use plain text.
 
-4. **Handle mode change** in `yeet-frontend/src/update/mode.rs`:
-   - Navigation mode `dd` has `force: Some(Mode::Normal)` which triggers `ChangeMode`. The `to: Normal` arm matches `Buffer::Directory`. Add `Buffer::Tasks(_)` to the early-return arms (no `yeet_buffer` update needed).
+3. **Handle mode change** in `yeet-frontend/src/update/mode.rs`:
+   - Navigation mode `dd` has `force: Some(Mode::Normal)` which triggers `ChangeMode`. The `to: Normal` arm uses `if let Buffer::Directory` guard — `Buffer::Tasks` already skips `yeet_buffer::update` (no change needed).
 
-5. **Add tests**:
-   - `dd` on task buffer with 3 tasks, cursor at index 1: task at index 1 is cancelled, buffer line has ANSI escape codes.
+4. **Add tests**:
+   - `dd` on task buffer with 3 tasks, cursor at index 1: task at index 1 has `token.is_cancelled()`, buffer line has ANSI escape codes.
    - `dd` on empty task buffer: no panic.
    - Non-`DeleteLine` modifications on task buffer are blocked.
-   - `cancelled` field is set correctly.
+   - `refresh_tasks_buffer` applies ANSI styling for cancelled tokens.
 
-6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+5. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
 
 ## Examples
 
@@ -831,6 +826,7 @@ focus::change(&mut app, &FocusDirection::Down);
 ## Notes
 
 - The borrow checker is the main challenge in `modify.rs` — extract what you need from the focused buffer before mutating tasks.
+- Cancellation state is derived from `CancellationToken::is_cancelled()` rather than a separate `cancelled` field — this avoids redundant state and also covers tasks cancelled via `:delt`.
 - The cancelled line stays in the buffer until `TaskEnded` removes it (Prompt 7). This is intentional — it provides visual feedback that the cancel was registered.
 
 ---

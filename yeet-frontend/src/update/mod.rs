@@ -250,9 +250,7 @@ pub fn update_with_buffer_message(
         BufferMessage::ChangeMode(from, to) => mode::change(app, state, from, to),
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
-            Mode::Insert | Mode::Normal => {
-                modify::buffer(app, state, &state.modes.current, repeat, modification)
-            }
+            Mode::Insert | Mode::Normal => modify::buffer(app, state, repeat, modification),
             Mode::Navigation => Vec::new(),
         },
         BufferMessage::MoveCursor(rpt, mtn) => match &mut state.modes.current {

@@ -4,7 +4,7 @@ use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
 use crate::{
     action::Action,
-    model::{App, Buffer, SplitFocus, Tasks, TasksBuffer, Window},
+    model::{App, Buffer, Contents, CurrentTask, SplitFocus, Tasks, TasksBuffer, Window},
     update::app,
 };
 
@@ -70,16 +70,40 @@ fn focus_tasks(window: &mut Window) -> bool {
     }
 }
 
+pub fn refresh_tasks_buffer(window: &Window, contents: &mut Contents, tasks: &Tasks) {
+    let buffer_id = match find_tasks_buffer_id(window) {
+        Some(id) => id,
+        None => return,
+    };
+
+    if let Some(Buffer::Tasks(tasks_buf)) = contents.buffers.get_mut(&buffer_id) {
+        tasks_buf.buffer.lines = build_task_lines(tasks);
+    }
+}
+
+fn find_tasks_buffer_id(window: &Window) -> Option<usize> {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            find_tasks_buffer_id(first).or_else(|| find_tasks_buffer_id(second))
+        }
+        Window::Tasks(vp) => Some(vp.buffer_id),
+        Window::Directory(_, _, _) => None,
+    }
+}
+
 fn build_task_lines(tasks: &Tasks) -> Vec<BufferLine> {
     let mut entries: Vec<_> = tasks.running.values().collect();
     entries.sort_by_key(|task| task.id);
-    entries
-        .iter()
-        .map(|task| {
-            let formatted = format!("{:<4} {}", task.id, task.external_id);
-            BufferLine::from(&formatted)
-        })
-        .collect()
+    entries.iter().map(|task| build_task_line(task)).collect()
+}
+
+fn build_task_line(task: &CurrentTask) -> BufferLine {
+    let formatted = format!("{:<4} {}", task.id, task.external_id);
+    if task.token.is_cancelled() {
+        BufferLine::from(&format!("\x1b[9;90m{}\x1b[0m", formatted))
+    } else {
+        BufferLine::from(&formatted)
+    }
 }
 
 #[cfg(test)]
@@ -368,5 +392,47 @@ mod test {
             }
             _ => panic!("expected Horizontal at root"),
         }
+    }
+
+    #[test]
+    fn refresh_tasks_buffer_applies_cancelled_styling() {
+        let tasks = make_tasks_with_entries();
+        let mut app = App::default();
+        open(&mut app, &tasks);
+
+        // Cancel the first task (id=1)
+        tasks.running.get("rg-1").unwrap().token.cancel();
+
+        super::refresh_tasks_buffer(&app.window, &mut app.contents, &tasks);
+
+        let task_vp = match &app.window {
+            Window::Horizontal { second, .. } => match second.as_ref() {
+                Window::Tasks(vp) => vp,
+                _ => panic!("expected Tasks"),
+            },
+            _ => panic!("expected Horizontal"),
+        };
+
+        let lines = match app.contents.buffers.get(&task_vp.buffer_id).unwrap() {
+            Buffer::Tasks(tb) => &tb.buffer.lines,
+            _ => panic!("expected Buffer::Tasks"),
+        };
+
+        assert_eq!(lines.len(), 2);
+        // First line (id=1) is cancelled — has ANSI escapes
+        assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
+        assert!(lines[0].content.to_string().contains("\x1b[9;90m"));
+        // Second line (id=12) is not cancelled — plain text
+        assert_eq!(lines[1].content.to_stripped_string(), "12   fd bar");
+        assert!(!lines[1].content.to_string().contains("\x1b["));
+    }
+
+    #[test]
+    fn refresh_tasks_buffer_noop_without_tasks_window() {
+        let tasks = Tasks::default();
+        let mut app = App::default();
+        // No :topen — app.window is a plain Directory
+        super::refresh_tasks_buffer(&app.window, &mut app.contents, &tasks);
+        // Should not panic
     }
 }
