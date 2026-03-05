@@ -7,7 +7,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `done`
 2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `done`
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `done`
-4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
+4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `done`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `planned`
 7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `planned`
@@ -595,7 +595,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: Add the `:topen` command that creates a task buffer, wraps the current window in a `Window::Horizontal` split with a `Window::Tasks` as the second child, and focuses the task window.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: This is the core user-facing entry point for the task window feature. The user types `:topen` and sees a split appear with a list of running tasks.
 
@@ -603,12 +603,12 @@ focus::change(&mut app, &FocusDirection::Down);
 
 - `:topen` creates a `Buffer::Tasks` with lines built from `tasks.running` (sorted by id, formatted as `"{id:<4} {external_id}"`).
 - The current window is wrapped in `Window::Horizontal { first: old_window, second: Window::Tasks(...), focus: SplitFocus::Second }`.
-- Cursor is hidden on the old window's focused leaf and shown on the task viewport.
 - If a `Window::Tasks` already exists in the tree, `:topen` switches focus to it instead of creating a duplicate.
 - The task buffer is properly registered in `app.contents.buffers`.
 
 ## Exclusions
 
+- Do NOT implement cursor visibility (Prompt 5).
 - Do NOT implement rendering (Prompt 5).
 - Do NOT implement `dd` cancellation (Prompt 6).
 - Do NOT implement live updates on `TaskStarted`/`TaskEnded` (Prompt 7).
@@ -695,11 +695,13 @@ focus::change(&mut app, &FocusDirection::Down);
 - The status line shows a "Tasks" label (or "Tasks: N running") when the task window is focused.
 - The `Horizontal` split renders both children with correct layout (directory panes on top, task list on bottom).
 - Layout dimensions are visually correct — consider adjusting the 50/50 ratio to 70/30 or a fixed height for the task pane.
+- Cursor visibility for focused vs unfocused windows is handled purely at render time as a visual override — **no viewport state is mutated**. The rendering code determines whether a viewport belongs to the focused leaf window and passes a cloned viewport with `hide_cursor` / `hide_cursor_line` set accordingly to the buffer view function. Unfocused windows render with cursor hidden; the focused window renders with cursor shown. This is a view-only concern and must not alter any `ViewPort` in the model.
 
 ## Exclusions
 
 - Do NOT add task cancellation (`dd`) — that is Prompt 6.
 - Do NOT add live updates — that is Prompt 7.
+- Do NOT alter viewport state (`hide_cursor`, `hide_cursor_line`) outside of rendering — cursor visibility is a render-time visual only.
 
 ## Context
 
@@ -715,19 +717,24 @@ focus::change(&mut app, &FocusDirection::Down);
 1. **Render task buffer** in `yeet-frontend/src/view/buffer.rs`:
    - In `render_buffer_slot`, add handling for `Buffer::Tasks(tasks_buf)`: render using `yeet_buffer::view()` on `tasks_buf.buffer`, same pattern as `Buffer::Content`.
 
-2. **Status line** in `yeet-frontend/src/view/statusline.rs`:
+2. **Cursor visibility as a render-time visual** in `yeet-frontend/src/view/buffer.rs`:
+   - Pass the focused `buffer_id` (from `Window::focused_viewport().buffer_id`) down through `render_window` and into `render_buffer_slot`.
+   - In `render_buffer_slot`, compare the viewport's `buffer_id` against the focused `buffer_id`. If they differ, clone the viewport and set `hide_cursor = true` / `hide_cursor_line = true` on the clone before passing it to the buffer view function. If they match, render with the viewport as-is.
+   - This is purely visual — no `ViewPort` in the model is mutated. The clone is a temporary local used only for the render call.
+
+3. **Status line** in `yeet-frontend/src/view/statusline.rs`:
    - Add `Buffer::Tasks(_)` to the match in `view()`. Render a simple "Tasks" label or "Tasks: N running".
 
-3. **Verify recursive rendering**: `view::buffer::view` (from Prompt 2) should correctly render both children of the `Horizontal` split. Directory panes appear in the top half, task list in the bottom half.
+4. **Verify recursive rendering**: `view::buffer::view` (from Prompt 2) should correctly render both children of the `Horizontal` split. Directory panes appear in the top half, task list in the bottom half.
 
-4. **Verify/adjust layout**: `set_buffer_vp` (from Prompt 2) splits 50/50. Visually verify this. Consider whether the task window should be smaller (e.g., 70/30). Adjust constraints in `set_buffer_vp` if needed.
+5. **Verify/adjust layout**: `set_buffer_vp` (from Prompt 2) splits 50/50. Visually verify this. Consider whether the task window should be smaller (e.g., 70/30). Adjust constraints in `set_buffer_vp` if needed.
 
-5. **Add tests**:
+6. **Add tests**:
    - After `open` + `window::update(app, area)`, all viewports (directory parent/current/preview + task) have non-zero dimensions.
    - Task viewport's `y` offset is greater than directory viewports' `y` offset (it is below).
    - `Window::get_height()` on the `Horizontal` tree returns the full area height.
 
-6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+7. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
 
 ## Examples
 
@@ -745,6 +752,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 - At this point `:topen` should produce a visible split with the task list rendered.
 - The split ratio (50/50 vs 70/30) is a UX decision — adjust based on how it looks.
+- Cursor visibility is strictly a rendering concern. The `ViewPort` fields `hide_cursor` and `hide_cursor_line` in the model are **not** toggled when focus changes — instead, `render_buffer_slot` determines at render time whether the viewport is focused and applies a visual-only override via a cloned viewport. This keeps the model clean and avoids state synchronization bugs when focus changes.
 
 ---
 

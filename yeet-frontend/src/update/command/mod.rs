@@ -165,6 +165,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("tl", "") => print::tasks(&state.tasks),
+        ("topen", "") => add_change_mode(mode_before, mode, task::open(app, &state.tasks)),
         ("w", "") => add_change_mode(
             mode_before,
             mode,

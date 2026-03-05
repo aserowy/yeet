@@ -146,6 +146,22 @@ impl Window {
             Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
         }
     }
+
+    pub fn contains_tasks(&self) -> bool {
+        match self {
+            Window::Horizontal { first, second, .. } => {
+                first.contains_tasks() || second.contains_tasks()
+            }
+            Window::Directory(_, _, _) => false,
+            Window::Tasks(_) => true,
+        }
+    }
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Window::Directory(Default::default(), Default::default(), Default::default())
+    }
 }
 
 #[derive(Default)]
