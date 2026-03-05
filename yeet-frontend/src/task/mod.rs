@@ -302,6 +302,7 @@ async fn run_task(
             match read_dir {
                 Ok(mut rd) => {
                     let mut cache_size = 100;
+                    let cache_size_increment = 2500;
 
                     let (is_selection, selection_path) = match &selection {
                         Some(selection) => {
@@ -353,12 +354,8 @@ async fn run_task(
                                 )]))
                                 .await;
 
-                            cache_size *= 2;
+                            cache_size += cache_size_increment;
                         }
-                    }
-
-                    if cancellation.is_cancelled() {
-                        return Ok(());
                     }
 
                     let _ = sender

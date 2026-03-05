@@ -23,6 +23,16 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         _ => {}
     }
 
+    if !from.is_command() && !to.is_command() {
+        let vp = app.window.focused_viewport();
+        if matches!(
+            app.contents.buffers.get(&vp.buffer_id),
+            Some(Buffer::Tasks(_))
+        ) {
+            return Vec::new();
+        }
+    }
+
     state.modes.current = to.clone();
     state.modes.previous = Some(from.clone());
 
@@ -271,5 +281,67 @@ mod test {
             .iter()
             .any(|action| matches!(action, crate::action::Action::ModeChanged)));
         assert!(state.pending_path_events.is_empty());
+    }
+
+    #[test]
+    fn mode_change_blocked_on_tasks_buffer() {
+        use crate::model::Tasks;
+        use crate::update::command::task::open;
+
+        let tasks = Tasks::default();
+        let mut app = crate::model::App::default();
+        open(&mut app, &tasks);
+
+        let mut state = crate::model::State::default();
+        state.modes.current = Mode::Navigation;
+
+        // Navigation → Normal should be blocked on Tasks
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal);
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+
+        // Navigation → Insert should also be blocked
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert);
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+    }
+
+    #[test]
+    fn command_mode_allowed_on_tasks_buffer() {
+        use yeet_buffer::model::CommandMode;
+
+        use crate::model::Tasks;
+        use crate::update::command::task::open;
+
+        let tasks = Tasks::default();
+        let mut app = crate::model::App::default();
+        open(&mut app, &tasks);
+
+        let mut state = crate::model::State::default();
+        state.modes.current = Mode::Navigation;
+
+        // Navigation → Command should be allowed on Tasks
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Command(CommandMode::Command),
+        );
+        assert!(actions
+            .iter()
+            .any(|a| matches!(a, crate::action::Action::ModeChanged)));
+        assert_eq!(state.modes.current, Mode::Command(CommandMode::Command));
+
+        // Command → Navigation should also be allowed on Tasks
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Command(CommandMode::Command),
+            &Mode::Navigation,
+        );
+        assert!(actions
+            .iter()
+            .any(|a| matches!(a, crate::action::Action::ModeChanged)));
+        assert_eq!(state.modes.current, Mode::Navigation);
     }
 }

@@ -70,23 +70,50 @@ fn focus_tasks(window: &mut Window) -> bool {
     }
 }
 
-pub fn refresh_tasks_buffer(window: &Window, contents: &mut Contents, tasks: &Tasks) {
-    let buffer_id = match find_tasks_buffer_id(window) {
-        Some(id) => id,
+pub fn refresh_tasks_buffer(window: &mut Window, contents: &mut Contents, tasks: &Tasks) {
+    let vp = match find_tasks_viewport_mut(window) {
+        Some(vp) => vp,
         None => return,
     };
 
-    if let Some(Buffer::Tasks(tasks_buf)) = contents.buffers.get_mut(&buffer_id) {
-        tasks_buf.buffer.lines = build_task_lines(tasks);
+    let buffer_id = vp.buffer_id;
+    if let Some(Buffer::Tasks(tasks_buffer)) = contents.buffers.get_mut(&buffer_id) {
+        let old_cursor_task_id: Option<u16> = tasks_buffer
+            .buffer
+            .lines
+            .get(vp.cursor.vertical_index)
+            .and_then(|line| {
+                line.content
+                    .to_stripped_string()
+                    .split_whitespace()
+                    .next()
+                    .and_then(|s| s.parse().ok())
+            });
+
+        tasks_buffer.buffer.lines = build_task_lines(tasks);
+        let line_count = tasks_buffer.buffer.lines.len();
+
+        if let Some(old_id) = old_cursor_task_id {
+            let mut sorted_tasks: Vec<_> = tasks.running.values().collect();
+            sorted_tasks.sort_by_key(|t| t.id);
+            if let Some(new_idx) = sorted_tasks.iter().position(|t| t.id == old_id) {
+                vp.cursor.vertical_index = new_idx;
+                return;
+            }
+        }
+
+        if vp.cursor.vertical_index >= line_count {
+            vp.cursor.vertical_index = line_count.saturating_sub(1);
+        }
     }
 }
 
-fn find_tasks_buffer_id(window: &Window) -> Option<usize> {
+fn find_tasks_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> {
     match window {
         Window::Horizontal { first, second, .. } => {
-            find_tasks_buffer_id(first).or_else(|| find_tasks_buffer_id(second))
+            find_tasks_viewport_mut(first).or_else(|| find_tasks_viewport_mut(second))
         }
-        Window::Tasks(vp) => Some(vp.buffer_id),
+        Window::Tasks(vp) => Some(vp),
         Window::Directory(_, _, _) => None,
     }
 }
@@ -403,7 +430,7 @@ mod test {
         // Cancel the first task (id=1)
         tasks.running.get("rg-1").unwrap().token.cancel();
 
-        super::refresh_tasks_buffer(&app.window, &mut app.contents, &tasks);
+        super::refresh_tasks_buffer(&mut app.window, &mut app.contents, &tasks);
 
         let task_vp = match &app.window {
             Window::Horizontal { second, .. } => match second.as_ref() {
@@ -432,7 +459,7 @@ mod test {
         let tasks = Tasks::default();
         let mut app = App::default();
         // No :topen — app.window is a plain Directory
-        super::refresh_tasks_buffer(&app.window, &mut app.contents, &tasks);
+        super::refresh_tasks_buffer(&mut app.window, &mut app.contents, &tasks);
         // Should not panic
     }
 }

@@ -23,7 +23,7 @@ pub fn buffer(
 
             let cursor_index = vp.cursor.vertical_index;
             cancel_task_at_index(&mut state.tasks, cursor_index);
-            refresh_tasks_buffer(&app.window, &mut app.contents, &state.tasks);
+            refresh_tasks_buffer(&mut app.window, &mut app.contents, &state.tasks);
 
             Vec::new()
         }
@@ -113,9 +113,8 @@ mod test {
             tasks,
             ..Default::default()
         };
-        state.modes.current = yeet_buffer::model::Mode::Normal;
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        // Set cursor to index 1 (sorted: id=1, id=5, id=10 → index 1 = id 5)
         let vp = app.window.focused_viewport_mut();
         vp.cursor.vertical_index = 1;
 
@@ -149,6 +148,25 @@ mod test {
     }
 
     #[test]
+    fn dd_on_tasks_stays_in_navigation_mode() {
+        let tasks = make_tasks_3();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State {
+            tasks,
+            ..Default::default()
+        };
+        // mode::change blocks Navigation→Normal on Tasks, so mode stays Navigation.
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        let actions = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+
+        // Mode should remain Navigation — no mode change occurred.
+        assert_eq!(state.modes.current, yeet_buffer::model::Mode::Navigation);
+        // No ModeChanged action needed — mode never changed.
+        assert!(actions.is_empty());
+    }
+
+    #[test]
     fn dd_on_cancelled_task_updates_buffer_with_ansi() {
         let tasks = make_tasks_3();
         let mut app = make_app_with_tasks(&tasks);
@@ -156,7 +174,7 @@ mod test {
             tasks,
             ..Default::default()
         };
-        state.modes.current = yeet_buffer::model::Mode::Normal;
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
 
         // Cancel task at index 0 (id=1)
         vp_set_cursor(&mut app, 0);
@@ -178,7 +196,7 @@ mod test {
         let tasks = Tasks::default();
         let mut app = make_app_with_tasks(&tasks);
         let mut state = State::default();
-        state.modes.current = yeet_buffer::model::Mode::Normal;
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
 
         buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
         // No panic — test passes if we reach here
@@ -192,7 +210,7 @@ mod test {
             tasks,
             ..Default::default()
         };
-        state.modes.current = yeet_buffer::model::Mode::Normal;
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
 
         // Try inserting text — should be blocked
         buffer(

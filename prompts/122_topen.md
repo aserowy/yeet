@@ -10,7 +10,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `done`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `done`
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `done`
-7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `planned`
+7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `done`
 8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `planned`
 9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `planned`
 
@@ -835,7 +835,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: The task window automatically refreshes when tasks start or end.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Without live updates, the task window becomes stale. Users expect to see new tasks appear and completed/cancelled tasks disappear in real time.
 
@@ -863,9 +863,11 @@ focus::change(&mut app, &FocusDirection::Down);
 
 1. **Modify `add()`** in `yeet-frontend/src/update/task.rs`:
    - Accept `&mut Contents` and `&Window` (or `&mut App`). After registering the task, call `refresh_tasks_buffer(...)`.
+   - After modification the cursor should stay on the task with the same id
 
 2. **Modify `remove()`** similarly:
    - After removing the task, call `refresh_tasks_buffer(...)`.
+   - After modification the cursor should stay on the task with the same id if it still exists, or stay on the same index.
 
 3. **Update dispatch** in `yeet-frontend/src/update/mod.rs`:
    - Update `Message::TaskStarted` handler to pass the additional arguments.
@@ -920,7 +922,8 @@ focus::change(&mut app, &FocusDirection::Down);
 - `:qa!` always emits `Quit(Force)`.
 - `:q!` force-closes focused window if split, otherwise force quits.
 - `Window` has a `Default` impl for `std::mem::take`.
-- Closed window's buffers are removed from `app.contents.buffers` (without removing buffers still referenced by the kept window).
+- If task window is removed, remove task buffer from `app.contents.buffers` (without removing buffers still referenced by the kept window).
+- Other buffer types should still get handled like they are currently implemented!
 
 ## Exclusions
 

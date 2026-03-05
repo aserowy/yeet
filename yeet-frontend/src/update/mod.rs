@@ -167,8 +167,16 @@ fn update_with_message(
         Message::PreviewLoaded(content) => preview::update(app, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
-        Message::TaskStarted(id, cancellation) => task::add(&mut state.tasks, id, cancellation),
-        Message::TaskEnded(id) => task::remove(&mut state.tasks, id),
+        Message::TaskStarted(id, cancellation) => task::add(
+            &mut state.tasks,
+            &mut app.window,
+            &mut app.contents,
+            id,
+            cancellation,
+        ),
+        Message::TaskEnded(id) => {
+            task::remove(&mut state.tasks, &mut app.window, &mut app.contents, id)
+        }
         Message::ZoxideResult(path) => navigate::path(app, &state.history, path.as_ref()),
     }
 }
@@ -251,7 +259,17 @@ pub fn update_with_buffer_message(
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
             Mode::Insert | Mode::Normal => modify::buffer(app, state, repeat, modification),
-            Mode::Navigation => Vec::new(),
+            Mode::Navigation => {
+                let vp = app.window.focused_viewport();
+                if matches!(
+                    app.contents.buffers.get(&vp.buffer_id),
+                    Some(Buffer::Tasks(_))
+                ) {
+                    modify::buffer(app, state, repeat, modification)
+                } else {
+                    Vec::new()
+                }
+            }
         },
         BufferMessage::MoveCursor(rpt, mtn) => match &mut state.modes.current {
             Mode::Command(_) => {
