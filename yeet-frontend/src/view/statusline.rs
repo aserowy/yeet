@@ -12,17 +12,46 @@ use yeet_buffer::model::{
     viewport::ViewPort,
 };
 
-use crate::model::{self, Buffer, DirectoryBuffer};
+use crate::model::{self, Buffer, DirectoryBuffer, TasksBuffer};
 
 pub fn view(current: &Buffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
     match current {
         Buffer::Directory(it) => filetree_status(it, viewport, frame, rect),
-        Buffer::Image(_)
-        | Buffer::Content(_)
-        | Buffer::PathReference(_)
-        | Buffer::Tasks(_)
-        | Buffer::Empty => {}
+        Buffer::Tasks(it) => tasks_status(it, viewport, frame, rect),
+        Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
+}
+
+fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
+    let count = buffer.buffer.lines.len();
+    let position = if count == 0 {
+        0
+    } else {
+        viewport.cursor.vertical_index + 1
+    };
+
+    let label = Line::from(Span::styled("Tasks", Style::default().fg(Color::Gray)));
+    let position_line = Line::from(vec![
+        Span::styled(format!("{}/", position), Style::default().fg(Color::Gray)),
+        Span::styled(format!("{}", count), Style::default().fg(Color::Gray)),
+    ]);
+
+    let layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(label.width() as u16),
+            Constraint::Min(3),
+            Constraint::Length(position_line.width() as u16),
+        ])
+        .split(rect);
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        rect,
+    );
+
+    frame.render_widget(Paragraph::new(label), layout[0]);
+    frame.render_widget(Paragraph::new(position_line), layout[2]);
 }
 
 fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {

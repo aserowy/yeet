@@ -8,7 +8,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `done`
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `done`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `done`
-5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
+5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `done`
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `planned`
 7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `planned`
 8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `planned`
@@ -685,7 +685,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: Make the task window visible when `:topen` is run — directory panes on top, task list on the bottom.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: After Prompt 4, `:topen` creates the split in the model but nothing renders. This prompt connects the model to the view so the user actually sees the task window.
 
@@ -694,7 +694,6 @@ focus::change(&mut app, &FocusDirection::Down);
 - `render_buffer_slot` handles `Buffer::Tasks` by rendering it the same way as `Buffer::Content` (via `yeet_buffer::view()`).
 - The status line shows a "Tasks" label (or "Tasks: N running") when the task window is focused.
 - The `Horizontal` split renders both children with correct layout (directory panes on top, task list on bottom).
-- Layout dimensions are visually correct — consider adjusting the 50/50 ratio to 70/30 or a fixed height for the task pane.
 - Cursor visibility for focused vs unfocused windows is handled purely at render time as a visual override — **no viewport state is mutated**. The rendering code determines whether a viewport belongs to the focused leaf window and passes a cloned viewport with `hide_cursor` / `hide_cursor_line` set accordingly to the buffer view function. Unfocused windows render with cursor hidden; the focused window renders with cursor shown. This is a view-only concern and must not alter any `ViewPort` in the model.
 
 ## Exclusions
@@ -751,7 +750,6 @@ focus::change(&mut app, &FocusDirection::Down);
 ## Notes
 
 - At this point `:topen` should produce a visible split with the task list rendered.
-- The split ratio (50/50 vs 70/30) is a UX decision — adjust based on how it looks.
 - Cursor visibility is strictly a rendering concern. The `ViewPort` fields `hide_cursor` and `hide_cursor_line` in the model are **not** toggled when focus changes — instead, `render_buffer_slot` determines at render time whether the viewport is focused and applies a visual-only override via a cloned viewport. This keeps the model clean and avoids state synchronization bugs when focus changes.
 
 ---

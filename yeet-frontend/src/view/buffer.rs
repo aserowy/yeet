@@ -16,6 +16,7 @@ pub fn view(
     horizontal_offset: u16,
     vertical_offset: u16,
 ) {
+    let focused_buffer_id = app.window.focused_viewport().buffer_id;
     render_window(
         mode,
         &app.window,
@@ -23,6 +24,7 @@ pub fn view(
         frame,
         horizontal_offset,
         vertical_offset,
+        focused_buffer_id,
     );
 }
 
@@ -33,6 +35,7 @@ fn render_window(
     frame: &mut Frame,
     horizontal_offset: u16,
     vertical_offset: u16,
+    focused_buffer_id: usize,
 ) {
     match window {
         Window::Horizontal { first, second, .. } => {
@@ -43,6 +46,7 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
             render_window(
                 mode,
@@ -51,6 +55,7 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
         }
         Window::Directory(parent, current, preview) => {
@@ -61,6 +66,7 @@ fn render_window(
                 buffers.get(&parent.buffer_id),
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
             render_buffer_slot(
                 mode,
@@ -69,6 +75,7 @@ fn render_window(
                 buffers.get(&current.buffer_id),
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
             render_buffer_slot(
                 mode,
@@ -77,6 +84,7 @@ fn render_window(
                 buffers.get(&preview.buffer_id),
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
         }
         Window::Tasks(vp) => {
@@ -87,6 +95,7 @@ fn render_window(
                 buffers.get(&vp.buffer_id),
                 horizontal_offset,
                 vertical_offset,
+                focused_buffer_id,
             );
         }
     }
@@ -99,19 +108,38 @@ fn render_buffer_slot(
     buffer: Option<&Buffer>,
     horizontal_offset: u16,
     vertical_offset: u16,
+    focused_buffer_id: usize,
 ) {
     let x = viewport.x.saturating_add(horizontal_offset);
     let y = viewport.y.saturating_add(vertical_offset);
 
+    // Cursor visibility is a render-time visual only. If this viewport is not
+    // the focused one, clone it and hide the cursor. No model state is mutated.
+    let is_focused = viewport.buffer_id == focused_buffer_id;
+    let unfocused_vp;
+    let effective_vp = if is_focused {
+        viewport
+    } else {
+        unfocused_vp = ViewPort {
+            hide_cursor: true,
+            hide_cursor_line: true,
+            ..viewport.clone()
+        };
+        &unfocused_vp
+    };
+
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            buffer_view(viewport, mode, &buffer.buffer, frame, x, y);
+            buffer_view(effective_vp, mode, &buffer.buffer, frame, x, y);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, viewport, buffer, x, y);
+            render_directory_buffer(mode, frame, effective_vp, buffer, x, y);
         }
-        Some(Buffer::Tasks(_)) | Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
-            let mut vp = viewport.clone();
+        Some(Buffer::Tasks(tasks_buf)) => {
+            buffer_view(effective_vp, mode, &tasks_buf.buffer, frame, x, y);
+        }
+        Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
+            let mut vp = effective_vp.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 

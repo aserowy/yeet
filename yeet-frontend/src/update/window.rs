@@ -135,6 +135,116 @@ mod test {
     }
 
     #[test]
+    fn set_buffer_vp_all_viewports_nonzero_after_layout() {
+        let mut tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::Second,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 50,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        match &tree {
+            Window::Horizontal { first, second, .. } => {
+                match first.as_ref() {
+                    Window::Directory(parent, current, preview) => {
+                        assert!(parent.width > 0 && parent.height > 0, "parent non-zero");
+                        assert!(current.width > 0 && current.height > 0, "current non-zero");
+                        assert!(preview.width > 0 && preview.height > 0, "preview non-zero");
+                    }
+                    _ => panic!("expected Directory"),
+                }
+                match second.as_ref() {
+                    Window::Tasks(vp) => {
+                        assert!(vp.width > 0 && vp.height > 0, "tasks non-zero");
+                    }
+                    _ => panic!("expected Tasks"),
+                }
+            }
+            _ => panic!("expected Horizontal"),
+        }
+    }
+
+    #[test]
+    fn set_buffer_vp_tasks_below_directory() {
+        let mut tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::Second,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 40,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        match &tree {
+            Window::Horizontal { first, second, .. } => {
+                let dir_y = match first.as_ref() {
+                    Window::Directory(_, current, _) => current.y,
+                    _ => panic!("expected Directory"),
+                };
+                let task_y = match second.as_ref() {
+                    Window::Tasks(vp) => vp.y,
+                    _ => panic!("expected Tasks"),
+                };
+                assert!(
+                    task_y > dir_y,
+                    "task viewport y ({task_y}) should be below directory y ({dir_y})"
+                );
+            }
+            _ => panic!("expected Horizontal"),
+        }
+    }
+
+    #[test]
+    fn get_height_horizontal_returns_full_area() {
+        let mut tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 40,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        let total_height = tree.get_height().unwrap();
+        assert_eq!(
+            total_height, area.height,
+            "horizontal tree height should equal area height"
+        );
+    }
+
+    #[test]
     fn set_buffer_vp_tasks_sets_dimensions() {
         let mut window = Window::Tasks(ViewPort::default());
         let area = Rect {
