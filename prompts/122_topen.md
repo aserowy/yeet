@@ -11,7 +11,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `done`
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `done`
 7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `done`
-8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `planned`
+8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `done`
 9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `planned`
 
 ---
@@ -910,7 +910,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: `:q` closes the focused window in a split (collapsing the `Horizontal`). If only one window remains, `:q` shuts down yeet. `:qa` quits regardless of windows. `:qa!` force-quits. Like vim, `:q` refuses to close or quit when there are unsaved changes in any directory buffer — the user must use `:q!` to force it.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Users need a way to close the task window and return to the normal single-pane view. The `:q` semantics match vim's behavior — close current window, or quit if it's the last one. The unsaved changes guard prevents accidental data loss (matching vim's `E37: No write since last change` behavior).
 

@@ -178,6 +178,46 @@ impl Default for KeyMap {
                     },
                 ),
                 (
+                    vec![Key::new(KeyCode::from_char('h'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
+                            FocusDirection::Left,
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('j'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
+                            FocusDirection::Down,
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('k'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
+                            FocusDirection::Up,
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Ctrl])],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
+                            FocusDirection::Right,
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
                     vec![
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('n'), vec![]),
@@ -485,46 +525,6 @@ impl Default for KeyMap {
                         kind: BindingKind::Message(KeymapMessage::Buffer(
                             BufferMessage::MoveViewPort(ViewPortDirection::HalfPageUp),
                         )),
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('h'), vec![KeyModifier::Ctrl])],
-                    Binding {
-                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
-                            FocusDirection::Left,
-                        )),
-                        repeatable: false,
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('j'), vec![KeyModifier::Ctrl])],
-                    Binding {
-                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
-                            FocusDirection::Down,
-                        )),
-                        repeatable: false,
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('k'), vec![KeyModifier::Ctrl])],
-                    Binding {
-                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
-                            FocusDirection::Up,
-                        )),
-                        repeatable: false,
-                        ..Default::default()
-                    },
-                ),
-                (
-                    vec![Key::new(KeyCode::from_char('l'), vec![KeyModifier::Ctrl])],
-                    Binding {
-                        kind: BindingKind::Message(KeymapMessage::FocusDirection(
-                            FocusDirection::Right,
-                        )),
-                        repeatable: false,
                         ..Default::default()
                     },
                 ),
