@@ -9,11 +9,12 @@ use crate::{
 
 pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
     let (vp, focused_id) = match &mut app.window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(_, vp, _) => {
             let id = vp.buffer_id;
             (vp, id)
         }
+        Window::Tasks(_) => todo!(),
     };
 
     match app.contents.buffers.get_mut(&focused_id) {
@@ -24,8 +25,9 @@ pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
 
 pub fn get_focused_directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
     match &app.window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
+        Window::Tasks(_) => todo!(),
     }
 }
 
@@ -33,8 +35,9 @@ pub fn get_focused_directory_viewports_mut(
     window: &mut Window,
 ) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
     match window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
+        Window::Tasks(_) => todo!(),
     }
 }
 
@@ -48,7 +51,7 @@ pub fn get_viewport_by_buffer_id_mut(
     buffer_id: usize,
 ) -> Option<&mut ViewPort> {
     match window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(parent, current, preview) => {
             if parent.buffer_id == buffer_id {
                 Some(parent)
@@ -60,6 +63,7 @@ pub fn get_viewport_by_buffer_id_mut(
                 None
             }
         }
+        Window::Tasks(_) => todo!(),
     }
 }
 
@@ -118,6 +122,7 @@ pub fn resolve_buffer(
                 Buffer::Content(it) => Some(format!("{}:Content:{}", buf_id, it.path.display())),
                 Buffer::Image(it) => Some(format!("{}:Image:{}", buf_id, it.path.display())),
                 Buffer::PathReference(p) => Some(format!("{}:PathRef:{}", buf_id, p.display())),
+                Buffer::Tasks(_) => None,
                 Buffer::Empty => None,
             };
             path_str

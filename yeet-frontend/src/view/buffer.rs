@@ -15,8 +15,9 @@ pub fn view(
     vertical_offset: u16,
 ) {
     let (parent_viewport, current_viewport, preview_viewport) = match &app.window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
+        Window::Tasks(_) => todo!(),
     };
 
     let parent_buffer = app.contents.buffers.get(&parent_viewport.buffer_id);
@@ -68,7 +69,7 @@ fn render_buffer_slot(
         Some(Buffer::Directory(buffer)) => {
             render_directory_buffer(mode, frame, viewport, buffer, x, y);
         }
-        Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
+        Some(Buffer::Tasks(_)) | Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = viewport.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;

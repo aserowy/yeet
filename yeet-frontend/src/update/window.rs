@@ -31,8 +31,9 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
     let preview_rect = layout[2];
 
     let (parent_vp, current_vp, preview_vp) = match window {
-        Window::Horizontal(_, _) => todo!(),
+        Window::Horizontal { .. } => todo!(),
         Window::Directory(parent, current, preview) => (parent, current, preview),
+        Window::Tasks(_) => todo!(),
     };
 
     parent_vp.height = parent_rect.height;

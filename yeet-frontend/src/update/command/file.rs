@@ -47,6 +47,7 @@ pub fn refresh(app: &mut App) -> Vec<Action> {
         Buffer::Image(buffer) => buffer.resolve_path(),
         Buffer::Content(buffer) => buffer.resolve_path(),
         Buffer::PathReference(path) => Some(path.as_path()),
+        Buffer::Tasks(_) => None,
         Buffer::Empty => None,
     };
 

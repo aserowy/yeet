@@ -17,8 +17,9 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
 
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
         let (focused_id, focused_vp) = match &model.app.window {
-            Window::Horizontal(_, _) => todo!(),
+            Window::Horizontal { .. } => todo!(),
             Window::Directory(_, vp, _) => (&vp.buffer_id, vp),
+            Window::Tasks(_) => todo!(),
         };
 
         let buffer = match model.app.contents.buffers.get(focused_id) {

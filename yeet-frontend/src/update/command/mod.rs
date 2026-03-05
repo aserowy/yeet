@@ -52,7 +52,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Some(Buffer::Content(it)) => it.resolve_path(),
                 Some(Buffer::Image(it)) => it.resolve_path(),
                 Some(Buffer::PathReference(path)) => Some(path.as_path()),
-                Some(Buffer::Empty) | None => None,
+                Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
             };
 
             let actions = match path {
@@ -224,7 +224,7 @@ fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
         Some(Buffer::Content(it)) => it.resolve_path(),
         Some(Buffer::Image(it)) => it.resolve_path(),
         Some(Buffer::PathReference(path)) => Some(path.as_path()),
-        Some(Buffer::Empty) | None => None,
+        Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
     }
 }
 

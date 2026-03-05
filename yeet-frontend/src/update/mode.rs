@@ -54,6 +54,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 (_vp, Buffer::Image(_)) => return Vec::new(),
                 (_vp, Buffer::Content(_)) => return Vec::new(),
                 (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                (_vp, Buffer::Tasks(_)) => return Vec::new(),
                 (_vp, Buffer::Empty) => return Vec::new(),
             };
 
@@ -74,6 +75,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 (_vp, Buffer::Image(_)) => return Vec::new(),
                 (_vp, Buffer::Content(_)) => return Vec::new(),
                 (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                (_vp, Buffer::Tasks(_)) => return Vec::new(),
                 (_vp, Buffer::Empty) => return Vec::new(),
             };
 
@@ -96,6 +98,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 (_vp, Buffer::Image(_)) => return Vec::new(),
                 (_vp, Buffer::Content(_)) => return Vec::new(),
                 (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                (_vp, Buffer::Tasks(_)) => return Vec::new(),
                 (_vp, Buffer::Empty) => return Vec::new(),
             };
 

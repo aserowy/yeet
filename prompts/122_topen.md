@@ -4,7 +4,7 @@ The `:topen` feature adds a task window to yeet — a split pane that lists runn
 
 The implementation is split into 9 sequential prompts, each leaving the program in a compilable and functional state:
 
-1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `planned`
+1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `done`
 2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `planned`
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `planned`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
@@ -20,7 +20,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 
 **Goal**: Introduce the new data types for the task window feature without any behavior changes.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The `:topen` command needs a way to represent a task window in the window tree and a task-specific buffer type. Adding the types first — with all match arms compiling — isolates model changes from logic changes, keeping each step reviewable and the program functional.
 

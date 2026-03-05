@@ -74,17 +74,30 @@ pub struct Contents {
     pub latest_buffer_id: usize,
 }
 
-#[allow(dead_code, clippy::large_enum_variant)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum SplitFocus {
+    #[default]
+    First,
+    Second,
+}
+
+#[allow(clippy::large_enum_variant)]
 pub enum Window {
-    Horizontal(Box<Window>, Box<Window>),
+    Horizontal {
+        first: Box<Window>,
+        second: Box<Window>,
+        focus: SplitFocus,
+    },
     Directory(ViewPort, ViewPort, ViewPort),
+    Tasks(ViewPort),
 }
 
 impl Window {
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
-            Window::Horizontal(_, _) => todo!(),
+            Window::Horizontal { .. } => todo!(),
             Window::Directory(_, vp, _) => Ok(vp.height),
+            Window::Tasks(_) => todo!(),
         }
     }
 }
@@ -162,7 +175,13 @@ pub enum Buffer {
     Image(PreviewImageBuffer),
     Content(ContentBuffer),
     PathReference(PathBuf),
+    Tasks(TasksBuffer),
     Empty,
+}
+
+#[derive(Default)]
+pub struct TasksBuffer {
+    pub buffer: TextBuffer,
 }
 
 #[derive(Default)]
@@ -246,5 +265,45 @@ pub fn get_selected_path_with_base(
         Some(target)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use super::*;
+
+    #[test]
+    fn split_focus_default_is_first() {
+        assert_eq!(SplitFocus::default(), SplitFocus::First);
+    }
+
+    #[test]
+    fn window_tasks_construction_and_pattern_match() {
+        let task_window = Window::Tasks(ViewPort::default());
+        assert!(matches!(task_window, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn window_horizontal_struct_variant_construction() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+        assert!(matches!(tree, Window::Horizontal { .. }));
+    }
+
+    #[test]
+    fn buffer_tasks_construction_and_pattern_match() {
+        let buf = Buffer::Tasks(TasksBuffer {
+            buffer: TextBuffer::default(),
+        });
+        assert!(matches!(buf, Buffer::Tasks(_)));
     }
 }

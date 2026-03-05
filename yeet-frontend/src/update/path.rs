@@ -301,6 +301,7 @@ fn buffer_path(buffer: &Buffer) -> Option<&Path> {
         Buffer::Content(buffer) => buffer.resolve_path(),
         Buffer::Image(buffer) => buffer.resolve_path(),
         Buffer::PathReference(path) => Some(path.as_path()),
+        Buffer::Tasks(_) => None,
         Buffer::Empty => None,
     }
 }

@@ -4,10 +4,11 @@ use crate::model::{App, Buffer, Window};
 
 pub fn update(app: &mut App) {
     let referenced: HashSet<usize> = match &app.window {
-        Window::Horizontal(_, _) => return,
+        Window::Horizontal { .. } => return,
         Window::Directory(parent, current, preview) => {
             HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
         }
+        Window::Tasks(_) => return,
     };
 
     let stale_images: Vec<usize> = app

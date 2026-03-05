@@ -94,7 +94,7 @@ pub fn relocate(
         Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         Some(Buffer::PathReference(path)) => Some(path.to_path_buf()),
-        Some(Buffer::Empty) | None => None,
+        Some(Buffer::Tasks(_)) | Some(Buffer::Empty) | None => None,
     };
 
     let (viewport, buffer) = match app::get_focused_current_mut(app) {
@@ -102,6 +102,7 @@ pub fn relocate(
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
         (_, Buffer::PathReference(_)) => return Vec::new(),
+        (_, Buffer::Tasks(_)) => return Vec::new(),
         (_, Buffer::Empty) => return Vec::new(),
     };
 
