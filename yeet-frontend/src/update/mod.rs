@@ -20,6 +20,7 @@ mod command;
 pub mod commandline;
 mod cursor;
 mod enumeration;
+mod focus;
 pub mod history;
 pub mod junkyard;
 mod mark;
@@ -190,6 +191,7 @@ pub fn update_with_keymap_message(
             app.contents.buffers.values_mut().collect(),
             mrks,
         ),
+        KeymapMessage::FocusDirection(direction) => focus::change(app, direction),
         KeymapMessage::ExecuteCommand => {
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }

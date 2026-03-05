@@ -87,9 +87,18 @@ impl KeySequence {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FocusDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum KeymapMessage {
     Buffer(BufferMessage),
     ClearSearchHighlight,
+    FocusDirection(FocusDirection),
     DeleteMarks(Vec<char>),
     ExecuteCommand,
     ExecuteCommandString(String),

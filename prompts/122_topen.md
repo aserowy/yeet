@@ -6,7 +6,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 
 1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `done`
 2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `done`
-3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `planned`
+3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `done`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `planned`
@@ -495,7 +495,7 @@ assert!(get_focused_directory_viewports(&app_with_tasks_focused.window).is_none(
 
 **Goal**: Add keybindings and logic to move focus between windows in a split layout.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Once splits exist (Prompt 4), users need a way to move focus between the directory panes and the task window. Wiring this up now — while no splits exist yet — keeps the change isolated and testable.
 

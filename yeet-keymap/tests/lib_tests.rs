@@ -4,7 +4,7 @@ use yeet_buffer::{
 };
 use yeet_keymap::{
     key::{Key, KeyCode, KeyModifier},
-    message::{KeySequence, KeymapMessage},
+    message::{FocusDirection, KeySequence, KeymapMessage},
     MessageResolver,
 };
 
@@ -358,5 +358,34 @@ fn add_and_resolve_key_normal_qa_and_q() {
 
     assert_eq!(Some(&KeymapMessage::StopMacro), result.0.first());
     assert_eq!(KeySequence::Completed("q".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
+fn add_and_resolve_key_navigation_ctrl_j() {
+    let mut resolver = MessageResolver::default();
+
+    let result = resolver.add_key(Key::new(KeyCode::from_char('j'), vec![KeyModifier::Ctrl]));
+
+    assert_eq!(
+        Some(&KeymapMessage::FocusDirection(FocusDirection::Down)),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("<C-j>".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
+fn add_and_resolve_key_normal_ctrl_k() {
+    let mut resolver = MessageResolver::default();
+    resolver.mode = Mode::Normal;
+
+    let result = resolver.add_key(Key::new(KeyCode::from_char('k'), vec![KeyModifier::Ctrl]));
+
+    assert_eq!(
+        Some(&KeymapMessage::FocusDirection(FocusDirection::Up)),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("<C-k>".to_string()), result.1);
     assert_eq!(1, result.0.len());
 }
