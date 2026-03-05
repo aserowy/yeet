@@ -18,7 +18,8 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let (current_vp, current_buffer) =
+        app::get_focused_current_mut(&mut app.window, &mut app.contents);
     let current_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
@@ -52,13 +53,14 @@ pub fn set_preview_buffer_for_selection(
 
     preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
 
-    let preview_vp = app::get_focused_directory_viewports_mut(&mut app.window).2;
-    preview_vp.cursor = Cursor::default();
-    preview_vp.hide_cursor_line = true;
-    preview_vp.horizontal_index = 0;
-    preview_vp.vertical_index = 0;
+    if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports_mut(&mut app.window) {
+        preview_vp.cursor = Cursor::default();
+        preview_vp.hide_cursor_line = true;
+        preview_vp.horizontal_index = 0;
+        preview_vp.vertical_index = 0;
 
-    cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
+        cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
+    }
 
     actions
 }

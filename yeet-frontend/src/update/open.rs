@@ -13,7 +13,8 @@ pub fn selected(settings: &Settings, mode: &Mode, app: &mut crate::model::App) -
         return Vec::new();
     }
 
-    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let (current_vp, current_buffer) =
+        app::get_focused_current_mut(&mut app.window, &mut app.contents);
     let selected = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => None,

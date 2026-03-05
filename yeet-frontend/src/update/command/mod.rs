@@ -201,12 +201,12 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 }
 
 fn get_current_path(app: &App) -> Option<&Path> {
-    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
+    let (_, current_id, _) = app::get_focused_directory_buffer_ids(&app.window)?;
     app::get_buffer_path(app, current_id)
 }
 
 fn get_preview_path(app: &App) -> Option<&Path> {
-    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
+    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&app.window)?;
     app::get_buffer_path(app, preview_id)
 }
 

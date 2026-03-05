@@ -4,46 +4,61 @@ use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
-    model::{App, Buffer, Contents, Window},
+    model::{App, Buffer, Contents, SplitFocus, Window},
 };
 
-pub fn get_focused_current_mut(app: &mut App) -> (&mut ViewPort, &mut Buffer) {
-    let (vp, focused_id) = match &mut app.window {
-        Window::Horizontal { .. } => todo!(),
-        Window::Directory(_, vp, _) => {
-            let id = vp.buffer_id;
-            (vp, id)
-        }
-        Window::Tasks(_) => todo!(),
-    };
-
-    match app.contents.buffers.get_mut(&focused_id) {
+pub fn get_focused_current_mut<'a>(
+    window: &'a mut Window,
+    contents: &'a mut Contents,
+) -> (&'a mut ViewPort, &'a mut Buffer) {
+    let vp = window.focused_viewport_mut();
+    let focused_id = vp.buffer_id;
+    match contents.buffers.get_mut(&focused_id) {
         Some(it) => (vp, it),
-        None => todo!(),
+        None => panic!(
+            "focused viewport references non-existent buffer {}",
+            focused_id
+        ),
     }
 }
 
-pub fn get_focused_directory_viewports(app: &App) -> (&ViewPort, &ViewPort, &ViewPort) {
-    match &app.window {
-        Window::Horizontal { .. } => todo!(),
-        Window::Directory(parent, current, preview) => (parent, current, preview),
-        Window::Tasks(_) => todo!(),
+pub fn get_focused_directory_viewports(
+    window: &Window,
+) -> Option<(&ViewPort, &ViewPort, &ViewPort)> {
+    match window {
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        } => match focus {
+            SplitFocus::First => get_focused_directory_viewports(first),
+            SplitFocus::Second => get_focused_directory_viewports(second),
+        },
+        Window::Directory(parent, current, preview) => Some((parent, current, preview)),
+        Window::Tasks(_) => None,
     }
 }
 
 pub fn get_focused_directory_viewports_mut(
     window: &mut Window,
-) -> (&mut ViewPort, &mut ViewPort, &mut ViewPort) {
+) -> Option<(&mut ViewPort, &mut ViewPort, &mut ViewPort)> {
     match window {
-        Window::Horizontal { .. } => todo!(),
-        Window::Directory(parent, current, preview) => (parent, current, preview),
-        Window::Tasks(_) => todo!(),
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        } => match focus {
+            SplitFocus::First => get_focused_directory_viewports_mut(first),
+            SplitFocus::Second => get_focused_directory_viewports_mut(second),
+        },
+        Window::Directory(parent, current, preview) => Some((parent, current, preview)),
+        Window::Tasks(_) => None,
     }
 }
 
-pub fn get_focused_directory_buffer_ids(app: &App) -> (usize, usize, usize) {
-    let (parent, current, preview) = get_focused_directory_viewports(app);
-    (parent.buffer_id, current.buffer_id, preview.buffer_id)
+pub fn get_focused_directory_buffer_ids(window: &Window) -> Option<(usize, usize, usize)> {
+    let (parent, current, preview) = get_focused_directory_viewports(window)?;
+    Some((parent.buffer_id, current.buffer_id, preview.buffer_id))
 }
 
 pub fn get_viewport_by_buffer_id_mut(
@@ -51,7 +66,8 @@ pub fn get_viewport_by_buffer_id_mut(
     buffer_id: usize,
 ) -> Option<&mut ViewPort> {
     match window {
-        Window::Horizontal { .. } => todo!(),
+        Window::Horizontal { first, second, .. } => get_viewport_by_buffer_id_mut(first, buffer_id)
+            .or_else(|| get_viewport_by_buffer_id_mut(second, buffer_id)),
         Window::Directory(parent, current, preview) => {
             if parent.buffer_id == buffer_id {
                 Some(parent)
@@ -63,7 +79,13 @@ pub fn get_viewport_by_buffer_id_mut(
                 None
             }
         }
-        Window::Tasks(_) => todo!(),
+        Window::Tasks(vp) => {
+            if vp.buffer_id == buffer_id {
+                Some(vp)
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -189,4 +211,108 @@ pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
     contents.latest_buffer_id = next_id;
 
     next_id
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use crate::model::{App, Buffer, Contents, SplitFocus, TasksBuffer, Window};
+
+    use super::*;
+
+    fn make_horizontal_app() -> App {
+        let mut buffers = HashMap::new();
+        buffers.insert(10, Buffer::Empty);
+        buffers.insert(11, Buffer::Empty);
+        buffers.insert(12, Buffer::Empty);
+        buffers.insert(20, Buffer::Tasks(TasksBuffer::default()));
+
+        App {
+            commandline: Default::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 20,
+            },
+            window: Window::Horizontal {
+                first: Box::new(Window::Directory(
+                    ViewPort {
+                        buffer_id: 10,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: 11,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: 12,
+                        ..Default::default()
+                    },
+                )),
+                second: Box::new(Window::Tasks(ViewPort {
+                    buffer_id: 20,
+                    ..Default::default()
+                })),
+                focus: SplitFocus::Second,
+            },
+        }
+    }
+
+    #[test]
+    fn get_focused_current_mut_returns_tasks_when_focused() {
+        let mut app = make_horizontal_app();
+        let (vp, buffer) = get_focused_current_mut(&mut app.window, &mut app.contents);
+        assert_eq!(vp.buffer_id, 20);
+        assert!(matches!(buffer, Buffer::Tasks(_)));
+    }
+
+    #[test]
+    fn get_focused_directory_viewports_none_for_tasks() {
+        let app = make_horizontal_app();
+        assert!(get_focused_directory_viewports(&app.window).is_none());
+    }
+
+    #[test]
+    fn get_focused_directory_viewports_some_through_horizontal() {
+        let mut app = make_horizontal_app();
+        if let Window::Horizontal { focus, .. } = &mut app.window {
+            *focus = SplitFocus::First;
+        }
+        let result = get_focused_directory_viewports(&app.window);
+        assert!(result.is_some());
+        let (parent, current, preview) = result.unwrap();
+        assert_eq!(parent.buffer_id, 10);
+        assert_eq!(current.buffer_id, 11);
+        assert_eq!(preview.buffer_id, 12);
+    }
+
+    #[test]
+    fn get_focused_directory_buffer_ids_none_for_tasks() {
+        let app = make_horizontal_app();
+        assert!(get_focused_directory_buffer_ids(&app.window).is_none());
+    }
+
+    #[test]
+    fn get_viewport_by_buffer_id_mut_finds_in_second_child() {
+        let mut app = make_horizontal_app();
+        let vp = get_viewport_by_buffer_id_mut(&mut app.window, 20);
+        assert!(vp.is_some());
+        assert_eq!(vp.unwrap().buffer_id, 20);
+    }
+
+    #[test]
+    fn get_viewport_by_buffer_id_mut_finds_in_first_child() {
+        let mut app = make_horizontal_app();
+        let vp = get_viewport_by_buffer_id_mut(&mut app.window, 11);
+        assert!(vp.is_some());
+        assert_eq!(vp.unwrap().buffer_id, 11);
+    }
+
+    #[test]
+    fn get_viewport_by_buffer_id_mut_returns_none_for_missing() {
+        let mut app = make_horizontal_app();
+        assert!(get_viewport_by_buffer_id_mut(&mut app.window, 999).is_none());
+    }
 }

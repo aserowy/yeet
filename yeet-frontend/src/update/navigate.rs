@@ -102,7 +102,8 @@ pub fn navigate_to_path_with_selection(
         app::get_empty_buffer(&mut app.contents)
     };
 
-    let (parent_vp, current_vp, _) = app::get_focused_directory_viewports_mut(&mut app.window);
+    let (parent_vp, current_vp, _) = app::get_focused_directory_viewports_mut(&mut app.window)
+        .expect("requires directory window");
 
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
@@ -152,7 +153,8 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
-    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
+    let (_, current_id, _) =
+        app::get_focused_directory_buffer_ids(&app.window).expect("requires directory window");
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
         _ => return Vec::new(),
@@ -164,7 +166,8 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         }
 
         let (parent_vp, current_vp, preview_vp) =
-            app::get_focused_directory_viewports_mut(&mut app.window);
+            app::get_focused_directory_viewports_mut(&mut app.window)
+                .expect("requires directory window");
         swap_viewport(parent_vp, preview_vp);
         swap_viewport(current_vp, preview_vp);
 
@@ -201,7 +204,8 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     let (parent_vp, current_vp, preview_vp) =
-        app::get_focused_directory_viewports_mut(&mut app.window);
+        app::get_focused_directory_viewports_mut(&mut app.window)
+            .expect("requires directory window");
     let preview_buffer = match app.contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),

@@ -11,7 +11,7 @@ use crate::{
 use super::{app, sign};
 
 pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
-    let (vp, buffer) = match app::get_focused_current_mut(app) {
+    let (vp, buffer) = match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
         (vp, Buffer::Directory(it)) => (vp, it),
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),

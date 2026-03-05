@@ -135,7 +135,10 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
 }
 
 pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> Vec<Action> {
-    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
+    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(&app.window) {
+        Some(ids) => ids,
+        None => return Vec::new(),
+    };
     let buffer = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
@@ -156,7 +159,8 @@ pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> V
 }
 
 pub fn yank(app: &mut crate::model::App, junk: &mut JunkYard, repeat: &usize) -> Vec<Action> {
-    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let (current_vp, current_buffer) =
+        app::get_focused_current_mut(&mut app.window, &mut app.contents);
     let directory = match current_buffer {
         Buffer::Directory(directory) => directory,
         _ => return Vec::new(),

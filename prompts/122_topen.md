@@ -5,7 +5,7 @@ The `:topen` feature adds a task window to yeet — a split pane that lists runn
 The implementation is split into 9 sequential prompts, each leaving the program in a compilable and functional state:
 
 1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `done`
-2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `refined`
+2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `done`
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `planned`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
@@ -155,7 +155,7 @@ assert!(matches!(buf, Buffer::Tasks(_)));
 
 **Goal**: Replace every `todo!()` on `Window::Horizontal` and `Window::Tasks` with real implementations, making the window tree fully functional for recursive splits and task windows.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The window tree must support splits and task leaves before any user-facing feature (`:topen`, focus switching) can work. Implementing all `todo!()` sites in one prompt ensures the infrastructure is complete and testable end-to-end.
 

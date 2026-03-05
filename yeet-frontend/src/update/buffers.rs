@@ -1,15 +1,7 @@
-use std::collections::HashSet;
-
-use crate::model::{App, Buffer, Window};
+use crate::model::{App, Buffer};
 
 pub fn update(app: &mut App) {
-    let referenced: HashSet<usize> = match &app.window {
-        Window::Horizontal { .. } => return,
-        Window::Directory(parent, current, preview) => {
-            HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
-        }
-        Window::Tasks(_) => return,
-    };
+    let referenced = app.window.buffer_ids();
 
     let stale_images: Vec<usize> = app
         .contents
@@ -69,7 +61,8 @@ mod test {
     #[test]
     fn keeps_referenced_image() {
         let mut app = App::default();
-        let (_, _, preview_id) = crate::update::app::get_focused_directory_buffer_ids(&app);
+        let (_, _, preview_id) =
+            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
 
         app.contents.buffers.insert(
             preview_id,

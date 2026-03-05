@@ -41,7 +41,7 @@ pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Actio
 }
 
 pub fn refresh(app: &mut App) -> Vec<Action> {
-    let (_, buffer) = app::get_focused_current_mut(app);
+    let (_, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
     let path = buffer.resolve_path();
 
     let navigation = if let Some(path) = path {

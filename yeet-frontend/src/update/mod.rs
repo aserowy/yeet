@@ -225,7 +225,8 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
-            let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+            let (current_vp, current_buffer) =
+                app::get_focused_current_mut(&mut app.window, &mut app.contents);
             let directory = match current_buffer {
                 Buffer::Directory(directory) => directory,
                 _ => return Vec::new(),

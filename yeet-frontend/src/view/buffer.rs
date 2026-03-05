@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
 use yeet_buffer::{
@@ -14,41 +16,80 @@ pub fn view(
     horizontal_offset: u16,
     vertical_offset: u16,
 ) {
-    let (parent_viewport, current_viewport, preview_viewport) = match &app.window {
-        Window::Horizontal { .. } => todo!(),
-        Window::Directory(parent, current, preview) => (parent, current, preview),
-        Window::Tasks(_) => todo!(),
-    };
-
-    let parent_buffer = app.contents.buffers.get(&parent_viewport.buffer_id);
-    render_buffer_slot(
+    render_window(
         mode,
+        &app.window,
+        &app.contents.buffers,
         frame,
-        parent_viewport,
-        parent_buffer,
         horizontal_offset,
         vertical_offset,
     );
+}
 
-    let current_buffer = app.contents.buffers.get(&current_viewport.buffer_id);
-    render_buffer_slot(
-        mode,
-        frame,
-        current_viewport,
-        current_buffer,
-        horizontal_offset,
-        vertical_offset,
-    );
-
-    let preview_buffer = app.contents.buffers.get(&preview_viewport.buffer_id);
-    render_buffer_slot(
-        mode,
-        frame,
-        preview_viewport,
-        preview_buffer,
-        horizontal_offset,
-        vertical_offset,
-    );
+fn render_window(
+    mode: &Mode,
+    window: &Window,
+    buffers: &HashMap<usize, Buffer>,
+    frame: &mut Frame,
+    horizontal_offset: u16,
+    vertical_offset: u16,
+) {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            render_window(
+                mode,
+                first,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+            );
+            render_window(
+                mode,
+                second,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+            );
+        }
+        Window::Directory(parent, current, preview) => {
+            render_buffer_slot(
+                mode,
+                frame,
+                parent,
+                buffers.get(&parent.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+            );
+            render_buffer_slot(
+                mode,
+                frame,
+                current,
+                buffers.get(&current.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+            );
+            render_buffer_slot(
+                mode,
+                frame,
+                preview,
+                buffers.get(&preview.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+            );
+        }
+        Window::Tasks(vp) => {
+            render_buffer_slot(
+                mode,
+                frame,
+                vp,
+                buffers.get(&vp.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+            );
+        }
+    }
 }
 
 fn render_buffer_slot(

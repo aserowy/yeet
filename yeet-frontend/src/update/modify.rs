@@ -19,7 +19,7 @@ pub fn buffer(
     modification: &TextModification,
 ) -> Vec<Action> {
     let msg = BufferMessage::Modification(*repeat, modification.clone());
-    match app::get_focused_current_mut(app) {
+    match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
         (vp, Buffer::Directory(it)) => {
             yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
         }
@@ -30,7 +30,7 @@ pub fn buffer(
         (_vp, Buffer::Empty) => return Vec::new(),
     }
 
-    let (_, buffer) = app::get_focused_current_mut(app);
+    let (_, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
     if let Buffer::Directory(_buffer) = buffer {
         return selection::refresh_preview_from_current_selection(app, &state.history, None);
     }

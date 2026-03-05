@@ -1,10 +1,6 @@
 use ratatui::layout::Rect;
 
-use crate::{
-    error::AppError,
-    model::{Model, Window},
-    terminal::TerminalWrapper,
-};
+use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 
 mod buffer;
 mod commandline;
@@ -16,11 +12,8 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
         tracing::debug!("Rendering with area: {}", frame.area());
 
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
-        let (focused_id, focused_vp) = match &model.app.window {
-            Window::Horizontal { .. } => todo!(),
-            Window::Directory(_, vp, _) => (&vp.buffer_id, vp),
-            Window::Tasks(_) => todo!(),
-        };
+        let focused_vp = model.app.window.focused_viewport();
+        let focused_id = &focused_vp.buffer_id;
 
         let buffer = match model.app.contents.buffers.get(focused_id) {
             Some(it) => it,

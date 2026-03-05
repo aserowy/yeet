@@ -33,7 +33,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (vp, _buffer) = app::get_focused_current_mut(app);
+            let (vp, _buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
             vp.hide_cursor = true;
 
             vec![]
@@ -49,14 +49,15 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) =
+                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
+                    (vp, Buffer::Directory(it)) => (vp, it),
+                    (_vp, Buffer::Image(_)) => return Vec::new(),
+                    (_vp, Buffer::Content(_)) => return Vec::new(),
+                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
+                    (_vp, Buffer::Empty) => return Vec::new(),
+                };
 
             vp.hide_cursor = false;
 
@@ -70,14 +71,15 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) =
+                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
+                    (vp, Buffer::Directory(it)) => (vp, it),
+                    (_vp, Buffer::Image(_)) => return Vec::new(),
+                    (_vp, Buffer::Content(_)) => return Vec::new(),
+                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
+                    (_vp, Buffer::Empty) => return Vec::new(),
+                };
 
             // TODO: handle file operations: show pending with gray, refresh on operation success
             // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
@@ -93,14 +95,15 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             save::changes(app, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Tasks(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) =
+                match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
+                    (vp, Buffer::Directory(it)) => (vp, it),
+                    (_vp, Buffer::Image(_)) => return Vec::new(),
+                    (_vp, Buffer::Content(_)) => return Vec::new(),
+                    (_vp, Buffer::PathReference(_)) => return Vec::new(),
+                    (_vp, Buffer::Tasks(_)) => return Vec::new(),
+                    (_vp, Buffer::Empty) => return Vec::new(),
+                };
 
             vp.hide_cursor = false;
 
@@ -261,7 +264,8 @@ mod test {
         let mut app = crate::model::App::default();
         let mut state = crate::model::State::default();
 
-        let (_, current_id, _) = crate::update::app::get_focused_directory_buffer_ids(&app);
+        let (_, current_id, _) =
+            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
         app.contents
             .buffers
             .insert(current_id, Buffer::Directory(DirectoryBuffer::default()));
