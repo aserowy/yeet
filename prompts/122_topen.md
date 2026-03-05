@@ -5,7 +5,7 @@ The `:topen` feature adds a task window to yeet — a split pane that lists runn
 The implementation is split into 9 sequential prompts, each leaving the program in a compilable and functional state:
 
 1. [Prompt 1: Add `Window::Tasks` variant, `Buffer::Tasks` variant, and `SplitFocus` enum to the model](#prompt-1-add-windowtasks-variant-buffertasks-variant-and-splitfocus-enum-to-the-model) — `done`
-2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `planned`
+2. [Prompt 2: Implement `Window::Horizontal` and `Window::Tasks` in all `todo!()` sites](#prompt-2-implement-windowhorizontal-and-windowtasks-in-all-todo-sites) — `refined`
 3. [Prompt 3: Add `FocusDirection` message, `Ctrl+h/j/k/l` keybindings, and focus switching logic](#prompt-3-add-focusdirection-message-ctrlhjkl-keybindings-and-focus-switching-logic) — `planned`
 4. [Prompt 4: Implement `:topen` command](#prompt-4-implement-topen-command) — `planned`
 5. [Prompt 5: Render the `Window::Tasks` and `Buffer::Tasks` types](#prompt-5-render-the-windowtasks-and-buffertasks-types) — `planned`
@@ -166,6 +166,7 @@ assert!(matches!(buf, Buffer::Tasks(_)));
 - `Tasks` viewport behaves like a single-pane leaf (height, width, x, y from area).
 - Focus-aware functions recurse into the focused child of `Horizontal`.
 - Buffer-id collection recursively walks the entire tree.
+- `get_focused_directory_viewports`, `_mut`, and `_buffer_ids` return `Option` — `None` when the focused leaf is a Tasks window. All callers are updated accordingly.
 - All existing tests continue to pass.
 
 ## Exclusions
@@ -177,59 +178,274 @@ assert!(matches!(buf, Buffer::Tasks(_)));
 ## Context
 
 - @yeet-frontend/src/model/mod.rs — `Window` enum, `SplitFocus`, `get_height()`.
-- @yeet-frontend/src/update/app.rs — `get_focused_current_mut`, `get_focused_directory_viewports`, `get_focused_directory_viewports_mut`, `get_viewport_by_buffer_id_mut`.
+- @yeet-frontend/src/update/app.rs — `get_focused_current_mut`, `get_focused_directory_viewports`, `get_focused_directory_viewports_mut`, `get_viewport_by_buffer_id_mut`, `get_buffer_path`.
 - @yeet-frontend/src/update/window.rs — `set_buffer_vp`, uses `ratatui::layout::{Layout, Direction, Constraint}`.
 - @yeet-frontend/src/update/buffers.rs — `update`, uses `HashSet<usize>` for referenced buffer ids.
 - @yeet-frontend/src/view/mod.rs — `model` function (status line context).
 - @yeet-frontend/src/view/buffer.rs — `view` function (recursive rendering).
+- @yeet-frontend/src/update/navigate.rs — caller of `get_focused_directory_viewports_mut` and `_buffer_ids`.
+- @yeet-frontend/src/update/path.rs — caller of `get_focused_directory_buffer_ids`.
+- @yeet-frontend/src/update/cursor.rs — caller of `get_focused_directory_buffer_ids`.
+- @yeet-frontend/src/update/selection.rs — caller of `get_focused_directory_viewports_mut`.
+- @yeet-frontend/src/update/preview.rs — caller of `get_focused_directory_viewports_mut`.
+- @yeet-frontend/src/update/enumeration.rs — caller of `get_focused_directory_buffer_ids`.
+- @yeet-frontend/src/update/command/mod.rs — caller of `get_focused_directory_buffer_ids`.
+- @yeet-frontend/src/action.rs — caller of `get_focused_directory_viewports` and `_buffer_ids`.
 - @AGENTS.md — build/test/lint commands.
 
 ## Implementation Plan
 
-1. **`Window::get_height`** in `yeet-frontend/src/model/mod.rs`:
-   - `Horizontal { first, second, .. }` → `first.get_height()? + second.get_height()?` (top/bottom split).
-   - `Tasks(vp)` → `Ok(vp.height)`.
+### Step 1: Add `Window` methods in `yeet-frontend/src/model/mod.rs`
 
-2. **`get_focused_current_mut`** in `yeet-frontend/src/update/app.rs`:
-   - `Horizontal { first, second, focus }` → recurse into the focused child based on `focus` (`SplitFocus::First` → `first`, `Second` → `second`). Restructure to avoid borrow conflicts — extract the focused viewport reference and `buffer_id` from the window tree first, then look up the buffer.
-   - `Tasks(vp)` → return `(vp, &mut contents.buffers[vp.buffer_id])`.
-   - Fix `None => todo!()` to `None => panic!("Buffer not found for focused viewport")`.
+Add three methods to the `Window` impl block:
 
-3. **`get_focused_directory_viewports`** in `yeet-frontend/src/update/app.rs`:
-   - `Horizontal { first, second, focus }` → recurse into the focused child.
-   - `Tasks(_)` → this function returns 3 directory viewports. If the focused window is a Tasks leaf, this is an error. Panic with a descriptive message, or use `Option` if callers can handle it gracefully. Check all callers to decide.
+1a. **`focused_viewport(&self) -> &ViewPort`** — recursively follows `SplitFocus` to the focused leaf. For `Directory`, returns the middle viewport (current). For `Tasks`, returns the single viewport. For `Horizontal`, recurses into the focused child.
 
-4. **`get_focused_directory_viewports_mut`** in `yeet-frontend/src/update/app.rs`:
-   - Same approach as the immutable version.
+```rust
+pub fn focused_viewport(&self) -> &ViewPort {
+    match self {
+        Window::Horizontal { first, second, focus } => match focus {
+            SplitFocus::First => first.focused_viewport(),
+            SplitFocus::Second => second.focused_viewport(),
+        },
+        Window::Directory(_, vp, _) => vp,
+        Window::Tasks(vp) => vp,
+    }
+}
+```
 
-5. **`get_viewport_by_buffer_id_mut`** in `yeet-frontend/src/update/app.rs`:
-   - `Horizontal { first, second, .. }` → try `first`, if `None` try `second`.
-   - `Tasks(vp)` → if `vp.buffer_id == buffer_id` return `Some(vp)`, else `None`.
+1b. **`focused_viewport_mut(&mut self) -> &mut ViewPort`** — mutable version of the above, same recursive structure.
 
-6. **`set_buffer_vp`** in `yeet-frontend/src/update/window.rs`:
-   - `Horizontal { first, second, .. }` → split the `area` Rect vertically using `Layout::default().direction(Direction::Vertical).constraints([Constraint::Percentage(50), Constraint::Percentage(50)])`. Recurse into each child with its sub-rect.
-   - `Tasks(vp)` → set `vp.height`, `vp.width`, `vp.x`, `vp.y` from the area Rect (same pattern as individual viewports in the `Directory` arm).
+1c. **`buffer_ids(&self) -> HashSet<usize>`** — recursively collects all buffer ids from the window tree. For `Horizontal`, unions both children. For `Directory`, returns the 3 viewport buffer ids. For `Tasks`, returns the single buffer id.
 
-7. **`view::model`** in `yeet-frontend/src/view/mod.rs`:
-   - Add a helper `fn get_focused_leaf(window: &Window) -> &ViewPort` that recursively follows `SplitFocus` to the focused leaf (for `Directory`: middle viewport; for `Tasks`: the single viewport).
-   - Use this to get `focused_id` and `focused_vp` for the status line.
+```rust
+pub fn buffer_ids(&self) -> HashSet<usize> {
+    match self {
+        Window::Horizontal { first, second, .. } => {
+            let mut ids = first.buffer_ids();
+            ids.extend(second.buffer_ids());
+            ids
+        }
+        Window::Directory(parent, current, preview) => {
+            HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
+        }
+        Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
+    }
+}
+```
 
-8. **`view::buffer::view`** in `yeet-frontend/src/view/buffer.rs`:
-   - `Horizontal { first, second, .. }` → recursively call `view` for each child. Offsets are encoded in each viewport's `x`/`y` fields (set by `set_buffer_vp`).
-   - `Tasks(vp)` → look up the buffer and call `render_buffer_slot`.
+1d. **`get_height`** — replace the `todo!()` arms:
+- `Horizontal { first, second, .. }` → `first.get_height()? + second.get_height()?`
+- `Tasks(vp)` → `Ok(vp.height)`
 
-9. **`buffers::update`** in `yeet-frontend/src/update/buffers.rs`:
-   - `Horizontal { first, second, .. }` → recursively collect buffer_ids from both children. Add `fn collect_buffer_ids(window: &Window) -> HashSet<usize>`.
-   - `Tasks(vp)` → add `vp.buffer_id` to the set.
+### Step 2: Restructure `get_focused_current_mut` in `yeet-frontend/src/update/app.rs`
 
-10. **Add tests**:
-    - `get_height` for `Horizontal { Tasks(h=10), Directory(h=15) }` → returns 25.
-    - `set_buffer_vp` with a `Horizontal` tree: verify both children get correct y-offsets (first starts at `area.y`, second at `area.y + area.height/2`).
-    - `get_viewport_by_buffer_id_mut` recursively finds a viewport in the second child.
-    - `collect_buffer_ids` on a nested tree returns all buffer_ids.
-    - `get_focused_current_mut` on `Horizontal { Directory, Tasks, focus: Second }` returns the tasks viewport.
+Change the signature to accept `&mut Window` and `&mut Contents` directly instead of `&mut App`. This avoids destructuring `app` inside the method and makes the borrow split explicit at the call site:
 
-11. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
+```rust
+pub fn get_focused_current_mut<'a>(
+    window: &'a mut Window,
+    contents: &'a mut Contents,
+) -> (&'a mut ViewPort, &'a mut Buffer) {
+    let vp = window.focused_viewport_mut();
+    let focused_id = vp.buffer_id;
+    match contents.buffers.get_mut(&focused_id) {
+        Some(it) => (vp, it),
+        None => panic!("focused viewport references non-existent buffer {}", focused_id),
+    }
+}
+```
+
+All 19 callers must be updated from `app::get_focused_current_mut(app)` to `app::get_focused_current_mut(&mut app.window, &mut app.contents)`. The split into `&mut app.window` and `&mut app.contents` at the call site satisfies the borrow checker because Rust can see these are disjoint fields of `App`.
+
+### Step 3: Change `get_focused_directory_viewports` to return `Option`
+
+Change return type from `(&ViewPort, &ViewPort, &ViewPort)` to `Option<(&ViewPort, &ViewPort, &ViewPort)>`. For `Horizontal`, recurse into the focused child. For `Tasks`, return `None`. For `Directory`, return `Some(...)`.
+
+```rust
+pub fn get_focused_directory_viewports(window: &Window) -> Option<(&ViewPort, &ViewPort, &ViewPort)> {
+    match window {
+        Window::Horizontal { first, second, focus } => match focus {
+            SplitFocus::First => get_focused_directory_viewports(first),
+            SplitFocus::Second => get_focused_directory_viewports(second),
+        },
+        Window::Directory(parent, current, preview) => Some((parent, current, preview)),
+        Window::Tasks(_) => None,
+    }
+}
+```
+
+Passing `&Window` directly enables natural recursion without needing a separate helper. All callers change from `get_focused_directory_viewports(app)` to `get_focused_directory_viewports(&app.window)`.
+
+### Step 4: Change `get_focused_directory_viewports_mut` to return `Option`
+
+Same approach as Step 3, mutable version. The existing signature already takes `window: &mut Window` — just change the return type to `Option`.
+
+### Step 5: Change `get_focused_directory_buffer_ids` to return `Option`
+
+```rust
+pub fn get_focused_directory_buffer_ids(window: &Window) -> Option<(usize, usize, usize)> {
+    let (parent, current, preview) = get_focused_directory_viewports(window)?;
+    Some((parent.buffer_id, current.buffer_id, preview.buffer_id))
+}
+```
+
+All callers change from `get_focused_directory_buffer_ids(app)` to `get_focused_directory_buffer_ids(&app.window)`.
+
+### Step 6: Update all callers of `get_focused_directory_viewports`, `_mut`, and `_buffer_ids`
+
+Each caller must handle the new `Option` return. Strategy per caller:
+
+- **Callers that fundamentally require directory viewports** (navigation, path reset, preview set): use `.expect("requires directory window")` or early-return if appropriate.
+- **Callers that can gracefully handle None** (commands returning `Vec<Action>`, actions): propagate `None` and return `Vec::new()` or skip the operation.
+
+Known callers (~14 sites):
+- `action.rs` — `get_focused_directory_viewports`, `get_focused_directory_buffer_ids`: return early / skip if `None`
+- `update/navigate.rs` — `get_focused_directory_viewports_mut`, `get_focused_directory_buffer_ids`: `.expect(...)` (navigation is fundamentally directory-specific)
+- `update/path.rs` — `get_focused_directory_buffer_ids`: early-return if `None`
+- `update/cursor.rs` — `get_focused_directory_buffer_ids`: early-return if `None`
+- `update/selection.rs` — `get_focused_directory_viewports_mut`: `.expect(...)` (preview refresh is directory-specific)
+- `update/preview.rs` — `get_focused_directory_viewports_mut`: `.expect(...)` (preview is directory-specific)
+- `update/command/mod.rs` — `get_focused_directory_buffer_ids`: propagate `None` (already returns `Option<&Path>`)
+- `update/enumeration.rs` — `get_focused_directory_buffer_ids`: early-return if `None`
+- `update/junkyard.rs` — `get_focused_directory_buffer_ids`: early-return if `None`
+- `update/open.rs` — (if it calls `get_focused_directory_buffer_ids`): early-return if `None`
+- Tests in `update/buffers.rs`, `update/mode.rs`, `update/path.rs`: `.unwrap()` / `.expect(...)` (tests always use directory windows)
+
+### Step 7: Implement `get_viewport_by_buffer_id_mut`
+
+Recursive search through the window tree:
+
+```rust
+pub fn get_viewport_by_buffer_id_mut(window: &mut Window, buffer_id: usize) -> Option<&mut ViewPort> {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            get_viewport_by_buffer_id_mut(first, buffer_id)
+                .or_else(|| get_viewport_by_buffer_id_mut(second, buffer_id))
+        }
+        Window::Directory(parent, current, preview) => {
+            if parent.buffer_id == buffer_id { Some(parent) }
+            else if current.buffer_id == buffer_id { Some(current) }
+            else if preview.buffer_id == buffer_id { Some(preview) }
+            else { None }
+        }
+        Window::Tasks(vp) => {
+            if vp.buffer_id == buffer_id { Some(vp) } else { None }
+        }
+    }
+}
+```
+
+### Step 8: Restructure `set_buffer_vp` in `yeet-frontend/src/update/window.rs`
+
+Match on the window variant at the top. Move the 3-column horizontal layout into the `Directory` arm. `Horizontal` splits the area vertically 50/50 and recurses. `Tasks` sets viewport dimensions directly.
+
+```rust
+fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            let layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(Constraint::from_ratios([(1, 2), (1, 2)]))
+                .split(area);
+            set_buffer_vp(first, layout[0])?;
+            set_buffer_vp(second, layout[1])?;
+            Ok(())
+        }
+        Window::Directory(parent, current, preview) => {
+            let layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(Constraint::from_ratios([(1, 5), (2, 5), (2, 5)]))
+                .split(area);
+            // ... assign layout[0/1/2] dimensions to parent/current/preview viewports
+            Ok(())
+        }
+        Window::Tasks(vp) => {
+            vp.height = area.height;
+            vp.width = area.width;
+            vp.x = area.x;
+            vp.y = area.y;
+            Ok(())
+        }
+    }
+}
+```
+
+### Step 9: Replace `view::model` match with `Window::focused_viewport()`
+
+In `yeet-frontend/src/view/mod.rs`, replace the inline match:
+
+```rust
+// Before:
+let (focused_id, focused_vp) = match &model.app.window {
+    Window::Horizontal { .. } => todo!(),
+    Window::Directory(_, vp, _) => (&vp.buffer_id, vp),
+    Window::Tasks(_) => todo!(),
+};
+
+// After:
+let focused_vp = model.app.window.focused_viewport();
+let focused_id = &focused_vp.buffer_id;
+```
+
+### Step 10: Extract `render_window` helper in `yeet-frontend/src/view/buffer.rs`
+
+Replace the current `view()` function with a recursive `render_window` helper that takes `(&Window, &HashMap<usize, Buffer>)` instead of `&App`:
+
+```rust
+pub fn view(mode: &Mode, app: &App, frame: &mut Frame, h_off: u16, v_off: u16) {
+    render_window(mode, &app.window, &app.contents.buffers, frame, h_off, v_off);
+}
+
+fn render_window(
+    mode: &Mode,
+    window: &Window,
+    buffers: &HashMap<usize, Buffer>,
+    frame: &mut Frame,
+    h_off: u16,
+    v_off: u16,
+) {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            render_window(mode, first, buffers, frame, h_off, v_off);
+            render_window(mode, second, buffers, frame, h_off, v_off);
+        }
+        Window::Directory(parent, current, preview) => {
+            render_buffer_slot(mode, frame, parent, buffers.get(&parent.buffer_id), h_off, v_off);
+            render_buffer_slot(mode, frame, current, buffers.get(&current.buffer_id), h_off, v_off);
+            render_buffer_slot(mode, frame, preview, buffers.get(&preview.buffer_id), h_off, v_off);
+        }
+        Window::Tasks(vp) => {
+            render_buffer_slot(mode, frame, vp, buffers.get(&vp.buffer_id), h_off, v_off);
+        }
+    }
+}
+```
+
+### Step 11: Simplify `buffers::update` with `Window::buffer_ids()`
+
+Replace the match + early-return with the new method:
+
+```rust
+pub fn update(app: &mut App) {
+    let referenced = app.window.buffer_ids();
+    // ... existing stale image cleanup logic unchanged
+}
+```
+
+### Step 12: Add tests
+
+- `Window::get_height` for `Horizontal { Tasks(h=10), Directory(h=15) }` → returns `Ok(25)`.
+- `Window::focused_viewport` on `Horizontal { Directory, Tasks, focus: Second }` → returns the Tasks viewport.
+- `Window::focused_viewport` on `Horizontal { Directory, Tasks, focus: First }` → returns the Directory middle viewport.
+- `Window::buffer_ids` on a nested tree returns all buffer ids.
+- `set_buffer_vp` with a `Horizontal` tree: both children get correct y-offsets (first starts at `area.y`, second at `area.y + area.height/2`).
+- `get_viewport_by_buffer_id_mut` recursively finds a viewport in the second child.
+- `get_focused_current_mut` on `Horizontal { Directory, Tasks, focus: Second }` returns the tasks viewport and buffer.
+- `get_focused_directory_viewports` returns `None` when focused on a `Tasks` leaf.
+- `get_focused_directory_viewports` returns `Some(...)` when focused on a `Directory` through `Horizontal`.
+
+### Step 13: Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.
 
 ## Examples
 
@@ -246,6 +462,18 @@ let tree = Window::Horizontal {
 };
 assert_eq!(tree.get_height().unwrap(), 25);
 
+// focused_viewport follows SplitFocus
+let vp = tree.focused_viewport();
+assert_eq!(vp.height, 10); // Tasks viewport (first child, focused)
+
+// buffer_ids collects from all leaves
+let ids = tree.buffer_ids();
+assert_eq!(ids.len(), 4); // 1 from Tasks + 3 from Directory
+
+// get_focused_directory_viewports returns None for Tasks leaf
+// (assuming focus is on the Tasks child)
+assert!(get_focused_directory_viewports(&app_with_tasks_focused.window).is_none());
+
 // set_buffer_vp layout
 // Given area { x: 0, y: 0, width: 80, height: 40 }:
 // first child gets  { x: 0, y: 0,  width: 80, height: 20 }
@@ -254,8 +482,12 @@ assert_eq!(tree.get_height().unwrap(), 25);
 
 ## Notes
 
-- The `get_focused_directory_viewports` function is the trickiest — a `Tasks` leaf has no directory viewports. Decide between panicking and returning `Option` based on caller analysis. If callers always expect directory viewports, panicking is acceptable since callers should guard against this.
+- `Window::focused_viewport()` and `focused_viewport_mut()` unify the needs of `get_focused_current_mut` (Step 2) and `view::model` (Step 9). Implementing them as methods on `Window` keeps the logic close to the data and avoids duplication.
+- `Window::buffer_ids()` fits alongside the existing `get_height()` method as a pure query on the window tree.
+- The `get_focused_current_mut` signature changes from `(app: &mut App)` to `(window: &mut Window, contents: &mut Contents)`. This makes the borrow split explicit at each call site (`&mut app.window, &mut app.contents`), avoiding hidden destructuring inside the method. All 19 callers must be updated.
+- `get_focused_directory_viewports` and `get_focused_directory_buffer_ids` change from taking `&App` to `&Window`, matching the Step 2 pattern of passing the narrowest type needed. Combined with the `Option` return, this is a significant API change affecting ~14 callers. Callers that fundamentally require directory viewports (navigation, preview) use `.expect(...)`. Callers that can handle a Tasks focus (commands, cursor, actions) propagate `None` gracefully.
 - The 50/50 split ratio in `set_buffer_vp` may be adjusted in Prompt 5 after visual verification.
+- The `render_window` helper in `view/buffer.rs` takes `&HashMap<usize, Buffer>` instead of `&App` to enable recursion — each recursive call passes the same buffers reference but a different `&Window` subtree.
 
 ---
 
