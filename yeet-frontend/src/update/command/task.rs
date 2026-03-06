@@ -65,6 +65,7 @@ fn focus_tasks(window: &mut Window) -> bool {
                 false
             }
         }
+        Window::Vertical { .. } => todo!(),
         Window::Tasks(_) => true,
         Window::Directory(_, _, _) => false,
     }
@@ -113,6 +114,7 @@ fn find_tasks_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> {
         Window::Horizontal { first, second, .. } => {
             find_tasks_viewport_mut(first).or_else(|| find_tasks_viewport_mut(second))
         }
+        Window::Vertical { .. } => todo!(),
         Window::Tasks(vp) => Some(vp),
         Window::Directory(_, _, _) => None,
     }

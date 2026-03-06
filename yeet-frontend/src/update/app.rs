@@ -34,6 +34,7 @@ pub fn get_focused_directory_viewports(
             SplitFocus::First => get_focused_directory_viewports(first),
             SplitFocus::Second => get_focused_directory_viewports(second),
         },
+        Window::Vertical { .. } => todo!(),
         Window::Directory(parent, current, preview) => Some((parent, current, preview)),
         Window::Tasks(_) => None,
     }
@@ -51,6 +52,7 @@ pub fn get_focused_directory_viewports_mut(
             SplitFocus::First => get_focused_directory_viewports_mut(first),
             SplitFocus::Second => get_focused_directory_viewports_mut(second),
         },
+        Window::Vertical { .. } => todo!(),
         Window::Directory(parent, current, preview) => Some((parent, current, preview)),
         Window::Tasks(_) => None,
     }
@@ -68,6 +70,7 @@ pub fn get_viewport_by_buffer_id_mut(
     match window {
         Window::Horizontal { first, second, .. } => get_viewport_by_buffer_id_mut(first, buffer_id)
             .or_else(|| get_viewport_by_buffer_id_mut(second, buffer_id)),
+        Window::Vertical { .. } => todo!(),
         Window::Directory(parent, current, preview) => {
             if parent.buffer_id == buffer_id {
                 Some(parent)

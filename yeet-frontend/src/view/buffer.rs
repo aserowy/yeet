@@ -60,6 +60,7 @@ fn render_window(
                 focused_buffer_id,
             );
         }
+        Window::Vertical { .. } => todo!(),
         Window::Directory(parent, current, preview) => {
             render_buffer_slot(
                 mode,

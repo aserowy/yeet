@@ -29,6 +29,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             set_buffer_vp(first, layout[0])?;
             set_buffer_vp(second, layout[1])?;
         }
+        Window::Vertical { .. } => todo!(),
         Window::Directory(parent_vp, current_vp, preview_vp) => {
             let layout = Layout::default()
                 .direction(Direction::Horizontal)

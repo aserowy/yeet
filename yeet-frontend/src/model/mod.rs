@@ -88,6 +88,11 @@ pub enum Window {
         second: Box<Window>,
         focus: SplitFocus,
     },
+    Vertical {
+        first: Box<Window>,
+        second: Box<Window>,
+        focus: SplitFocus,
+    },
     Directory(ViewPort, ViewPort, ViewPort),
     Tasks(ViewPort),
 }
@@ -98,6 +103,7 @@ impl Window {
             Window::Horizontal { first, second, .. } => {
                 Ok(first.get_height()? + second.get_height()?)
             }
+            Window::Vertical { .. } => todo!(),
             // NOTE: +1 for status line
             Window::Directory(_, vp, _) => Ok(vp.height + 1),
             Window::Tasks(vp) => Ok(vp.height + 1),
@@ -114,6 +120,7 @@ impl Window {
                 SplitFocus::First => first.focused_viewport(),
                 SplitFocus::Second => second.focused_viewport(),
             },
+            Window::Vertical { .. } => todo!(),
             Window::Directory(_, vp, _) => vp,
             Window::Tasks(vp) => vp,
         }
@@ -129,6 +136,7 @@ impl Window {
                 SplitFocus::First => first.focused_viewport_mut(),
                 SplitFocus::Second => second.focused_viewport_mut(),
             },
+            Window::Vertical { .. } => todo!(),
             Window::Directory(_, vp, _) => vp,
             Window::Tasks(vp) => vp,
         }
@@ -141,6 +149,7 @@ impl Window {
                 ids.extend(second.buffer_ids());
                 ids
             }
+            Window::Vertical { .. } => todo!(),
             Window::Directory(parent, current, preview) => {
                 HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
             }
@@ -153,6 +162,7 @@ impl Window {
             Window::Horizontal { first, second, .. } => {
                 first.contains_tasks() || second.contains_tasks()
             }
+            Window::Vertical { .. } => todo!(),
             Window::Directory(_, _, _) => false,
             Window::Tasks(_) => true,
         }
@@ -378,6 +388,24 @@ mod test {
             focus: SplitFocus::First,
         };
         assert!(matches!(tree, Window::Horizontal { .. }));
+    }
+
+    #[test]
+    fn window_vertical_construction_and_pattern_match() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        assert!(matches!(tree, Window::Vertical { .. }));
     }
 
     #[test]

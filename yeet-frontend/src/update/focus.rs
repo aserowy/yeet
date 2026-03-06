@@ -6,14 +6,14 @@ use crate::{
 };
 
 pub fn change(app: &mut App, direction: &FocusDirection) -> Vec<Action> {
-    let Window::Horizontal {
-        first,
-        second,
-        focus,
-    } = &mut app.window
-    else {
-        // Non-split windows: all directions are no-ops.
-        return Vec::new();
+    let (first, second, focus) = match &mut app.window {
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        } => (first, second, focus),
+        Window::Vertical { .. } => todo!(),
+        _ => return Vec::new(),
     };
 
     let new_focus = match direction {
