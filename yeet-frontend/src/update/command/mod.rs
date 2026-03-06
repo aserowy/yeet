@@ -14,6 +14,7 @@ use crate::{
 mod file;
 mod print;
 mod qfix;
+mod split;
 pub mod task;
 
 #[tracing::instrument(skip_all)]
@@ -186,9 +187,11 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("tl", "") => print::tasks(&state.tasks),
+        ("split", "") => add_change_mode(mode_before, Mode::Navigation, split::horizontal(app)),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
+        ("vsplit", "") => add_change_mode(mode_before, Mode::Navigation, split::vertical(app)),
         ("w", "") => add_change_mode(
             mode_before,
             mode,
