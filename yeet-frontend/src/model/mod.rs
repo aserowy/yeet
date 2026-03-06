@@ -147,6 +147,17 @@ impl Window {
         }
     }
 
+    /// Returns the total rendered height including per-leaf statusline rows.
+    pub fn get_rendered_height(&self) -> Result<u16, AppError> {
+        match self {
+            Window::Horizontal { first, second, .. } => {
+                Ok(first.get_rendered_height()? + second.get_rendered_height()?)
+            }
+            Window::Directory(_, vp, _) => Ok(vp.height + 1),
+            Window::Tasks(vp) => Ok(vp.height + 1),
+        }
+    }
+
     pub fn contains_tasks(&self) -> bool {
         match self {
             Window::Horizontal { first, second, .. } => {
