@@ -4,9 +4,9 @@ The statusline-per-window feature changes the statusline from a single global ba
 
 The implementation is split into 3 sequential prompts, each leaving the program in a compilable and functional state:
 
-1. [Prompt 1: Move statusline rendering into the window tree traversal](#prompt-1-move-statusline-rendering-into-the-window-tree-traversal) — `planned`
-2. [Prompt 2: Account for per-window statusline height in layout computation](#prompt-2-account-for-per-window-statusline-height-in-layout-computation) — `planned`
-3. [Prompt 3: Differentiate focused vs unfocused statusline content](#prompt-3-differentiate-focused-vs-unfocused-statusline-content) — `planned`
+1. [Prompt 1: Move statusline rendering into the window tree traversal](#prompt-1-move-statusline-rendering-into-the-window-tree-traversal) — `done`
+2. [Prompt 2: Account for per-window statusline height in layout computation](#prompt-2-account-for-per-window-statusline-height-in-layout-computation) — `done`
+3. [Prompt 3: Differentiate focused vs unfocused statusline content](#prompt-3-differentiate-focused-vs-unfocused-statusline-content) — `done`
 
 ---
 
@@ -14,7 +14,7 @@ The implementation is split into 3 sequential prompts, each leaving the program 
 
 **Goal**: Render a statusline below each leaf window by moving statusline rendering from the top-level `view::model` into the recursive `view::buffer::render_window` traversal, so that each leaf window draws its own statusline.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Currently, a single statusline is rendered in `view::model` at a fixed y-offset after the entire window tree. This approach only shows status for the focused buffer. To support per-window statuslines in splits, the statusline must be rendered as part of each leaf window — directly below its content area. This prompt performs the structural move without changing layout math (Prompt 2) or content differentiation (Prompt 3).
 
@@ -199,7 +199,7 @@ This matches the current behavior exactly.
 
 **Goal**: Adjust the layout computation in `update::window` so that each leaf window reserves 1 row for its statusline, preventing the statusline from overlapping the commandline or being clipped.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: After Prompt 1, each leaf window renders a statusline at `y = viewport.height`, but the layout computation in `update::window::set_buffer_vp` does not account for this extra row. The viewport heights are set to fill the available area, and the statusline ends up overlapping the commandline. This prompt fixes the layout math so that each leaf's content area is reduced by 1 row to make room for its statusline.
 
@@ -342,7 +342,7 @@ Given terminal area height = 42, commandline lines = 1:
 
 **Goal**: Show the full statusline (path, permissions, changes, position) for the focused window and a simplified statusline (path/label only) for unfocused windows.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: When multiple windows are visible, showing the full statusline for all of them creates visual clutter. Differentiating focused vs unfocused statuslines helps the user quickly identify which window is active and reduces noise. This matches the vim/neovim convention where the active window's statusline is highlighted and the inactive ones are dimmed/simplified.
 

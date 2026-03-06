@@ -236,7 +236,7 @@ mod test {
 
         set_buffer_vp(&mut tree, area).unwrap();
 
-        let rendered_height = tree.get_rendered_height().unwrap();
+        let rendered_height = tree.get_height().unwrap();
         assert_eq!(
             rendered_height, area.height,
             "horizontal rendered height should equal area height"

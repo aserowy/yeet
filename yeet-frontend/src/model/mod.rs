@@ -98,8 +98,9 @@ impl Window {
             Window::Horizontal { first, second, .. } => {
                 Ok(first.get_height()? + second.get_height()?)
             }
-            Window::Directory(_, vp, _) => Ok(vp.height),
-            Window::Tasks(vp) => Ok(vp.height),
+            // NOTE: +1 for status line
+            Window::Directory(_, vp, _) => Ok(vp.height + 1),
+            Window::Tasks(vp) => Ok(vp.height + 1),
         }
     }
 
@@ -144,17 +145,6 @@ impl Window {
                 HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
             }
             Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
-        }
-    }
-
-    /// Returns the total rendered height including per-leaf statusline rows.
-    pub fn get_rendered_height(&self) -> Result<u16, AppError> {
-        match self {
-            Window::Horizontal { first, second, .. } => {
-                Ok(first.get_rendered_height()? + second.get_rendered_height()?)
-            }
-            Window::Directory(_, vp, _) => Ok(vp.height + 1),
-            Window::Tasks(vp) => Ok(vp.height + 1),
         }
     }
 
@@ -415,7 +405,8 @@ mod test {
             )),
             focus: SplitFocus::First,
         };
-        assert_eq!(tree.get_height().unwrap(), 25);
+        // NOTE: +1 for each status line
+        assert_eq!(tree.get_height().unwrap(), 27);
     }
 
     #[test]
@@ -424,7 +415,8 @@ mod test {
             height: 7,
             ..Default::default()
         });
-        assert_eq!(w.get_height().unwrap(), 7);
+        // NOTE: +1 for status line
+        assert_eq!(w.get_height().unwrap(), 8);
     }
 
     #[test]
