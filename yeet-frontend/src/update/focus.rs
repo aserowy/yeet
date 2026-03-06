@@ -10,8 +10,6 @@ pub fn change(app: &mut App, direction: &FocusDirection) -> Vec<Action> {
     Vec::new()
 }
 
-/// Attempts to move focus in `direction` within or below `window`.
-/// Returns `true` if focus was successfully changed.
 fn try_move(window: &mut Window, direction: &FocusDirection) -> bool {
     match window {
         Window::Horizontal {
@@ -19,7 +17,6 @@ fn try_move(window: &mut Window, direction: &FocusDirection) -> bool {
             second,
             focus,
         } => {
-            // First, try to move within the currently focused child.
             let moved = match focus {
                 SplitFocus::First => try_move(first, direction),
                 SplitFocus::Second => try_move(second, direction),
@@ -27,7 +24,6 @@ fn try_move(window: &mut Window, direction: &FocusDirection) -> bool {
             if moved {
                 return true;
             }
-            // If the child couldn't handle it, try at this level.
             match direction {
                 FocusDirection::Down if *focus == SplitFocus::First => {
                     *focus = SplitFocus::Second;
@@ -68,13 +64,10 @@ fn try_move(window: &mut Window, direction: &FocusDirection) -> bool {
                 _ => false,
             }
         }
-        // Leaf nodes can never handle focus movement themselves.
         Window::Directory(_, _, _) | Window::Tasks(_) => false,
     }
 }
 
-/// When focus enters a subtree from a given direction, recursively set focus
-/// to the nearest leaf on the entry side.
 fn enter_from(window: &mut Window, direction: &FocusDirection) {
     match window {
         Window::Horizontal {
@@ -105,9 +98,7 @@ fn enter_from(window: &mut Window, direction: &FocusDirection) {
                 enter_from(second, direction);
             }
         },
-        Window::Directory(_, _, _) | Window::Tasks(_) => {
-            // Leaf — nothing to recurse into.
-        }
+        Window::Directory(_, _, _) | Window::Tasks(_) => {}
     }
 }
 
@@ -300,8 +291,6 @@ mod test {
             _ => panic!("expected Vertical"),
         }
     }
-
-    // --- Nested tree tests ---
 
     /// ```text
     /// Horizontal {
