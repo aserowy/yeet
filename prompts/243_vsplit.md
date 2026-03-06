@@ -7,7 +7,7 @@ This prompt file does **not** cover keymaps and commands to create vertical and 
 The implementation is split into 4 sequential prompts, each leaving the program in a compilable and functional state:
 
 1. [Prompt 1: Add `Window::Vertical` variant to the model](#prompt-1-add-windowvertical-variant-to-the-model) — `done`
-2. [Prompt 2: Implement `Window::Vertical` in layout computation and all `Window` match sites](#prompt-2-implement-windowvertical-in-layout-computation-and-all-window-match-sites) — `planned`
+2. [Prompt 2: Implement `Window::Vertical` in layout computation and all `Window` match sites](#prompt-2-implement-windowvertical-in-layout-computation-and-all-window-match-sites) — `done`
 3. [Prompt 3: Render `Window::Vertical` splits with per-window statuslines](#prompt-3-render-windowvertical-splits-with-per-window-statuslines) — `planned`
 4. [Prompt 4: Extend focus navigation to support all four directions across mixed split trees](#prompt-4-extend-focus-navigation-to-support-all-four-directions-across-mixed-split-trees) — `planned`
 
@@ -136,7 +136,7 @@ assert!(matches!(nested, Window::Horizontal { .. }));
 
 **Goal**: Replace every `todo!()` on `Window::Vertical` with real implementations, making the window tree fully functional for vertical (left/right) splits. The `Vertical` variant behaves like `Horizontal` but splits the area horizontally (left/right, 50/50) instead of vertically (top/bottom).
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The `Window::Vertical` variant was added in Prompt 1 with `todo!()` arms. Before any user-facing feature can create vertical splits, all infrastructure — layout computation, focus-aware helpers, buffer-id collection, and window closing — must handle `Vertical` correctly.
 

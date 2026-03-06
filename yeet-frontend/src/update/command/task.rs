@@ -54,6 +54,11 @@ fn focus_tasks(window: &mut Window) -> bool {
             first,
             second,
             focus,
+        }
+        | Window::Vertical {
+            first,
+            second,
+            focus,
         } => {
             if second.contains_tasks() {
                 *focus = SplitFocus::Second;
@@ -65,7 +70,6 @@ fn focus_tasks(window: &mut Window) -> bool {
                 false
             }
         }
-        Window::Vertical { .. } => todo!(),
         Window::Tasks(_) => true,
         Window::Directory(_, _, _) => false,
     }
@@ -111,10 +115,9 @@ pub fn refresh_tasks_buffer(window: &mut Window, contents: &mut Contents, tasks:
 
 fn find_tasks_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> {
     match window {
-        Window::Horizontal { first, second, .. } => {
+        Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
             find_tasks_viewport_mut(first).or_else(|| find_tasks_viewport_mut(second))
         }
-        Window::Vertical { .. } => todo!(),
         Window::Tasks(vp) => Some(vp),
         Window::Directory(_, _, _) => None,
     }

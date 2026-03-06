@@ -60,7 +60,26 @@ fn render_window(
                 focused_buffer_id,
             );
         }
-        Window::Vertical { .. } => todo!(),
+        Window::Vertical { first, second, .. } => {
+            render_window(
+                mode,
+                first,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+            render_window(
+                mode,
+                second,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+        }
         Window::Directory(parent, current, preview) => {
             render_buffer_slot(
                 mode,

@@ -287,6 +287,11 @@ fn close_focused_window_or_quit(
             first,
             second,
             focus,
+        }
+        | Window::Vertical {
+            first,
+            second,
+            focus,
         } => {
             let (kept, dropped) = match focus {
                 SplitFocus::First => (*second, *first),
@@ -300,7 +305,6 @@ fn close_focused_window_or_quit(
             app.window = kept;
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
-        Window::Vertical { .. } => todo!(),
         other => {
             app.window = other;
             vec![action::emit_keymap(KeymapMessage::Quit(quit_mode))]
