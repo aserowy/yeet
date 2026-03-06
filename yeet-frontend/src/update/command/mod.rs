@@ -148,9 +148,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                     mode,
                 );
             }
-            close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before)
+            close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before, false)
         }
-        ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before),
+        ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before, true),
         ("qa", "") => {
             if has_unsaved_changes(&app.contents, None) {
                 return print_error(
@@ -196,7 +196,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 KeymapMessage::Buffer(BufferMessage::SaveBuffer),
             )])],
         ),
-        ("wq", "") => close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before),
+        ("wq", "") => {
+            close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before, false)
+        }
         ("z", params) => add_change_mode(
             mode_before,
             mode,
@@ -265,10 +267,19 @@ fn has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
     })
 }
 
+fn reset_unsaved_changes(window: &Window, contents: &mut Contents) {
+    for buffer_id in window.buffer_ids() {
+        if let Some(Buffer::Directory(dir)) = contents.buffers.get_mut(&buffer_id) {
+            dir.buffer.undo.reset_to_last_save();
+        }
+    }
+}
+
 fn close_focused_window_or_quit(
     app: &mut App,
     quit_mode: QuitMode,
     mode_before: Mode,
+    discard_changes: bool,
 ) -> Vec<Action> {
     let old_window = mem::take(&mut app.window);
     match old_window {
@@ -277,10 +288,15 @@ fn close_focused_window_or_quit(
             second,
             focus,
         } => {
-            let (kept, _) = match focus {
+            let (kept, dropped) = match focus {
                 SplitFocus::First => (*second, *first),
                 SplitFocus::Second => (*first, *second),
             };
+
+            if discard_changes {
+                reset_unsaved_changes(&dropped, &mut app.contents);
+            }
+
             app.window = kept;
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
@@ -726,6 +742,74 @@ mod test {
         let actions = execute(&mut app, &mut state, "q");
 
         assert!(!contains_error_message(&actions));
+        assert!(matches!(app.window, Window::Directory(_, _, _)));
+    }
+
+    #[test]
+    fn q_bang_on_split_resets_dropped_pane_undo() {
+        // Setup: split with focus on First (Directory that has dirty buffer 50).
+        // :q! drops the focused First pane. The dirty buffer's undo should be reset
+        // so that the subsequent ChangeMode → Navigation → save::all doesn't persist
+        // the discarded changes.
+        let mut app = make_app_with_unsaved_changes_and_split();
+        if let Window::Horizontal { focus, first, .. } = &mut app.window {
+            *focus = SplitFocus::First;
+            // Point the focused directory viewport at the dirty buffer
+            if let Window::Directory(_, current_vp, _) = first.as_mut() {
+                current_vp.buffer_id = 50;
+            }
+        }
+        let mut state = make_state_with_command_mode();
+
+        // Verify the buffer is dirty before :q!
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
+            assert!(
+                !dir.buffer.undo.get_uncommited_changes().is_empty(),
+                "buffer 50 should be dirty before :q!"
+            );
+        } else {
+            panic!("buffer 50 should be a Directory");
+        }
+
+        let _actions = execute(&mut app, &mut state, "q!");
+
+        // After :q!, the dropped pane's buffer undo should be reset
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
+            assert!(
+                dir.buffer.undo.get_uncommited_changes().is_empty(),
+                "buffer 50 undo should be reset after :q! drops its pane"
+            );
+        }
+        // The window should have collapsed to the kept pane (Tasks)
+        assert!(matches!(app.window, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn q_bang_on_split_preserves_kept_pane_undo() {
+        // Setup: split where both panes have dirty buffers.
+        // Focus is on Second (Tasks), so Second is dropped and First (Directory) is kept.
+        // The kept pane's directory buffer (id 50) should retain its unsaved changes.
+        let mut app = make_app_with_unsaved_changes_and_split();
+        // Focus is already SplitFocus::Second (from make_app_with_unsaved_changes_and_split)
+        let mut state = make_state_with_command_mode();
+
+        // Verify the buffer is dirty before :q!
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
+            assert!(!dir.buffer.undo.get_uncommited_changes().is_empty());
+        }
+
+        let _actions = execute(&mut app, &mut state, "q!");
+
+        // Buffer 50 is in the KEPT pane (First/Directory) — its changes should be preserved
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
+            assert!(
+                !dir.buffer.undo.get_uncommited_changes().is_empty(),
+                "kept pane's buffer 50 should still have unsaved changes after :q!"
+            );
+        } else {
+            panic!("buffer 50 should still exist and be a Directory");
+        }
+        // Window should have collapsed to Directory (the first/kept pane)
         assert!(matches!(app.window, Window::Directory(_, _, _)));
     }
 
