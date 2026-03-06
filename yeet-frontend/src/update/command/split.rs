@@ -1,7 +1,5 @@
 use std::mem;
 
-use yeet_buffer::model::viewport::{LineNumber, ViewPort};
-
 use crate::{
     action::Action,
     event::Message,
@@ -9,8 +7,6 @@ use crate::{
     update::app,
 };
 
-/// Creates a horizontal (top/bottom) split of the currently focused directory.
-/// The new directory pane becomes the second child and receives focus.
 pub fn horizontal(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Action> {
     create_split(app, target, |old, new| Window::Horizontal {
         first: Box::new(old),
@@ -19,8 +15,6 @@ pub fn horizontal(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Acti
     })
 }
 
-/// Creates a vertical (left/right) split of the currently focused directory.
-/// The new directory pane becomes the second child and receives focus.
 pub fn vertical(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Action> {
     create_split(app, target, |old, new| Window::Vertical {
         first: Box::new(old),
@@ -105,29 +99,7 @@ fn create_split(
         app.contents.buffers.insert(preview_id, Buffer::Empty);
     }
 
-    let new_directory = Window::Directory(
-        ViewPort {
-            buffer_id: parent_id,
-            hide_cursor: true,
-            show_border: true,
-            ..Default::default()
-        },
-        ViewPort {
-            buffer_id: current_id,
-            line_number: LineNumber::Relative,
-            line_number_width: 3,
-            show_border: true,
-            sign_column_width: 2,
-            ..Default::default()
-        },
-        ViewPort {
-            buffer_id: preview_id,
-            hide_cursor: true,
-            hide_cursor_line: true,
-            ..Default::default()
-        },
-    );
-
+    let new_directory = Window::create(parent_id, current_id, preview_id);
     app.window.focused_viewport_mut().hide_cursor = true;
 
     let old_window = mem::take(&mut app.window);

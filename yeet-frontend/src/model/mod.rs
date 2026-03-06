@@ -43,28 +43,7 @@ impl Default for App {
                 buffers,
                 latest_buffer_id: 1,
             },
-            window: Window::Directory(
-                ViewPort {
-                    buffer_id: 1,
-                    hide_cursor: true,
-                    show_border: true,
-                    ..Default::default()
-                },
-                ViewPort {
-                    buffer_id: 1,
-                    line_number: LineNumber::Relative,
-                    line_number_width: 3,
-                    show_border: true,
-                    sign_column_width: 2,
-                    ..Default::default()
-                },
-                ViewPort {
-                    buffer_id: 1,
-                    hide_cursor: true,
-                    hide_cursor_line: true,
-                    ..Default::default()
-                },
-            ),
+            window: Window::create(1, 1, 1),
         }
     }
 }
@@ -98,6 +77,31 @@ pub enum Window {
 }
 
 impl Window {
+    pub fn create(parent_id: usize, current_id: usize, preview_id: usize) -> Window {
+        Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                hide_cursor: true,
+                show_border: true,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                line_number: LineNumber::Relative,
+                line_number_width: 3,
+                show_border: true,
+                sign_column_width: 2,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                hide_cursor: true,
+                hide_cursor_line: true,
+                ..Default::default()
+            },
+        )
+    }
+
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
             Window::Horizontal { first, second, .. } => {
