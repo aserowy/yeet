@@ -47,6 +47,7 @@ register holds all files which got yanked and the last nine trashes.
 | yp        | copy current selected path to system clipboard              |
 | yy        | yank file to junk yard                                      |
 | C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
+| C-h/j/k/l | move focus between split windows (left/down/up/right)       |
 
 ### navigation and normal mode
 
@@ -69,7 +70,6 @@ register holds all files which got yanked and the last nine trashes.
 | '\<char>   | jump to mark                                                                                      |
 | zt, zz, zb | move viewport to start, center, bottom of cursor position                                         |
 | C-u, C-d   | move viewport half screen up/down                                                                 |
-| C-h/j/k/l  | move focus between split windows (left/down/up/right)                                             |
 
 \*trash: files are not deleted but moved to yeets cache folder to enable junk yard
 interactions. Trashes get executed when leaving normal to navigation or saving the
@@ -130,6 +130,7 @@ In normal mode, all register interactions target the default register (equal to
 | q!                          | force tasks to stop and quit yeet                                                                                                                                                                                          |
 | reg                         | print all register entries                                                                                                                                                                                                 |
 | rg \<params for rg>         | uses [rg](https://github.com/BurntSushi/ripgrep/) to populate qfix. \<params for rg> are passed through to rg. Yeet sets the following params by default: --color never --files-with-matches \<params for rg> current_path |
+| topen                       | open a split and show all running tasks. `dd` to close selected tasks                                                                                                                                                      |
 | tl                          | list all currently running tasks                                                                                                                                                                                           |
 | w                           | write changes without changing mode                                                                                                                                                                                        |
 | wq                          | write changes and quit yeet                                                                                                                                                                                                |
