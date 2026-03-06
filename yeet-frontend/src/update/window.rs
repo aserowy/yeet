@@ -9,13 +9,12 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Percentage(100),
-            Constraint::Length(1),
             Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
         ])
         .split(area);
 
     set_buffer_vp(&mut app.window, main[0])?;
-    set_commandline_vp(&mut app.commandline, main[2])?;
+    set_commandline_vp(&mut app.commandline, main[1])?;
 
     Ok(())
 }
@@ -40,23 +39,23 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             let current_rect = layout[1];
             let preview_rect = layout[2];
 
-            parent_vp.height = parent_rect.height;
+            parent_vp.height = parent_rect.height.saturating_sub(1);
             parent_vp.width = parent_rect.width;
             parent_vp.x = parent_rect.x;
             parent_vp.y = parent_rect.y;
 
-            current_vp.height = current_rect.height;
+            current_vp.height = current_rect.height.saturating_sub(1);
             current_vp.width = current_rect.width;
             current_vp.x = current_rect.x;
             current_vp.y = current_rect.y;
 
-            preview_vp.height = preview_rect.height;
+            preview_vp.height = preview_rect.height.saturating_sub(1);
             preview_vp.width = preview_rect.width;
             preview_vp.x = preview_rect.x;
             preview_vp.y = preview_rect.y;
         }
         Window::Tasks(vp) => {
-            vp.height = area.height;
+            vp.height = area.height.saturating_sub(1);
             vp.width = area.width;
             vp.x = area.x;
             vp.y = area.y;
@@ -217,7 +216,7 @@ mod test {
     }
 
     #[test]
-    fn get_height_horizontal_returns_full_area() {
+    fn get_rendered_height_horizontal_returns_full_area() {
         let mut tree = Window::Horizontal {
             first: Box::new(Window::Directory(
                 ViewPort::default(),
@@ -237,10 +236,10 @@ mod test {
 
         set_buffer_vp(&mut tree, area).unwrap();
 
-        let total_height = tree.get_height().unwrap();
+        let rendered_height = tree.get_rendered_height().unwrap();
         assert_eq!(
-            total_height, area.height,
-            "horizontal tree height should equal area height"
+            rendered_height, area.height,
+            "horizontal rendered height should equal area height"
         );
     }
 
@@ -261,7 +260,10 @@ mod test {
                 assert_eq!(vp.x, 5);
                 assert_eq!(vp.y, 10);
                 assert_eq!(vp.width, 60);
-                assert_eq!(vp.height, 20);
+                assert_eq!(
+                    vp.height, 19,
+                    "height should be area.height - 1 for statusline"
+                );
             }
             _ => panic!("expected Tasks"),
         }
