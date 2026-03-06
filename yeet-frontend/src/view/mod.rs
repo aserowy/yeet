@@ -2,7 +2,7 @@ use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 
 mod buffer;
 mod commandline;
-pub(crate) mod statusline;
+pub mod statusline;
 mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
