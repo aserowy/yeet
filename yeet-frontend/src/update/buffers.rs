@@ -36,7 +36,12 @@ mod test {
 
     use ratatui_image::protocol::{sixel::Sixel, Protocol};
 
-    use crate::model::{App, Buffer, ContentBuffer, DirectoryBuffer, PreviewImageBuffer};
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use crate::model::{
+        App, Buffer, ContentBuffer, DirectoryBuffer, PreviewImageBuffer, SplitFocus, TasksBuffer,
+        Window,
+    };
 
     use super::update;
 
@@ -107,6 +112,33 @@ mod test {
         assert!(matches!(
             app.contents.buffers.get(&directory_id),
             Some(Buffer::Directory(_))
+        ));
+    }
+
+    #[test]
+    fn does_not_remove_referenced_tasks_buffer() {
+        let mut app = App::default();
+
+        let tasks_buffer_id = 100;
+        app.contents
+            .buffers
+            .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
+
+        let old_window = std::mem::take(&mut app.window);
+        app.window = Window::Horizontal {
+            first: Box::new(old_window),
+            second: Box::new(Window::Tasks(ViewPort {
+                buffer_id: tasks_buffer_id,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+
+        update(&mut app);
+
+        assert!(matches!(
+            app.contents.buffers.get(&tasks_buffer_id),
+            Some(Buffer::Tasks(_))
         ));
     }
 }

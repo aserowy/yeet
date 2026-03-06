@@ -12,7 +12,7 @@ The implementation is split into 9 sequential prompts, each leaving the program 
 6. [Prompt 6: Handle `dd` in the task window to cancel tasks](#prompt-6-handle-dd-in-the-task-window-to-cancel-tasks) — `done`
 7. [Prompt 7: Live-update the task buffer on `TaskStarted` / `TaskEnded`](#prompt-7-live-update-the-task-buffer-on-taskstarted--taskended) — `done`
 8. [Prompt 8: Implement `:q` to close focused window, `:qa` / `:qa!` to quit](#prompt-8-implement-q-to-close-focused-window-qa--qa-to-quit) — `done`
-9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `planned`
+9. [Prompt 9: Edge cases, polish, and safety](#prompt-9-edge-cases-polish-and-safety) — `done`
 
 ---
 
@@ -1089,7 +1089,7 @@ focus::change(&mut app, &FocusDirection::Down);
 
 **Goal**: Handle remaining edge cases to make the task window feature production-quality.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Individual prompts focused on core functionality. This prompt sweeps up all the edge cases, safety checks, and convenience features that make the difference between a prototype and a robust feature.
 
@@ -1098,71 +1098,88 @@ focus::change(&mut app, &FocusDirection::Down);
 - Dangerous operations (navigate, open, quickfix toggle) safely no-op when the task window is focused.
 - Insert mode (`i`/`a`/`s`/`I`/`A`) is blocked on the task buffer.
 - `:topen` when a split already exists with a `Tasks` child switches focus (no nested splits).
-- `:tclose` command closes the task window specifically (convenience alternative to focusing task + `:q`).
 - Empty task list works without panics (cursor handling on empty buffer).
 - `collect_buffer_ids` (from Prompt 2) includes the task buffer (no garbage collection).
-- `save::changes` returns early for `Buffer::Tasks`.
+- `save::current` and `save::all` return early for `Buffer::Tasks`.
 
 ## Exclusions
 
 - Do NOT refactor the window tree structure.
 - Do NOT add new task buffer features beyond what is specified.
+- `:tclose` is deferred — not implemented in this prompt.
 
 ## Context
 
-- @yeet-frontend/src/update/navigate.rs — `parent`, `selected`.
+- @yeet-frontend/src/update/navigate.rs — `parent`, `selected`, `navigate_to_path_with_selection`.
 - @yeet-frontend/src/update/open.rs — `selected`.
 - @yeet-frontend/src/update/qfix.rs — `toggle`.
 - @yeet-frontend/src/update/mode.rs — `change()`, Insert mode arms.
-- @yeet-frontend/src/update/command/mod.rs — command dispatch (for `:tclose`).
-- @yeet-frontend/src/update/buffers.rs — `update`, `collect_buffer_ids`.
-- @yeet-frontend/src/update/save.rs — `changes`.
+- @yeet-frontend/src/update/buffers.rs — `update`.
+- @yeet-frontend/src/update/save.rs — `current`, `all`.
 - @yeet-frontend/src/update/command/task.rs — `open` (idempotency check).
+- @yeet-keymap/tests/lib_tests.rs — `add_and_resolve_key_normal_ctrl_k` test.
 - @AGENTS.md — build/test/lint commands.
 
 ## Implementation Plan
 
-1. **Prevent dangerous operations in task window**:
-   - Audit `navigate::parent`, `navigate::selected`, `open::selected`, `qfix::toggle` — they call `get_focused_current_mut` and check for `Buffer::Directory`. Verify `Buffer::Tasks` causes early return.
-   - In `mode::change()`, add `Buffer::Tasks(_)` to early-return arms in the `to: Insert` branch to block entering Insert mode on the task buffer.
+1. **Audit all callers of `get_focused_directory_viewports_mut`, `get_focused_directory_viewports`, and `get_focused_directory_buffer_ids`** for `.expect()` / `.unwrap()` calls that would panic when the focused window is `Window::Tasks`.
 
-2. **`:topen` idempotency**: if the window tree already contains a `Window::Tasks` child inside a `Horizontal`, switch focus to it. Don't create nested splits. (This should already be handled in Prompt 4 — verify and fix if needed.)
+2. **Fix panic sites in `navigate.rs`** — replace 4 `.expect("requires directory window")` calls with early returns:
+   - `navigate_to_path_with_selection()` — `get_focused_directory_viewports_mut(...).expect(...)` → `match ... None => return actions`
+   - `parent()` — `get_focused_directory_buffer_ids(...).expect(...)` → `match ... None => return Vec::new()`
+   - `parent()` (second call) — `get_focused_directory_viewports_mut(...).expect(...)` → `match ... None => return Vec::new()`
+   - `selected()` — `get_focused_directory_viewports_mut(...).expect(...)` → `match ... None => return Vec::new()`
 
-3. **Add `:tclose` command**: find and remove the `Tasks` child from the `Horizontal`, collapse the split. This is a convenience alternative to focusing the task window then pressing `:q`.
+3. **Verify already-safe callers** (no changes needed):
+   - `open::selected` — uses `get_focused_current_mut` + catch-all `_ => None`, safe
+   - `qfix::toggle` — exhaustive match with explicit `Buffer::Tasks(_) => return Vec::new()`, safe
+   - `mode::change()` — explicit guard at top blocks non-Command mode transitions for `Buffer::Tasks`, safe
+   - `save::current` — exhaustive match with explicit `Buffer::Tasks(_) => return Vec::new()`, safe
+   - `save::all` — filters to `Buffer::Directory` only via `filter_map`, safe
+   - `buffers::update` — only garbage-collects `Buffer::Image`, task buffer untouched, safe
+   - `selection.rs`, `preview.rs`, `enumeration.rs`, `cursor.rs`, `path.rs`, `junkyard.rs`, `command/mod.rs` — all use `if let Some(...)`, `match ... None =>`, `.and_then(...)`, or `?` operator, safe
+   - `:topen` idempotency — `focus_tasks()` checks recursively, 4 existing tests, safe
+   - Empty task list — `open()` handles empty buffer, cursor clamping uses `saturating_sub(1)`, existing test, safe
+   - `dd` on empty buffer — `cancel_task_at_index` uses `.get_mut()` bounds check, existing test, safe
 
-4. **Empty task list UX**: verify `:topen` with no running tasks creates a task buffer with zero lines and cursor handling doesn't panic.
+4. **Fix stale keymap test** — `add_and_resolve_key_normal_ctrl_k` expected `Ctrl+k` to resolve in Normal mode, but the `FocusDirection` keybindings were already moved to Navigation-only. Updated test to expect no message.
 
-5. **Buffer cleanup verification**: verify `collect_buffer_ids` from Prompt 2 correctly includes the task buffer's id so it doesn't get garbage-collected.
+5. **Add tests**:
+   - `navigate::parent` is a no-op when task window is focused
+   - `navigate::selected` is a no-op when task window is focused
+   - `navigate_to_path_with_selection` does not panic when task window is focused
+   - `mark` does not panic when task window is focused
+   - `buffers::update` does not remove referenced task buffer
 
-6. **`save::changes` safety**: verify it returns early for `Buffer::Tasks` (it checks `Buffer::Directory`).
+6. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
 
-7. **Add tests**:
-   - Insert mode is blocked when task window is focused.
-   - `navigate::parent` is a no-op when task window is focused.
-   - `:topen` when split already exists → no nested split, focus switches.
-   - `:tclose` collapses the split.
-   - `dd` on empty task buffer → no panic.
-   - `buffers::update` doesn't remove the task buffer.
-   - `save::changes` returns empty when task window is focused.
+## Audit results
 
-8. **Run `cargo fmt`, `cargo clippy --all-targets --all-features`, `cargo test`.**
-
-## Examples
-
-```rust
-// :tclose when split exists
-// Before: Horizontal { Directory, Tasks, focus: First }
-// After:  Directory (task buffer cleaned up, focus on directory)
-
-// :topen when split already exists
-// Before: Horizontal { Directory, Tasks, focus: First }
-// After:  Horizontal { Directory, Tasks, focus: Second }  // just switch focus
-```
+| File | Function | Accessor Used | Safe? | Action Taken |
+|------|----------|---------------|-------|--------------|
+| `navigate.rs` | `navigate_to_path_with_selection()` | `get_focused_directory_viewports_mut` | **NO** — `.expect()` panics | **FIXED** — early return |
+| `navigate.rs` | `parent()` | `get_focused_directory_buffer_ids` | **NO** — `.expect()` panics | **FIXED** — early return |
+| `navigate.rs` | `parent()` (2nd call) | `get_focused_directory_viewports_mut` | **NO** — `.expect()` panics | **FIXED** — early return |
+| `navigate.rs` | `selected()` | `get_focused_directory_viewports_mut` | **NO** — `.expect()` panics | **FIXED** — early return |
+| `open.rs` | `selected()` | `get_focused_current_mut` | Yes — catch-all `_ => None` | Verified |
+| `qfix.rs` | `toggle()` | `get_focused_current_mut` | Yes — explicit `Buffer::Tasks` arm | Verified |
+| `mode.rs` | `change()` | `focused_viewport` | Yes — explicit guard | Verified |
+| `save.rs` | `current()` | `get_focused_current_mut` | Yes — explicit `Buffer::Tasks` arm | Verified |
+| `save.rs` | `all()` | iterates all buffers | Yes — filters to `Directory` only | Verified |
+| `buffers.rs` | `update()` | iterates all buffers | Yes — filters to `Image` only | Verified + test added |
+| `selection.rs` | `set_preview_buffer_for_selection()` | `get_focused_directory_viewports_mut` | Yes — `if let Some(...)` | Verified |
+| `preview.rs` | `set_buffer_id()` | `get_focused_directory_viewports_mut` | Yes — `if let Some(...)` | Verified |
+| `path.rs` | various | `get_focused_directory_buffer_ids` | Yes — `match None => return` / `if let` | Verified |
+| `enumeration.rs` | `change()`, `finish()` | `get_focused_directory_buffer_ids` | Yes — `match None => return` / `.map()` | Verified |
+| `cursor.rs` | `relocate()` | `get_focused_directory_buffer_ids` | Yes — `.and_then(...)` | Verified |
+| `junkyard.rs` | `paste()` | `get_focused_directory_buffer_ids` | Yes — `match None => return` | Verified |
+| `command/mod.rs` | `get_current_path()` etc. | `get_focused_directory_buffer_ids` | Yes — `?` operator | Verified |
 
 ## Notes
 
-- The audit in step 1 is important — any function that assumes `Buffer::Directory` will panic or misbehave if it encounters `Buffer::Tasks`. Grep for all `Buffer::Directory` matches and verify each one.
-- `:tclose` shares cleanup logic with `:q` from Prompt 8. Reuse `close_focused_window` or `cleanup_window_buffers` where possible.
+- The only panic-risk sites were 4 `.expect()` calls in `navigate.rs`. All other callers already handled the `Option` return gracefully.
+- `:tclose` was excluded from this prompt — it can be added as a follow-up if needed. The user can already close the task window via `:q` while it's focused.
+- The stale `add_and_resolve_key_normal_ctrl_k` test was from a prior fix that moved `Ctrl+h/j/k/l` bindings to Navigation-only mode. The test was asserting old behavior.
 
 ---
 
@@ -1178,4 +1195,4 @@ focus::change(&mut app, &FocusDirection::Down);
 | 6 | `dd` cancels tasks with visual feedback | Users can cancel tasks |
 | 7 | Live updates on `TaskStarted`/`TaskEnded` | Task list auto-refreshes |
 | 8 | `:q` closes focused window, `:qa`/`:qa!` quit app | Window management complete |
-| 9 | Edge cases: blocked ops, `:tclose`, empty buffer, safety | Production-quality feature |
+| 9 | Edge cases: navigate panic fixes, safety audit, hardening | Production-quality feature |

@@ -382,10 +382,6 @@ fn add_and_resolve_key_normal_ctrl_k() {
 
     let result = resolver.add_key(Key::new(KeyCode::from_char('k'), vec![KeyModifier::Ctrl]));
 
-    assert_eq!(
-        Some(&KeymapMessage::FocusDirection(FocusDirection::Up)),
-        result.0.first()
-    );
-    assert_eq!(KeySequence::Completed("<C-k>".to_string()), result.1);
-    assert_eq!(1, result.0.len());
+    assert_eq!(None, result.0.first());
+    assert!(result.0.is_empty());
 }

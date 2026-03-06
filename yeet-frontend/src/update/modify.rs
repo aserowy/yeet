@@ -6,7 +6,7 @@ use crate::{
     update::app,
 };
 
-use super::{command::task::refresh_tasks_buffer, selection};
+use super::{command::task, selection};
 
 pub fn buffer(
     app: &mut App,
@@ -23,7 +23,7 @@ pub fn buffer(
 
             let cursor_index = vp.cursor.vertical_index;
             cancel_task_at_index(&mut state.tasks, cursor_index);
-            refresh_tasks_buffer(&mut app.window, &mut app.contents, &state.tasks);
+            task::refresh_tasks_buffer(&mut app.window, &mut app.contents, &state.tasks);
 
             Vec::new()
         }

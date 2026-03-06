@@ -102,8 +102,11 @@ pub fn navigate_to_path_with_selection(
         app::get_empty_buffer(&mut app.contents)
     };
 
-    let (parent_vp, current_vp, _) = app::get_focused_directory_viewports_mut(&mut app.window)
-        .expect("requires directory window");
+    let (parent_vp, current_vp, _) = match app::get_focused_directory_viewports_mut(&mut app.window)
+    {
+        Some(vps) => vps,
+        None => return actions,
+    };
 
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
@@ -153,8 +156,10 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
-    let (_, current_id, _) =
-        app::get_focused_directory_buffer_ids(&app.window).expect("requires directory window");
+    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(&app.window) {
+        Some(ids) => ids,
+        None => return Vec::new(),
+    };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
         _ => return Vec::new(),
@@ -166,8 +171,10 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         }
 
         let (parent_vp, current_vp, preview_vp) =
-            app::get_focused_directory_viewports_mut(&mut app.window)
-                .expect("requires directory window");
+            match app::get_focused_directory_viewports_mut(&mut app.window) {
+                Some(vps) => vps,
+                None => return Vec::new(),
+            };
         swap_viewport(parent_vp, preview_vp);
         swap_viewport(current_vp, preview_vp);
 
@@ -204,8 +211,10 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
     let (parent_vp, current_vp, preview_vp) =
-        app::get_focused_directory_viewports_mut(&mut app.window)
-            .expect("requires directory window");
+        match app::get_focused_directory_viewports_mut(&mut app.window) {
+            Some(vps) => vps,
+            None => return Vec::new(),
+        };
     let preview_buffer = match app.contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
@@ -227,4 +236,112 @@ fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {
     mem::swap(&mut vp1.hide_cursor_line, &mut vp2.hide_cursor_line);
     mem::swap(&mut vp1.horizontal_index, &mut vp2.horizontal_index);
     mem::swap(&mut vp1.vertical_index, &mut vp2.vertical_index);
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+    use std::path::Path;
+
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use crate::model::{
+        history::History, mark::Marks, App, Buffer, Contents, SplitFocus, TasksBuffer, Window,
+    };
+
+    use super::*;
+
+    fn make_tasks_focused_app() -> App {
+        let mut buffers = HashMap::new();
+        buffers.insert(10, Buffer::Empty);
+        buffers.insert(11, Buffer::Empty);
+        buffers.insert(12, Buffer::Empty);
+        buffers.insert(20, Buffer::Tasks(TasksBuffer::default()));
+
+        App {
+            commandline: Default::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 20,
+            },
+            window: Window::Horizontal {
+                first: Box::new(Window::Directory(
+                    ViewPort {
+                        buffer_id: 10,
+                        hide_cursor: true,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: 11,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: 12,
+                        hide_cursor: true,
+                        ..Default::default()
+                    },
+                )),
+                second: Box::new(Window::Tasks(ViewPort {
+                    buffer_id: 20,
+                    ..Default::default()
+                })),
+                focus: SplitFocus::Second,
+            },
+        }
+    }
+
+    #[test]
+    fn parent_noop_when_tasks_focused() {
+        let mut app = make_tasks_focused_app();
+        let actions = parent(&mut app);
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn selected_noop_when_tasks_focused() {
+        let mut app = make_tasks_focused_app();
+        let mut history = History::default();
+        let actions = selected(&mut app, &mut history);
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn navigate_to_path_does_not_panic_when_tasks_focused() {
+        let mut app = make_tasks_focused_app();
+        let history = History::default();
+        let target = Path::new("/nonexistent/test/path");
+
+        // Should not panic; viewports remain unchanged
+        let _actions = navigate_to_path_with_selection(&history, &mut app, target, &None);
+
+        // Task viewport buffer_id unchanged
+        match &app.window {
+            Window::Horizontal { second, .. } => match second.as_ref() {
+                Window::Tasks(vp) => assert_eq!(vp.buffer_id, 20),
+                _ => panic!("expected Tasks"),
+            },
+            _ => panic!("expected Horizontal"),
+        }
+    }
+
+    #[test]
+    fn mark_does_not_panic_when_tasks_focused() {
+        let mut app = make_tasks_focused_app();
+        let history = History::default();
+        let mut marks = Marks::default();
+        marks
+            .entries
+            .insert('a', std::path::PathBuf::from("/nonexistent/test/path"));
+
+        // Should not panic; viewports remain unchanged
+        let _actions = mark(&mut app, &history, &marks, &'a');
+
+        match &app.window {
+            Window::Horizontal { second, .. } => match second.as_ref() {
+                Window::Tasks(vp) => assert_eq!(vp.buffer_id, 20),
+                _ => panic!("expected Tasks"),
+            },
+            _ => panic!("expected Horizontal"),
+        }
+    }
 }

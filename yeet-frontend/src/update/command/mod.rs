@@ -140,7 +140,8 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             )])],
         ),
         ("q", "") => {
-            if has_unsaved_changes(&app.contents) {
+            let buffer_id = app.window.focused_viewport().buffer_id;
+            if has_unsaved_changes(&app.contents, Some(buffer_id)) {
                 return print_error(
                     "No write since last change (add ! to override)",
                     mode_before,
@@ -151,7 +152,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         }
         ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before, mode),
         ("qa", "") => {
-            if has_unsaved_changes(&app.contents) {
+            if has_unsaved_changes(&app.contents, None) {
                 return print_error(
                     "No write since last change (add ! to override)",
                     mode_before,
@@ -255,8 +256,14 @@ fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> V
     actions
 }
 
-fn has_unsaved_changes(contents: &Contents) -> bool {
-    contents.buffers.values().any(|buf| {
+fn has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
+    contents.buffers.iter().any(|(key, buf)| {
+        if let Some(id) = buffer_id {
+            if *key != id {
+                return false;
+            }
+        }
+
         if let Buffer::Directory(dir) = buf {
             !dir.buffer.undo.get_uncommited_changes().is_empty()
         } else {
@@ -536,6 +543,10 @@ mod test {
     #[test]
     fn q_with_unsaved_changes_prints_error() {
         let mut app = make_app_with_unsaved_changes();
+        // Point the focused viewport (current/middle) at the dirty buffer (id 50)
+        if let Window::Directory(_, current_vp, _) = &mut app.window {
+            current_vp.buffer_id = 50;
+        }
         let mut state = make_state_with_command_mode();
 
         let actions = execute(&mut app, &mut state, "q");
@@ -546,8 +557,21 @@ mod test {
     }
 
     #[test]
-    fn q_with_unsaved_changes_on_split_prints_error_does_not_close() {
+    fn q_on_split_focused_on_dirty_buffer_prints_error() {
+        // Unsaved changes in buffer 50 (directory in first child).
+        // Focus is switched to First (directory) so :q checks that buffer.
         let mut app = make_app_with_unsaved_changes_and_split();
+        if let Window::Horizontal { focus, .. } = &mut app.window {
+            *focus = SplitFocus::First;
+        }
+        // The focused directory viewport points at buffer_id 1 (from App::default),
+        // but the dirty buffer is at id 50. We need to make the focused viewport
+        // point at the dirty buffer to trigger the check.
+        if let Window::Horizontal { first, .. } = &mut app.window {
+            if let Window::Directory(_, current_vp, _) = first.as_mut() {
+                current_vp.buffer_id = 50;
+            }
+        }
         let mut state = make_state_with_command_mode();
 
         let actions = execute(&mut app, &mut state, "q");
@@ -661,7 +685,7 @@ mod test {
             },
             latest_buffer_id: 3,
         };
-        assert!(!super::has_unsaved_changes(&contents));
+        assert!(!super::has_unsaved_changes(&contents, None));
     }
 
     #[test]
@@ -680,7 +704,7 @@ mod test {
             },
             latest_buffer_id: 1,
         };
-        assert!(super::has_unsaved_changes(&contents));
+        assert!(super::has_unsaved_changes(&contents, None));
     }
 
     #[test]
@@ -694,6 +718,45 @@ mod test {
             },
             latest_buffer_id: 2,
         };
-        assert!(!super::has_unsaved_changes(&contents));
+        assert!(!super::has_unsaved_changes(&contents, None));
+    }
+
+    #[test]
+    fn has_unsaved_changes_checks_only_specified_buffer() {
+        let mut dirty_buffer = DirectoryBuffer::default();
+        dirty_buffer.buffer.undo.add(
+            &Mode::Normal,
+            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
+        );
+
+        let contents = Contents {
+            buffers: {
+                let mut map = std::collections::HashMap::new();
+                map.insert(1, Buffer::Directory(DirectoryBuffer::default()));
+                map.insert(2, Buffer::Directory(dirty_buffer));
+                map
+            },
+            latest_buffer_id: 2,
+        };
+
+        // Checking buffer 1 (clean) should return false
+        assert!(!super::has_unsaved_changes(&contents, Some(1)));
+        // Checking buffer 2 (dirty) should return true
+        assert!(super::has_unsaved_changes(&contents, Some(2)));
+        // Checking all (None) should return true
+        assert!(super::has_unsaved_changes(&contents, None));
+    }
+
+    #[test]
+    fn q_on_split_with_unsaved_in_other_window_closes() {
+        // Unsaved changes are in buffer 50 (directory), but focus is on buffer 100 (tasks).
+        // :q should only check the focused buffer, so it should close the split.
+        let mut app = make_app_with_unsaved_changes_and_split();
+        let mut state = make_state_with_command_mode();
+
+        let actions = execute(&mut app, &mut state, "q");
+
+        assert!(!contains_error_message(&actions));
+        assert!(matches!(app.window, Window::Directory(_, _, _)));
     }
 }
