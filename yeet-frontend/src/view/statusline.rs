@@ -14,10 +14,28 @@ use yeet_buffer::model::{
 
 use crate::model::{self, Buffer, DirectoryBuffer, TasksBuffer};
 
-pub fn view(current: &Buffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
+pub fn view(
+    current: &Buffer,
+    viewport: &ViewPort,
+    frame: &mut Frame,
+    rect: Rect,
+    is_focused: bool,
+) {
     match current {
-        Buffer::Directory(it) => filetree_status(it, viewport, frame, rect),
-        Buffer::Tasks(it) => tasks_status(it, viewport, frame, rect),
+        Buffer::Directory(it) => {
+            if is_focused {
+                filetree_status(it, viewport, frame, rect)
+            } else {
+                filetree_status_unfocused(it, frame, rect)
+            }
+        }
+        Buffer::Tasks(it) => {
+            if is_focused {
+                tasks_status(it, viewport, frame, rect)
+            } else {
+                tasks_status_unfocused(frame, rect)
+            }
+        }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
 }
@@ -52,6 +70,28 @@ fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, re
 
     frame.render_widget(Paragraph::new(label), layout[0]);
     frame.render_widget(Paragraph::new(position_line), layout[2]);
+}
+
+fn tasks_status_unfocused(frame: &mut Frame, rect: Rect) {
+    let label = Line::from(Span::styled("Tasks", Style::default().fg(Color::Gray)));
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::DarkGray)),
+        rect,
+    );
+    frame.render_widget(Paragraph::new(label), rect);
+}
+
+fn filetree_status_unfocused(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
+    let content = buffer.path.to_str().unwrap_or("");
+    let style = Style::default().fg(Color::Gray);
+    let path = Line::from(Span::styled(content, style));
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::DarkGray)),
+        rect,
+    );
+    frame.render_widget(Paragraph::new(path), rect);
 }
 
 fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {

@@ -90,6 +90,7 @@ fn render_window(
             );
 
             if let Some(buffer) = buffers.get(&current.buffer_id) {
+                let is_focused = current.buffer_id == focused_buffer_id;
                 let statusline_rect = Rect {
                     x: 0,
                     y: current
@@ -99,7 +100,7 @@ fn render_window(
                     width: frame.area().width,
                     height: 1,
                 };
-                statusline::view(buffer, current, frame, statusline_rect);
+                statusline::view(buffer, current, frame, statusline_rect, is_focused);
             }
         }
         Window::Tasks(vp) => {
@@ -114,6 +115,7 @@ fn render_window(
             );
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
+                let is_focused = vp.buffer_id == focused_buffer_id;
                 let statusline_rect = Rect {
                     x: vp.x.saturating_add(horizontal_offset),
                     y: vp
@@ -123,7 +125,7 @@ fn render_window(
                     width: vp.width,
                     height: 1,
                 };
-                statusline::view(buffer, vp, frame, statusline_rect);
+                statusline::view(buffer, vp, frame, statusline_rect, is_focused);
             }
         }
     }
