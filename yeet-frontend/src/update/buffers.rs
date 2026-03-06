@@ -8,7 +8,7 @@ pub fn update(app: &mut App) {
         .buffers
         .iter()
         .filter_map(|(id, buffer)| {
-            if matches!(buffer, Buffer::Image(_)) && !referenced.contains(id) {
+            if matches!(buffer, Buffer::Image(_) | Buffer::Tasks(_)) && !referenced.contains(id) {
                 Some(*id)
             } else {
                 None
@@ -116,7 +116,21 @@ mod test {
     }
 
     #[test]
-    fn does_not_remove_referenced_tasks_buffer() {
+    fn removes_unreferenced_task_buffers() {
+        let mut app = App::default();
+
+        let buffer_id = 42;
+        app.contents
+            .buffers
+            .insert(buffer_id, Buffer::Tasks(TasksBuffer::default()));
+
+        update(&mut app);
+
+        assert!(!app.contents.buffers.contains_key(&buffer_id));
+    }
+
+    #[test]
+    fn keeps_referenced_tasks_buffer() {
         let mut app = App::default();
 
         let tasks_buffer_id = 100;

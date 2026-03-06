@@ -23,7 +23,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         _ => {}
     }
 
-    if !from.is_command() && !to.is_command() {
+    if !to.is_command() && to != &Mode::Navigation {
         let vp = app.window.focused_viewport();
         if matches!(
             app.contents.buffers.get(&vp.buffer_id),

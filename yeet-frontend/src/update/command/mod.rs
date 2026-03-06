@@ -148,9 +148,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                     mode,
                 );
             }
-            close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before, mode)
+            close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before)
         }
-        ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before, mode),
+        ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before),
         ("qa", "") => {
             if has_unsaved_changes(&app.contents, None) {
                 return print_error(
@@ -196,14 +196,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 KeymapMessage::Buffer(BufferMessage::SaveBuffer),
             )])],
         ),
-        ("wq", "") => add_change_mode(
-            mode_before,
-            mode,
-            vec![Action::EmitMessages(vec![
-                Message::Keymap(KeymapMessage::Buffer(BufferMessage::SaveBuffer)),
-                Message::Keymap(KeymapMessage::Quit(QuitMode::FailOnRunningTasks)),
-            ])],
-        ),
+        ("wq", "") => close_focused_window_or_quit(app, QuitMode::FailOnRunningTasks, mode_before),
         ("z", params) => add_change_mode(
             mode_before,
             mode,
@@ -276,7 +269,6 @@ fn close_focused_window_or_quit(
     app: &mut App,
     quit_mode: QuitMode,
     mode_before: Mode,
-    mode: Mode,
 ) -> Vec<Action> {
     let old_window = mem::take(&mut app.window);
     match old_window {
@@ -285,26 +277,16 @@ fn close_focused_window_or_quit(
             second,
             focus,
         } => {
-            let (kept, closed) = match focus {
+            let (kept, _) = match focus {
                 SplitFocus::First => (*second, *first),
                 SplitFocus::Second => (*first, *second),
             };
-            cleanup_window_buffers(&mut app.contents, &kept, &closed);
             app.window = kept;
-            add_change_mode(mode_before, mode, Vec::new())
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         other => {
             app.window = other;
             vec![action::emit_keymap(KeymapMessage::Quit(quit_mode))]
-        }
-    }
-}
-
-fn cleanup_window_buffers(contents: &mut Contents, kept: &Window, closed: &Window) {
-    let kept_ids = kept.buffer_ids();
-    for id in closed.buffer_ids() {
-        if !kept_ids.contains(&id) {
-            contents.buffers.remove(&id);
         }
     }
 }
@@ -494,19 +476,6 @@ mod test {
             "closing a split via :q must emit ChangeMode(Command, Navigation) so the app leaves command mode; actions: {:?}",
             actions,
         );
-    }
-
-    #[test]
-    fn q_on_horizontal_removes_task_buffer_from_contents() {
-        let mut app = make_app_with_horizontal_split();
-        let mut state = make_state_with_command_mode();
-
-        // The task buffer is at id 100
-        assert!(app.contents.buffers.contains_key(&100));
-
-        execute(&mut app, &mut state, "q");
-
-        assert!(!app.contents.buffers.contains_key(&100));
     }
 
     #[test]
@@ -758,5 +727,38 @@ mod test {
 
         assert!(!contains_error_message(&actions));
         assert!(matches!(app.window, Window::Directory(_, _, _)));
+    }
+
+    #[test]
+    fn wq_on_horizontal_from_normal_emits_change_mode_to_navigation() {
+        // When the user was in Normal mode (e.g. after editing a buffer line and pressing Esc),
+        // then enters command mode with ":" and runs ":wq", the mode after closing the split
+        // must be Navigation -- not Normal. Transitioning to Navigation triggers save::all,
+        // which commits all directory buffer changes to filesystem tasks.
+        let mut app = make_app_with_horizontal_split();
+        let mut state = State::default();
+        state.modes.current = Mode::Command(CommandMode::Command);
+        state.modes.previous = Some(Mode::Normal);
+
+        let actions = execute(&mut app, &mut state, "wq");
+
+        assert!(
+            matches!(app.window, Window::Directory(_, _, _)),
+            "wq on split must collapse to Directory",
+        );
+
+        assert!(
+            contains_change_mode(
+                &actions,
+                &Mode::Command(CommandMode::Command),
+                &Mode::Navigation,
+            ),
+            "wq must change mode to Navigation (not Normal) so save::all runs; actions: {actions:?}",
+        );
+
+        assert!(
+            !contains_quit_action(&actions, &QuitMode::FailOnRunningTasks),
+            "wq on split should close the pane, not quit the app; actions: {actions:?}",
+        );
     }
 }
