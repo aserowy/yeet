@@ -48,6 +48,8 @@ register holds all files which got yanked and the last nine trashes.
 | yy        | yank file to junk yard                                      |
 | C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
 | C-h/j/k/l | move focus between split windows (left/down/up/right)       |
+| C-w C-s   | split current directory view horizontally (top/bottom)      |
+| C-w C-v   | split current directory view vertically (left/right)        |
 
 ### navigation and normal mode
 

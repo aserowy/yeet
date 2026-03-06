@@ -376,6 +376,36 @@ fn add_and_resolve_key_navigation_ctrl_j() {
 }
 
 #[test]
+fn add_and_resolve_key_navigation_ctrl_w_ctrl_s() {
+    let mut resolver = MessageResolver::default();
+
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('w'), vec![KeyModifier::Ctrl]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('s'), vec![KeyModifier::Ctrl]));
+
+    assert_eq!(
+        Some(&KeymapMessage::ExecuteCommandString("split".to_string())),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("<C-w><C-s>".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
+fn add_and_resolve_key_navigation_ctrl_w_ctrl_v() {
+    let mut resolver = MessageResolver::default();
+
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('w'), vec![KeyModifier::Ctrl]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('v'), vec![KeyModifier::Ctrl]));
+
+    assert_eq!(
+        Some(&KeymapMessage::ExecuteCommandString("vsplit".to_string())),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("<C-w><C-v>".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
 fn add_and_resolve_key_normal_ctrl_k() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
