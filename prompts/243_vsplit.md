@@ -8,7 +8,7 @@ The implementation is split into 4 sequential prompts, each leaving the program 
 
 1. [Prompt 1: Add `Window::Vertical` variant to the model](#prompt-1-add-windowvertical-variant-to-the-model) — `done`
 2. [Prompt 2: Implement `Window::Vertical` in layout computation and all `Window` match sites](#prompt-2-implement-windowvertical-in-layout-computation-and-all-window-match-sites) — `done`
-3. [Prompt 3: Render `Window::Vertical` splits with per-window statuslines](#prompt-3-render-windowvertical-splits-with-per-window-statuslines) — `planned`
+3. [Prompt 3: Render `Window::Vertical` splits with per-window statuslines](#prompt-3-render-windowvertical-splits-with-per-window-statuslines) — `done`
 4. [Prompt 4: Extend focus navigation to support all four directions across mixed split trees](#prompt-4-extend-focus-navigation-to-support-all-four-directions-across-mixed-split-trees) — `planned`
 
 ---
@@ -449,7 +449,7 @@ fn up_down_noop_on_vertical() {
 
 **Goal**: Make vertical splits visible by implementing the `Window::Vertical` arm in the rendering pipeline, including per-window statuslines for each leaf in a vertical split.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: After Prompt 2, vertical splits are fully functional in the model and layout, but nothing renders. The `render_window` function in `view/buffer.rs` has a `todo!()` (or no arm yet) for `Window::Vertical`. This prompt connects the model to the view so the user sees side-by-side windows.
 

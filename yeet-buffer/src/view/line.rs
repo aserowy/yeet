@@ -52,8 +52,6 @@ fn add_cursor_styles(
     let char_count = content.count_chars();
     let line_length = if char_count > content_width {
         content_width
-    } else if char_count == 0 {
-        1
     } else {
         char_count
     };

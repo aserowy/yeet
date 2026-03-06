@@ -111,13 +111,14 @@ fn render_window(
 
             if let Some(buffer) = buffers.get(&current.buffer_id) {
                 let is_focused = current.buffer_id == focused_buffer_id;
+                let total_width = (preview.x + preview.width).saturating_sub(parent.x);
                 let statusline_rect = Rect {
-                    x: 0,
+                    x: parent.x.saturating_add(horizontal_offset),
                     y: current
                         .y
                         .saturating_add(current.height)
                         .saturating_add(vertical_offset),
-                    width: frame.area().width,
+                    width: total_width,
                     height: 1,
                 };
                 statusline::view(buffer, current, frame, statusline_rect, is_focused);
