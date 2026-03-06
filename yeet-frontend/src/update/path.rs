@@ -448,6 +448,112 @@ mod test {
     }
 
     #[test]
+    fn add_refreshes_preview_when_buffer_not_loaded_for_selection() {
+        use crate::model::{DirectoryBuffer, Window};
+        use yeet_buffer::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, TextBuffer};
+
+        // Create a real temp directory so that path.exists() returns true.
+        let base = unique_temp_dir();
+        fs::create_dir_all(&base).expect("create base dir");
+
+        let newfolder = base.join("newfolder");
+        fs::create_dir_all(&newfolder).expect("create newfolder");
+
+        let mut app = App::default();
+
+        let parent_id = 1;
+        let current_id = app::get_next_buffer_id(&mut app.contents);
+        let preview_id = app::get_next_buffer_id(&mut app.contents);
+
+        // Parent buffer: empty directory buffer (not important for this test).
+        app.contents
+            .buffers
+            .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
+
+        // Current buffer: the base directory, containing "newfolder/" at cursor index 0.
+        // The trailing slash simulates user-typed content from insert mode.
+        app.contents.buffers.insert(
+            current_id,
+            Buffer::Directory(DirectoryBuffer {
+                path: base.clone(),
+                buffer: TextBuffer {
+                    lines: vec![BufferLine {
+                        content: Ansi::new("newfolder/"),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+        );
+
+        // Preview buffer: Empty — simulates that the preview was never loaded for
+        // the newly-created folder (it didn't exist on disk when the cursor first
+        // landed on it).
+        app.contents.buffers.insert(preview_id, Buffer::Empty);
+
+        app.window = Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                cursor: Cursor {
+                    vertical_index: 0,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                ..Default::default()
+            },
+        );
+
+        let history = History::default();
+        let marks = Marks::default();
+        let qfix = QuickFix::default();
+
+        // Simulate PathsAdded for the new folder (path without trailing slash,
+        // as the filesystem watcher reports it).
+        let actions = add(
+            &history,
+            &marks,
+            &qfix,
+            &Mode::Navigation,
+            &mut app,
+            std::slice::from_ref(&newfolder),
+        );
+
+        // The preview viewport must now point at a buffer for "newfolder", not
+        // at the old Empty buffer. The buffer should be a PathReference (triggering
+        // a Load action) or a Directory if already resolved.
+        let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
+        let preview_buffer = app.contents.buffers.get(&new_preview_id);
+
+        // The preview buffer should no longer be Empty.
+        assert!(
+            !matches!(preview_buffer, Some(Buffer::Empty)),
+            "preview buffer should have been refreshed for the newly-created folder, \
+             but it is still Empty (preview_id={})",
+            new_preview_id,
+        );
+
+        // There should be a Load action for the new folder.
+        assert!(
+            actions
+                .iter()
+                .any(|a| matches!(a, Action::Load(p, _) if p == &newfolder)),
+            "expected a Load action for {:?}, got: {:?}",
+            newfolder,
+            actions,
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
     fn preview_is_reset_when_removed_from_subtree() {
         use crate::model::{DirectoryBuffer, Window};
         use yeet_buffer::model::viewport::ViewPort;

@@ -7,7 +7,7 @@ use crate::update::{cursor, preview};
 use crate::{
     action::Action,
     event::Message,
-    model::{history::History, register::Register, App, Buffer, DirectoryBuffer},
+    model::{history::History, register::Register, App, Buffer, Contents, DirectoryBuffer, Window},
 };
 
 use super::{app, history};
@@ -26,13 +26,42 @@ pub fn refresh_preview_from_current_selection(
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
-        tracing::trace!("skipping preview refresh: selection unchanged");
-        return Vec::new();
+        if preview_matches_selection(&app.window, &app.contents, &current_selection) {
+            tracing::trace!("skipping preview refresh: selection unchanged");
+            return Vec::new();
+        }
+        tracing::debug!("selection unchanged but preview buffer does not match; refreshing");
     }
 
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
 
     set_preview_buffer_for_selection(app, history, current_selection)
+}
+
+fn preview_matches_selection(
+    window: &Window,
+    contents: &Contents,
+    selection: &Option<PathBuf>,
+) -> bool {
+    let preview_id = match app::get_focused_directory_viewports(window) {
+        Some((_, _, preview_vp)) => preview_vp.buffer_id,
+        None => return false,
+    };
+
+    let preview_buffer = match contents.buffers.get(&preview_id) {
+        Some(buf) => buf,
+        None => return false,
+    };
+
+    match (preview_buffer, selection) {
+        (Buffer::Empty, None) => true,
+        (Buffer::Empty, Some(_)) | (Buffer::PathReference(_), Some(_)) => false,
+        (buffer, Some(selected_path)) => buffer
+            .resolve_path()
+            .map(|p| p == selected_path.as_path())
+            .unwrap_or(false),
+        (_, None) => false,
+    }
 }
 
 pub fn set_preview_buffer_for_selection(
