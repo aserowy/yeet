@@ -164,8 +164,6 @@ fn render_buffer_slot(
     let x = viewport.x.saturating_add(horizontal_offset);
     let y = viewport.y.saturating_add(vertical_offset);
 
-    // Cursor visibility is a render-time visual only. If this viewport is not
-    // the focused one, clone it and hide the cursor. No model state is mutated.
     let is_focused = viewport.buffer_id == focused_buffer_id;
     let unfocused_vp;
     let effective_vp = if is_focused {

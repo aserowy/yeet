@@ -9,7 +9,7 @@ The implementation is split into 4 sequential prompts, each leaving the program 
 1. [Prompt 1: Add `Window::Vertical` variant to the model](#prompt-1-add-windowvertical-variant-to-the-model) — `done`
 2. [Prompt 2: Implement `Window::Vertical` in layout computation and all `Window` match sites](#prompt-2-implement-windowvertical-in-layout-computation-and-all-window-match-sites) — `done`
 3. [Prompt 3: Render `Window::Vertical` splits with per-window statuslines](#prompt-3-render-windowvertical-splits-with-per-window-statuslines) — `done`
-4. [Prompt 4: Extend focus navigation to support all four directions across mixed split trees](#prompt-4-extend-focus-navigation-to-support-all-four-directions-across-mixed-split-trees) — `planned`
+4. [Prompt 4: Extend focus navigation to support all four directions across mixed split trees](#prompt-4-extend-focus-navigation-to-support-all-four-directions-across-mixed-split-trees) — `done`
 
 ---
 
@@ -578,7 +578,7 @@ The `Tasks` arm already uses `vp.width` for the statusline rect width, which is 
 
 **Goal**: Replace the current single-level focus switching with a tree-walking algorithm that correctly moves focus in all four directions (`Up`, `Down`, `Left`, `Right`) through any nesting of `Horizontal` and `Vertical` splits.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The current `focus::change` function only handles one level of `Horizontal` or `Vertical` at the root. In a nested tree (e.g., a `Vertical` inside a `Horizontal`), pressing `Ctrl+j`/`Ctrl+k` should move focus between windows that are visually above/below each other, even if they are in different branches of the tree. Similarly, `Ctrl+h`/`Ctrl+l` should move between windows that are visually left/right. This requires walking the tree to find the correct sibling in the desired direction.
 
