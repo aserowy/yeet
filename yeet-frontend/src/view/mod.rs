@@ -1,10 +1,8 @@
-use ratatui::layout::Rect;
-
 use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 
 mod buffer;
 mod commandline;
-mod statusline;
+pub mod statusline;
 mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
@@ -12,31 +10,12 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
         tracing::debug!("Rendering with area: {}", frame.area());
 
         let vertical_offset = window::view(model, frame).expect("Failed to render window view");
-        let focused_vp = model.app.window.focused_viewport();
-        let focused_id = &focused_vp.buffer_id;
-
-        let buffer = match model.app.contents.buffers.get(focused_id) {
-            Some(it) => it,
-            None => unreachable!(),
-        };
-
-        statusline::view(
-            buffer,
-            focused_vp,
-            frame,
-            Rect {
-                x: 0,
-                width: frame.area().width,
-                y: vertical_offset,
-                height: 1,
-            },
-        );
 
         commandline::view(
             &model.app.commandline,
             &model.state.modes.current,
             frame,
-            vertical_offset + 1,
+            vertical_offset,
         )
         .expect("Failed to render commandline view");
     })

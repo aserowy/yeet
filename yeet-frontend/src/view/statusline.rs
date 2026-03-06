@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use ratatui::{
     prelude::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
@@ -14,10 +14,28 @@ use yeet_buffer::model::{
 
 use crate::model::{self, Buffer, DirectoryBuffer, TasksBuffer};
 
-pub fn view(current: &Buffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
+pub fn view(
+    current: &Buffer,
+    viewport: &ViewPort,
+    frame: &mut Frame,
+    rect: Rect,
+    is_focused: bool,
+) {
     match current {
-        Buffer::Directory(it) => filetree_status(it, viewport, frame, rect),
-        Buffer::Tasks(it) => tasks_status(it, viewport, frame, rect),
+        Buffer::Directory(it) => {
+            if is_focused {
+                filetree_status(it, viewport, frame, rect)
+            } else {
+                filetree_status_unfocused(it, frame, rect)
+            }
+        }
+        Buffer::Tasks(it) => {
+            if is_focused {
+                tasks_status(it, viewport, frame, rect)
+            } else {
+                tasks_status_unfocused(frame, rect)
+            }
+        }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
 }
@@ -30,7 +48,12 @@ fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, re
         viewport.cursor.vertical_index + 1
     };
 
-    let label = Line::from(Span::styled("Tasks", Style::default().fg(Color::Gray)));
+    let label = Line::from(Span::styled(
+        "Tasks",
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    ));
     let position_line = Line::from(vec![
         Span::styled(format!("{}/", position), Style::default().fg(Color::Gray)),
         Span::styled(format!("{}", count), Style::default().fg(Color::Gray)),
@@ -54,6 +77,16 @@ fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, re
     frame.render_widget(Paragraph::new(position_line), layout[2]);
 }
 
+fn tasks_status_unfocused(frame: &mut Frame, rect: Rect) {
+    let label = Line::from(Span::styled("Tasks", Style::default().fg(Color::Gray)));
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        rect,
+    );
+    frame.render_widget(Paragraph::new(label), rect);
+}
+
 fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
     let selected = model::get_selected_path(buffer, &viewport.cursor);
     let permissions = get_permissions(&selected);
@@ -61,10 +94,12 @@ fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Fr
     let changes = get_changes_content(buffer);
     let position = get_position_content(buffer, viewport);
 
-    let content = buffer.path.to_str().unwrap_or("");
-    let style = Style::default().fg(Color::Gray);
-    let span = Span::styled(content, style);
-    let path = Line::from(span);
+    let path = Line::from(Span::styled(
+        buffer.path.to_str().unwrap_or(""),
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    ));
 
     let layout = Layout::default()
         .direction(Direction::Horizontal)
@@ -88,6 +123,18 @@ fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Fr
     frame.render_widget(Paragraph::new(permissions), layout[2]);
     frame.render_widget(Paragraph::new(changes), layout[4]);
     frame.render_widget(Paragraph::new(position), layout[6]);
+}
+
+fn filetree_status_unfocused(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
+    let content = buffer.path.to_str().unwrap_or("");
+    let style = Style::default().fg(Color::Gray);
+    let path = Line::from(Span::styled(content, style));
+
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        rect,
+    );
+    frame.render_widget(Paragraph::new(path), rect);
 }
 
 fn get_position_content<'a>(buffer: &'a DirectoryBuffer, viewport: &ViewPort) -> Line<'a> {

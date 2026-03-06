@@ -98,8 +98,9 @@ impl Window {
             Window::Horizontal { first, second, .. } => {
                 Ok(first.get_height()? + second.get_height()?)
             }
-            Window::Directory(_, vp, _) => Ok(vp.height),
-            Window::Tasks(vp) => Ok(vp.height),
+            // NOTE: +1 for status line
+            Window::Directory(_, vp, _) => Ok(vp.height + 1),
+            Window::Tasks(vp) => Ok(vp.height + 1),
         }
     }
 
@@ -404,7 +405,8 @@ mod test {
             )),
             focus: SplitFocus::First,
         };
-        assert_eq!(tree.get_height().unwrap(), 25);
+        // NOTE: +1 for each status line
+        assert_eq!(tree.get_height().unwrap(), 27);
     }
 
     #[test]
@@ -413,7 +415,8 @@ mod test {
             height: 7,
             ..Default::default()
         });
-        assert_eq!(w.get_height().unwrap(), 7);
+        // NOTE: +1 for status line
+        assert_eq!(w.get_height().unwrap(), 8);
     }
 
     #[test]

@@ -9,6 +9,8 @@ use yeet_buffer::{
 
 use crate::model::{App, Buffer, DirectoryBuffer, Window};
 
+use super::statusline;
+
 pub fn view(
     mode: &Mode,
     app: &App,
@@ -86,6 +88,20 @@ fn render_window(
                 vertical_offset,
                 focused_buffer_id,
             );
+
+            if let Some(buffer) = buffers.get(&current.buffer_id) {
+                let is_focused = current.buffer_id == focused_buffer_id;
+                let statusline_rect = Rect {
+                    x: 0,
+                    y: current
+                        .y
+                        .saturating_add(current.height)
+                        .saturating_add(vertical_offset),
+                    width: frame.area().width,
+                    height: 1,
+                };
+                statusline::view(buffer, current, frame, statusline_rect, is_focused);
+            }
         }
         Window::Tasks(vp) => {
             render_buffer_slot(
@@ -97,6 +113,20 @@ fn render_window(
                 vertical_offset,
                 focused_buffer_id,
             );
+
+            if let Some(buffer) = buffers.get(&vp.buffer_id) {
+                let is_focused = vp.buffer_id == focused_buffer_id;
+                let statusline_rect = Rect {
+                    x: vp.x.saturating_add(horizontal_offset),
+                    y: vp
+                        .y
+                        .saturating_add(vp.height)
+                        .saturating_add(vertical_offset),
+                    width: vp.width,
+                    height: 1,
+                };
+                statusline::view(buffer, vp, frame, statusline_rect, is_focused);
+            }
         }
     }
 }
