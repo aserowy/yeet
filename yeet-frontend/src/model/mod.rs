@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
@@ -74,18 +74,93 @@ pub struct Contents {
     pub latest_buffer_id: usize,
 }
 
-#[allow(dead_code, clippy::large_enum_variant)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum SplitFocus {
+    #[default]
+    First,
+    Second,
+}
+
+#[allow(clippy::large_enum_variant)]
 pub enum Window {
-    Horizontal(Box<Window>, Box<Window>),
+    Horizontal {
+        first: Box<Window>,
+        second: Box<Window>,
+        focus: SplitFocus,
+    },
     Directory(ViewPort, ViewPort, ViewPort),
+    Tasks(ViewPort),
 }
 
 impl Window {
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
-            Window::Horizontal(_, _) => todo!(),
+            Window::Horizontal { first, second, .. } => {
+                Ok(first.get_height()? + second.get_height()?)
+            }
             Window::Directory(_, vp, _) => Ok(vp.height),
+            Window::Tasks(vp) => Ok(vp.height),
         }
+    }
+
+    pub fn focused_viewport(&self) -> &ViewPort {
+        match self {
+            Window::Horizontal {
+                first,
+                second,
+                focus,
+            } => match focus {
+                SplitFocus::First => first.focused_viewport(),
+                SplitFocus::Second => second.focused_viewport(),
+            },
+            Window::Directory(_, vp, _) => vp,
+            Window::Tasks(vp) => vp,
+        }
+    }
+
+    pub fn focused_viewport_mut(&mut self) -> &mut ViewPort {
+        match self {
+            Window::Horizontal {
+                first,
+                second,
+                focus,
+            } => match focus {
+                SplitFocus::First => first.focused_viewport_mut(),
+                SplitFocus::Second => second.focused_viewport_mut(),
+            },
+            Window::Directory(_, vp, _) => vp,
+            Window::Tasks(vp) => vp,
+        }
+    }
+
+    pub fn buffer_ids(&self) -> HashSet<usize> {
+        match self {
+            Window::Horizontal { first, second, .. } => {
+                let mut ids = first.buffer_ids();
+                ids.extend(second.buffer_ids());
+                ids
+            }
+            Window::Directory(parent, current, preview) => {
+                HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
+            }
+            Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
+        }
+    }
+
+    pub fn contains_tasks(&self) -> bool {
+        match self {
+            Window::Horizontal { first, second, .. } => {
+                first.contains_tasks() || second.contains_tasks()
+            }
+            Window::Directory(_, _, _) => false,
+            Window::Tasks(_) => true,
+        }
+    }
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Window::Directory(Default::default(), Default::default(), Default::default())
     }
 }
 
@@ -162,7 +237,31 @@ pub enum Buffer {
     Image(PreviewImageBuffer),
     Content(ContentBuffer),
     PathReference(PathBuf),
+    Tasks(TasksBuffer),
     Empty,
+}
+
+impl Buffer {
+    pub fn resolve_path(&self) -> Option<&Path> {
+        match self {
+            Buffer::Directory(it) => it.resolve_path(),
+            Buffer::Content(it) => it.resolve_path(),
+            Buffer::Image(it) => it.resolve_path(),
+            Buffer::PathReference(path) => {
+                if path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(path.as_path())
+                }
+            }
+            Buffer::Tasks(_) | Buffer::Empty => None,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct TasksBuffer {
+    pub buffer: TextBuffer,
 }
 
 #[derive(Default)]
@@ -246,5 +345,145 @@ pub fn get_selected_path_with_base(
         Some(target)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use super::*;
+
+    #[test]
+    fn split_focus_default_is_first() {
+        assert_eq!(SplitFocus::default(), SplitFocus::First);
+    }
+
+    #[test]
+    fn window_tasks_construction_and_pattern_match() {
+        let task_window = Window::Tasks(ViewPort::default());
+        assert!(matches!(task_window, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn window_horizontal_struct_variant_construction() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+        assert!(matches!(tree, Window::Horizontal { .. }));
+    }
+
+    #[test]
+    fn buffer_tasks_construction_and_pattern_match() {
+        let buf = Buffer::Tasks(TasksBuffer {
+            buffer: TextBuffer::default(),
+        });
+        assert!(matches!(buf, Buffer::Tasks(_)));
+    }
+
+    #[test]
+    fn get_height_horizontal_sums_children() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Tasks(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    height: 15,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        assert_eq!(tree.get_height().unwrap(), 25);
+    }
+
+    #[test]
+    fn get_height_tasks_returns_viewport_height() {
+        let w = Window::Tasks(ViewPort {
+            height: 7,
+            ..Default::default()
+        });
+        assert_eq!(w.get_height().unwrap(), 7);
+    }
+
+    #[test]
+    fn focused_viewport_follows_split_focus_first() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    height: 42,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            focus: SplitFocus::First,
+        };
+        assert_eq!(tree.focused_viewport().height, 42);
+    }
+
+    #[test]
+    fn focused_viewport_follows_split_focus_second() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    height: 42,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+        assert_eq!(tree.focused_viewport().height, 10);
+    }
+
+    #[test]
+    fn buffer_ids_collects_all_from_nested_tree() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort {
+                    buffer_id: 1,
+                    ..Default::default()
+                },
+                ViewPort {
+                    buffer_id: 2,
+                    ..Default::default()
+                },
+                ViewPort {
+                    buffer_id: 3,
+                    ..Default::default()
+                },
+            )),
+            second: Box::new(Window::Tasks(ViewPort {
+                buffer_id: 4,
+                ..Default::default()
+            })),
+            focus: SplitFocus::First,
+        };
+        let ids = tree.buffer_ids();
+        assert_eq!(ids.len(), 4);
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
+        assert!(ids.contains(&3));
+        assert!(ids.contains(&4));
     }
 }

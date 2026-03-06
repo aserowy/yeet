@@ -23,6 +23,16 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         _ => {}
     }
 
+    if !to.is_command() && to != &Mode::Navigation {
+        let vp = app.window.focused_viewport();
+        if matches!(
+            app.contents.buffers.get(&vp.buffer_id),
+            Some(Buffer::Tasks(_))
+        ) {
+            return Vec::new();
+        }
+    }
+
     state.modes.current = to.clone();
     state.modes.previous = Some(from.clone());
 
@@ -33,7 +43,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (vp, _buffer) = app::get_focused_current_mut(app);
+            let (vp, _buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
             vp.hide_cursor = true;
 
             vec![]
@@ -49,64 +59,54 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                vp.hide_cursor = false;
 
-            vp.hide_cursor = false;
-
-            yeet_buffer::update(
-                Some(vp),
-                &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
             vec![]
         }
         Mode::Navigation => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                // TODO: handle file operations: show pending with gray, refresh on operation success
+                // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
+                vp.hide_cursor = false;
 
-            // TODO: handle file operations: show pending with gray, refresh on operation success
-            // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
-            vp.hide_cursor = false;
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
-            yeet_buffer::update(
-                Some(vp),
+            save::all(
+                &mut app.window,
+                &mut app.contents,
+                &mut state.junk,
                 &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
-
-            save::changes(app, &mut state.junk, &state.modes.current)
+            )
         }
         Mode::Normal => {
-            let (vp, buffer) = match app::get_focused_current_mut(app) {
-                (vp, Buffer::Directory(it)) => (vp, it),
-                (_vp, Buffer::Image(_)) => return Vec::new(),
-                (_vp, Buffer::Content(_)) => return Vec::new(),
-                (_vp, Buffer::PathReference(_)) => return Vec::new(),
-                (_vp, Buffer::Empty) => return Vec::new(),
-            };
+            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(dir) = buffer {
+                vp.hide_cursor = false;
 
-            vp.hide_cursor = false;
-
-            yeet_buffer::update(
-                Some(vp),
-                &state.modes.current,
-                &mut buffer.buffer,
-                std::slice::from_ref(&msg),
-            );
+                yeet_buffer::update(
+                    Some(vp),
+                    &state.modes.current,
+                    &mut dir.buffer,
+                    std::slice::from_ref(&msg),
+                );
+            }
 
             vec![]
         }
@@ -258,7 +258,8 @@ mod test {
         let mut app = crate::model::App::default();
         let mut state = crate::model::State::default();
 
-        let (_, current_id, _) = crate::update::app::get_focused_directory_buffer_ids(&app);
+        let (_, current_id, _) =
+            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
         app.contents
             .buffers
             .insert(current_id, Buffer::Directory(DirectoryBuffer::default()));
@@ -280,5 +281,67 @@ mod test {
             .iter()
             .any(|action| matches!(action, crate::action::Action::ModeChanged)));
         assert!(state.pending_path_events.is_empty());
+    }
+
+    #[test]
+    fn mode_change_blocked_on_tasks_buffer() {
+        use crate::model::Tasks;
+        use crate::update::command::task::open;
+
+        let tasks = Tasks::default();
+        let mut app = crate::model::App::default();
+        open(&mut app, &tasks);
+
+        let mut state = crate::model::State::default();
+        state.modes.current = Mode::Navigation;
+
+        // Navigation → Normal should be blocked on Tasks
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal);
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+
+        // Navigation → Insert should also be blocked
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert);
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+    }
+
+    #[test]
+    fn command_mode_allowed_on_tasks_buffer() {
+        use yeet_buffer::model::CommandMode;
+
+        use crate::model::Tasks;
+        use crate::update::command::task::open;
+
+        let tasks = Tasks::default();
+        let mut app = crate::model::App::default();
+        open(&mut app, &tasks);
+
+        let mut state = crate::model::State::default();
+        state.modes.current = Mode::Navigation;
+
+        // Navigation → Command should be allowed on Tasks
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Command(CommandMode::Command),
+        );
+        assert!(actions
+            .iter()
+            .any(|a| matches!(a, crate::action::Action::ModeChanged)));
+        assert_eq!(state.modes.current, Mode::Command(CommandMode::Command));
+
+        // Command → Navigation should also be allowed on Tasks
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Command(CommandMode::Command),
+            &Mode::Navigation,
+        );
+        assert!(actions
+            .iter()
+            .any(|a| matches!(a, crate::action::Action::ModeChanged)));
+        assert_eq!(state.modes.current, Mode::Navigation);
     }
 }

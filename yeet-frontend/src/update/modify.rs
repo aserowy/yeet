@@ -1,7 +1,4 @@
-use yeet_buffer::{
-    message::{BufferMessage, TextModification},
-    model::Mode,
-};
+use yeet_buffer::message::{BufferMessage, TextModification};
 
 use crate::{
     action::Action,
@@ -9,30 +6,243 @@ use crate::{
     update::app,
 };
 
-use super::selection;
+use super::{command::task, selection};
 
 pub fn buffer(
     app: &mut App,
-    state: &State,
-    mode: &Mode,
+    state: &mut State,
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
-    let msg = BufferMessage::Modification(*repeat, modification.clone());
-    match app::get_focused_current_mut(app) {
-        (vp, Buffer::Directory(it)) => {
-            yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
+    let (vp, focused) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+    match focused {
+        Buffer::Tasks(_) => {
+            if !matches!(modification, TextModification::DeleteLine) {
+                return Vec::new();
+            }
+
+            let cursor_index = vp.cursor.vertical_index;
+            cancel_task_at_index(&mut state.tasks, cursor_index);
+            task::refresh_tasks_buffer(&mut app.window, &mut app.contents, &state.tasks);
+
+            Vec::new()
         }
-        (_vp, Buffer::Image(_)) => return Vec::new(),
-        (_vp, Buffer::Content(_)) => return Vec::new(),
-        (_vp, Buffer::PathReference(_)) => return Vec::new(),
-        (_vp, Buffer::Empty) => return Vec::new(),
+        Buffer::Directory(it) => {
+            let mode = &state.modes.current;
+            let msg = BufferMessage::Modification(*repeat, modification.clone());
+            yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
+
+            let (_, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            if let Buffer::Directory(_) = buffer {
+                return selection::refresh_preview_from_current_selection(
+                    app,
+                    &state.history,
+                    None,
+                );
+            }
+
+            Vec::new()
+        }
+        Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
+            Vec::new()
+        }
+    }
+}
+
+fn cancel_task_at_index(tasks: &mut crate::model::Tasks, cursor_index: usize) {
+    let mut entries: Vec<_> = tasks.running.values_mut().collect();
+    entries.sort_by_key(|task| task.id);
+
+    if let Some(task) = entries.get_mut(cursor_index) {
+        task.token.cancel();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tokio_util::sync::CancellationToken;
+    use yeet_buffer::message::TextModification;
+
+    use crate::model::{App, Buffer, CurrentTask, State, Tasks};
+
+    use super::buffer;
+
+    fn make_app_with_tasks(tasks: &Tasks) -> App {
+        use crate::update::command::task::open;
+
+        let mut app = App::default();
+        open(&mut app, tasks);
+        app
     }
 
-    let (_, buffer) = app::get_focused_current_mut(app);
-    if let Buffer::Directory(_buffer) = buffer {
-        return selection::refresh_preview_from_current_selection(app, &state.history, None);
+    fn make_tasks_3() -> Tasks {
+        let mut tasks = Tasks::default();
+        tasks.running.insert(
+            "rg-1".to_string(),
+            CurrentTask {
+                external_id: "rg foo".to_string(),
+                id: 1,
+                token: CancellationToken::new(),
+            },
+        );
+        tasks.running.insert(
+            "fd-2".to_string(),
+            CurrentTask {
+                external_id: "fd bar".to_string(),
+                id: 5,
+                token: CancellationToken::new(),
+            },
+        );
+        tasks.running.insert(
+            "rg-3".to_string(),
+            CurrentTask {
+                external_id: "rg baz".to_string(),
+                id: 10,
+                token: CancellationToken::new(),
+            },
+        );
+        tasks
     }
 
-    Vec::new()
+    #[test]
+    fn dd_cancels_task_at_cursor_index() {
+        let tasks = make_tasks_3();
+        let token_fd = tasks.running.get("fd-2").unwrap().token.clone();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State {
+            tasks,
+            ..Default::default()
+        };
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        let vp = app.window.focused_viewport_mut();
+        vp.cursor.vertical_index = 1;
+
+        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+
+        // Task at index 1 (id=5, "fd-2") should be cancelled
+        assert!(token_fd.is_cancelled());
+        assert!(state
+            .tasks
+            .running
+            .get("fd-2")
+            .unwrap()
+            .token
+            .is_cancelled());
+
+        // Other tasks should NOT be cancelled
+        assert!(!state
+            .tasks
+            .running
+            .get("rg-1")
+            .unwrap()
+            .token
+            .is_cancelled());
+        assert!(!state
+            .tasks
+            .running
+            .get("rg-3")
+            .unwrap()
+            .token
+            .is_cancelled());
+    }
+
+    #[test]
+    fn dd_on_tasks_stays_in_navigation_mode() {
+        let tasks = make_tasks_3();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State {
+            tasks,
+            ..Default::default()
+        };
+        // mode::change blocks Navigation→Normal on Tasks, so mode stays Navigation.
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        let actions = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+
+        // Mode should remain Navigation — no mode change occurred.
+        assert_eq!(state.modes.current, yeet_buffer::model::Mode::Navigation);
+        // No ModeChanged action needed — mode never changed.
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn dd_on_cancelled_task_updates_buffer_with_ansi() {
+        let tasks = make_tasks_3();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State {
+            tasks,
+            ..Default::default()
+        };
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        // Cancel task at index 0 (id=1)
+        vp_set_cursor(&mut app, 0);
+        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+
+        // The buffer should be refreshed — cancelled line has ANSI codes
+        let lines = get_tasks_buffer_lines(&app);
+        assert_eq!(lines.len(), 3);
+        // Cancelled line: stripped content is the same, but raw content has ANSI
+        assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
+        assert!(lines[0].content.to_string().contains("\x1b[9;90m"));
+        // Non-cancelled lines are plain
+        assert!(!lines[1].content.to_string().contains("\x1b["));
+        assert!(!lines[2].content.to_string().contains("\x1b["));
+    }
+
+    #[test]
+    fn dd_on_empty_task_buffer_does_not_panic() {
+        let tasks = Tasks::default();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State::default();
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        // No panic — test passes if we reach here
+    }
+
+    #[test]
+    fn non_delete_modification_on_tasks_is_blocked() {
+        let tasks = make_tasks_3();
+        let mut app = make_app_with_tasks(&tasks);
+        let mut state = State {
+            tasks,
+            ..Default::default()
+        };
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        // Try inserting text — should be blocked
+        buffer(
+            &mut app,
+            &mut state,
+            &1,
+            &TextModification::Insert("x".to_string()),
+        );
+
+        // No task should be cancelled
+        for task in state.tasks.running.values() {
+            assert!(!task.token.is_cancelled());
+        }
+
+        // Buffer content should be unchanged (3 plain lines)
+        let lines = get_tasks_buffer_lines(&app);
+        assert_eq!(lines.len(), 3);
+        for line in &lines {
+            assert!(!line.content.to_string().contains("\x1b["));
+        }
+    }
+
+    fn vp_set_cursor(app: &mut App, index: usize) {
+        let vp = app.window.focused_viewport_mut();
+        vp.cursor.vertical_index = index;
+    }
+
+    fn get_tasks_buffer_lines(app: &App) -> Vec<yeet_buffer::model::BufferLine> {
+        let vp = app.window.focused_viewport();
+        match app.contents.buffers.get(&vp.buffer_id) {
+            Some(Buffer::Tasks(tb)) => tb.buffer.lines.clone(),
+            _ => panic!("expected Buffer::Tasks"),
+        }
+    }
 }

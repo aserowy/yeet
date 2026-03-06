@@ -88,20 +88,22 @@ pub fn relocate(
         search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
-    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(app);
-    let premotion_preview_path = match app.contents.buffers.get(&preview_id) {
-        Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::Image(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::Content(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        Some(Buffer::PathReference(path)) => Some(path.to_path_buf()),
-        Some(Buffer::Empty) | None => None,
-    };
+    let premotion_preview_path =
+        app::get_focused_directory_buffer_ids(&app.window).and_then(|(_, _, preview_id)| {
+            app.contents
+                .buffers
+                .get(&preview_id)
+                .and_then(|b| b.resolve_path())
+                .map(|p| p.to_path_buf())
+        });
 
-    let (viewport, buffer) = match app::get_focused_current_mut(app) {
+    let (viewport, buffer) = match app::get_focused_current_mut(&mut app.window, &mut app.contents)
+    {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
         (_, Buffer::PathReference(_)) => return Vec::new(),
+        (_, Buffer::Tasks(_)) => return Vec::new(),
         (_, Buffer::Empty) => return Vec::new(),
     };
 

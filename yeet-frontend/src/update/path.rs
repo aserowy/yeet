@@ -29,7 +29,8 @@ pub fn add(
     app: &mut App,
     paths: &[PathBuf],
 ) -> Vec<Action> {
-    let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+    let (current_vp, current_buffer) =
+        app::get_focused_current_mut(&mut app.window, &mut app.contents);
     let previous_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => None,
@@ -252,7 +253,10 @@ fn update_directory_buffers_on_remove(
         }
     }
 
-    let (_, current_id, preview_id) = app::get_focused_directory_buffer_ids(app);
+    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(&app.window) {
+        Some((_, current_id, preview_id)) => (current_id, preview_id),
+        None => return Vec::new(),
+    };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
         _ => None,
@@ -261,7 +265,7 @@ fn update_directory_buffers_on_remove(
         .contents
         .buffers
         .get(&preview_id)
-        .and_then(buffer_path)
+        .and_then(|b| b.resolve_path())
         .map(|p| p.to_path_buf());
 
     let current_removed = current_path
@@ -295,19 +299,10 @@ fn update_directory_buffers_on_remove(
     actions
 }
 
-fn buffer_path(buffer: &Buffer) -> Option<&Path> {
-    match buffer {
-        Buffer::Directory(buffer) => buffer.resolve_path(),
-        Buffer::Content(buffer) => buffer.resolve_path(),
-        Buffer::Image(buffer) => buffer.resolve_path(),
-        Buffer::PathReference(path) => Some(path.as_path()),
-        Buffer::Empty => None,
-    }
-}
-
 fn remove_buffers_under_path(app: &mut App, path: &Path) {
     app.contents.buffers.retain(|_, buffer| {
-        buffer_path(buffer)
+        buffer
+            .resolve_path()
             .map(|buffer_path| !buffer_path.starts_with(path))
             .unwrap_or(true)
     });
@@ -328,9 +323,10 @@ fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
 
 fn reset_directory_viewports_to_empty(app: &mut App) {
     let buffer_id = app::get_empty_buffer(&mut app.contents);
-    let (parent, current, _) = app::get_focused_directory_viewports_mut(&mut app.window);
-    parent.buffer_id = buffer_id;
-    current.buffer_id = buffer_id;
+    if let Some((parent, current, _)) = app::get_focused_directory_viewports_mut(&mut app.window) {
+        parent.buffer_id = buffer_id;
+        current.buffer_id = buffer_id;
+    }
 
     preview::set_buffer_id(&mut app.contents, &mut app.window, buffer_id);
 }
@@ -433,7 +429,7 @@ mod test {
             &removed,
         );
 
-        let (_, current_id, _) = app::get_focused_directory_buffer_ids(&app);
+        let (_, current_id, _) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
         let current_path = match app.contents.buffers.get(&current_id) {
             Some(Buffer::Directory(buffer)) => buffer.path.clone(),
             Some(Buffer::PathReference(path)) => path.clone(),
@@ -445,8 +441,114 @@ mod test {
             .contents
             .buffers
             .values()
-            .filter_map(buffer_path)
+            .filter_map(|b| b.resolve_path())
             .all(|path| !path.starts_with(&removed)));
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn add_refreshes_preview_when_buffer_not_loaded_for_selection() {
+        use crate::model::{DirectoryBuffer, Window};
+        use yeet_buffer::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, TextBuffer};
+
+        // Create a real temp directory so that path.exists() returns true.
+        let base = unique_temp_dir();
+        fs::create_dir_all(&base).expect("create base dir");
+
+        let newfolder = base.join("newfolder");
+        fs::create_dir_all(&newfolder).expect("create newfolder");
+
+        let mut app = App::default();
+
+        let parent_id = 1;
+        let current_id = app::get_next_buffer_id(&mut app.contents);
+        let preview_id = app::get_next_buffer_id(&mut app.contents);
+
+        // Parent buffer: empty directory buffer (not important for this test).
+        app.contents
+            .buffers
+            .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
+
+        // Current buffer: the base directory, containing "newfolder/" at cursor index 0.
+        // The trailing slash simulates user-typed content from insert mode.
+        app.contents.buffers.insert(
+            current_id,
+            Buffer::Directory(DirectoryBuffer {
+                path: base.clone(),
+                buffer: TextBuffer {
+                    lines: vec![BufferLine {
+                        content: Ansi::new("newfolder/"),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+        );
+
+        // Preview buffer: Empty — simulates that the preview was never loaded for
+        // the newly-created folder (it didn't exist on disk when the cursor first
+        // landed on it).
+        app.contents.buffers.insert(preview_id, Buffer::Empty);
+
+        app.window = Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                cursor: Cursor {
+                    vertical_index: 0,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                ..Default::default()
+            },
+        );
+
+        let history = History::default();
+        let marks = Marks::default();
+        let qfix = QuickFix::default();
+
+        // Simulate PathsAdded for the new folder (path without trailing slash,
+        // as the filesystem watcher reports it).
+        let actions = add(
+            &history,
+            &marks,
+            &qfix,
+            &Mode::Navigation,
+            &mut app,
+            std::slice::from_ref(&newfolder),
+        );
+
+        // The preview viewport must now point at a buffer for "newfolder", not
+        // at the old Empty buffer. The buffer should be a PathReference (triggering
+        // a Load action) or a Directory if already resolved.
+        let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
+        let preview_buffer = app.contents.buffers.get(&new_preview_id);
+
+        // The preview buffer should no longer be Empty.
+        assert!(
+            !matches!(preview_buffer, Some(Buffer::Empty)),
+            "preview buffer should have been refreshed for the newly-created folder, \
+             but it is still Empty (preview_id={})",
+            new_preview_id,
+        );
+
+        // There should be a Load action for the new folder.
+        assert!(
+            actions
+                .iter()
+                .any(|a| matches!(a, Action::Load(p, _) if p == &newfolder)),
+            "expected a Load action for {:?}, got: {:?}",
+            newfolder,
+            actions,
+        );
 
         let _ = fs::remove_dir_all(&base);
     }
@@ -521,11 +623,11 @@ mod test {
             &removed,
         );
 
-        let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&app);
+        let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
         let preview_buffer = app.contents.buffers.get(&preview_id);
         assert!(preview_buffer.is_some());
 
-        if let Some(path) = preview_buffer.and_then(buffer_path) {
+        if let Some(path) = preview_buffer.and_then(|b| b.resolve_path()) {
             assert!(!path.starts_with(&removed));
         }
 

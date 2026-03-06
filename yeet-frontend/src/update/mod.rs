@@ -20,6 +20,7 @@ mod command;
 pub mod commandline;
 mod cursor;
 mod enumeration;
+mod focus;
 pub mod history;
 pub mod junkyard;
 mod mark;
@@ -166,8 +167,16 @@ fn update_with_message(
         Message::PreviewLoaded(content) => preview::update(app, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
-        Message::TaskStarted(id, cancellation) => task::add(&mut state.tasks, id, cancellation),
-        Message::TaskEnded(id) => task::remove(&mut state.tasks, id),
+        Message::TaskStarted(id, cancellation) => task::add(
+            &mut state.tasks,
+            &mut app.window,
+            &mut app.contents,
+            id,
+            cancellation,
+        ),
+        Message::TaskEnded(id) => {
+            task::remove(&mut state.tasks, &mut app.window, &mut app.contents, id)
+        }
         Message::ZoxideResult(path) => navigate::path(app, &state.history, path.as_ref()),
     }
 }
@@ -190,6 +199,7 @@ pub fn update_with_keymap_message(
             app.contents.buffers.values_mut().collect(),
             mrks,
         ),
+        KeymapMessage::FocusDirection(direction) => focus::change(app, direction),
         KeymapMessage::ExecuteCommand => {
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
@@ -225,7 +235,8 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
-            let (current_vp, current_buffer) = app::get_focused_current_mut(app);
+            let (current_vp, current_buffer) =
+                app::get_focused_current_mut(&mut app.window, &mut app.contents);
             let directory = match current_buffer {
                 Buffer::Directory(directory) => directory,
                 _ => return Vec::new(),
@@ -247,10 +258,18 @@ pub fn update_with_buffer_message(
         BufferMessage::ChangeMode(from, to) => mode::change(app, state, from, to),
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
-            Mode::Insert | Mode::Normal => {
-                modify::buffer(app, state, &state.modes.current, repeat, modification)
+            Mode::Insert | Mode::Normal => modify::buffer(app, state, repeat, modification),
+            Mode::Navigation => {
+                let vp = app.window.focused_viewport();
+                if matches!(
+                    app.contents.buffers.get(&vp.buffer_id),
+                    Some(Buffer::Tasks(_))
+                ) {
+                    modify::buffer(app, state, repeat, modification)
+                } else {
+                    Vec::new()
+                }
             }
-            Mode::Navigation => Vec::new(),
         },
         BufferMessage::MoveCursor(rpt, mtn) => match &mut state.modes.current {
             Mode::Command(_) => {
@@ -268,7 +287,7 @@ pub fn update_with_buffer_message(
                 viewport::relocate(app, &state.history, &state.modes.current, mtn)
             }
         },
-        BufferMessage::SaveBuffer => save::changes(app, &mut state.junk, &state.modes.current),
+        BufferMessage::SaveBuffer => save::current(app, &mut state.junk, &state.modes.current),
 
         BufferMessage::AddLine(_, _)
         | BufferMessage::RemoveLine(_)

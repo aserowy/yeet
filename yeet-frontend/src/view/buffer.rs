@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
 use yeet_buffer::{
@@ -14,40 +16,89 @@ pub fn view(
     horizontal_offset: u16,
     vertical_offset: u16,
 ) {
-    let (parent_viewport, current_viewport, preview_viewport) = match &app.window {
-        Window::Horizontal(_, _) => todo!(),
-        Window::Directory(parent, current, preview) => (parent, current, preview),
-    };
-
-    let parent_buffer = app.contents.buffers.get(&parent_viewport.buffer_id);
-    render_buffer_slot(
+    let focused_buffer_id = app.window.focused_viewport().buffer_id;
+    render_window(
         mode,
+        &app.window,
+        &app.contents.buffers,
         frame,
-        parent_viewport,
-        parent_buffer,
         horizontal_offset,
         vertical_offset,
+        focused_buffer_id,
     );
+}
 
-    let current_buffer = app.contents.buffers.get(&current_viewport.buffer_id);
-    render_buffer_slot(
-        mode,
-        frame,
-        current_viewport,
-        current_buffer,
-        horizontal_offset,
-        vertical_offset,
-    );
-
-    let preview_buffer = app.contents.buffers.get(&preview_viewport.buffer_id);
-    render_buffer_slot(
-        mode,
-        frame,
-        preview_viewport,
-        preview_buffer,
-        horizontal_offset,
-        vertical_offset,
-    );
+fn render_window(
+    mode: &Mode,
+    window: &Window,
+    buffers: &HashMap<usize, Buffer>,
+    frame: &mut Frame,
+    horizontal_offset: u16,
+    vertical_offset: u16,
+    focused_buffer_id: usize,
+) {
+    match window {
+        Window::Horizontal { first, second, .. } => {
+            render_window(
+                mode,
+                first,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+            render_window(
+                mode,
+                second,
+                buffers,
+                frame,
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+        }
+        Window::Directory(parent, current, preview) => {
+            render_buffer_slot(
+                mode,
+                frame,
+                parent,
+                buffers.get(&parent.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+            render_buffer_slot(
+                mode,
+                frame,
+                current,
+                buffers.get(&current.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+            render_buffer_slot(
+                mode,
+                frame,
+                preview,
+                buffers.get(&preview.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+        }
+        Window::Tasks(vp) => {
+            render_buffer_slot(
+                mode,
+                frame,
+                vp,
+                buffers.get(&vp.buffer_id),
+                horizontal_offset,
+                vertical_offset,
+                focused_buffer_id,
+            );
+        }
+    }
 }
 
 fn render_buffer_slot(
@@ -57,19 +108,38 @@ fn render_buffer_slot(
     buffer: Option<&Buffer>,
     horizontal_offset: u16,
     vertical_offset: u16,
+    focused_buffer_id: usize,
 ) {
     let x = viewport.x.saturating_add(horizontal_offset);
     let y = viewport.y.saturating_add(vertical_offset);
 
+    // Cursor visibility is a render-time visual only. If this viewport is not
+    // the focused one, clone it and hide the cursor. No model state is mutated.
+    let is_focused = viewport.buffer_id == focused_buffer_id;
+    let unfocused_vp;
+    let effective_vp = if is_focused {
+        viewport
+    } else {
+        unfocused_vp = ViewPort {
+            hide_cursor: true,
+            hide_cursor_line: true,
+            ..viewport.clone()
+        };
+        &unfocused_vp
+    };
+
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            buffer_view(viewport, mode, &buffer.buffer, frame, x, y);
+            buffer_view(effective_vp, mode, &buffer.buffer, frame, x, y);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, viewport, buffer, x, y);
+            render_directory_buffer(mode, frame, effective_vp, buffer, x, y);
+        }
+        Some(Buffer::Tasks(tasks_buf)) => {
+            buffer_view(effective_vp, mode, &tasks_buf.buffer, frame, x, y);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
-            let mut vp = viewport.clone();
+            let mut vp = effective_vp.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 

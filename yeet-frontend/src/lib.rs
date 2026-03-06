@@ -7,7 +7,7 @@ use init::{
     history::load_history_from_file, junkyard::init_junkyard, mark::load_marks_from_file,
     qfix::load_qfix_from_files,
 };
-use model::{qfix::CdoState, App, Buffer, Model};
+use model::{qfix::CdoState, App, Model};
 use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
@@ -156,13 +156,7 @@ fn get_watcher_changes(app: &App, watches: &mut Vec<PathBuf>) -> Vec<Action> {
         .contents
         .buffers
         .values()
-        .flat_map(|bffr| match bffr {
-            Buffer::Directory(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::Image(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::Content(it) => it.resolve_path().map(|p| p.to_path_buf()).into_iter(),
-            Buffer::PathReference(p) => { Some(p.to_path_buf()) }.into_iter(),
-            Buffer::Empty => None.into_iter(),
-        })
+        .filter_map(|bffr| bffr.resolve_path().map(|p| p.to_path_buf()))
         .collect::<Vec<_>>();
 
     let mut actions = Vec::new();

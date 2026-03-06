@@ -46,7 +46,10 @@ pub fn change(
         }
     }
 
-    let (_, current_id, preview_id) = app::get_focused_directory_buffer_ids(app);
+    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(&app.window) {
+        Some((_, current_id, preview_id)) => (current_id, preview_id),
+        None => return Vec::new(),
+    };
     let current = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer,
         _ => return Vec::new(),
@@ -147,8 +150,8 @@ pub fn finish(
         );
     }
 
-    let (_, current_id, _) = app::get_focused_directory_buffer_ids(app);
-    let is_current_buffer = match app.contents.buffers.get(&current_id) {
+    let current_id = app::get_focused_directory_buffer_ids(&app.window).map(|(_, id, _)| id);
+    let is_current_buffer = match current_id.and_then(|id| app.contents.buffers.get(&id)) {
         Some(Buffer::Directory(buffer)) => buffer.path.as_path() == path,
         _ => false,
     };
@@ -291,7 +294,8 @@ mod test {
             [Action::Load(path, _)] if path == &selected_file
         ));
 
-        let (_, _, preview_id) = crate::update::app::get_focused_directory_buffer_ids(&app);
+        let (_, _, preview_id) =
+            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
         assert!(matches!(
             app.contents.buffers.get(&preview_id),
             Some(Buffer::PathReference(path)) if path == &selected_file

@@ -1,21 +1,14 @@
-use std::collections::HashSet;
-
-use crate::model::{App, Buffer, Window};
+use crate::model::{App, Buffer};
 
 pub fn update(app: &mut App) {
-    let referenced: HashSet<usize> = match &app.window {
-        Window::Horizontal(_, _) => return,
-        Window::Directory(parent, current, preview) => {
-            HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
-        }
-    };
+    let referenced = app.window.buffer_ids();
 
     let stale_images: Vec<usize> = app
         .contents
         .buffers
         .iter()
         .filter_map(|(id, buffer)| {
-            if matches!(buffer, Buffer::Image(_)) && !referenced.contains(id) {
+            if matches!(buffer, Buffer::Image(_) | Buffer::Tasks(_)) && !referenced.contains(id) {
                 Some(*id)
             } else {
                 None
@@ -43,7 +36,12 @@ mod test {
 
     use ratatui_image::protocol::{sixel::Sixel, Protocol};
 
-    use crate::model::{App, Buffer, ContentBuffer, DirectoryBuffer, PreviewImageBuffer};
+    use yeet_buffer::model::viewport::ViewPort;
+
+    use crate::model::{
+        App, Buffer, ContentBuffer, DirectoryBuffer, PreviewImageBuffer, SplitFocus, TasksBuffer,
+        Window,
+    };
 
     use super::update;
 
@@ -68,7 +66,8 @@ mod test {
     #[test]
     fn keeps_referenced_image() {
         let mut app = App::default();
-        let (_, _, preview_id) = crate::update::app::get_focused_directory_buffer_ids(&app);
+        let (_, _, preview_id) =
+            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
 
         app.contents.buffers.insert(
             preview_id,
@@ -113,6 +112,47 @@ mod test {
         assert!(matches!(
             app.contents.buffers.get(&directory_id),
             Some(Buffer::Directory(_))
+        ));
+    }
+
+    #[test]
+    fn removes_unreferenced_task_buffers() {
+        let mut app = App::default();
+
+        let buffer_id = 42;
+        app.contents
+            .buffers
+            .insert(buffer_id, Buffer::Tasks(TasksBuffer::default()));
+
+        update(&mut app);
+
+        assert!(!app.contents.buffers.contains_key(&buffer_id));
+    }
+
+    #[test]
+    fn keeps_referenced_tasks_buffer() {
+        let mut app = App::default();
+
+        let tasks_buffer_id = 100;
+        app.contents
+            .buffers
+            .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
+
+        let old_window = std::mem::take(&mut app.window);
+        app.window = Window::Horizontal {
+            first: Box::new(old_window),
+            second: Box::new(Window::Tasks(ViewPort {
+                buffer_id: tasks_buffer_id,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+
+        update(&mut app);
+
+        assert!(matches!(
+            app.contents.buffers.get(&tasks_buffer_id),
+            Some(Buffer::Tasks(_))
         ));
     }
 }

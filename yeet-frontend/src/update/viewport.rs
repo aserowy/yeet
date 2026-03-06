@@ -19,11 +19,12 @@ pub fn relocate(
 ) -> Vec<Action> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
-    let (vp, buffer) = match app::get_focused_current_mut(app) {
+    let (vp, buffer) = match app::get_focused_current_mut(&mut app.window, &mut app.contents) {
         (vp, Buffer::Directory(it)) => (vp, it),
         (_vp, Buffer::Image(_)) => return Vec::new(),
         (_vp, Buffer::Content(_)) => return Vec::new(),
         (_vp, Buffer::PathReference(_)) => return Vec::new(),
+        (_vp, Buffer::Tasks(_)) => return Vec::new(),
         (_vp, Buffer::Empty) => return Vec::new(),
     };
 

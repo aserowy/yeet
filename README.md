@@ -47,6 +47,7 @@ register holds all files which got yanked and the last nine trashes.
 | yp        | copy current selected path to system clipboard              |
 | yy        | yank file to junk yard                                      |
 | C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
+| C-h/j/k/l | move focus between split windows (left/down/up/right)       |
 
 ### navigation and normal mode
 
@@ -125,10 +126,13 @@ In normal mode, all register interactions target the default register (equal to
 | marks                       | list all given marks                                                                                                                                                                                                       |
 | mv \<path> or '\<mark>      | moves the selected file to the target. The directory must exist without a file with the same name like the source                                                                                                          |
 | noh                         | remove search highlights                                                                                                                                                                                                   |
-| q                           | quit yeet                                                                                                                                                                                                                  |
-| q!                          | force tasks to stop and quit yeet                                                                                                                                                                                          |
+| q                           | close current buffer or quit yeet if the last buffer gets closed yeet                                                                                                                                                      |
+| q!                          | force tasks to stop, close current buffer resetting all changes, and quit yeet if the last buffer gets closed                                                                                                              |
+| qa                          | close all buffer and quit yeet                                                                                                                                                                                             |
+| qa!                         | force tasks to stop, close all buffer resetting all changes, and quit yeet                                                                                                                                                 |
 | reg                         | print all register entries                                                                                                                                                                                                 |
 | rg \<params for rg>         | uses [rg](https://github.com/BurntSushi/ripgrep/) to populate qfix. \<params for rg> are passed through to rg. Yeet sets the following params by default: --color never --files-with-matches \<params for rg> current_path |
+| topen                       | open a split and show all running tasks. `dd` to close selected tasks                                                                                                                                                      |
 | tl                          | list all currently running tasks                                                                                                                                                                                           |
 | w                           | write changes without changing mode                                                                                                                                                                                        |
 | wq                          | write changes and quit yeet                                                                                                                                                                                                |
