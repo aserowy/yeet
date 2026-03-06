@@ -187,11 +187,25 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("tl", "") => print::tasks(&state.tasks),
-        ("split", "") => add_change_mode(mode_before, Mode::Navigation, split::horizontal(app)),
+        ("split", "") => {
+            add_change_mode(mode_before, Mode::Navigation, split::horizontal(app, None))
+        }
+        ("split", args) => add_change_mode(
+            mode_before,
+            Mode::Navigation,
+            split::horizontal(app, Some(std::path::PathBuf::from(args.trim()))),
+        ),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
-        ("vsplit", "") => add_change_mode(mode_before, Mode::Navigation, split::vertical(app)),
+        ("vsplit", "") => {
+            add_change_mode(mode_before, Mode::Navigation, split::vertical(app, None))
+        }
+        ("vsplit", args) => add_change_mode(
+            mode_before,
+            Mode::Navigation,
+            split::vertical(app, Some(std::path::PathBuf::from(args.trim()))),
+        ),
         ("w", "") => add_change_mode(
             mode_before,
             mode,
