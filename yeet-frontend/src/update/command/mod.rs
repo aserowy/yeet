@@ -1,4 +1,4 @@
-use std::{mem, path::{Path, PathBuf}};
+use std::{mem, path::Path};
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, QuitMode};
@@ -186,26 +186,50 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("tl", "") => print::tasks(&state.tasks),
-        ("split", "") => {
-            add_change_mode(mode_before, Mode::Navigation, split::horizontal(app, None))
+        ("split", args) => {
+            let preview_path = get_preview_path(app);
+            match preview_path {
+                Some(path) => {
+                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
+                        Ok(target_path) => target_path,
+                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
+                    };
+
+                    add_change_mode(
+                        mode_before,
+                        Mode::Navigation,
+                        split::horizontal(app, target_path.as_path()),
+                    )
+                }
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Split failed. Preview path could not be resolved.".to_string(),
+                )])],
+            }
         }
-        ("split", args) => add_change_mode(
-            mode_before,
-            Mode::Navigation,
-            split::horizontal(app, Some(PathBuf::from(args.trim()))),
-        ),
+        ("tl", "") => print::tasks(&state.tasks),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
-        ("vsplit", "") => {
-            add_change_mode(mode_before, Mode::Navigation, split::vertical(app, None))
+        ("vsplit", args) => {
+            let preview_path = get_preview_path(app);
+            match preview_path {
+                Some(path) => {
+                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
+                        Ok(target_path) => target_path,
+                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
+                    };
+
+                    add_change_mode(
+                        mode_before,
+                        Mode::Navigation,
+                        split::vertical(app, target_path.as_path()),
+                    )
+                }
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Vsplit failed. Preview path could not be resolved.".to_string(),
+                )])],
+            }
         }
-        ("vsplit", args) => add_change_mode(
-            mode_before,
-            Mode::Navigation,
-            split::vertical(app, Some(PathBuf::from(args.trim()))),
-        ),
         ("w", "") => add_change_mode(
             mode_before,
             mode,

@@ -12,7 +12,7 @@ use crate::{
 
 pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action> {
     tracing::info!("copying path: {:?}", source_path);
-    match get_target_file_path(marks, target, source_path) {
+    match expand_path(marks, target, source_path) {
         Ok(target_path) => {
             vec![Action::Task(Task::CopyPath(
                 source_path.to_path_buf(),
@@ -27,7 +27,7 @@ pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action>
 
 pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action> {
     tracing::info!("renaming path: {:?}", source_path);
-    match get_target_file_path(marks, target, source_path) {
+    match expand_path(marks, target, source_path) {
         Ok(target_path) => {
             vec![Action::Task(Task::RenamePath(
                 source_path.to_path_buf(),
@@ -53,11 +53,7 @@ pub fn refresh(app: &mut App) -> Vec<Action> {
     vec![action::emit_keymap(navigation)]
 }
 
-fn get_target_file_path(
-    marks: &Marks,
-    target: &str,
-    source_path: &Path,
-) -> Result<PathBuf, String> {
+pub fn expand_path(marks: &Marks, target: &str, source_path: &Path) -> Result<PathBuf, String> {
     let file_name = match source_path.file_name() {
         Some(it) => it,
         None => {
@@ -103,6 +99,7 @@ fn get_target_file_path(
         "resolved target file path"
     );
 
+    // TODO; move checks into mv/cp
     if target_dir.is_dir() && target_dir.exists() && !target_file.exists() {
         Ok(target_file)
     } else {

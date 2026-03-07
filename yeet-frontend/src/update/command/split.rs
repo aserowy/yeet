@@ -1,15 +1,14 @@
-use std::mem;
+use std::{mem, path::Path};
 
 use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::{self, Action},
-    event::Message,
     model::{App, SplitFocus, Window},
     update::app,
 };
 
-pub fn horizontal(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Action> {
+pub fn horizontal(app: &mut App, target: &Path) -> Vec<Action> {
     create_split(app, target, |old, new| Window::Horizontal {
         first: Box::new(old),
         second: Box::new(new),
@@ -17,7 +16,7 @@ pub fn horizontal(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Acti
     })
 }
 
-pub fn vertical(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Action> {
+pub fn vertical(app: &mut App, target: &Path) -> Vec<Action> {
     create_split(app, target, |old, new| Window::Vertical {
         first: Box::new(old),
         second: Box::new(new),
@@ -27,46 +26,16 @@ pub fn vertical(app: &mut App, target: Option<std::path::PathBuf>) -> Vec<Action
 
 fn create_split(
     app: &mut App,
-    target: Option<std::path::PathBuf>,
+    target: &Path,
     make_split: impl FnOnce(Window, Window) -> Window,
 ) -> Vec<Action> {
-    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(&app.window) {
-        Some(ids) => ids,
-        None => return Vec::new(),
-    };
-
-    let current_path = match app::get_buffer_path(app, current_id) {
-        Some(path) => path.to_path_buf(),
-        None => return Vec::new(),
-    };
-
-    let navigate_path = match &target {
-        Some(path) => {
-            let resolved = if path.is_relative() {
-                current_path.join(path)
-            } else {
-                path.clone()
-            };
-
-            if !resolved.exists() {
-                return vec![Action::EmitMessages(vec![Message::Error(format!(
-                    "Path does not exist: {}",
-                    resolved.display()
-                ))])];
-            }
-
-            resolved
-        }
-        None => current_path.clone(),
-    };
-
     let empty_buffer = app::get_empty_buffer(&mut app.contents);
     let new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
     let old_window = mem::take(&mut app.window);
     app.window = make_split(old_window, new_directory);
 
     vec![action::emit_keymap(KeymapMessage::NavigateToPath(
-        navigate_path,
+        target.to_path_buf(),
     ))]
 }
 
