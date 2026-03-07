@@ -7,7 +7,7 @@ use yeet_buffer::{
     view as buffer_view,
 };
 
-use crate::model::{App, Buffer, DirectoryBuffer, Window};
+use crate::model::{App, Buffer, DirectoryBuffer, SplitFocus, Window};
 
 use super::statusline;
 
@@ -18,7 +18,6 @@ pub fn view(
     horizontal_offset: u16,
     vertical_offset: u16,
 ) {
-    let focused_buffer_id = app.window.focused_viewport().buffer_id;
     render_window(
         mode,
         &app.window,
@@ -26,7 +25,8 @@ pub fn view(
         frame,
         horizontal_offset,
         vertical_offset,
-        focused_buffer_id,
+        true,
+        false,
     );
 }
 
@@ -37,10 +37,15 @@ fn render_window(
     frame: &mut Frame,
     horizontal_offset: u16,
     vertical_offset: u16,
-    focused_buffer_id: usize,
+    is_focused: bool,
+    draw_borders: bool,
 ) {
     match window {
-        Window::Horizontal { first, second, .. } => {
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        } => {
             render_window(
                 mode,
                 first,
@@ -48,7 +53,8 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused && focus == &SplitFocus::First,
+                false,
             );
             render_window(
                 mode,
@@ -57,10 +63,15 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused && focus == &SplitFocus::Second,
+                false,
             );
         }
-        Window::Vertical { first, second, .. } => {
+        Window::Vertical {
+            first,
+            second,
+            focus,
+        } => {
             render_window(
                 mode,
                 first,
@@ -68,7 +79,8 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused && focus == &SplitFocus::First,
+                true,
             );
             render_window(
                 mode,
@@ -77,7 +89,8 @@ fn render_window(
                 frame,
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused && focus == &SplitFocus::Second,
+                false,
             );
         }
         Window::Directory(parent, current, preview) => {
@@ -88,7 +101,8 @@ fn render_window(
                 buffers.get(&parent.buffer_id),
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused,
+                None,
             );
             render_buffer_slot(
                 mode,
@@ -97,7 +111,8 @@ fn render_window(
                 buffers.get(&current.buffer_id),
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused,
+                None,
             );
             render_buffer_slot(
                 mode,
@@ -106,11 +121,11 @@ fn render_window(
                 buffers.get(&preview.buffer_id),
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused,
+                Some(draw_borders),
             );
 
             if let Some(buffer) = buffers.get(&current.buffer_id) {
-                let is_focused = current.buffer_id == focused_buffer_id;
                 let total_width = (preview.x + preview.width).saturating_sub(parent.x);
                 let statusline_rect = Rect {
                     x: parent.x.saturating_add(horizontal_offset),
@@ -132,11 +147,11 @@ fn render_window(
                 buffers.get(&vp.buffer_id),
                 horizontal_offset,
                 vertical_offset,
-                focused_buffer_id,
+                is_focused,
+                Some(draw_borders),
             );
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
-                let is_focused = vp.buffer_id == focused_buffer_id;
                 let statusline_rect = Rect {
                     x: vp.x.saturating_add(horizontal_offset),
                     y: vp
@@ -159,33 +174,36 @@ fn render_buffer_slot(
     buffer: Option<&Buffer>,
     horizontal_offset: u16,
     vertical_offset: u16,
-    focused_buffer_id: usize,
+    is_focused: bool,
+    draw_border: Option<bool>,
 ) {
     let x = viewport.x.saturating_add(horizontal_offset);
     let y = viewport.y.saturating_add(vertical_offset);
 
-    let is_focused = viewport.buffer_id == focused_buffer_id;
-    let unfocused_vp;
-    let effective_vp = if is_focused {
-        viewport
+    let mut effective_vp = if is_focused {
+        viewport.clone()
     } else {
-        unfocused_vp = ViewPort {
+        ViewPort {
             hide_cursor: true,
             hide_cursor_line: true,
             ..viewport.clone()
-        };
-        &unfocused_vp
+        }
     };
+
+    if let Some(true) = draw_border {
+        effective_vp.show_border = true;
+        effective_vp.width = effective_vp.width.saturating_sub(1);
+    }
 
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            buffer_view(effective_vp, mode, &buffer.buffer, frame, x, y);
+            buffer_view(&effective_vp, mode, &buffer.buffer, frame, x, y);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, effective_vp, buffer, x, y);
+            render_directory_buffer(mode, frame, &effective_vp, buffer, x, y);
         }
         Some(Buffer::Tasks(tasks_buf)) => {
-            buffer_view(effective_vp, mode, &tasks_buf.buffer, frame, x, y);
+            buffer_view(&effective_vp, mode, &tasks_buf.buffer, frame, x, y);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = effective_vp.clone();

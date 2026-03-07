@@ -1,4 +1,4 @@
-use std::{mem, path::Path};
+use std::{mem, path::{Path, PathBuf}};
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, QuitMode};
@@ -193,7 +193,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("split", args) => add_change_mode(
             mode_before,
             Mode::Navigation,
-            split::horizontal(app, Some(std::path::PathBuf::from(args.trim()))),
+            split::horizontal(app, Some(PathBuf::from(args.trim()))),
         ),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
@@ -204,7 +204,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         ("vsplit", args) => add_change_mode(
             mode_before,
             Mode::Navigation,
-            split::vertical(app, Some(std::path::PathBuf::from(args.trim()))),
+            split::vertical(app, Some(PathBuf::from(args.trim()))),
         ),
         ("w", "") => add_change_mode(
             mode_before,
