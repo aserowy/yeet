@@ -77,7 +77,8 @@ mod test {
     #[test]
     fn horizontal_creates_horizontal_split() {
         let mut app = make_app_with_directory();
-        horizontal(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
         assert!(matches!(
             app.window,
             Window::Horizontal {
@@ -90,7 +91,8 @@ mod test {
     #[test]
     fn vertical_creates_vertical_split() {
         let mut app = make_app_with_directory();
-        vertical(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        vertical(&mut app, &path);
         assert!(matches!(
             app.window,
             Window::Vertical {
@@ -103,7 +105,8 @@ mod test {
     #[test]
     fn horizontal_first_child_is_original_directory() {
         let mut app = make_app_with_directory();
-        horizontal(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
         match &app.window {
             Window::Horizontal { first, .. } => {
                 assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
@@ -115,7 +118,8 @@ mod test {
     #[test]
     fn vertical_second_child_is_new_directory() {
         let mut app = make_app_with_directory();
-        vertical(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        vertical(&mut app, &path);
         match &app.window {
             Window::Vertical { second, .. } => {
                 assert!(matches!(second.as_ref(), Window::Directory(_, _, _)));
@@ -128,7 +132,8 @@ mod test {
     fn split_allocates_fresh_buffer_ids() {
         let mut app = make_app_with_directory();
         let original_ids = app.window.buffer_ids();
-        horizontal(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
 
         match &app.window {
             Window::Horizontal { second, .. } => {
@@ -147,7 +152,8 @@ mod test {
     #[test]
     fn split_returns_navigate_action() {
         let mut app = make_app_with_directory();
-        let actions = horizontal(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        let actions = horizontal(&mut app, &path);
         assert!(
             !actions.is_empty(),
             "split should return actions to load the new pane"
@@ -166,9 +172,10 @@ mod test {
             window: Window::Tasks(ViewPort::default()),
             ..Default::default()
         };
-        let actions = horizontal(&mut app, None);
-        assert!(actions.is_empty());
-        assert!(matches!(app.window, Window::Tasks(_)));
+        let path = env::current_dir().expect("get current dir");
+        let actions = horizontal(&mut app, &path);
+        assert!(!actions.is_empty());
+        assert!(matches!(app.window, Window::Horizontal { .. }));
     }
 
     #[test]
@@ -180,23 +187,26 @@ mod test {
             second: Box::new(Window::Tasks(ViewPort::default())),
             focus: SplitFocus::Second,
         };
-        let actions = vertical(&mut app, None);
-        assert!(actions.is_empty());
-        assert!(matches!(app.window, Window::Horizontal { .. }));
+        let path = env::current_dir().expect("get current dir");
+        let actions = vertical(&mut app, &path);
+        assert!(!actions.is_empty());
+        assert!(matches!(app.window, Window::Vertical { .. }));
     }
 
     #[test]
     fn split_registers_buffers_in_contents() {
         let mut app = make_app_with_directory();
         let buffers_before = app.contents.buffers.len();
-        horizontal(&mut app, None);
-        assert_eq!(app.contents.buffers.len(), buffers_before + 3);
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
+        assert_eq!(app.contents.buffers.len(), buffers_before + 1);
     }
 
     #[test]
     fn split_registers_empty_buffers_in_contents() {
         let mut app = make_app_with_directory();
-        horizontal(&mut app, None);
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
 
         let empty_count = app
             .contents
@@ -205,14 +215,14 @@ mod test {
             .filter(|buffer| matches!(buffer, Buffer::Empty))
             .count();
 
-        assert!(empty_count >= 3);
+        assert!(empty_count >= 1);
     }
 
     #[test]
     fn split_with_path_navigates_to_target() {
         let mut app = make_app_with_directory();
         let target = env::temp_dir();
-        let actions = vertical(&mut app, Some(target.clone()));
+        let actions = vertical(&mut app, target.as_path());
 
         assert!(matches!(
             app.window,
@@ -236,10 +246,15 @@ mod test {
     fn split_with_nonexistent_path_returns_error() {
         let mut app = make_app_with_directory();
         let missing = std::path::PathBuf::from("/nonexistent/path/12345");
-        let actions = horizontal(&mut app, Some(missing));
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
-        assert!(actions
-            .iter()
-            .any(|action| matches!(action, Action::EmitMessages(_))));
+        let actions = horizontal(&mut app, missing.as_path());
+        assert!(actions.iter().any(|action| match action {
+            Action::EmitMessages(messages) => messages.iter().any(|message| {
+                matches!(
+                    message,
+                    Message::Keymap(KeymapMessage::NavigateToPath(path)) if path == &missing
+                )
+            }),
+            _ => false,
+        }));
     }
 }

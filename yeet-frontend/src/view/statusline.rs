@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
 use ratatui::{
-    Frame, prelude::{Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, Paragraph}
+    prelude::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph},
+    Frame,
 };
 use yeet_buffer::model::{
     undo::{self, BufferChanged},

@@ -4,9 +4,9 @@ This feature adds user-facing commands and keymaps for creating horizontal and v
 
 The implementation is split into 3 sequential prompts, each leaving the program in a compilable and functional state:
 
-1. [Prompt 1: Add `:split` and `:vsplit` commands](#prompt-1-add-split-and-vsplit-commands) — `planned`
-2. [Prompt 2: Add `Ctrl+w Ctrl+s` and `Ctrl+w Ctrl+v` keybindings](#prompt-2-add-ctrl-w-ctrl-s-and-ctrl-w-ctrl-v-keybindings) — `planned`
-3. [Prompt 3: Add `:split {path}` and `:vsplit {path}` with optional path arguments](#prompt-3-add-split-path-and-vsplit-path-with-optional-path-arguments) — `planned`
+1. [Prompt 1: Add `:split` and `:vsplit` commands](#prompt-1-add-split-and-vsplit-commands) — `done`
+2. [Prompt 2: Add `Ctrl+w Ctrl+s` and `Ctrl+w Ctrl+v` keybindings](#prompt-2-add-ctrl-w-ctrl-s-and-ctrl-w-ctrl-v-keybindings) — `done`
+3. [Prompt 3: Add `:split {path}` and `:vsplit {path}` with optional path arguments](#prompt-3-add-split-path-and-vsplit-path-with-optional-path-arguments) — `done`
 
 ---
 
@@ -14,7 +14,7 @@ The implementation is split into 3 sequential prompts, each leaving the program 
 
 **Goal**: Add `:split` (horizontal split, top/bottom) and `:vsplit` (vertical split, left/right) ex-commands that duplicate the currently focused `Directory` window into a new split.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The split infrastructure was added in `prompts/243_vsplit.md`, but there is no user-facing way to create a `Directory`-to-`Directory` split. Currently the only split-creating command is `:topen`, which creates a `Horizontal` split with a `Tasks` window. `:split` and `:vsplit` fill this gap, letting the user view the same (or different) directory in side-by-side or top-bottom panes.
 
@@ -383,7 +383,7 @@ After :vsplit:
 
 **Goal**: Add `Ctrl+w Ctrl+s` and `Ctrl+w Ctrl+v` key sequences in Navigation mode that create horizontal and vertical splits respectively, mirroring the `:split` and `:vsplit` commands from Prompt 1.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Power users expect vim-style `Ctrl+w` split keybindings in addition to ex-commands. `Ctrl+w Ctrl+s` (horizontal split) and `Ctrl+w Ctrl+v` (vertical split) provide a fast, keyboard-driven workflow without needing to type `:split` or `:vsplit`. Using the Ctrl modifier on both keys makes it easy to hold Ctrl and press `w` then `s`/`v` in quick succession.
 
@@ -529,7 +529,7 @@ User presses Ctrl+v:
 
 **Goal**: Extend `:split` and `:vsplit` to accept an optional directory path argument, so `:split /tmp` opens a horizontal split with the new pane navigated to `/tmp` instead of the current directory.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Without path arguments, the user must first split, then navigate the new pane to the desired directory. Supporting `:split /tmp` streamlines this workflow, matching vim's `:split {file}` pattern adapted for a file manager context.
 

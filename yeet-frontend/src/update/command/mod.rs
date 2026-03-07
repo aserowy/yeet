@@ -187,7 +187,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, mode, actions)
         }
         ("split", args) => {
-            let preview_path = get_preview_path(app);
+            let preview_path = get_current_path(app);
             match preview_path {
                 Some(path) => {
                     let target_path = match file::expand_path(&state.marks, args.trim(), path) {
@@ -211,7 +211,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
         ("vsplit", args) => {
-            let preview_path = get_preview_path(app);
+            let preview_path = get_current_path(app);
             match preview_path {
                 Some(path) => {
                     let target_path = match file::expand_path(&state.marks, args.trim(), path) {
