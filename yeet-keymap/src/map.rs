@@ -219,6 +219,32 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![
+                        Key::new(KeyCode::from_char('w'), vec![KeyModifier::Ctrl]),
+                        Key::new(KeyCode::from_char('s'), vec![KeyModifier::Ctrl]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "split".to_owned(),
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('w'), vec![KeyModifier::Ctrl]),
+                        Key::new(KeyCode::from_char('v'), vec![KeyModifier::Ctrl]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "vsplit".to_owned(),
+                        )),
+                        repeatable: false,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
                         Key::new(KeyCode::from_char('g'), vec![]),
                         Key::new(KeyCode::from_char('n'), vec![]),
                     ],

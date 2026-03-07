@@ -12,7 +12,7 @@ use crate::{
 
 pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action> {
     tracing::info!("copying path: {:?}", source_path);
-    match get_target_file_path(marks, target, source_path) {
+    match expand_and_validate_path(marks, target, source_path) {
         Ok(target_path) => {
             vec![Action::Task(Task::CopyPath(
                 source_path.to_path_buf(),
@@ -27,7 +27,7 @@ pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action>
 
 pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action> {
     tracing::info!("renaming path: {:?}", source_path);
-    match get_target_file_path(marks, target, source_path) {
+    match expand_and_validate_path(marks, target, source_path) {
         Ok(target_path) => {
             vec![Action::Task(Task::RenamePath(
                 source_path.to_path_buf(),
@@ -38,6 +38,60 @@ pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Actio
             vec![Action::EmitMessages(vec![Message::Error(err)])]
         }
     }
+}
+
+fn expand_and_validate_path(
+    marks: &Marks,
+    target: &str,
+    source_path: &Path,
+) -> Result<PathBuf, String> {
+    let file_name = match source_path.file_name() {
+        Some(it) => it,
+        None => {
+            return Err(format!(
+                "could not resolve file name from path {:?}",
+                source_path
+            ))
+        }
+    };
+
+    let target_path = expand_path(marks, target, source_path)?;
+    let target_file = target_path.join(file_name);
+
+    // NOTE: cannot use `is_file` here because the target file does not exist yet,
+    // so we need to check if the path ends with a file name instead
+    if target_file.file_name().is_none() {
+        return Err(format!(
+            "target path {:?} is not a file",
+            target_file.display()
+        ));
+    }
+
+    if target_file.exists() {
+        return Err(format!(
+            "target file path {:?} exists already",
+            target_file.display()
+        ));
+    }
+
+    let parent_dir = match target_file.parent() {
+        Some(it) => it,
+        None => {
+            return Err(format!(
+                "could not resolve parent directory from path {:?}",
+                target_file
+            ))
+        }
+    };
+
+    if !parent_dir.exists() {
+        return Err(format!(
+            "target directory {:?} does not exist",
+            target_file.display()
+        ));
+    }
+
+    Ok(target_file)
 }
 
 pub fn refresh(app: &mut App) -> Vec<Action> {
@@ -53,31 +107,7 @@ pub fn refresh(app: &mut App) -> Vec<Action> {
     vec![action::emit_keymap(navigation)]
 }
 
-fn get_target_file_path(
-    marks: &Marks,
-    target: &str,
-    source_path: &Path,
-) -> Result<PathBuf, String> {
-    let file_name = match source_path.file_name() {
-        Some(it) => it,
-        None => {
-            return Err(format!(
-                "could not resolve file name from path {:?}",
-                source_path
-            ))
-        }
-    };
-
-    let source_parent = match source_path.parent() {
-        Some(it) => it,
-        None => {
-            return Err(format!(
-                "could not resolve parent from path {:?}",
-                source_path
-            ))
-        }
-    };
-
+pub fn expand_path(marks: &Marks, target: &str, source_path: &Path) -> Result<PathBuf, String> {
     let target_dir = if target.starts_with('\'') {
         let mark = match target.chars().nth(1) {
             Some(it) => it,
@@ -91,23 +121,30 @@ fn get_target_file_path(
             return Err(format!("mark '{}' not found", mark));
         }
     } else {
-        expand_target_path(target, source_parent)
-    };
+        let source_directory_path = if source_path.is_dir() {
+            source_path
+        } else {
+            match source_path.parent() {
+                Some(it) => it,
+                None => {
+                    return Err(format!(
+                        "could not resolve parent from path {:?}",
+                        source_path
+                    ))
+                }
+            }
+        };
 
-    let target_file = target_dir.join(file_name);
+        expand_target_path(target, source_directory_path)
+    };
 
     tracing::debug!(
         source = %source_path.display(),
         target_dir = %target_dir.display(),
-        target_file = %target_file.display(),
-        "resolved target file path"
+        "resolved target directory path"
     );
 
-    if target_dir.is_dir() && target_dir.exists() && !target_file.exists() {
-        Ok(target_file)
-    } else {
-        Err("target path is not valid".to_string())
-    }
+    Ok(target_dir)
 }
 
 fn expand_target_path(target: &str, base_dir: &Path) -> PathBuf {
@@ -127,5 +164,178 @@ fn expand_target_path(target: &str, base_dir: &Path) -> PathBuf {
             "expanded relative target path"
         );
         expanded
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use crate::{action::Action, event::Message, model::mark::Marks, task::Task};
+
+    use super::{copy_path, expand_path, rename_path};
+
+    fn unique_temp_dir() -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time went backwards")
+            .as_nanos();
+        dir.push(format!("yeet_test_{}", nanos));
+        fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    #[test]
+    fn expand_directorypath_with_absolute_target() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/user/");
+        let target = "/tmp";
+
+        let result = expand_path(&marks, target, &source).expect("expand path");
+
+        assert_eq!(result, PathBuf::from("/tmp/"));
+    }
+
+    #[test]
+    fn expand_filepath_with_absolute_target() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/user/file.txt");
+        let target = "/tmp";
+
+        let result = expand_path(&marks, target, &source).expect("expand path");
+
+        assert_eq!(result, PathBuf::from("/tmp/"));
+    }
+
+    #[test]
+    fn expand_directorypath_with_relative_target() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/");
+        let target = "dest";
+
+        let result = expand_path(&marks, target, &source).expect("expand path");
+
+        assert_eq!(result, PathBuf::from("/home/dest/"));
+    }
+
+    #[test]
+    fn expand_filepath_with_relative_target() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/user/file.txt");
+        let target = "dest";
+
+        let result = expand_path(&marks, target, &source).expect("expand path");
+
+        assert_eq!(result, PathBuf::from("/home/user/dest/"));
+    }
+
+    #[test]
+    fn expand_path_with_mark_target() {
+        let mut marks = Marks::default();
+        marks.entries.insert('a', PathBuf::from("/var/tmp"));
+        let source = PathBuf::from("/home/user/file.txt");
+
+        let result = expand_path(&marks, "'a", &source).expect("expand path");
+
+        assert_eq!(result, PathBuf::from("/var/tmp/"));
+    }
+
+    #[test]
+    fn expand_path_with_missing_mark_returns_error() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/user/file.txt");
+
+        let error = expand_path(&marks, "'x", &source).expect_err("missing mark");
+
+        assert_eq!(error, "mark 'x' not found");
+    }
+
+    #[test]
+    fn expand_path_with_invalid_mark_format_returns_error() {
+        let marks = Marks::default();
+        let source = PathBuf::from("/home/user/file.txt");
+
+        let error = expand_path(&marks, "'", &source).expect_err("invalid mark");
+
+        assert_eq!(error, "invalid mark format");
+    }
+
+    #[test]
+    fn copy_path_returns_copy_task_on_success() {
+        let marks = Marks::default();
+        let target_dir = unique_temp_dir();
+        let source = target_dir.join("source.txt");
+        let target = target_dir.to_string_lossy();
+
+        let actions = copy_path(&marks, &source, target.as_ref());
+
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(
+            &actions[0],
+            Action::Task(Task::CopyPath(src, dst))
+                if src == &source && dst == &target_dir.join("source.txt")
+        ));
+
+        let _ = fs::remove_dir_all(&target_dir);
+    }
+
+    #[test]
+    fn rename_path_returns_rename_task_on_success() {
+        let marks = Marks::default();
+        let target_dir = unique_temp_dir();
+        let source = target_dir.join("source.txt");
+        let target = target_dir.to_string_lossy();
+
+        let actions = rename_path(&marks, &source, target.as_ref());
+
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(
+            &actions[0],
+            Action::Task(Task::RenamePath(src, dst))
+                if src == &source && dst == &target_dir.join("source.txt")
+        ));
+
+        let _ = fs::remove_dir_all(&target_dir);
+    }
+
+    #[test]
+    fn copy_path_returns_error_when_target_dir_missing() {
+        let marks = Marks::default();
+        let mut missing_dir = std::env::temp_dir();
+        missing_dir.push("yeet_missing_target_dir");
+        let source = PathBuf::from("/home/user/file.txt");
+
+        let actions = copy_path(&marks, &source, missing_dir.to_string_lossy().as_ref());
+
+        assert_eq!(actions.len(), 1);
+        assert!(
+            matches!(&actions[0], Action::EmitMessages(messages) if matches!(
+                messages.as_slice(),
+                [Message::Error(message)] if message.contains("target directory")
+            ))
+        );
+    }
+
+    #[test]
+    fn rename_path_returns_error_when_target_dir_missing() {
+        let marks = Marks::default();
+        let mut missing_dir = std::env::temp_dir();
+        missing_dir.push("yeet_missing_target_dir_rename");
+        let source = PathBuf::from("/home/user/file.txt");
+
+        let actions = rename_path(&marks, &source, missing_dir.to_string_lossy().as_ref());
+
+        assert_eq!(actions.len(), 1);
+        assert!(
+            matches!(&actions[0], Action::EmitMessages(messages) if matches!(
+                messages.as_slice(),
+                [Message::Error(message)] if message.contains("target directory")
+            ))
+        );
     }
 }

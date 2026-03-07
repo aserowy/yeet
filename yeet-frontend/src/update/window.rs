@@ -29,6 +29,14 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             set_buffer_vp(first, layout[0])?;
             set_buffer_vp(second, layout[1])?;
         }
+        Window::Vertical { first, second, .. } => {
+            let layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(Constraint::from_ratios([(1, 2), (1, 2)]))
+                .split(area);
+            set_buffer_vp(first, layout[0])?;
+            set_buffer_vp(second, layout[1])?;
+        }
         Window::Directory(parent_vp, current_vp, preview_vp) => {
             let layout = Layout::default()
                 .direction(Direction::Horizontal)
@@ -267,5 +275,108 @@ mod test {
             }
             _ => panic!("expected Tasks"),
         }
+    }
+
+    #[test]
+    fn set_buffer_vp_vertical_splits_horizontally() {
+        let mut tree = Window::Vertical {
+            first: Box::new(Window::Tasks(ViewPort::default())),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 40,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        match &tree {
+            Window::Vertical { first, second, .. } => match (first.as_ref(), second.as_ref()) {
+                (Window::Tasks(left), Window::Tasks(right)) => {
+                    assert_eq!(left.x, 0);
+                    assert!(right.x > 0, "right pane x should be > 0");
+                    assert_eq!(left.y, 0);
+                    assert_eq!(right.y, 0);
+                    assert!(left.width > 0);
+                    assert!(right.width > 0);
+                    assert_eq!(left.width + right.width, 80);
+                }
+                _ => panic!("expected Tasks"),
+            },
+            _ => panic!("expected Vertical"),
+        }
+    }
+
+    #[test]
+    fn set_buffer_vp_vertical_children_same_y() {
+        let mut tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 50,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        match &tree {
+            Window::Vertical { first, second, .. } => {
+                match (first.as_ref(), second.as_ref()) {
+                    (Window::Directory(lp, lc, lprev), Window::Directory(rp, rc, rprev)) => {
+                        // Both directories should be at the same y
+                        assert_eq!(lc.y, rc.y, "both directories should start at same y");
+                        // Right directory panes should have x > left panes
+                        assert!(rp.x > lprev.x, "right parent x should be > left preview x");
+                        // All viewports should have non-zero dimensions
+                        for vp in &[lp, lc, lprev, rp, rc, rprev] {
+                            assert!(vp.width > 0 && vp.height > 0);
+                        }
+                    }
+                    _ => panic!("expected Directory"),
+                }
+            }
+            _ => panic!("expected Vertical"),
+        }
+    }
+
+    #[test]
+    fn get_rendered_height_vertical_returns_area_height() {
+        let mut tree = Window::Vertical {
+            first: Box::new(Window::Tasks(ViewPort::default())),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 40,
+        };
+
+        set_buffer_vp(&mut tree, area).unwrap();
+
+        let rendered_height = tree.get_height().unwrap();
+        assert_eq!(
+            rendered_height, area.height,
+            "vertical rendered height should equal area height"
+        );
     }
 }

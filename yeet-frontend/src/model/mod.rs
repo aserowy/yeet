@@ -43,28 +43,7 @@ impl Default for App {
                 buffers,
                 latest_buffer_id: 1,
             },
-            window: Window::Directory(
-                ViewPort {
-                    buffer_id: 1,
-                    hide_cursor: true,
-                    show_border: true,
-                    ..Default::default()
-                },
-                ViewPort {
-                    buffer_id: 1,
-                    line_number: LineNumber::Relative,
-                    line_number_width: 3,
-                    show_border: true,
-                    sign_column_width: 2,
-                    ..Default::default()
-                },
-                ViewPort {
-                    buffer_id: 1,
-                    hide_cursor: true,
-                    hide_cursor_line: true,
-                    ..Default::default()
-                },
-            ),
+            window: Window::create(1, 1, 1),
         }
     }
 }
@@ -88,15 +67,48 @@ pub enum Window {
         second: Box<Window>,
         focus: SplitFocus,
     },
+    Vertical {
+        first: Box<Window>,
+        second: Box<Window>,
+        focus: SplitFocus,
+    },
     Directory(ViewPort, ViewPort, ViewPort),
     Tasks(ViewPort),
 }
 
 impl Window {
+    pub fn create(parent_id: usize, current_id: usize, preview_id: usize) -> Window {
+        Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                hide_cursor: true,
+                show_border: true,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                line_number: LineNumber::Relative,
+                line_number_width: 3,
+                show_border: true,
+                sign_column_width: 2,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                hide_cursor: true,
+                hide_cursor_line: true,
+                ..Default::default()
+            },
+        )
+    }
+
     pub fn get_height(&self) -> Result<u16, AppError> {
         match self {
             Window::Horizontal { first, second, .. } => {
                 Ok(first.get_height()? + second.get_height()?)
+            }
+            Window::Vertical { first, second, .. } => {
+                Ok(first.get_height()?.max(second.get_height()?))
             }
             // NOTE: +1 for status line
             Window::Directory(_, vp, _) => Ok(vp.height + 1),
@@ -107,6 +119,11 @@ impl Window {
     pub fn focused_viewport(&self) -> &ViewPort {
         match self {
             Window::Horizontal {
+                first,
+                second,
+                focus,
+            }
+            | Window::Vertical {
                 first,
                 second,
                 focus,
@@ -125,6 +142,11 @@ impl Window {
                 first,
                 second,
                 focus,
+            }
+            | Window::Vertical {
+                first,
+                second,
+                focus,
             } => match focus {
                 SplitFocus::First => first.focused_viewport_mut(),
                 SplitFocus::Second => second.focused_viewport_mut(),
@@ -136,7 +158,7 @@ impl Window {
 
     pub fn buffer_ids(&self) -> HashSet<usize> {
         match self {
-            Window::Horizontal { first, second, .. } => {
+            Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
                 let mut ids = first.buffer_ids();
                 ids.extend(second.buffer_ids());
                 ids
@@ -150,7 +172,7 @@ impl Window {
 
     pub fn contains_tasks(&self) -> bool {
         match self {
-            Window::Horizontal { first, second, .. } => {
+            Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
                 first.contains_tasks() || second.contains_tasks()
             }
             Window::Directory(_, _, _) => false,
@@ -381,6 +403,24 @@ mod test {
     }
 
     #[test]
+    fn window_vertical_construction_and_pattern_match() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        assert!(matches!(tree, Window::Vertical { .. }));
+    }
+
+    #[test]
     fn buffer_tasks_construction_and_pattern_match() {
         let buf = Buffer::Tasks(TasksBuffer {
             buffer: TextBuffer::default(),
@@ -488,5 +528,89 @@ mod test {
         assert!(ids.contains(&2));
         assert!(ids.contains(&3));
         assert!(ids.contains(&4));
+    }
+
+    #[test]
+    fn get_height_vertical_returns_max_of_children() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Tasks(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            second: Box::new(Window::Tasks(ViewPort {
+                height: 15,
+                ..Default::default()
+            })),
+            focus: SplitFocus::First,
+        };
+        // height = max(10+1, 15+1) = 16
+        assert_eq!(tree.get_height().unwrap(), 16);
+    }
+
+    #[test]
+    fn focused_viewport_follows_vertical_split_focus() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Tasks(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            second: Box::new(Window::Tasks(ViewPort {
+                height: 20,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+        assert_eq!(tree.focused_viewport().height, 20);
+    }
+
+    #[test]
+    fn buffer_ids_collects_from_vertical() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Tasks(ViewPort {
+                buffer_id: 1,
+                ..Default::default()
+            })),
+            second: Box::new(Window::Tasks(ViewPort {
+                buffer_id: 2,
+                ..Default::default()
+            })),
+            focus: SplitFocus::First,
+        };
+        let ids = tree.buffer_ids();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
+    }
+
+    #[test]
+    fn contains_tasks_in_vertical() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+        assert!(tree.contains_tasks());
+    }
+
+    #[test]
+    fn contains_tasks_false_in_vertical_without_tasks() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        assert!(!tree.contains_tasks());
     }
 }

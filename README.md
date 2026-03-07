@@ -48,6 +48,8 @@ register holds all files which got yanked and the last nine trashes.
 | yy        | yank file to junk yard                                      |
 | C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
 | C-h/j/k/l | move focus between split windows (left/down/up/right)       |
+| C-w C-s   | split current directory view horizontally (top/bottom)      |
+| C-w C-v   | split current directory view vertically (left/right)        |
 
 ### navigation and normal mode
 
@@ -133,6 +135,8 @@ In normal mode, all register interactions target the default register (equal to
 | reg                         | print all register entries                                                                                                                                                                                                 |
 | rg \<params for rg>         | uses [rg](https://github.com/BurntSushi/ripgrep/) to populate qfix. \<params for rg> are passed through to rg. Yeet sets the following params by default: --color never --files-with-matches \<params for rg> current_path |
 | topen                       | open a split and show all running tasks. `dd` to close selected tasks                                                                                                                                                      |
+| split \<path>               | split current directory view horizontally (top/bottom). The new pane opens below showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                   |
+| vsplit \<path>              | split current directory view vertically (left/right). The new pane opens to the right showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                |
 | tl                          | list all currently running tasks                                                                                                                                                                                           |
 | w                           | write changes without changing mode                                                                                                                                                                                        |
 | wq                          | write changes and quit yeet                                                                                                                                                                                                |

@@ -4,7 +4,7 @@ use ratatui::{
     prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 use yeet_buffer::model::{
@@ -21,6 +21,20 @@ pub fn view(
     rect: Rect,
     is_focused: bool,
 ) {
+    let rect = if viewport.show_border {
+        let block = Block::default()
+            .borders(Borders::RIGHT)
+            .border_style(Style::default().fg(Color::Black));
+
+        let inner = block.inner(rect);
+
+        frame.render_widget(block, rect);
+
+        inner
+    } else {
+        rect
+    };
+
     match current {
         Buffer::Directory(it) => {
             if is_focused {

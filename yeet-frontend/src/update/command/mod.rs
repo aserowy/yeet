@@ -14,6 +14,7 @@ use crate::{
 mod file;
 mod print;
 mod qfix;
+mod split;
 pub mod task;
 
 #[tracing::instrument(skip_all)]
@@ -185,9 +186,49 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
+        ("split", args) => {
+            let preview_path = get_current_path(app);
+            match preview_path {
+                Some(path) => {
+                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
+                        Ok(target_path) => target_path,
+                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
+                    };
+
+                    add_change_mode(
+                        mode_before,
+                        Mode::Navigation,
+                        split::horizontal(app, target_path.as_path()),
+                    )
+                }
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Split failed. Preview path could not be resolved.".to_string(),
+                )])],
+            }
+        }
         ("tl", "") => print::tasks(&state.tasks),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
+        }
+        ("vsplit", args) => {
+            let preview_path = get_current_path(app);
+            match preview_path {
+                Some(path) => {
+                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
+                        Ok(target_path) => target_path,
+                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
+                    };
+
+                    add_change_mode(
+                        mode_before,
+                        Mode::Navigation,
+                        split::vertical(app, target_path.as_path()),
+                    )
+                }
+                None => vec![Action::EmitMessages(vec![Message::Error(
+                    "Vsplit failed. Preview path could not be resolved.".to_string(),
+                )])],
+            }
         }
         ("w", "") => add_change_mode(
             mode_before,
@@ -284,6 +325,11 @@ fn close_focused_window_or_quit(
     let old_window = mem::take(&mut app.window);
     match old_window {
         Window::Horizontal {
+            first,
+            second,
+            focus,
+        }
+        | Window::Vertical {
             first,
             second,
             focus,

@@ -30,6 +30,11 @@ pub fn get_focused_directory_viewports(
             first,
             second,
             focus,
+        }
+        | Window::Vertical {
+            first,
+            second,
+            focus,
         } => match focus {
             SplitFocus::First => get_focused_directory_viewports(first),
             SplitFocus::Second => get_focused_directory_viewports(second),
@@ -44,6 +49,11 @@ pub fn get_focused_directory_viewports_mut(
 ) -> Option<(&mut ViewPort, &mut ViewPort, &mut ViewPort)> {
     match window {
         Window::Horizontal {
+            first,
+            second,
+            focus,
+        }
+        | Window::Vertical {
             first,
             second,
             focus,
@@ -66,8 +76,10 @@ pub fn get_viewport_by_buffer_id_mut(
     buffer_id: usize,
 ) -> Option<&mut ViewPort> {
     match window {
-        Window::Horizontal { first, second, .. } => get_viewport_by_buffer_id_mut(first, buffer_id)
-            .or_else(|| get_viewport_by_buffer_id_mut(second, buffer_id)),
+        Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
+            get_viewport_by_buffer_id_mut(first, buffer_id)
+                .or_else(|| get_viewport_by_buffer_id_mut(second, buffer_id))
+        }
         Window::Directory(parent, current, preview) => {
             if parent.buffer_id == buffer_id {
                 Some(parent)
