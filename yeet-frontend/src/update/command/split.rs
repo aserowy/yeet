@@ -1,9 +1,11 @@
 use std::mem;
 
+use yeet_keymap::message::KeymapMessage;
+
 use crate::{
-    action::Action,
+    action::{self, Action},
     event::Message,
-    model::{self, App, Buffer, SplitFocus, Window},
+    model::{App, SplitFocus, Window},
     update::app,
 };
 
@@ -28,20 +30,15 @@ fn create_split(
     target: Option<std::path::PathBuf>,
     make_split: impl FnOnce(Window, Window) -> Window,
 ) -> Vec<Action> {
-    let (_, current_vp, _) = match app::get_focused_directory_viewports(&app.window) {
-        Some(vps) => vps,
+    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(&app.window) {
+        Some(ids) => ids,
         None => return Vec::new(),
     };
 
-    let current_buffer = match app.contents.buffers.get(&current_vp.buffer_id) {
-        Some(Buffer::Directory(buffer)) => buffer,
-        _ => return Vec::new(),
+    let current_path = match app::get_buffer_path(app, current_id) {
+        Some(path) => path.to_path_buf(),
+        None => return Vec::new(),
     };
-
-    let current_path = current_buffer.path.clone();
-    if current_path.as_os_str().is_empty() {
-        return Vec::new();
-    }
 
     let navigate_path = match &target {
         Some(path) => {
@@ -63,63 +60,14 @@ fn create_split(
         None => current_path.clone(),
     };
 
-    let selection_path = match target {
-        Some(_) => None,
-        None => model::get_selected_path(current_buffer, &current_vp.cursor),
-    };
-    let preview_path = selection_path.clone();
-    let selection = selection_path.and_then(|path| {
-        path.file_name()
-            .map(|name| name.to_string_lossy().to_string())
-    });
-
-    let parent_path = navigate_path.parent().map(|path| path.to_path_buf());
-
-    let parent_id = app::get_next_buffer_id(&mut app.contents);
-    let current_id = app::get_next_buffer_id(&mut app.contents);
-    let preview_id = app::get_next_buffer_id(&mut app.contents);
-
-    if let Some(path) = &parent_path {
-        app.contents
-            .buffers
-            .insert(parent_id, Buffer::PathReference(path.clone()));
-    } else {
-        app.contents.buffers.insert(parent_id, Buffer::Empty);
-    }
-
-    app.contents
-        .buffers
-        .insert(current_id, Buffer::PathReference(navigate_path.clone()));
-
-    if let Some(path) = &preview_path {
-        app.contents
-            .buffers
-            .insert(preview_id, Buffer::PathReference(path.clone()));
-    } else {
-        app.contents.buffers.insert(preview_id, Buffer::Empty);
-    }
-
-    let new_directory = Window::create(parent_id, current_id, preview_id);
-    app.window.focused_viewport_mut().hide_cursor = true;
-
+    let empty_buffer = app::get_empty_buffer(&mut app.contents);
+    let new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
     let old_window = mem::take(&mut app.window);
     app.window = make_split(old_window, new_directory);
 
-    let mut actions = Vec::new();
-    if let Some(path) = parent_path {
-        let selection = navigate_path
-            .file_name()
-            .map(|name| name.to_string_lossy().to_string());
-        actions.push(Action::Load(path, selection));
-    }
-
-    actions.push(Action::Load(navigate_path, selection));
-
-    if let Some(path) = preview_path {
-        actions.push(Action::Load(path, None));
-    }
-
-    actions
+    vec![action::emit_keymap(KeymapMessage::NavigateToPath(
+        navigate_path,
+    ))]
 }
 
 #[cfg(test)]
@@ -128,7 +76,12 @@ mod test {
 
     use yeet_buffer::model::viewport::ViewPort;
 
-    use crate::model::{App, Buffer, DirectoryBuffer, SplitFocus, Window};
+    use yeet_keymap::message::KeymapMessage;
+
+    use crate::{
+        event::Message,
+        model::{App, Buffer, DirectoryBuffer, SplitFocus, Window},
+    };
 
     use super::*;
 
@@ -223,16 +176,19 @@ mod test {
     }
 
     #[test]
-    fn split_returns_load_actions() {
+    fn split_returns_navigate_action() {
         let mut app = make_app_with_directory();
         let actions = horizontal(&mut app, None);
         assert!(
             !actions.is_empty(),
             "split should return actions to load the new pane"
         );
-        assert!(actions
-            .iter()
-            .any(|action| matches!(action, Action::Load(_, _))));
+        assert!(actions.iter().any(|action| match action {
+            Action::EmitMessages(messages) => messages.iter().any(|message| {
+                matches!(message, Message::Keymap(KeymapMessage::NavigateToPath(_)))
+            }),
+            _ => false,
+        }));
     }
 
     #[test]
@@ -269,22 +225,42 @@ mod test {
     }
 
     #[test]
-    fn split_with_path_sets_path_references() {
+    fn split_registers_empty_buffers_in_contents() {
         let mut app = make_app_with_directory();
-        let target = env::temp_dir();
-        vertical(&mut app, Some(target.clone()));
+        horizontal(&mut app, None);
 
-        let buffer_paths: Vec<_> = app
+        let empty_count = app
             .contents
             .buffers
             .values()
-            .filter_map(|buffer| match buffer {
-                Buffer::PathReference(path) => Some(path.clone()),
-                _ => None,
-            })
-            .collect();
+            .filter(|buffer| matches!(buffer, Buffer::Empty))
+            .count();
 
-        assert!(buffer_paths.iter().any(|path| path == &target));
+        assert!(empty_count >= 3);
+    }
+
+    #[test]
+    fn split_with_path_navigates_to_target() {
+        let mut app = make_app_with_directory();
+        let target = env::temp_dir();
+        let actions = vertical(&mut app, Some(target.clone()));
+
+        assert!(matches!(
+            app.window,
+            Window::Vertical {
+                focus: SplitFocus::Second,
+                ..
+            }
+        ));
+        assert!(actions.iter().any(|action| match action {
+            Action::EmitMessages(messages) => messages.iter().any(|message| {
+                matches!(
+                    message,
+                    Message::Keymap(KeymapMessage::NavigateToPath(path)) if path == &target
+                )
+            }),
+            _ => false,
+        }));
     }
 
     #[test]
