@@ -18,16 +18,22 @@ pub fn view(
     horizontal_offset: u16,
     vertical_offset: u16,
 ) {
-    render_window(
-        mode,
-        &app.window,
-        &app.contents.buffers,
-        frame,
+    let context = RenderContext {
+        draw_borders: None,
+        is_focused: true,
         horizontal_offset,
         vertical_offset,
-        true,
-        false,
-    );
+    };
+
+    render_window(mode, &app.window, &app.contents.buffers, frame, context);
+}
+
+#[derive(Clone)]
+struct RenderContext {
+    draw_borders: Option<bool>,
+    is_focused: bool,
+    horizontal_offset: u16,
+    vertical_offset: u16,
 }
 
 fn render_window(
@@ -35,10 +41,7 @@ fn render_window(
     window: &Window,
     buffers: &HashMap<usize, Buffer>,
     frame: &mut Frame,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-    is_focused: bool,
-    draw_borders: bool,
+    context: RenderContext,
 ) {
     match window {
         Window::Horizontal {
@@ -51,20 +54,20 @@ fn render_window(
                 first,
                 buffers,
                 frame,
-                horizontal_offset,
-                vertical_offset,
-                is_focused && focus == &SplitFocus::First,
-                false,
+                RenderContext {
+                    is_focused: context.is_focused && focus == &SplitFocus::First,
+                    ..context.clone()
+                },
             );
             render_window(
                 mode,
                 second,
                 buffers,
                 frame,
-                horizontal_offset,
-                vertical_offset,
-                is_focused && focus == &SplitFocus::Second,
-                false,
+                RenderContext {
+                    is_focused: context.is_focused && focus == &SplitFocus::Second,
+                    ..context.clone()
+                },
             );
         }
         Window::Vertical {
@@ -77,20 +80,21 @@ fn render_window(
                 first,
                 buffers,
                 frame,
-                horizontal_offset,
-                vertical_offset,
-                is_focused && focus == &SplitFocus::First,
-                true,
+                RenderContext {
+                    is_focused: context.is_focused && focus == &SplitFocus::First,
+                    draw_borders: Some(true),
+                    ..context.clone()
+                },
             );
             render_window(
                 mode,
                 second,
                 buffers,
                 frame,
-                horizontal_offset,
-                vertical_offset,
-                is_focused && focus == &SplitFocus::Second,
-                false,
+                RenderContext {
+                    is_focused: context.is_focused && focus == &SplitFocus::Second,
+                    ..context.clone()
+                },
             );
         }
         Window::Directory(parent, current, preview) => {
@@ -99,69 +103,71 @@ fn render_window(
                 frame,
                 parent,
                 buffers.get(&parent.buffer_id),
-                horizontal_offset,
-                vertical_offset,
-                is_focused,
-                None,
+                context.clone(),
             );
             render_buffer_slot(
                 mode,
                 frame,
                 current,
                 buffers.get(&current.buffer_id),
-                horizontal_offset,
-                vertical_offset,
-                is_focused,
-                None,
+                context.clone(),
             );
             render_buffer_slot(
                 mode,
                 frame,
                 preview,
                 buffers.get(&preview.buffer_id),
-                horizontal_offset,
-                vertical_offset,
-                is_focused,
-                Some(draw_borders),
+                context.clone(),
             );
 
             if let Some(buffer) = buffers.get(&current.buffer_id) {
                 let total_width = (preview.x + preview.width).saturating_sub(parent.x);
                 let statusline_rect = Rect {
-                    x: parent.x.saturating_add(horizontal_offset),
+                    x: parent.x.saturating_add(context.horizontal_offset),
                     y: current
                         .y
                         .saturating_add(current.height)
-                        .saturating_add(vertical_offset),
+                        .saturating_add(context.vertical_offset),
                     width: total_width,
                     height: 1,
                 };
-                statusline::view(buffer, current, frame, statusline_rect, is_focused);
+
+                let mut statusline_vp = current.clone();
+                statusline_vp.show_border = context.draw_borders.unwrap_or(preview.show_border);
+
+                statusline::view(
+                    buffer,
+                    &statusline_vp,
+                    frame,
+                    statusline_rect,
+                    context.is_focused,
+                );
             }
         }
         Window::Tasks(vp) => {
-            render_buffer_slot(
-                mode,
-                frame,
-                vp,
-                buffers.get(&vp.buffer_id),
-                horizontal_offset,
-                vertical_offset,
-                is_focused,
-                Some(draw_borders),
-            );
+            render_buffer_slot(mode, frame, vp, buffers.get(&vp.buffer_id), context.clone());
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
                 let statusline_rect = Rect {
-                    x: vp.x.saturating_add(horizontal_offset),
+                    x: vp.x.saturating_add(context.horizontal_offset),
                     y: vp
                         .y
                         .saturating_add(vp.height)
-                        .saturating_add(vertical_offset),
+                        .saturating_add(context.vertical_offset),
                     width: vp.width,
                     height: 1,
                 };
-                statusline::view(buffer, vp, frame, statusline_rect, is_focused);
+
+                let mut statusline_vp = vp.clone();
+                statusline_vp.show_border = context.draw_borders.unwrap_or(vp.show_border);
+
+                statusline::view(
+                    buffer,
+                    &statusline_vp,
+                    frame,
+                    statusline_rect,
+                    context.is_focused,
+                );
             }
         }
     }
@@ -172,15 +178,12 @@ fn render_buffer_slot(
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: Option<&Buffer>,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-    is_focused: bool,
-    draw_border: Option<bool>,
+    context: RenderContext,
 ) {
-    let x = viewport.x.saturating_add(horizontal_offset);
-    let y = viewport.y.saturating_add(vertical_offset);
+    let x = viewport.x.saturating_add(context.horizontal_offset);
+    let y = viewport.y.saturating_add(context.vertical_offset);
 
-    let mut effective_vp = if is_focused {
+    let mut effective_vp = if context.is_focused {
         viewport.clone()
     } else {
         ViewPort {
@@ -190,9 +193,8 @@ fn render_buffer_slot(
         }
     };
 
-    if let Some(true) = draw_border {
+    if let Some(true) = context.draw_borders {
         effective_vp.show_border = true;
-        effective_vp.width = effective_vp.width.saturating_sub(1);
     }
 
     match buffer {
