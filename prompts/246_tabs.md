@@ -7,7 +7,7 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
 3. [Prompt 3: Tab bar rendering + layout offset](#prompt-3-tab-bar-rendering--layout-offset) — `done`
 4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `done`
 5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `done`
-6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `planned`
+6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `done`
 7. [Prompt 7: :tabdo execution across tabs](#prompt-7-tabdo-execution-across-tabs) — `planned`
 
 ---
@@ -423,7 +423,7 @@ pub fn next_tab_id(current: usize, ordered: &[usize]) -> usize {
 
 **Goal**: Implement a Vim-like `:tabs` output listing, inspired by `:cl` formatting.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Users need a quick overview of all tabs and the current selection.
 
@@ -432,9 +432,10 @@ pub fn next_tab_id(current: usize, ordered: &[usize]) -> usize {
 - Implement `:tabs` output using a `print::tabs(...)` helper.
 - Output format should be Vim-like and modeled on `:cl`:
   - `:tabs`
-  - `> 1  src`
-  - `  2  tests`
+  - `> 1  /absolut/path/src`
+  - `  2  /absolut/path/tests`
   - `  3  (empty)`
+  - `  4  Tasks`
 - Include a marker for the current tab.
 - Add tests to validate output ordering and current marker.
 

@@ -86,9 +86,8 @@ fn tab_title_from_window(window: &Window, buffers: &HashMap<usize, Buffer>) -> S
         },
         Window::Directory(_, current, _) => {
             if let Some(Buffer::Directory(dir)) = buffers.get(&current.buffer_id) {
-                if !dir.path.as_os_str().is_empty() {
-                    return dir
-                        .path
+                if let Some(path) = dir.resolve_path() {
+                    return path
                         .file_name()
                         .and_then(|name| name.to_str())
                         .unwrap_or("(empty)")

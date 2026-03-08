@@ -246,6 +246,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             tab::previous_tab(app);
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
+        ("tabs", "") => print::tabs(app),
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
@@ -543,6 +544,21 @@ mod test {
             } else {
                 false
             }
+        })
+    }
+
+    fn extract_print_lines(actions: &[Action]) -> Option<Vec<String>> {
+        actions.iter().find_map(|action| match action {
+            Action::EmitMessages(messages) => messages.iter().find_map(|message| match message {
+                Message::Keymap(KeymapMessage::Print(content)) => Some(
+                    content
+                        .iter()
+                        .map(|entry| entry.to_string())
+                        .collect::<Vec<_>>(),
+                ),
+                _ => None,
+            }),
+            _ => None,
         })
     }
 
@@ -915,6 +931,35 @@ mod test {
                 "Tabnew failed. Target path could not be resolved."
             ));
         }
+    }
+
+    #[test]
+    fn tabs_lists_ordered_with_current_marker() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        execute(&mut app, &mut state, "tabnew");
+        assert_eq!(app.current_tab_id, 3);
+
+        let actions = execute(&mut app, &mut state, "tabs");
+        let lines = extract_print_lines(&actions).expect("tabs must emit print output");
+
+        assert_eq!(lines[0], ":tabs");
+        assert!(lines.iter().any(|line| line.starts_with("> 3")));
+        assert!(lines.iter().any(|line| line.starts_with("  1")));
+        assert!(lines.iter().any(|line| line.starts_with("  2")));
+    }
+
+    #[test]
+    fn tabs_prints_empty_for_uninitialized_directory() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+
+        let actions = execute(&mut app, &mut state, "tabs");
+        let lines = extract_print_lines(&actions).expect("tabs must emit print output");
+
+        assert_eq!(lines[0], ":tabs");
+        assert!(lines.iter().any(|line| line.ends_with("(empty)")));
     }
 
     #[test]

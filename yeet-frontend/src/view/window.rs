@@ -26,6 +26,7 @@ mod test {
     use super::view;
 
     fn make_model(tab_count: usize) -> Model {
+        let tabbar_offset = if tab_count > 1 { 1 } else { 0 };
         let mut buffers = HashMap::new();
         let mut tabs = HashMap::new();
 
@@ -36,6 +37,7 @@ mod test {
                 id,
                 Window::Tasks(ViewPort {
                     buffer_id,
+                    y: tabbar_offset,
                     width: 80,
                     height: 10,
                     ..Default::default()

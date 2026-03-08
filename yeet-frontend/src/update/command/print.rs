@@ -7,9 +7,9 @@ use crate::{
         mark::Marks,
         qfix::QuickFix,
         register::Register,
-        Tasks,
+        App, Buffer, SplitFocus, Tasks, Window,
     },
-    update::junkyard::get_junkyard_transaction,
+    update::{junkyard, tab},
 };
 
 pub fn marks(marks: &Marks) -> Vec<Action> {
@@ -90,7 +90,7 @@ pub fn qfix(qfix: &QuickFix) -> Vec<Action> {
 
 pub fn junkyard(junkyard: &JunkYard) -> Vec<Action> {
     let mut contents = vec![":junk".to_string(), "Name Content".to_string()];
-    if let Some(current) = get_junkyard_transaction(junkyard, &'"') {
+    if let Some(current) = junkyard::get_junkyard_transaction(junkyard, &'"') {
         contents.push(print_junkyard_entry("\"\"", current));
     }
     if let Some(yanked) = &junkyard.yanked {
@@ -155,6 +155,58 @@ pub fn register(register: &Register) -> Vec<Action> {
         .collect();
 
     vec![action::emit_keymap(KeymapMessage::Print(content))]
+}
+
+pub fn tabs(app: &App) -> Vec<Action> {
+    let mut lines = vec![":tabs".to_string()];
+    let ordered = tab::ordered_tab_ids(app);
+
+    for id in ordered {
+        let title = tab_title_for_id(app, id);
+        let prefix = if id == app.current_tab_id { ">" } else { " " };
+        lines.push(format!("{} {:<2} {}", prefix, id, title));
+    }
+
+    let content = lines.into_iter().map(PrintContent::Default).collect();
+
+    vec![action::emit_keymap(KeymapMessage::Print(content))]
+}
+
+fn tab_title_for_id(app: &App, id: usize) -> String {
+    app.tabs
+        .get(&id)
+        .map(|window| tab_title_from_window_full_path(window, &app.contents.buffers))
+        .unwrap_or_else(|| "(empty)".to_string())
+}
+
+fn tab_title_from_window_full_path(
+    window: &Window,
+    buffers: &std::collections::HashMap<usize, Buffer>,
+) -> String {
+    match window {
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        }
+        | Window::Vertical {
+            first,
+            second,
+            focus,
+        } => match focus {
+            SplitFocus::First => tab_title_from_window_full_path(first, buffers),
+            SplitFocus::Second => tab_title_from_window_full_path(second, buffers),
+        },
+        Window::Directory(_, current, _) => {
+            if let Some(Buffer::Directory(dir)) = buffers.get(&current.buffer_id) {
+                if let Some(path) = dir.resolve_path() {
+                    return path.to_string_lossy().to_string();
+                }
+            }
+            "(empty)".to_string()
+        }
+        Window::Tasks(_) => "Tasks".to_string(),
+    }
 }
 
 fn print_content(prefix: &char, content: &str) -> String {
