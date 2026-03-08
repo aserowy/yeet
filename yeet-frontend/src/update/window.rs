@@ -88,9 +88,11 @@ fn set_commandline_vp(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use yeet_buffer::model::viewport::ViewPort;
 
-    use crate::model::{SplitFocus, Window};
+    use crate::model::{App, Buffer, CommandLine, Contents, SplitFocus, Window};
 
     use super::*;
 
@@ -379,5 +381,49 @@ mod test {
             rendered_height, area.height,
             "vertical rendered height should equal area height"
         );
+    }
+
+    #[test]
+    fn update_uses_current_tab_window() {
+        let mut tabs = HashMap::new();
+        tabs.insert(1, Window::Tasks(ViewPort::default()));
+        tabs.insert(2, Window::Tasks(ViewPort::default()));
+
+        let mut buffers = HashMap::new();
+        buffers.insert(1, Buffer::Empty);
+
+        let mut app = App {
+            commandline: CommandLine::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 1,
+            },
+            tabs,
+            current_tab_id: 2,
+        };
+
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 40,
+        };
+
+        update(&mut app, area).unwrap();
+
+        let tab_one = app.tabs.get(&1).expect("tab 1 exists");
+        let tab_two = app.tabs.get(&2).expect("tab 2 exists");
+
+        let tab_one_height = match tab_one {
+            Window::Tasks(vp) => vp.height,
+            _ => panic!("expected Tasks for tab 1"),
+        };
+        let tab_two_height = match tab_two {
+            Window::Tasks(vp) => vp.height,
+            _ => panic!("expected Tasks for tab 2"),
+        };
+
+        assert_eq!(tab_one_height, 0, "tab 1 should be unchanged");
+        assert_eq!(tab_two_height, 39, "tab 2 should be updated");
     }
 }
