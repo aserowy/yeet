@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 
 use crate::message::CursorDirection;
 
@@ -55,10 +55,60 @@ pub enum SearchDirection {
 pub struct TextBuffer {
     pub last_find: Option<CursorDirection>,
     pub lines: Vec<BufferLine>,
-    pub undo: Undo,
+    pub(crate) undo: Undo,
 }
 
-impl std::fmt::Debug for TextBuffer {
+impl TextBuffer {
+    pub fn has_unsaved_changes(&self) -> bool {
+        !self.undo.get_uncommited_changes().is_empty()
+    }
+
+    pub fn uncommitted_changes(&self) -> Vec<BufferChanged> {
+        self.undo.get_uncommited_changes()
+    }
+
+    pub fn from_lines(lines: Vec<BufferLine>) -> Self {
+        Self {
+            last_find: None,
+            lines,
+            undo: Undo::default(),
+        }
+    }
+
+    pub fn revert_unsaved_changes(&mut self) {
+        let changes = self.undo.get_uncommited_changes();
+        if !changes.is_empty() {
+            for change in changes.iter().rev() {
+                match change {
+                    BufferChanged::LineAdded(idx, _) => {
+                        if *idx < self.lines.len() {
+                            self.lines.remove(*idx);
+                        }
+                    }
+                    BufferChanged::LineRemoved(idx, content) => {
+                        let line = BufferLine {
+                            content: content.clone(),
+                            ..Default::default()
+                        };
+                        if *idx <= self.lines.len() {
+                            self.lines.insert(*idx, line);
+                        } else {
+                            self.lines.push(line);
+                        }
+                    }
+                    BufferChanged::Content(idx, old, _) => {
+                        if let Some(line) = self.lines.get_mut(*idx) {
+                            line.content = old.clone();
+                        }
+                    }
+                }
+            }
+        }
+        self.undo.reset_to_last_save();
+    }
+}
+
+impl fmt::Debug for TextBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Buffer")
             .field("last_find", &self.last_find)

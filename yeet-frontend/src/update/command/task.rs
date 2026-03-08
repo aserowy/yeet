@@ -29,10 +29,7 @@ pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action> {
     contents.buffers.insert(
         buffer_id,
         Buffer::Tasks(TasksBuffer {
-            buffer: TextBuffer {
-                lines,
-                ..Default::default()
-            },
+            buffer: TextBuffer::from_lines(lines),
         }),
     );
 

@@ -25,10 +25,7 @@ pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
                 preview_id,
                 Buffer::Content(ContentBuffer {
                     path,
-                    buffer: TextBuffer {
-                        lines: content,
-                        ..Default::default()
-                    },
+                    buffer: TextBuffer::from_lines(content),
                 }),
             );
         }

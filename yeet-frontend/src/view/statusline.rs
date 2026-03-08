@@ -7,10 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
-use yeet_buffer::model::{
-    undo::{self, BufferChanged},
-    viewport::ViewPort,
-};
+use yeet_buffer::model::{undo, undo::BufferChanged, viewport::ViewPort};
 
 use crate::model::{self, Buffer, DirectoryBuffer, TasksBuffer};
 
@@ -174,7 +171,7 @@ fn get_position_content<'a>(buffer: &'a DirectoryBuffer, viewport: &ViewPort) ->
 }
 
 fn get_changes_content(buffer: &DirectoryBuffer) -> Line<'_> {
-    let modifications = buffer.buffer.undo.get_uncommited_changes();
+    let modifications = buffer.buffer.uncommitted_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
     let (mut added, mut changed, mut removed) = (0, 0, 0);

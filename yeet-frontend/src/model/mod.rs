@@ -278,9 +278,7 @@ pub struct CommandLine {
 impl Default for CommandLine {
     fn default() -> Self {
         Self {
-            buffer: TextBuffer {
-                ..Default::default()
-            },
+            buffer: TextBuffer::default(),
             key_sequence: "".to_owned(),
             viewport: yeet_buffer::model::viewport::ViewPort {
                 hide_cursor: true,

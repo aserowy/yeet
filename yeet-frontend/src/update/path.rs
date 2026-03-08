@@ -491,13 +491,10 @@ mod test {
             current_id,
             Buffer::Directory(DirectoryBuffer {
                 path: base.clone(),
-                buffer: TextBuffer {
-                    lines: vec![BufferLine {
-                        content: Ansi::new("newfolder/"),
-                        ..Default::default()
-                    }],
+                buffer: TextBuffer::from_lines(vec![BufferLine {
+                    content: Ansi::new("newfolder/"),
                     ..Default::default()
-                },
+                }]),
                 ..Default::default()
             }),
         );

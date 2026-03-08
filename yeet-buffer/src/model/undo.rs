@@ -79,7 +79,7 @@ impl Undo {
             })
     }
 
-    pub fn reset_to_last_save(&mut self) {
+    pub(crate) fn reset_to_last_save(&mut self) {
         self.current_change = None;
         self.change_buffer = Vec::new();
 

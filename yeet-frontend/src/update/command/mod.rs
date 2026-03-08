@@ -145,7 +145,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 Ok(window) => window.focused_viewport().buffer_id,
                 Err(_) => return Vec::new(),
             };
-            if has_unsaved_changes(&app.contents, Some(buffer_id)) {
+            if buffer_has_unsaved_changes(&app.contents, Some(buffer_id)) {
                 return print_error(
                     "No write since last change (add ! to override)",
                     mode_before,
@@ -156,7 +156,7 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
         }
         ("q!", "") => close_focused_window_or_quit(app, QuitMode::Force, mode_before, true),
         ("qa", "") => {
-            if has_unsaved_changes(&app.contents, None) {
+            if buffer_has_unsaved_changes(&app.contents, None) {
                 return print_error(
                     "No write since last change (add ! to override)",
                     mode_before,
@@ -384,7 +384,7 @@ fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> V
     actions
 }
 
-fn has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
+fn buffer_has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
     contents.buffers.iter().any(|(key, buf)| {
         if let Some(id) = buffer_id {
             if *key != id {
@@ -393,15 +393,11 @@ fn has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
         }
 
         if let Buffer::Directory(dir) = buf {
-            !dir.buffer.undo.get_uncommited_changes().is_empty()
+            dir.buffer.has_unsaved_changes()
         } else {
             false
         }
     })
-}
-
-fn reset_unsaved_changes(window: &Window, contents: &mut Contents) {
-    reset_unsaved_changes_for_buffer_ids(window.buffer_ids(), contents);
 }
 
 fn reset_unsaved_changes_for_buffer_ids(
@@ -410,7 +406,7 @@ fn reset_unsaved_changes_for_buffer_ids(
 ) {
     for buffer_id in buffer_ids {
         if let Some(Buffer::Directory(dir)) = contents.buffers.get_mut(&buffer_id) {
-            dir.buffer.undo.reset_to_last_save();
+            dir.buffer.revert_unsaved_changes();
         }
     }
 }
@@ -434,7 +430,7 @@ fn window_has_unsaved_changes(window: &Window, contents: &Contents) -> bool {
     window
         .buffer_ids()
         .into_iter()
-        .any(|id| has_unsaved_changes(contents, Some(id)))
+        .any(|id| buffer_has_unsaved_changes(contents, Some(id)))
 }
 
 fn close_focused_window_or_quit(
@@ -465,7 +461,7 @@ fn close_focused_window_or_quit(
             };
 
             if discard_changes {
-                reset_unsaved_changes(&dropped, contents);
+                reset_unsaved_changes_for_buffer_ids(dropped.buffer_ids(), contents);
             }
 
             *window = kept;
@@ -500,9 +496,8 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 
 #[cfg(test)]
 mod test {
-    use yeet_buffer::model::{
-        ansi::Ansi, undo::BufferChanged, viewport::ViewPort, BufferLine, CommandMode, Mode,
-    };
+    use yeet_buffer::message::{BufferMessage, LineDirection, TextModification};
+    use yeet_buffer::model::{viewport::ViewPort, BufferLine, CommandMode, Mode};
     use yeet_keymap::message::{KeymapMessage, QuitMode};
 
     use crate::{
@@ -544,10 +539,7 @@ mod test {
         let mut app = App::default();
         // Create a directory buffer with unsaved changes
         let mut dir_buffer = DirectoryBuffer::default();
-        dir_buffer.buffer.undo.add(
-            &Mode::Normal,
-            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
-        );
+        mark_directory_buffer_dirty(&mut dir_buffer, 50);
         app.contents
             .buffers
             .insert(50, Buffer::Directory(dir_buffer));
@@ -658,10 +650,7 @@ mod test {
 
     fn insert_dirty_directory_buffer(contents: &mut Contents, buffer_id: usize) {
         let mut dir_buffer = DirectoryBuffer::default();
-        dir_buffer.buffer.undo.add(
-            &Mode::Normal,
-            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
-        );
+        mark_directory_buffer_dirty(&mut dir_buffer, buffer_id);
         contents
             .buffers
             .insert(buffer_id, Buffer::Directory(dir_buffer));
@@ -670,9 +659,42 @@ mod test {
 
     fn buffer_is_dirty(contents: &Contents, buffer_id: usize) -> bool {
         match contents.buffers.get(&buffer_id) {
-            Some(Buffer::Directory(dir)) => !dir.buffer.undo.get_uncommited_changes().is_empty(),
+            Some(Buffer::Directory(dir)) => dir.buffer.has_unsaved_changes(),
             _ => false,
         }
+    }
+
+    fn apply_modifications(buffer: &mut yeet_buffer::model::TextBuffer, buffer_id: usize) {
+        let mut viewport = ViewPort {
+            buffer_id,
+            ..Default::default()
+        };
+        let messages = [
+            BufferMessage::Modification(1, TextModification::InsertNewLine(LineDirection::Down)),
+            BufferMessage::Modification(1, TextModification::Insert("test".to_string())),
+        ];
+        yeet_buffer::update(Some(&mut viewport), &Mode::Normal, buffer, &messages);
+    }
+
+    fn mark_directory_buffer_dirty(buffer: &mut DirectoryBuffer, buffer_id: usize) {
+        apply_modifications(&mut buffer.buffer, buffer_id);
+    }
+
+    fn add_line_to_directory_buffer(buffer: &mut DirectoryBuffer, buffer_id: usize, line: &str) {
+        let mut viewport = ViewPort {
+            buffer_id,
+            ..Default::default()
+        };
+        let messages = [
+            BufferMessage::Modification(1, TextModification::InsertNewLine(LineDirection::Down)),
+            BufferMessage::Modification(1, TextModification::Insert(line.to_string())),
+        ];
+        yeet_buffer::update(
+            Some(&mut viewport),
+            &Mode::Normal,
+            &mut buffer.buffer,
+            &messages,
+        );
     }
 
     #[test]
@@ -914,16 +936,13 @@ mod test {
             },
             latest_buffer_id: 3,
         };
-        assert!(!super::has_unsaved_changes(&contents, None));
+        assert!(!super::buffer_has_unsaved_changes(&contents, None));
     }
 
     #[test]
     fn has_unsaved_changes_returns_true_for_dirty_buffer() {
         let mut dir_buffer = DirectoryBuffer::default();
-        dir_buffer.buffer.undo.add(
-            &Mode::Normal,
-            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
-        );
+        mark_directory_buffer_dirty(&mut dir_buffer, 1);
 
         let contents = Contents {
             buffers: {
@@ -933,7 +952,7 @@ mod test {
             },
             latest_buffer_id: 1,
         };
-        assert!(super::has_unsaved_changes(&contents, None));
+        assert!(super::buffer_has_unsaved_changes(&contents, None));
     }
 
     #[test]
@@ -947,16 +966,13 @@ mod test {
             },
             latest_buffer_id: 2,
         };
-        assert!(!super::has_unsaved_changes(&contents, None));
+        assert!(!super::buffer_has_unsaved_changes(&contents, None));
     }
 
     #[test]
     fn has_unsaved_changes_checks_only_specified_buffer() {
         let mut dirty_buffer = DirectoryBuffer::default();
-        dirty_buffer.buffer.undo.add(
-            &Mode::Normal,
-            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
-        );
+        mark_directory_buffer_dirty(&mut dirty_buffer, 2);
 
         let contents = Contents {
             buffers: {
@@ -969,11 +985,11 @@ mod test {
         };
 
         // Checking buffer 1 (clean) should return false
-        assert!(!super::has_unsaved_changes(&contents, Some(1)));
+        assert!(!super::buffer_has_unsaved_changes(&contents, Some(1)));
         // Checking buffer 2 (dirty) should return true
-        assert!(super::has_unsaved_changes(&contents, Some(2)));
+        assert!(super::buffer_has_unsaved_changes(&contents, Some(2)));
         // Checking all (None) should return true
-        assert!(super::has_unsaved_changes(&contents, None));
+        assert!(super::buffer_has_unsaved_changes(&contents, None));
     }
 
     #[test]
@@ -1168,11 +1184,7 @@ mod test {
         *window = make_directory_window(buffer_id);
 
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get_mut(&buffer_id) {
-            dir.buffer.lines.push(BufferLine::from("added"));
-            dir.buffer.undo.add(
-                &Mode::Normal,
-                vec![BufferChanged::LineAdded(1, Ansi::new("added"))],
-            );
+            add_line_to_directory_buffer(dir, buffer_id, "added");
         }
 
         let actions = execute(&mut app, &mut state, "tabc!");
@@ -1222,7 +1234,7 @@ mod test {
         // Verify the buffer is dirty before :q!
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
-                !dir.buffer.undo.get_uncommited_changes().is_empty(),
+                dir.buffer.has_unsaved_changes(),
                 "buffer 50 should be dirty before :q!"
             );
         } else {
@@ -1234,7 +1246,7 @@ mod test {
         // After :q!, the dropped pane's buffer undo should be reset
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
-                dir.buffer.undo.get_uncommited_changes().is_empty(),
+                !dir.buffer.has_unsaved_changes(),
                 "buffer 50 undo should be reset after :q! drops its pane"
             );
         }
@@ -1254,7 +1266,7 @@ mod test {
 
         // Verify the buffer is dirty before :q!
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
-            assert!(!dir.buffer.undo.get_uncommited_changes().is_empty());
+            assert!(dir.buffer.has_unsaved_changes());
         }
 
         let _actions = execute(&mut app, &mut state, "q!");
@@ -1262,7 +1274,7 @@ mod test {
         // Buffer 50 is in the KEPT pane (First/Directory) — its changes should be preserved
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
-                !dir.buffer.undo.get_uncommited_changes().is_empty(),
+                dir.buffer.has_unsaved_changes(),
                 "kept pane's buffer 50 should still have unsaved changes after :q!"
             );
         } else {

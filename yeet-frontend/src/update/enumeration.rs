@@ -262,13 +262,10 @@ mod test {
 
         let current_buffer = DirectoryBuffer {
             path: current_path.clone(),
-            buffer: TextBuffer {
-                lines: vec![yeet_buffer::model::BufferLine {
-                    content: Ansi::new("Cargo.toml"),
-                    ..Default::default()
-                }],
+            buffer: TextBuffer::from_lines(vec![yeet_buffer::model::BufferLine {
+                content: Ansi::new("Cargo.toml"),
                 ..Default::default()
-            },
+            }]),
             ..Default::default()
         };
 
