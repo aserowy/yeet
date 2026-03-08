@@ -1,6 +1,6 @@
 # Overview
 
-This feature adds Vim-like tabs to yeet, including a tab bar, commands for creating/closing/navigating tabs, Navigation-mode keymaps for `gt`/`gT`, and a `:tabs` listing plus `:tabdo` for bulk execution. The implementation is split into sequential prompts, each leaving the program in a runnable and functional state.
+This feature adds Vim-like tabs to yeet, including a tab bar, commands for creating/closing/navigating tabs, Navigation-mode keymaps for `gt`/`gT`, and a `:tabs` listing. The implementation is split into sequential prompts, each leaving the program in a runnable and functional state.
 
 1. [Prompt 1: Tab data model scaffolding](#prompt-1-tab-data-model-scaffolding) — `done`
 2. [Prompt 2: Current-tab window plumbing](#prompt-2-current-tab-window-plumbing) — `done`
@@ -8,7 +8,7 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
 4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `done`
 5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `done`
 6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `done`
-7. [Prompt 7: :tabdo execution across tabs](#prompt-7-tabdo-execution-across-tabs) — `planned`
+7. [Prompt 7: Guard tab close on unsaved buffers](#prompt-7-guard-tab-close-on-unsaved-buffers) — `planned`
 
 ---
 
@@ -290,7 +290,7 @@ buffer::view(&model.state.modes.current, &model.app, frame, 0, vertical_offset);
 ## Exclusions
 
 - Do not add `gt/gT` keymaps in this prompt.
-- Do not implement `:tabs` or `:tabdo` in this prompt.
+- Do not implement `:tabs`.
 
 ## Context
 
@@ -441,8 +441,6 @@ pub fn next_tab_id(current: usize, ordered: &[usize]) -> usize {
 
 ## Exclusions
 
-- Do not implement `:tabdo` in this prompt.
-
 ## Context
 
 - Command printing style: @yeet-frontend/src/update/command/print.rs
@@ -498,83 +496,82 @@ for id in ordered_ids {
 
 ---
 
-# Prompt 7: :tabdo execution across tabs
+# Prompt 7: Guard tab close on unsaved buffers
 
-**Goal**: Implement `:tabdo {cmd}` to run a command in each tab, restoring the original tab afterward.
+**Goal**: Make tab-close commands respect unsaved buffer changes, mirroring `:q` behavior for focused buffers.
 
-**State**: `planned`
+**State**: `done`
 
-**Motivation**: `:tabdo` is useful for bulk operations across tabs. It should feel Vim-compatible and avoid leaving the user in a different tab.
+**Motivation**: Users should not lose unsaved work when closing a tab. Tab close should behave like buffer close: if any buffer shown in the tab has unsaved changes, block the close and show the same warning as `:q`.
 
 ## Requirements
 
-- Add `:tabdo {cmd}` to command execution:
-  - Iterate through all tabs in order of tab id (ascending).
-  - For each tab, set `current_tab_id`, then execute `{cmd}` as if typed normally.
-  - After completion, restore the original `current_tab_id` (Vim-like behavior).
-- Ensure any mode transitions or commandline updates are consistent with existing command execution flow.
-- Add tests for `:tabdo` that verify:
-  - commands are executed for each tab;
-  - the current tab is restored afterward;
-  - errors within one tab do not crash the loop (follow existing error handling patterns).
+- When running `:tabc` or `:tabo`, prevent closing any tab that contains **visible buffers with unsaved changes**.
+- The unsaved check must mirror `:q` logic in `@yeet-frontend/src/update/command/mod.rs`:
+  - Use the same error message: `No write since last change (add ! to override)`.
+  - Scope the check to **buffers shown in the tab's windows** (not all buffers in the app).
+- If a tab close is blocked, do **not** change the current tab or close any tabs.
+- Add a force variant for tab close (`:tabc!` and `:tabo!`) that skips the unsaved check and always closes.
+- On forced tab close, **roll back unsaved changes** for buffers that belong to any tab being closed (same intent as `:q!`).
+- Add tests covering:
+  - `:tabc` blocked when the current tab shows a dirty buffer.
+  - `:tabo` blocked when any other tab shows a dirty buffer.
+  - `:tabc!` and `:tabo!` ignore unsaved checks and proceed.
 
 ## Exclusions
 
-- Do not add new keymaps in this prompt.
-- Do not introduce parallel execution; tabdo is sequential.
+- Do not change `:q`, `:q!`, `:qa`, or `:qa!` behavior.
+- Do not alter buffer save mechanics or undo behavior.
+- Do not change tab title rendering or tab listing output.
 
 ## Context
 
-- Command execution: @yeet-frontend/src/update/command/mod.rs
-- Tab helpers from Prompt 4 (if introduced)
-- Model tabs/current tab: @yeet-frontend/src/model/mod.rs
-- Update flow: @yeet-frontend/src/update/mod.rs
-- Testing guidance: @AGENTS.md
+- `:q` unsaved-change handling and error messaging: @yeet-frontend/src/update/command/mod.rs
+- Tab command dispatch: @yeet-frontend/src/update/command/mod.rs
+- Tab helpers and close behavior: @yeet-frontend/src/update/tab.rs
+- App model tabs/windows: @yeet-frontend/src/model/mod.rs
+- Project conventions and tests: @AGENTS.md
 
 ## Implementation Plan
 
-1. **Parse command**: split the incoming command to extract `tabdo` and the subcommand string.
-2. **Snapshot ids**: collect tab ids into a sorted `Vec<usize>` before iterating (avoid mutation issues).
-3. **Execute per tab**:
-   - Save `original_tab_id`.
-   - For each id, set `current_tab_id`, then call `command::execute` for the subcommand.
-   - Accumulate actions across iterations.
-4. **Restore focus**: set `current_tab_id` back to `original_tab_id` before returning actions.
-5. **Tests**:
-   - Verify subcommand runs for each tab.
-   - Verify original tab id restored.
-   - Verify errors are surfaced but do not abort remaining tabs.
+1. **Introduce shared helpers**:
+   - Add a helper that checks a `Window` for unsaved changes by inspecting its `buffer_ids()` against `Contents`.
+   - Add a helper that **resets undo state** for all directory buffers in a `Window` (mirror `reset_unsaved_changes` used by `:q!`).
+   - Reuse the `has_unsaved_changes` logic but scope it to the buffer IDs in the target tab.
+2. **Wire into command dispatch**:
+   - In `command::execute`, add `tabc!` and `tabo!` command arms.
+   - For `tabc` and `tabo`, call the unsaved check before closing. If dirty, emit the same error as `:q` via `print_error(...)` and return early.
+3. **Close logic**:
+   - For `tabo`, if any tab to be closed contains dirty buffers, block the entire operation.
+   - For `tabc!` / `tabo!`, **reset undo state** for buffers in tabs being closed before removing them.
+4. **Tests**:
+   - Add tests in `command/mod.rs` covering blocked and forced close cases.
+   - Reuse existing helpers for creating dirty directory buffers.
 
 ```rust
-pub fn tabdo(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
-    let original = app.current_tab_id;
-    let ids = ordered_tab_ids(app);
-    let mut actions = Vec::new();
-    for id in ids {
-        app.current_tab_id = id;
-        actions.extend(execute(app, state, cmd));
-    }
-    app.current_tab_id = original;
-    actions
+fn tab_has_unsaved_changes(app: &App, tab_id: usize) -> bool {
+    let window = app.tabs.get(&tab_id)?;
+    let ids = window.buffer_ids();
+    ids.into_iter().any(|id| has_unsaved_changes(&app.contents, Some(id)))
 }
 ```
 
 ```rust
-let original = app.current_tab_id;
-let ids: Vec<_> = app.tabs.keys().copied().sorted().collect();
-for id in ids {
-    app.current_tab_id = id;
-    actions.extend(execute(app, state, subcommand));
+// tabc
+if tab_has_unsaved_changes(app, app.current_tab_id) {
+    return print_error("No write since last change (add ! to override)", mode_before, mode);
 }
-app.current_tab_id = original;
 ```
 
 ## Examples
 
-- `:tabdo split` runs `:split` in each tab, then returns focus to the original tab.
-- `:tabdo tabc` behaves like Vim: if a command closes tabs, ensure iteration handles removed ids safely (e.g., snapshot ids up front).
+- `:tabc` on a tab whose focused directory has unsaved changes → error and no close.
+- `:tabo` when any other tab shows an unsaved directory buffer → error and no tabs are closed.
+- `:tabc!` closes the tab regardless of unsaved changes and rolls back those changes in the closed tab.
+- `:tabo!` closes other tabs, rolling back unsaved changes in each closed tab.
 
 ## Notes
 
-- Take a snapshot of tab ids before iterating to avoid mutation during iteration.
-- Keep logging consistent with other command paths.
+- Use the existing `:q` wording and error path for consistency.
+- Forced tab close should mirror `:q!` intent: discard unsaved changes for closed tabs only, leaving kept tabs untouched.
+- Ensure tests assert that the tab count and `current_tab_id` remain unchanged when blocked.

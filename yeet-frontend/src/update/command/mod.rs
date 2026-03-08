@@ -223,10 +223,60 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                     QuitMode::FailOnRunningTasks,
                 ))];
             }
+            if tab_has_unsaved_changes(app, app.current_tab_id) {
+                return print_error(
+                    "No write since last change (add ! to override)",
+                    mode_before,
+                    mode,
+                );
+            }
+            tab::close_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabc!", "") => {
+            if app.tabs.len() <= 1 {
+                return vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))];
+            }
+            reset_unsaved_changes_for_tab(app, app.current_tab_id);
             tab::close_tab(app);
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         ("tabo", "") => {
+            if app.tabs.len() > 1 {
+                let current = app.current_tab_id;
+                let tabs_to_close: Vec<usize> = app
+                    .tabs
+                    .keys()
+                    .copied()
+                    .filter(|id| *id != current)
+                    .collect();
+                if tabs_to_close
+                    .iter()
+                    .any(|id| tab_has_unsaved_changes(app, *id))
+                {
+                    return print_error(
+                        "No write since last change (add ! to override)",
+                        mode_before,
+                        mode,
+                    );
+                }
+            }
+            tab::close_other_tabs(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabo!", "") => {
+            if app.tabs.len() > 1 {
+                let current = app.current_tab_id;
+                let tabs_to_close: Vec<usize> = app
+                    .tabs
+                    .keys()
+                    .copied()
+                    .filter(|id| *id != current)
+                    .collect();
+                for id in tabs_to_close {
+                    reset_unsaved_changes_for_tab(app, id);
+                }
+            }
             tab::close_other_tabs(app);
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
@@ -351,11 +401,40 @@ fn has_unsaved_changes(contents: &Contents, buffer_id: Option<usize>) -> bool {
 }
 
 fn reset_unsaved_changes(window: &Window, contents: &mut Contents) {
-    for buffer_id in window.buffer_ids() {
+    reset_unsaved_changes_for_buffer_ids(window.buffer_ids(), contents);
+}
+
+fn reset_unsaved_changes_for_buffer_ids(
+    buffer_ids: impl IntoIterator<Item = usize>,
+    contents: &mut Contents,
+) {
+    for buffer_id in buffer_ids {
         if let Some(Buffer::Directory(dir)) = contents.buffers.get_mut(&buffer_id) {
             dir.buffer.undo.reset_to_last_save();
         }
     }
+}
+
+fn reset_unsaved_changes_for_tab(app: &mut App, tab_id: usize) {
+    let buffer_ids = match app.tabs.get(&tab_id) {
+        Some(window) => window.buffer_ids(),
+        None => return,
+    };
+    reset_unsaved_changes_for_buffer_ids(buffer_ids, &mut app.contents);
+}
+
+fn tab_has_unsaved_changes(app: &App, tab_id: usize) -> bool {
+    match app.tabs.get(&tab_id) {
+        Some(window) => window_has_unsaved_changes(window, &app.contents),
+        None => false,
+    }
+}
+
+fn window_has_unsaved_changes(window: &Window, contents: &Contents) -> bool {
+    window
+        .buffer_ids()
+        .into_iter()
+        .any(|id| has_unsaved_changes(contents, Some(id)))
 }
 
 fn close_focused_window_or_quit(
@@ -422,7 +501,7 @@ fn get_mode_after_command(mode_before: &Option<Mode>) -> Mode {
 #[cfg(test)]
 mod test {
     use yeet_buffer::model::{
-        ansi::Ansi, undo::BufferChanged, viewport::ViewPort, CommandMode, Mode,
+        ansi::Ansi, undo::BufferChanged, viewport::ViewPort, BufferLine, CommandMode, Mode,
     };
     use yeet_keymap::message::{KeymapMessage, QuitMode};
 
@@ -560,6 +639,40 @@ mod test {
             }),
             _ => None,
         })
+    }
+
+    fn make_viewport(buffer_id: usize) -> ViewPort {
+        ViewPort {
+            buffer_id,
+            ..Default::default()
+        }
+    }
+
+    fn make_directory_window(buffer_id: usize) -> Window {
+        Window::Directory(
+            make_viewport(buffer_id),
+            make_viewport(buffer_id),
+            make_viewport(buffer_id),
+        )
+    }
+
+    fn insert_dirty_directory_buffer(contents: &mut Contents, buffer_id: usize) {
+        let mut dir_buffer = DirectoryBuffer::default();
+        dir_buffer.buffer.undo.add(
+            &Mode::Normal,
+            vec![BufferChanged::LineAdded(0, Ansi::new("test"))],
+        );
+        contents
+            .buffers
+            .insert(buffer_id, Buffer::Directory(dir_buffer));
+        contents.latest_buffer_id = contents.latest_buffer_id.max(buffer_id);
+    }
+
+    fn buffer_is_dirty(contents: &Contents, buffer_id: usize) -> bool {
+        match contents.buffers.get(&buffer_id) {
+            Some(Buffer::Directory(dir)) => !dir.buffer.undo.get_uncommited_changes().is_empty(),
+            _ => false,
+        }
     }
 
     #[test]
@@ -960,6 +1073,119 @@ mod test {
 
         assert_eq!(lines[0], ":tabs");
         assert!(lines.iter().any(|line| line.ends_with("(empty)")));
+    }
+
+    #[test]
+    fn tabc_blocks_on_dirty_buffer_in_current_tab() {
+        let mut app = App::default();
+        insert_dirty_directory_buffer(&mut app.contents, 1);
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        execute(&mut app, &mut state, "tabp");
+        assert_eq!(app.current_tab_id, 1);
+
+        let actions = execute(&mut app, &mut state, "tabc");
+
+        assert!(contains_error_message(&actions));
+        assert_eq!(app.tabs.len(), 2);
+        assert_eq!(app.current_tab_id, 1);
+    }
+
+    #[test]
+    fn tabo_blocks_on_dirty_buffer_in_other_tab() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        assert_eq!(app.current_tab_id, 2);
+        insert_dirty_directory_buffer(&mut app.contents, 1);
+
+        let actions = execute(&mut app, &mut state, "tabo");
+
+        assert!(contains_error_message(&actions));
+        assert_eq!(app.tabs.len(), 2);
+        assert_eq!(app.current_tab_id, 2);
+    }
+
+    #[test]
+    fn tabc_bang_closes_and_resets_dirty_buffers() {
+        let mut app = App::default();
+        insert_dirty_directory_buffer(&mut app.contents, 1);
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        execute(&mut app, &mut state, "tabp");
+        assert_eq!(app.current_tab_id, 1);
+
+        let actions = execute(&mut app, &mut state, "tabc!");
+
+        assert!(!contains_error_message(&actions));
+        assert_eq!(app.tabs.len(), 1);
+        assert_eq!(app.current_tab_id, 2);
+        assert!(!buffer_is_dirty(&app.contents, 1));
+    }
+
+    #[test]
+    fn tabo_bang_resets_closed_tabs_only() {
+        let mut app = App::default();
+        insert_dirty_directory_buffer(&mut app.contents, 1);
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        let current_buffer_id = app
+            .current_window()
+            .expect("test requires current tab")
+            .buffer_ids()
+            .into_iter()
+            .next()
+            .expect("current tab must have a buffer");
+        insert_dirty_directory_buffer(&mut app.contents, current_buffer_id);
+
+        let actions = execute(&mut app, &mut state, "tabo!");
+
+        assert!(!contains_error_message(&actions));
+        assert_eq!(app.tabs.len(), 1);
+        assert_eq!(app.current_tab_id, 2);
+        assert!(!buffer_is_dirty(&app.contents, 1));
+        assert!(buffer_is_dirty(&app.contents, current_buffer_id));
+    }
+
+    #[test]
+    fn tabc_bang_resets_shared_buffer_content() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        let buffer_id = 50;
+
+        let mut dir_buffer = DirectoryBuffer::default();
+        dir_buffer.buffer.lines = vec![BufferLine::from("initial")];
+        app.contents
+            .buffers
+            .insert(buffer_id, Buffer::Directory(dir_buffer));
+        app.contents.latest_buffer_id = app.contents.latest_buffer_id.max(buffer_id);
+
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = make_directory_window(buffer_id);
+
+        execute(&mut app, &mut state, "tabnew");
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = make_directory_window(buffer_id);
+
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get_mut(&buffer_id) {
+            dir.buffer.lines.push(BufferLine::from("added"));
+            dir.buffer.undo.add(
+                &Mode::Normal,
+                vec![BufferChanged::LineAdded(1, Ansi::new("added"))],
+            );
+        }
+
+        let actions = execute(&mut app, &mut state, "tabc!");
+
+        assert!(!contains_error_message(&actions));
+        assert_eq!(app.tabs.len(), 1);
+        assert_eq!(app.current_tab_id, 1);
+        if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&buffer_id) {
+            assert_eq!(dir.buffer.lines.len(), 1);
+            assert_eq!(dir.buffer.lines[0].content.to_string(), "initial");
+        } else {
+            panic!("buffer 50 should still exist and be a Directory");
+        }
     }
 
     #[test]
