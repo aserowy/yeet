@@ -152,16 +152,6 @@ impl Window {
         )
     }
 
-    pub fn get_height(&self) -> u16 {
-        match self {
-            Window::Horizontal { first, second, .. } => first.get_height() + second.get_height(),
-            Window::Vertical { first, second, .. } => first.get_height().max(second.get_height()),
-            // NOTE: +1 for status line
-            Window::Directory(_, vp, _) => vp.height + 1,
-            Window::Tasks(vp) => vp.height + 1,
-        }
-    }
-
     pub fn focused_viewport(&self) -> &ViewPort {
         match self {
             Window::Horizontal {
@@ -483,37 +473,6 @@ mod test {
     }
 
     #[test]
-    fn get_height_horizontal_sums_children() {
-        let tree = Window::Horizontal {
-            first: Box::new(Window::Tasks(ViewPort {
-                height: 10,
-                ..Default::default()
-            })),
-            second: Box::new(Window::Directory(
-                ViewPort::default(),
-                ViewPort {
-                    height: 15,
-                    ..Default::default()
-                },
-                ViewPort::default(),
-            )),
-            focus: SplitFocus::First,
-        };
-        // NOTE: +1 for each status line
-        assert_eq!(tree.get_height(), 27);
-    }
-
-    #[test]
-    fn get_height_tasks_returns_viewport_height() {
-        let w = Window::Tasks(ViewPort {
-            height: 7,
-            ..Default::default()
-        });
-        // NOTE: +1 for status line
-        assert_eq!(w.get_height(), 8);
-    }
-
-    #[test]
     fn focused_viewport_follows_split_focus_first() {
         let tree = Window::Horizontal {
             first: Box::new(Window::Directory(
@@ -582,23 +541,6 @@ mod test {
         assert!(ids.contains(&2));
         assert!(ids.contains(&3));
         assert!(ids.contains(&4));
-    }
-
-    #[test]
-    fn get_height_vertical_returns_max_of_children() {
-        let tree = Window::Vertical {
-            first: Box::new(Window::Tasks(ViewPort {
-                height: 10,
-                ..Default::default()
-            })),
-            second: Box::new(Window::Tasks(ViewPort {
-                height: 15,
-                ..Default::default()
-            })),
-            focus: SplitFocus::First,
-        };
-        // height = max(10+1, 15+1) = 16
-        assert_eq!(tree.get_height(), 16);
     }
 
     #[test]

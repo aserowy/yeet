@@ -28,20 +28,6 @@ pub fn update_viewport_by_direction(
     update::viewport::update_by_direction(viewport, buffer, direction);
 }
 
-pub fn view(
-    viewport: &ViewPort,
-    mode: &Mode,
-    buffer: &TextBuffer,
-    frame: &mut Frame,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-) {
-    view::view(
-        viewport,
-        mode,
-        buffer,
-        frame,
-        horizontal_offset,
-        vertical_offset,
-    )
+pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
+    view::view(viewport, mode, buffer, frame)
 }

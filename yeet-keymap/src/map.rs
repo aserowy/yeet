@@ -118,6 +118,30 @@ impl Default for KeyMap {
                 ),
                 (
                     vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('t'), vec![]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "tabn".to_owned(),
+                        )),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
+                        Key::new(KeyCode::from_char('g'), vec![]),
+                        Key::new(KeyCode::from_char('t'), vec![KeyModifier::Shift]),
+                    ],
+                    Binding {
+                        kind: BindingKind::Message(KeymapMessage::ExecuteCommandString(
+                            "tabp".to_owned(),
+                        )),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    vec![
                         Key::new(KeyCode::from_char('"'), vec![]),
                         Key::new(KeyCode::from_char('p'), vec![]),
                     ],

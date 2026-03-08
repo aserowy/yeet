@@ -12,20 +12,13 @@ use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, Tex
 mod line;
 mod prefix;
 
-pub fn view(
-    viewport: &ViewPort,
-    mode: &Mode,
-    buffer: &TextBuffer,
-    frame: &mut Frame,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-) {
+pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
     let rendered = get_rendered_lines(viewport, buffer);
     let styled = get_styled_lines(viewport, mode, &viewport.cursor, rendered);
 
     let rect = Rect {
-        x: horizontal_offset,
-        y: vertical_offset,
+        x: viewport.x,
+        y: viewport.y,
         width: viewport.width,
         height: viewport.height,
     };

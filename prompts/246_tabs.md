@@ -5,8 +5,8 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
 1. [Prompt 1: Tab data model scaffolding](#prompt-1-tab-data-model-scaffolding) — `done`
 2. [Prompt 2: Current-tab window plumbing](#prompt-2-current-tab-window-plumbing) — `done`
 3. [Prompt 3: Tab bar rendering + layout offset](#prompt-3-tab-bar-rendering--layout-offset) — `done`
-4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `planned`
-5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `planned`
+4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `done`
+5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `done`
 6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `planned`
 7. [Prompt 7: :tabdo execution across tabs](#prompt-7-tabdo-execution-across-tabs) — `planned`
 
@@ -271,7 +271,7 @@ buffer::view(&model.state.modes.current, &model.app, frame, 0, vertical_offset);
 
 **Goal**: Implement Vim-like tab commands for creating, closing, and switching tabs.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Users need command-driven control over tabs, matching Vim behavior.
 
@@ -356,7 +356,7 @@ pub fn next_tab_id(current: usize, ordered: &[usize]) -> usize {
 
 **Goal**: Add Navigation-mode keymaps for `gt` (next tab) and `gT` (previous tab).
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Vim users expect `gt/gT` for tab navigation.
 
@@ -381,7 +381,7 @@ pub fn next_tab_id(current: usize, ordered: &[usize]) -> usize {
 1. **Bindings**:
    - Add `g` `t` to Navigation mode mapping → `ExecuteCommandString("tabn")`.
    - Add `g` `T` to Navigation mode mapping → `ExecuteCommandString("tabp")`.
-2. **Mode scope**: ensure no `gt/gT` mappings are added to Normal mode.
+2. **Mode scope**: ensure no `gt/gT` mappings are added to Navigation mode.
 3. **Tests**:
    - Add keymap tests asserting Navigation mode resolves `gt` and `gT` to the expected messages.
    - Add a negative test that Normal mode does not resolve `gt/gT` (if patterns exist).

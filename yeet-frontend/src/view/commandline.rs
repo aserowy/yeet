@@ -3,24 +3,12 @@ use yeet_buffer::{model::Mode, view as buffer_view};
 
 use crate::{error::AppError, model::CommandLine};
 
-pub fn view(
-    commandline: &CommandLine,
-    mode: &Mode,
-    frame: &mut Frame,
-    vertical_offset: u16,
-) -> Result<(), AppError> {
-    buffer_view(
-        &commandline.viewport,
-        mode,
-        &commandline.buffer,
-        frame,
-        0,
-        vertical_offset,
-    );
+pub fn view(commandline: &CommandLine, mode: &Mode, frame: &mut Frame) -> Result<(), AppError> {
+    buffer_view(&commandline.viewport, mode, &commandline.buffer, frame);
 
     let rect = Rect {
         x: commandline.viewport.width,
-        y: vertical_offset,
+        y: commandline.viewport.y,
         width: u16::try_from(commandline.key_sequence.chars().count())?,
         height: commandline.viewport.height,
     };

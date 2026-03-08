@@ -37,6 +37,7 @@ mod search;
 mod selection;
 mod settings;
 mod sign;
+mod tab;
 mod task;
 mod viewport;
 pub mod window;

@@ -8,7 +8,7 @@ use crate::{
     event::Message,
     model::{App, Buffer, Contents, SplitFocus, State, Window},
     task::Task,
-    update::app,
+    update::{app, tab},
 };
 
 mod file;
@@ -210,6 +210,42 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             }
         }
         ("tl", "") => print::tasks(&state.tasks),
+        ("tabnew", "") => {
+            let actions = match tab::tabnew_target_path(app) {
+                Ok(path) => tab::create_tab(app, path.as_path()),
+                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+            };
+            add_change_mode(mode_before, Mode::Navigation, actions)
+        }
+        ("tabc", "") => {
+            if app.tabs.len() <= 1 {
+                return vec![action::emit_keymap(KeymapMessage::Quit(
+                    QuitMode::FailOnRunningTasks,
+                ))];
+            }
+            tab::close_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabo", "") => {
+            tab::close_other_tabs(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabfir", "") => {
+            tab::first_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabl", "") => {
+            tab::last_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabn", "") => {
+            tab::next_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
+        ("tabp", "") => {
+            tab::previous_tab(app);
+            add_change_mode(mode_before, Mode::Navigation, Vec::new())
+        }
         ("topen", "") => {
             add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
         }
@@ -476,6 +512,17 @@ mod test {
                 msgs.iter().any(
                     |m| matches!(m, Message::Error(s) if s.contains("No write since last change")),
                 )
+            } else {
+                false
+            }
+        })
+    }
+
+    fn contains_command_error(actions: &[Action], needle: &str) -> bool {
+        actions.iter().any(|a| {
+            if let Action::EmitMessages(msgs) = a {
+                msgs.iter()
+                    .any(|m| matches!(m, Message::Error(s) if s.contains(needle)))
             } else {
                 false
             }
@@ -798,6 +845,76 @@ mod test {
         assert!(super::has_unsaved_changes(&contents, Some(2)));
         // Checking all (None) should return true
         assert!(super::has_unsaved_changes(&contents, None));
+    }
+
+    #[test]
+    fn tabnew_creates_new_tab_and_sets_current() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+
+        let actions = execute(&mut app, &mut state, "tabnew");
+
+        assert_eq!(app.tabs.len(), 2);
+        assert!(app.tabs.contains_key(&2));
+        assert_eq!(app.current_tab_id, 2);
+        assert!(actions.iter().any(|action| match action {
+            Action::EmitMessages(messages) => messages.iter().any(|message| {
+                matches!(message, Message::Keymap(KeymapMessage::NavigateToPath(_)))
+            }),
+            _ => false,
+        }));
+    }
+
+    #[test]
+    fn tabc_on_last_tab_emits_quit() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+
+        let actions = execute(&mut app, &mut state, "tabc");
+
+        assert!(contains_quit_action(
+            &actions,
+            &QuitMode::FailOnRunningTasks
+        ));
+    }
+
+    #[test]
+    fn tabn_and_tabp_wrap_across_tabs() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        execute(&mut app, &mut state, "tabnew");
+        execute(&mut app, &mut state, "tabnew");
+        assert_eq!(app.current_tab_id, 3);
+
+        let _ = execute(&mut app, &mut state, "tabn");
+        assert_eq!(app.current_tab_id, 1);
+
+        let _ = execute(&mut app, &mut state, "tabp");
+        assert_eq!(app.current_tab_id, 3);
+    }
+
+    #[test]
+    fn tabnew_uses_home_when_tasks_focused() {
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Tasks(ViewPort::default());
+        let mut state = make_state_with_command_mode();
+
+        let actions = execute(&mut app, &mut state, "tabnew");
+
+        if dirs::home_dir().is_some() {
+            assert!(actions.iter().any(|action| match action {
+                Action::EmitMessages(messages) => messages.iter().any(|message| {
+                    matches!(message, Message::Keymap(KeymapMessage::NavigateToPath(_)))
+                }),
+                _ => false,
+            }));
+        } else {
+            assert!(contains_command_error(
+                &actions,
+                "Tabnew failed. Target path could not be resolved."
+            ));
+        }
     }
 
     #[test]

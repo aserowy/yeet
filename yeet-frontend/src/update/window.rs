@@ -22,7 +22,7 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
         .split(area);
 
     let window = app.current_window_mut()?;
-    set_buffer_vp(window, main[0 + index_offset])?;
+    set_buffer_vp(window, main[index_offset])?;
     set_commandline_vp(&mut app.commandline, main[1 + index_offset])?;
 
     Ok(())
@@ -88,6 +88,8 @@ fn set_commandline_vp(
     commandline: &mut crate::model::CommandLine,
     rect: Rect,
 ) -> Result<(), AppError> {
+    commandline.viewport.x = rect.x;
+    commandline.viewport.y = rect.y;
     commandline.viewport.height = rect.height;
 
     let key_sequence_offset = u16::try_from(commandline.key_sequence.chars().count())?;
@@ -237,34 +239,6 @@ mod test {
     }
 
     #[test]
-    fn get_rendered_height_horizontal_returns_full_area() {
-        let mut tree = Window::Horizontal {
-            first: Box::new(Window::Directory(
-                ViewPort::default(),
-                ViewPort::default(),
-                ViewPort::default(),
-            )),
-            second: Box::new(Window::Tasks(ViewPort::default())),
-            focus: SplitFocus::First,
-        };
-
-        let area = Rect {
-            x: 0,
-            y: 0,
-            width: 80,
-            height: 40,
-        };
-
-        set_buffer_vp(&mut tree, area).unwrap();
-
-        let rendered_height = tree.get_height();
-        assert_eq!(
-            rendered_height, area.height,
-            "horizontal rendered height should equal area height"
-        );
-    }
-
-    #[test]
     fn set_buffer_vp_tasks_sets_dimensions() {
         let mut window = Window::Tasks(ViewPort::default());
         let area = Rect {
@@ -367,30 +341,6 @@ mod test {
             }
             _ => panic!("expected Vertical"),
         }
-    }
-
-    #[test]
-    fn get_rendered_height_vertical_returns_area_height() {
-        let mut tree = Window::Vertical {
-            first: Box::new(Window::Tasks(ViewPort::default())),
-            second: Box::new(Window::Tasks(ViewPort::default())),
-            focus: SplitFocus::First,
-        };
-
-        let area = Rect {
-            x: 0,
-            y: 0,
-            width: 80,
-            height: 40,
-        };
-
-        set_buffer_vp(&mut tree, area).unwrap();
-
-        let rendered_height = tree.get_height();
-        assert_eq!(
-            rendered_height, area.height,
-            "vertical rendered height should equal area height"
-        );
     }
 
     #[test]

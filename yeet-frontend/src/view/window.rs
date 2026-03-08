@@ -4,18 +4,11 @@ use crate::{error::AppError, model::Model};
 
 use super::{buffer, tabbar};
 
-pub fn view(model: &Model, frame: &mut Frame) -> Result<u16, AppError> {
-    let vertical_offset = tabbar::render(&model.app, frame);
-    buffer::view(
-        &model.state.modes.current,
-        &model.app,
-        frame,
-        0,
-        vertical_offset,
-    );
+pub fn view(model: &Model, frame: &mut Frame) -> Result<(), AppError> {
+    tabbar::render(&model.app, frame);
+    buffer::view(&model.state.modes.current, &model.app, frame);
 
-    let window = model.app.current_window()?;
-    Ok(window.get_height().saturating_add(vertical_offset))
+    Ok(())
 }
 
 #[cfg(test)]
@@ -68,34 +61,51 @@ mod test {
     }
 
     #[test]
-    fn view_returns_window_height_without_tabbar() {
+    fn view_renders_without_tabbar() {
         let model = make_model(1);
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("create terminal");
-        let mut rendered_height = None;
+        let mut result = None;
 
         terminal
             .draw(|frame| {
-                rendered_height = Some(view(&model, frame).expect("render view"));
+                result = Some(view(&model, frame));
             })
             .expect("draw frame");
 
-        assert_eq!(rendered_height, Some(11));
+        assert!(matches!(result, Some(Ok(()))));
+
+        let buffer = terminal.backend().buffer();
+        let row = read_row(buffer, 0);
+        assert!(row.trim().is_empty(), "expected no tabbar for single tab");
     }
 
     #[test]
-    fn view_adds_tabbar_height_when_multiple_tabs() {
+    fn view_renders_with_tabbar() {
         let model = make_model(2);
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("create terminal");
-        let mut rendered_height = None;
+        let mut result = None;
 
         terminal
             .draw(|frame| {
-                rendered_height = Some(view(&model, frame).expect("render view"));
+                result = Some(view(&model, frame));
             })
             .expect("draw frame");
 
-        assert_eq!(rendered_height, Some(12));
+        assert!(matches!(result, Some(Ok(()))));
+
+        let buffer = terminal.backend().buffer();
+        let row = read_row(buffer, 0);
+        assert!(row.contains("1:"), "expected tabbar labels");
+    }
+
+    fn read_row(buffer: &ratatui::buffer::Buffer, y: u16) -> String {
+        let mut row = String::new();
+        for x in 0..buffer.area.width {
+            let cell = buffer.cell((x, y)).expect("cell exists");
+            row.push_str(cell.symbol());
+        }
+        row
     }
 }

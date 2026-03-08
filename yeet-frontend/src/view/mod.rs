@@ -10,14 +10,9 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
     terminal.draw(|frame| {
         tracing::debug!("Rendering with area: {}", frame.area());
 
-        let vertical_offset = window::view(model, frame).expect("Failed to render window view");
+        window::view(model, frame).expect("Failed to render window view");
 
-        commandline::view(
-            &model.app.commandline,
-            &model.state.modes.current,
-            frame,
-            vertical_offset,
-        )
-        .expect("Failed to render commandline view");
+        commandline::view(&model.app.commandline, &model.state.modes.current, frame)
+            .expect("Failed to render commandline view");
     })
 }
