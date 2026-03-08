@@ -29,7 +29,8 @@ pub struct Model {
 pub struct App {
     pub commandline: CommandLine,
     pub contents: Contents,
-    pub window: Window,
+    pub tabs: HashMap<usize, Window>,
+    pub current_tab_id: usize,
 }
 
 impl Default for App {
@@ -37,14 +38,63 @@ impl Default for App {
         let mut buffers = HashMap::new();
         buffers.insert(1, Buffer::Empty);
 
+        let window = Window::create(1, 1, 1);
+        let mut tabs = HashMap::new();
+        tabs.insert(1, window);
+
         Self {
             commandline: Default::default(),
             contents: Contents {
                 buffers,
                 latest_buffer_id: 1,
             },
-            window: Window::create(1, 1, 1),
+            tabs,
+            current_tab_id: 1,
         }
+    }
+}
+
+impl App {
+    pub fn current_window(&self) -> Result<&Window, AppError> {
+        match self.tabs.get(&self.current_tab_id) {
+            Some(window) => Ok(window),
+            None => {
+                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                tracing::error!("Failed to resolve current window: {}", err);
+                Err(err)
+            }
+        }
+    }
+
+    pub fn current_window_mut(&mut self) -> Result<&mut Window, AppError> {
+        match self.tabs.get_mut(&self.current_tab_id) {
+            Some(window) => Ok(window),
+            None => {
+                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                tracing::error!("Failed to resolve current window: {}", err);
+                Err(err)
+            }
+        }
+    }
+
+    pub fn current_window_and_contents_mut(
+        &mut self,
+    ) -> Result<(&mut Window, &mut Contents), AppError> {
+        let App {
+            contents,
+            tabs,
+            current_tab_id,
+            ..
+        } = self;
+        let window = match tabs.get_mut(current_tab_id) {
+            Some(window) => window,
+            None => {
+                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                tracing::error!("Failed to resolve current window: {}", err);
+                return Err(err);
+            }
+        };
+        Ok((window, contents))
     }
 }
 
@@ -102,17 +152,13 @@ impl Window {
         )
     }
 
-    pub fn get_height(&self) -> Result<u16, AppError> {
+    pub fn get_height(&self) -> u16 {
         match self {
-            Window::Horizontal { first, second, .. } => {
-                Ok(first.get_height()? + second.get_height()?)
-            }
-            Window::Vertical { first, second, .. } => {
-                Ok(first.get_height()?.max(second.get_height()?))
-            }
+            Window::Horizontal { first, second, .. } => first.get_height() + second.get_height(),
+            Window::Vertical { first, second, .. } => first.get_height().max(second.get_height()),
             // NOTE: +1 for status line
-            Window::Directory(_, vp, _) => Ok(vp.height + 1),
-            Window::Tasks(vp) => Ok(vp.height + 1),
+            Window::Directory(_, vp, _) => vp.height + 1,
+            Window::Tasks(vp) => vp.height + 1,
         }
     }
 
@@ -389,6 +435,14 @@ mod test {
     }
 
     #[test]
+    fn app_default_sets_current_tab() {
+        let app = App::default();
+        assert_eq!(app.current_tab_id, 1);
+        assert_eq!(app.tabs.len(), 1);
+        assert!(matches!(app.tabs.get(&1), Some(Window::Directory(_, _, _))));
+    }
+
+    #[test]
     fn window_horizontal_struct_variant_construction() {
         let tree = Window::Horizontal {
             first: Box::new(Window::Directory(
@@ -446,7 +500,7 @@ mod test {
             focus: SplitFocus::First,
         };
         // NOTE: +1 for each status line
-        assert_eq!(tree.get_height().unwrap(), 27);
+        assert_eq!(tree.get_height(), 27);
     }
 
     #[test]
@@ -456,7 +510,7 @@ mod test {
             ..Default::default()
         });
         // NOTE: +1 for status line
-        assert_eq!(w.get_height().unwrap(), 8);
+        assert_eq!(w.get_height(), 8);
     }
 
     #[test]
@@ -544,7 +598,7 @@ mod test {
             focus: SplitFocus::First,
         };
         // height = max(10+1, 15+1) = 16
-        assert_eq!(tree.get_height().unwrap(), 16);
+        assert_eq!(tree.get_height(), 16);
     }
 
     #[test]

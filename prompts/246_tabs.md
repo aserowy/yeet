@@ -2,7 +2,7 @@
 
 This feature adds Vim-like tabs to yeet, including a tab bar, commands for creating/closing/navigating tabs, Navigation-mode keymaps for `gt`/`gT`, and a `:tabs` listing plus `:tabdo` for bulk execution. The implementation is split into sequential prompts, each leaving the program in a runnable and functional state.
 
-1. [Prompt 1: Tab data model scaffolding](#prompt-1-tab-data-model-scaffolding) — `planned`
+1. [Prompt 1: Tab data model scaffolding](#prompt-1-tab-data-model-scaffolding) — `done`
 2. [Prompt 2: Current-tab window plumbing](#prompt-2-current-tab-window-plumbing) — `planned`
 3. [Prompt 3: Tab bar rendering + layout offset](#prompt-3-tab-bar-rendering--layout-offset) — `planned`
 4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `planned`
@@ -16,7 +16,7 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
 
 **Goal**: Introduce tab state in the frontend model and remove the legacy `app.window` field.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: Tabs are a top-level navigation concept like in Vim. We need a durable model foundation before routing layout, rendering, and commands through it.
 
@@ -51,7 +51,7 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
    - Set `current_tab_id = 1`.
 4. **Accessors**:
    - Add `current_window()` and `current_window_mut()` that read from `tabs` via `current_tab_id`.
-   - Use `expect(...)` with a clear message if the id is missing.
+   - Return `Result<&Window, AppError>` / `Result<&mut Window, AppError>` instead of `expect(...)`.
 5. **Tests**:
    - Add a unit test that asserts `App::default()` has `current_tab_id == 1` and `tabs.len() == 1`.
    - Assert that `tabs[&1]` is the default `Window` type (e.g., `Window::Directory`).
@@ -87,16 +87,16 @@ pub struct App {
 }
 
 impl App {
-    pub fn current_window(&self) -> &Window {
+    pub fn current_window(&self) -> Result<&Window, AppError> {
         self.tabs
             .get(&self.current_tab_id)
-            .expect("current_tab_id missing from tabs")
+            .ok_or_else(|| AppError::InvalidState("current_tab_id missing from tabs".to_string()))
     }
 
-    pub fn current_window_mut(&mut self) -> &mut Window {
+    pub fn current_window_mut(&mut self) -> Result<&mut Window, AppError> {
         self.tabs
             .get_mut(&self.current_tab_id)
-            .expect("current_tab_id missing from tabs")
+            .ok_or_else(|| AppError::InvalidState("current_tab_id missing from tabs".to_string()))
     }
 }
 ```

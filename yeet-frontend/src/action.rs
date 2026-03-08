@@ -101,7 +101,11 @@ async fn execute(
     };
 
     let mut remaining_actions = vec![];
-    let preview_id = app::get_focused_directory_buffer_ids(&model.app.window).map(|(_, _, id)| id);
+    let preview_id = model
+        .app
+        .current_window()
+        .ok()
+        .and_then(|window| app::get_focused_directory_buffer_ids(window).map(|(_, _, id)| id));
     for action in actions.into_iter() {
         if is_preview != is_preview_action(&action) {
             remaining_actions.push(action);
@@ -117,16 +121,16 @@ async fn execute(
             Action::Load(path, selection) => {
                 if path.is_dir() {
                     emitter.run(Task::EnumerateDirectory(path, selection.clone()));
-                } else if let Some((_, _, preview_vp)) =
-                    app::get_focused_directory_viewports(&model.app.window)
-                {
-                    let rect = Rect {
-                        x: 0,
-                        y: 0,
-                        width: preview_vp.width,
-                        height: preview_vp.height,
-                    };
-                    emitter.run(Task::LoadPreview(path.clone(), rect));
+                } else if let Ok(window) = model.app.current_window() {
+                    if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports(window) {
+                        let rect = Rect {
+                            x: 0,
+                            y: 0,
+                            width: preview_vp.width,
+                            height: preview_vp.height,
+                        };
+                        emitter.run(Task::LoadPreview(path.clone(), rect));
+                    }
                 }
             }
             Action::ModeChanged => {

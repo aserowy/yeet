@@ -24,7 +24,10 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
     }
 
     if !to.is_command() && to != &Mode::Navigation {
-        let vp = app.window.focused_viewport();
+        let vp = match app.current_window() {
+            Ok(window) => window.focused_viewport(),
+            Err(_) => return Vec::new(),
+        };
         if matches!(
             app.contents.buffers.get(&vp.buffer_id),
             Some(Buffer::Tasks(_))
@@ -43,7 +46,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (vp, _buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return vec![],
+            };
+            let (vp, _buffer) = app::get_focused_current_mut(window, contents);
             vp.hide_cursor = true;
 
             vec![]
@@ -59,7 +66,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return vec![],
+            };
+            let (vp, buffer) = app::get_focused_current_mut(window, contents);
             if let Buffer::Directory(dir) = buffer {
                 vp.hide_cursor = false;
 
@@ -74,7 +85,11 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
-            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return vec![],
+            };
+            let (vp, buffer) = app::get_focused_current_mut(window, contents);
             if let Buffer::Directory(dir) = buffer {
                 // TODO: handle file operations: show pending with gray, refresh on operation success
                 // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
@@ -88,15 +103,18 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 );
             }
 
-            save::all(
-                &mut app.window,
-                &mut app.contents,
-                &mut state.junk,
-                &state.modes.current,
-            )
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return vec![],
+            };
+            save::all(window, contents, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return vec![],
+            };
+            let (vp, buffer) = app::get_focused_current_mut(window, contents);
             if let Buffer::Directory(dir) = buffer {
                 vp.hide_cursor = false;
 
@@ -258,8 +276,9 @@ mod test {
         let mut app = crate::model::App::default();
         let mut state = crate::model::State::default();
 
+        let window = app.current_window().expect("test requires current tab");
         let (_, current_id, _) =
-            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
+            crate::update::app::get_focused_directory_buffer_ids(window).unwrap();
         app.contents
             .buffers
             .insert(current_id, Buffer::Directory(DirectoryBuffer::default()));

@@ -14,6 +14,8 @@ pub enum AppError {
     FileOperationFailed(#[from] std::io::Error),
     #[error("Invalid mime type resolved")]
     InvalidMimeType,
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
     #[error("Path target is invalid")]
     InvalidTargetPath,
     #[error("Loading navigation history failed")]

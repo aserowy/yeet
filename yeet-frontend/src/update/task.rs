@@ -132,7 +132,8 @@ mod test {
     }
 
     fn get_task_line_count(app: &App) -> usize {
-        let vp = app.window.focused_viewport();
+        let window = app.current_window().expect("test requires current tab");
+        let vp = window.focused_viewport();
         match app.contents.buffers.get(&vp.buffer_id) {
             Some(Buffer::Tasks(tb)) => tb.buffer.lines.len(),
             _ => panic!("expected Buffer::Tasks"),
@@ -140,7 +141,8 @@ mod test {
     }
 
     fn get_task_line_content(app: &App, index: usize) -> String {
-        let vp = app.window.focused_viewport();
+        let window = app.current_window().expect("test requires current tab");
+        let vp = window.focused_viewport();
         match app.contents.buffers.get(&vp.buffer_id) {
             Some(Buffer::Tasks(tb)) => tb.buffer.lines[index].content.to_stripped_string(),
             _ => panic!("expected Buffer::Tasks"),
@@ -156,10 +158,13 @@ mod test {
         assert_eq!(get_task_line_count(&app), 2);
 
         let mut tasks = tasks;
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
         add(
             &mut tasks,
-            &mut app.window,
-            &mut app.contents,
+            window,
+            contents,
             "grep-3".to_string(),
             CancellationToken::new(),
         );
@@ -176,12 +181,10 @@ mod test {
         assert_eq!(get_task_line_count(&app), 2);
 
         let mut tasks = tasks;
-        remove(
-            &mut tasks,
-            &mut app.window,
-            &mut app.contents,
-            "rg-1".to_string(),
-        );
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        remove(&mut tasks, window, contents, "rg-1".to_string());
 
         assert_eq!(get_task_line_count(&app), 1);
         assert_eq!(get_task_line_content(&app, 0), "5    fd bar");
@@ -194,42 +197,44 @@ mod test {
         open(&mut app, &tasks);
 
         // Set cursor to last line (index 1)
-        app.window.focused_viewport_mut().cursor.vertical_index = 1;
+        let window = app.current_window_mut().expect("test requires current tab");
+        window.focused_viewport_mut().cursor.vertical_index = 1;
 
         let mut tasks = tasks;
         // Remove both tasks
-        remove(
-            &mut tasks,
-            &mut app.window,
-            &mut app.contents,
-            "rg-1".to_string(),
-        );
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        remove(&mut tasks, window, contents, "rg-1".to_string());
 
         // Cursor should be clamped to 0 (only 1 line left)
-        assert_eq!(app.window.focused_viewport().cursor.vertical_index, 0);
+        let window = app.current_window().expect("test requires current tab");
+        assert_eq!(window.focused_viewport().cursor.vertical_index, 0);
 
-        remove(
-            &mut tasks,
-            &mut app.window,
-            &mut app.contents,
-            "fd-2".to_string(),
-        );
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        remove(&mut tasks, window, contents, "fd-2".to_string());
 
         // Buffer is empty, cursor clamped to 0
         assert_eq!(get_task_line_count(&app), 0);
-        assert_eq!(app.window.focused_viewport().cursor.vertical_index, 0);
+        let window = app.current_window().expect("test requires current tab");
+        assert_eq!(window.focused_viewport().cursor.vertical_index, 0);
     }
 
     #[test]
     fn add_without_task_window_does_not_panic() {
         let mut tasks = Tasks::default();
         let mut app = App::default();
-        // No :topen — app.window is a plain Directory
+        // No :topen — current tab is a plain Directory
 
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
         add(
             &mut tasks,
-            &mut app.window,
-            &mut app.contents,
+            window,
+            contents,
             "rg-1".to_string(),
             CancellationToken::new(),
         );
@@ -241,14 +246,12 @@ mod test {
     fn remove_without_task_window_does_not_panic() {
         let mut tasks = make_tasks_2();
         let mut app = App::default();
-        // No :topen — app.window is a plain Directory
+        // No :topen — current tab is a plain Directory
 
-        remove(
-            &mut tasks,
-            &mut app.window,
-            &mut app.contents,
-            "rg-1".to_string(),
-        );
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        remove(&mut tasks, window, contents, "rg-1".to_string());
         // No panic — task is removed
         assert_eq!(tasks.running.len(), 1);
     }
@@ -263,19 +266,24 @@ mod test {
         open(&mut app, &tasks);
 
         // Place cursor on task id=5 (index 1 in sorted [1, 5])
-        app.window.focused_viewport_mut().cursor.vertical_index = 1;
+        let window = app.current_window_mut().expect("test requires current tab");
+        window.focused_viewport_mut().cursor.vertical_index = 1;
 
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
         add(
             &mut tasks,
-            &mut app.window,
-            &mut app.contents,
+            window,
+            contents,
             "grep-3".to_string(),
             CancellationToken::new(),
         );
 
         // New sorted order: [1, 2, 5]. id=5 is now at index 2.
         assert_eq!(get_task_line_count(&app), 3);
-        assert_eq!(app.window.focused_viewport().cursor.vertical_index, 2);
+        let window = app.current_window().expect("test requires current tab");
+        assert_eq!(window.focused_viewport().cursor.vertical_index, 2);
         assert_eq!(get_task_line_content(&app, 2), "5    fd bar");
     }
 
@@ -289,18 +297,18 @@ mod test {
         open(&mut app, &tasks);
 
         // Place cursor on task id=10 (index 2 in sorted [1, 5, 10])
-        app.window.focused_viewport_mut().cursor.vertical_index = 2;
+        let window = app.current_window_mut().expect("test requires current tab");
+        window.focused_viewport_mut().cursor.vertical_index = 2;
 
-        remove(
-            &mut tasks,
-            &mut app.window,
-            &mut app.contents,
-            "rg-1".to_string(),
-        );
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        remove(&mut tasks, window, contents, "rg-1".to_string());
 
         // New sorted order: [5, 10]. id=10 is now at index 1.
         assert_eq!(get_task_line_count(&app), 2);
-        assert_eq!(app.window.focused_viewport().cursor.vertical_index, 1);
+        let window = app.current_window().expect("test requires current tab");
+        assert_eq!(window.focused_viewport().cursor.vertical_index, 1);
         assert_eq!(get_task_line_content(&app, 1), "10   grep baz");
     }
 }

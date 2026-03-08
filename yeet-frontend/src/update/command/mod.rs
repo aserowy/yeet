@@ -141,7 +141,10 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             )])],
         ),
         ("q", "") => {
-            let buffer_id = app.window.focused_viewport().buffer_id;
+            let buffer_id = match app.current_window() {
+                Ok(window) => window.focused_viewport().buffer_id,
+                Err(_) => return Vec::new(),
+            };
             if has_unsaved_changes(&app.contents, Some(buffer_id)) {
                 return print_error(
                     "No write since last change (add ! to override)",
@@ -261,12 +264,14 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 }
 
 fn get_current_path(app: &App) -> Option<&Path> {
-    let (_, current_id, _) = app::get_focused_directory_buffer_ids(&app.window)?;
+    let window = app.current_window().ok()?;
+    let (_, current_id, _) = app::get_focused_directory_buffer_ids(window)?;
     app::get_buffer_path(app, current_id)
 }
 
 fn get_preview_path(app: &App) -> Option<&Path> {
-    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&app.window)?;
+    let window = app.current_window().ok()?;
+    let (_, _, preview_id) = app::get_focused_directory_buffer_ids(window)?;
     app::get_buffer_path(app, preview_id)
 }
 
@@ -322,7 +327,11 @@ fn close_focused_window_or_quit(
     mode_before: Mode,
     discard_changes: bool,
 ) -> Vec<Action> {
-    let old_window = mem::take(&mut app.window);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let old_window = mem::take(window);
     match old_window {
         Window::Horizontal {
             first,
@@ -340,14 +349,14 @@ fn close_focused_window_or_quit(
             };
 
             if discard_changes {
-                reset_unsaved_changes(&dropped, &mut app.contents);
+                reset_unsaved_changes(&dropped, contents);
             }
 
-            app.window = kept;
+            *window = kept;
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         other => {
-            app.window = other;
+            *window = other;
             vec![action::emit_keymap(KeymapMessage::Quit(quit_mode))]
         }
     }
@@ -402,8 +411,9 @@ mod test {
             .buffers
             .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
 
-        let old_window = std::mem::take(&mut app.window);
-        app.window = Window::Horizontal {
+        let window = app.current_window_mut().expect("test requires current tab");
+        let old_window = std::mem::take(window);
+        *window = Window::Horizontal {
             first: Box::new(old_window),
             second: Box::new(Window::Tasks(ViewPort {
                 buffer_id: tasks_buffer_id,
@@ -435,8 +445,9 @@ mod test {
             .buffers
             .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
 
-        let old_window = std::mem::take(&mut app.window);
-        app.window = Window::Horizontal {
+        let window = app.current_window_mut().expect("test requires current tab");
+        let old_window = std::mem::take(window);
+        *window = Window::Horizontal {
             first: Box::new(old_window),
             second: Box::new(Window::Tasks(ViewPort {
                 buffer_id: tasks_buffer_id,
@@ -514,7 +525,8 @@ mod test {
 
         let actions = execute(&mut app, &mut state, "q");
 
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
         assert!(!contains_quit_action(
             &actions,
             &QuitMode::FailOnRunningTasks
@@ -528,7 +540,8 @@ mod test {
 
         let actions = execute(&mut app, &mut state, "q");
 
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
         assert!(
             contains_change_mode(
                 &actions,
@@ -544,14 +557,16 @@ mod test {
     fn q_on_horizontal_focus_first_closes_directory_keeps_tasks() {
         let mut app = make_app_with_horizontal_split();
         // Switch focus to First (directory)
-        if let Window::Horizontal { focus, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
         let mut state = make_state_with_command_mode();
 
         let actions = execute(&mut app, &mut state, "q");
 
-        assert!(matches!(app.window, Window::Tasks(_)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Tasks(_)));
         assert!(!contains_quit_action(
             &actions,
             &QuitMode::FailOnRunningTasks
@@ -575,7 +590,8 @@ mod test {
     fn q_with_unsaved_changes_prints_error() {
         let mut app = make_app_with_unsaved_changes();
         // Point the focused viewport (current/middle) at the dirty buffer (id 50)
-        if let Window::Directory(_, current_vp, _) = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Directory(_, current_vp, _) = window {
             current_vp.buffer_id = 50;
         }
         let mut state = make_state_with_command_mode();
@@ -584,7 +600,8 @@ mod test {
 
         assert!(contains_error_message(&actions));
         // Window should remain unchanged
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
@@ -592,13 +609,15 @@ mod test {
         // Unsaved changes in buffer 50 (directory in first child).
         // Focus is switched to First (directory) so :q checks that buffer.
         let mut app = make_app_with_unsaved_changes_and_split();
-        if let Window::Horizontal { focus, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
         // The focused directory viewport points at buffer_id 1 (from App::default),
         // but the dirty buffer is at id 50. We need to make the focused viewport
         // point at the dirty buffer to trigger the check.
-        if let Window::Horizontal { first, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { first, .. } = window {
             if let Window::Directory(_, current_vp, _) = first.as_mut() {
                 current_vp.buffer_id = 50;
             }
@@ -609,7 +628,8 @@ mod test {
 
         assert!(contains_error_message(&actions));
         // Window should remain a Horizontal split
-        assert!(matches!(app.window, Window::Horizontal { .. }));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Horizontal { .. }));
     }
 
     #[test]
@@ -621,7 +641,8 @@ mod test {
 
         assert!(!contains_error_message(&actions));
         // Should have collapsed the split
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
@@ -687,7 +708,8 @@ mod test {
         let mut state = make_state_with_command_mode();
 
         // Collect buffer ids from the first child (directory) before closing
-        let dir_buffer_ids: Vec<usize> = match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        let dir_buffer_ids: Vec<usize> = match window {
             Window::Horizontal { first, .. } => first.buffer_ids().into_iter().collect(),
             _ => panic!("expected Horizontal"),
         };
@@ -788,7 +810,8 @@ mod test {
         let actions = execute(&mut app, &mut state, "q");
 
         assert!(!contains_error_message(&actions));
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
@@ -798,7 +821,8 @@ mod test {
         // so that the subsequent ChangeMode → Navigation → save::all doesn't persist
         // the discarded changes.
         let mut app = make_app_with_unsaved_changes_and_split();
-        if let Window::Horizontal { focus, first, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { focus, first, .. } = window {
             *focus = SplitFocus::First;
             // Point the focused directory viewport at the dirty buffer
             if let Window::Directory(_, current_vp, _) = first.as_mut() {
@@ -827,7 +851,8 @@ mod test {
             );
         }
         // The window should have collapsed to the kept pane (Tasks)
-        assert!(matches!(app.window, Window::Tasks(_)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Tasks(_)));
     }
 
     #[test]
@@ -856,7 +881,8 @@ mod test {
             panic!("buffer 50 should still exist and be a Directory");
         }
         // Window should have collapsed to Directory (the first/kept pane)
-        assert!(matches!(app.window, Window::Directory(_, _, _)));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
@@ -872,8 +898,9 @@ mod test {
 
         let actions = execute(&mut app, &mut state, "wq");
 
+        let window = app.current_window().expect("test requires current tab");
         assert!(
-            matches!(app.window, Window::Directory(_, _, _)),
+            matches!(window, Window::Directory(_, _, _)),
             "wq on split must collapse to Directory",
         );
 

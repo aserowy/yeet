@@ -242,13 +242,10 @@ mod test {
         buffers.insert(12, Buffer::Empty);
         buffers.insert(20, Buffer::Tasks(TasksBuffer::default()));
 
-        App {
-            commandline: Default::default(),
-            contents: Contents {
-                buffers,
-                latest_buffer_id: 20,
-            },
-            window: Window::Horizontal {
+        let mut tabs = HashMap::new();
+        tabs.insert(
+            1,
+            Window::Horizontal {
                 first: Box::new(Window::Directory(
                     ViewPort {
                         buffer_id: 10,
@@ -269,13 +266,26 @@ mod test {
                 })),
                 focus: SplitFocus::Second,
             },
+        );
+
+        App {
+            commandline: Default::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 20,
+            },
+            tabs,
+            current_tab_id: 1,
         }
     }
 
     #[test]
     fn get_focused_current_mut_returns_tasks_when_focused() {
         let mut app = make_horizontal_app();
-        let (vp, buffer) = get_focused_current_mut(&mut app.window, &mut app.contents);
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        let (vp, buffer) = get_focused_current_mut(window, contents);
         assert_eq!(vp.buffer_id, 20);
         assert!(matches!(buffer, Buffer::Tasks(_)));
     }
@@ -283,16 +293,19 @@ mod test {
     #[test]
     fn get_focused_directory_viewports_none_for_tasks() {
         let app = make_horizontal_app();
-        assert!(get_focused_directory_viewports(&app.window).is_none());
+        let window = app.current_window().expect("test requires current tab");
+        assert!(get_focused_directory_viewports(window).is_none());
     }
 
     #[test]
     fn get_focused_directory_viewports_some_through_horizontal() {
         let mut app = make_horizontal_app();
-        if let Window::Horizontal { focus, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
-        let result = get_focused_directory_viewports(&app.window);
+        let window = app.current_window().expect("test requires current tab");
+        let result = get_focused_directory_viewports(window);
         assert!(result.is_some());
         let (parent, current, preview) = result.unwrap();
         assert_eq!(parent.buffer_id, 10);
@@ -303,13 +316,15 @@ mod test {
     #[test]
     fn get_focused_directory_buffer_ids_none_for_tasks() {
         let app = make_horizontal_app();
-        assert!(get_focused_directory_buffer_ids(&app.window).is_none());
+        let window = app.current_window().expect("test requires current tab");
+        assert!(get_focused_directory_buffer_ids(window).is_none());
     }
 
     #[test]
     fn get_viewport_by_buffer_id_mut_finds_in_second_child() {
         let mut app = make_horizontal_app();
-        let vp = get_viewport_by_buffer_id_mut(&mut app.window, 20);
+        let window = app.current_window_mut().expect("test requires current tab");
+        let vp = get_viewport_by_buffer_id_mut(window, 20);
         assert!(vp.is_some());
         assert_eq!(vp.unwrap().buffer_id, 20);
     }
@@ -317,7 +332,8 @@ mod test {
     #[test]
     fn get_viewport_by_buffer_id_mut_finds_in_first_child() {
         let mut app = make_horizontal_app();
-        let vp = get_viewport_by_buffer_id_mut(&mut app.window, 11);
+        let window = app.current_window_mut().expect("test requires current tab");
+        let vp = get_viewport_by_buffer_id_mut(window, 11);
         assert!(vp.is_some());
         assert_eq!(vp.unwrap().buffer_id, 11);
     }
@@ -325,6 +341,7 @@ mod test {
     #[test]
     fn get_viewport_by_buffer_id_mut_returns_none_for_missing() {
         let mut app = make_horizontal_app();
-        assert!(get_viewport_by_buffer_id_mut(&mut app.window, 999).is_none());
+        let window = app.current_window_mut().expect("test requires current tab");
+        assert!(get_viewport_by_buffer_id_mut(window, 999).is_none());
     }
 }

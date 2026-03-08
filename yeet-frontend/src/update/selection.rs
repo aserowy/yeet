@@ -18,16 +18,23 @@ pub fn refresh_preview_from_current_selection(
     history: &History,
     previous_selection: Option<PathBuf>,
 ) -> Vec<Action> {
-    let (current_vp, current_buffer) =
-        app::get_focused_current_mut(&mut app.window, &mut app.contents);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
     let current_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Vec::new(),
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
-        if preview_matches_selection(&app.window, &app.contents, &current_selection) {
-            tracing::trace!("skipping preview refresh: selection unchanged");
+        if let Ok(window) = app.current_window() {
+            if preview_matches_selection(window, &app.contents, &current_selection) {
+                tracing::trace!("skipping preview refresh: selection unchanged");
+                return Vec::new();
+            }
+        } else {
             return Vec::new();
         }
         tracing::debug!("selection unchanged but preview buffer does not match; refreshing");
@@ -80,15 +87,21 @@ pub fn set_preview_buffer_for_selection(
         app::get_empty_buffer(&mut app.contents)
     };
 
-    preview::set_buffer_id(&mut app.contents, &mut app.window, preview_id);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return actions,
+    };
+    preview::set_buffer_id(contents, window, preview_id);
 
-    if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports_mut(&mut app.window) {
+    if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports_mut(window) {
         preview_vp.cursor = Cursor::default();
         preview_vp.hide_cursor_line = true;
         preview_vp.horizontal_index = 0;
         preview_vp.vertical_index = 0;
 
-        cursor::set_index(&mut app.contents, history, preview_vp, &Mode::Normal, None);
+        let mut cursor_vp = preview_vp.clone();
+        cursor::set_index(contents, history, &mut cursor_vp, &Mode::Normal, None);
+        *preview_vp = cursor_vp;
     }
 
     actions

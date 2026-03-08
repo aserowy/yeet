@@ -13,7 +13,8 @@ pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
         ])
         .split(area);
 
-    set_buffer_vp(&mut app.window, main[0])?;
+    let window = app.current_window_mut()?;
+    set_buffer_vp(window, main[0])?;
     set_commandline_vp(&mut app.commandline, main[1])?;
 
     Ok(())
@@ -244,7 +245,7 @@ mod test {
 
         set_buffer_vp(&mut tree, area).unwrap();
 
-        let rendered_height = tree.get_height().unwrap();
+        let rendered_height = tree.get_height();
         assert_eq!(
             rendered_height, area.height,
             "horizontal rendered height should equal area height"
@@ -373,7 +374,7 @@ mod test {
 
         set_buffer_vp(&mut tree, area).unwrap();
 
-        let rendered_height = tree.get_height().unwrap();
+        let rendered_height = tree.get_height();
         assert_eq!(
             rendered_height, area.height,
             "vertical rendered height should equal area height"

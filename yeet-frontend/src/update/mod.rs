@@ -167,16 +167,16 @@ fn update_with_message(
         Message::PreviewLoaded(content) => preview::update(app, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
-        Message::TaskStarted(id, cancellation) => task::add(
-            &mut state.tasks,
-            &mut app.window,
-            &mut app.contents,
-            id,
-            cancellation,
-        ),
-        Message::TaskEnded(id) => {
-            task::remove(&mut state.tasks, &mut app.window, &mut app.contents, id)
-        }
+        Message::TaskStarted(id, cancellation) => match app.current_window_and_contents_mut() {
+            Ok((window, contents)) => {
+                task::add(&mut state.tasks, window, contents, id, cancellation)
+            }
+            Err(_) => Vec::new(),
+        },
+        Message::TaskEnded(id) => match app.current_window_and_contents_mut() {
+            Ok((window, contents)) => task::remove(&mut state.tasks, window, contents, id),
+            Err(_) => Vec::new(),
+        },
         Message::ZoxideResult(path) => navigate::path(app, &state.history, path.as_ref()),
     }
 }
@@ -235,8 +235,11 @@ pub fn update_with_keymap_message(
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
-            let (current_vp, current_buffer) =
-                app::get_focused_current_mut(&mut app.window, &mut app.contents);
+            let (window, contents) = match app.current_window_and_contents_mut() {
+                Ok(window) => window,
+                Err(_) => return Vec::new(),
+            };
+            let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
             let directory = match current_buffer {
                 Buffer::Directory(directory) => directory,
                 _ => return Vec::new(),
@@ -260,7 +263,10 @@ pub fn update_with_buffer_message(
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
             Mode::Insert | Mode::Normal => modify::buffer(app, state, repeat, modification),
             Mode::Navigation => {
-                let vp = app.window.focused_viewport();
+                let vp = match app.current_window() {
+                    Ok(window) => window.focused_viewport(),
+                    Err(_) => return Vec::new(),
+                };
                 if matches!(
                     app.contents.buffers.get(&vp.buffer_id),
                     Some(Buffer::Tasks(_))

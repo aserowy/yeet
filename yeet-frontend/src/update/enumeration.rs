@@ -23,9 +23,10 @@ pub fn change(
     content: &[(ContentKind, String)],
     selection: &Option<String>,
 ) -> Vec<Action> {
-    let App {
-        contents, window, ..
-    } = app;
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
@@ -46,7 +47,11 @@ pub fn change(
         }
     }
 
-    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(&app.window) {
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
         None => return Vec::new(),
     };
@@ -85,9 +90,10 @@ pub fn finish(
     }
 
     let mut actions = Vec::new();
-    let App {
-        contents, window, ..
-    } = app;
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
@@ -150,7 +156,11 @@ pub fn finish(
         );
     }
 
-    let current_id = app::get_focused_directory_buffer_ids(&app.window).map(|(_, id, _)| id);
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let current_id = app::get_focused_directory_buffer_ids(window).map(|(_, id, _)| id);
     let is_current_buffer = match current_id.and_then(|id| app.contents.buffers.get(&id)) {
         Some(Buffer::Directory(buffer)) => buffer.path.as_path() == path,
         _ => false,
@@ -269,8 +279,9 @@ mod test {
             .buffers
             .insert(2, Buffer::Directory(Default::default()));
         app.contents.buffers.insert(3, Buffer::Empty);
-        app.window = Window::Directory(Default::default(), Default::default(), Default::default());
-        if let Window::Directory(parent, current, preview) = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Directory(Default::default(), Default::default(), Default::default());
+        if let Window::Directory(parent, current, preview) = window {
             parent.buffer_id = 2;
             current.buffer_id = 1;
             current.cursor = Cursor {
@@ -294,8 +305,9 @@ mod test {
             [Action::Load(path, _)] if path == &selected_file
         ));
 
+        let window = app.current_window().expect("test requires current tab");
         let (_, _, preview_id) =
-            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
+            crate::update::app::get_focused_directory_buffer_ids(window).unwrap();
         assert!(matches!(
             app.contents.buffers.get(&preview_id),
             Some(Buffer::PathReference(path)) if path == &selected_file

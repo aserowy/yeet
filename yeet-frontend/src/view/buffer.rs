@@ -25,7 +25,11 @@ pub fn view(
         vertical_offset,
     };
 
-    render_window(mode, &app.window, &app.contents.buffers, frame, context);
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return,
+    };
+    render_window(mode, window, &app.contents.buffers, frame, context);
 }
 
 #[derive(Clone)]

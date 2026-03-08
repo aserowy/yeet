@@ -1,7 +1,10 @@
 use crate::model::{App, Buffer};
 
 pub fn update(app: &mut App) {
-    let referenced = app.window.buffer_ids();
+    let referenced = match app.current_window() {
+        Ok(window) => window.buffer_ids(),
+        Err(_) => return,
+    };
 
     let stale_images: Vec<usize> = app
         .contents
@@ -66,8 +69,9 @@ mod test {
     #[test]
     fn keeps_referenced_image() {
         let mut app = App::default();
+        let window = app.current_window().expect("test requires current tab");
         let (_, _, preview_id) =
-            crate::update::app::get_focused_directory_buffer_ids(&app.window).unwrap();
+            crate::update::app::get_focused_directory_buffer_ids(window).unwrap();
 
         app.contents.buffers.insert(
             preview_id,
@@ -138,8 +142,9 @@ mod test {
             .buffers
             .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
 
-        let old_window = std::mem::take(&mut app.window);
-        app.window = Window::Horizontal {
+        let window = app.current_window_mut().expect("test requires current tab");
+        let old_window = std::mem::take(window);
+        *window = Window::Horizontal {
             first: Box::new(old_window),
             second: Box::new(Window::Tasks(ViewPort {
                 buffer_id: tasks_buffer_id,
