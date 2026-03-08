@@ -3,8 +3,8 @@
 This feature adds Vim-like tabs to yeet, including a tab bar, commands for creating/closing/navigating tabs, Navigation-mode keymaps for `gt`/`gT`, and a `:tabs` listing plus `:tabdo` for bulk execution. The implementation is split into sequential prompts, each leaving the program in a runnable and functional state.
 
 1. [Prompt 1: Tab data model scaffolding](#prompt-1-tab-data-model-scaffolding) — `done`
-2. [Prompt 2: Current-tab window plumbing](#prompt-2-current-tab-window-plumbing) — `planned`
-3. [Prompt 3: Tab bar rendering + layout offset](#prompt-3-tab-bar-rendering--layout-offset) — `planned`
+2. [Prompt 2: Current-tab window plumbing](#prompt-2-current-tab-window-plumbing) — `done`
+3. [Prompt 3: Tab bar rendering + layout offset](#prompt-3-tab-bar-rendering--layout-offset) — `done`
 4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `planned`
 5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `planned`
 6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `planned`
@@ -119,7 +119,7 @@ assert!(app.tabs.contains_key(&1));
 
 **Goal**: Route layout and rendering through the current tab’s window, without adding new commands or keymaps yet.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: After introducing tabs, the rest of the app should read from the current tab’s window to preserve behavior while enabling new tab features.
 
@@ -194,7 +194,7 @@ buffer::view(&model.state.modes.current, &model.app, frame, 0, 0);
 
 **Goal**: Render a tab bar above all windows when more than one tab exists and reserve layout space for it.
 
-**State**: `planned`
+**State**: `done`
 
 **Motivation**: The tab bar is the visual anchor for tabs; it must integrate cleanly with window layout and statuslines.
 

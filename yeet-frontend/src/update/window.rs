@@ -5,17 +5,25 @@ use crate::{
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
 pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
+    let mut contraints = vec![
+        Constraint::Percentage(100),
+        Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
+    ];
+
+    let mut index_offset = 0;
+    if app.tabs.len() > 1 {
+        contraints.insert(0, Constraint::Length(1));
+        index_offset = 1;
+    }
+
     let main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(100),
-            Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
-        ])
+        .constraints(contraints)
         .split(area);
 
     let window = app.current_window_mut()?;
-    set_buffer_vp(window, main[0])?;
-    set_commandline_vp(&mut app.commandline, main[1])?;
+    set_buffer_vp(window, main[0 + index_offset])?;
+    set_commandline_vp(&mut app.commandline, main[1 + index_offset])?;
 
     Ok(())
 }
@@ -38,6 +46,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             set_buffer_vp(first, layout[0])?;
             set_buffer_vp(second, layout[1])?;
         }
+        // NOTE: the -1 for height is to account for the statusline at the bottom of each pane
         Window::Directory(parent_vp, current_vp, preview_vp) => {
             let layout = Layout::default()
                 .direction(Direction::Horizontal)
@@ -63,6 +72,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             preview_vp.x = preview_rect.x;
             preview_vp.y = preview_rect.y;
         }
+        // NOTE: the -1 for height is to account for the statusline at the bottom of each pane
         Window::Tasks(vp) => {
             vp.height = area.height.saturating_sub(1);
             vp.width = area.width;
@@ -92,7 +102,7 @@ mod test {
 
     use yeet_buffer::model::viewport::ViewPort;
 
-    use crate::model::{App, Buffer, CommandLine, Contents, SplitFocus, Window};
+    use crate::model::{Buffer, CommandLine, Contents, SplitFocus, Window};
 
     use super::*;
 
@@ -424,6 +434,6 @@ mod test {
         };
 
         assert_eq!(tab_one_height, 0, "tab 1 should be unchanged");
-        assert_eq!(tab_two_height, 39, "tab 2 should be updated");
+        assert_eq!(tab_two_height, 38, "tab 2 should be updated");
     }
 }

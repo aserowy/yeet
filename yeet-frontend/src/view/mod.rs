@@ -3,6 +3,7 @@ use crate::{error::AppError, model::Model, terminal::TerminalWrapper};
 mod buffer;
 mod commandline;
 pub mod statusline;
+mod tabbar;
 mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
