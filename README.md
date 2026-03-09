@@ -41,6 +41,7 @@ register holds all files which got yanked and the last nine trashes.
 | --------- | ----------------------------------------------------------- |
 | gh        | goto home directory                                         |
 | gn        | go into normal mode                                         |
+| gt, gT    | go to next/previous tab                                     |
 | h, l      | navigating the file tree                                    |
 | p         | paste " from junk yard to current path                      |
 | "p\<char> | paste register named \<char> from junk yard to current path |
@@ -135,9 +136,15 @@ In normal mode, all register interactions target the default register (equal to
 | reg                         | print all register entries                                                                                                                                                                                                 |
 | rg \<params for rg>         | uses [rg](https://github.com/BurntSushi/ripgrep/) to populate qfix. \<params for rg> are passed through to rg. Yeet sets the following params by default: --color never --files-with-matches \<params for rg> current_path |
 | topen                       | open a split and show all running tasks. `dd` to close selected tasks                                                                                                                                                      |
-| split \<path>               | split current directory view horizontally (top/bottom). The new pane opens below showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                   |
-| vsplit \<path>              | split current directory view vertically (left/right). The new pane opens to the right showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                |
+| split \<path>               | split current directory view horizontally (top/bottom). The new pane opens below showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                  |
+| vsplit \<path>              | split current directory view vertically (left/right). The new pane opens to the right showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory             |
 | tl                          | list all currently running tasks                                                                                                                                                                                           |
+| tabnew                      | opens a new tab                                                                                                                                                                                                            |
+| tabfir/tabl                 | shows the first/last tab                                                                                                                                                                                                   |
+| tabn/tabp                   | shows the next/previous tab                                                                                                                                                                                                |
+| tabc/tabc!                  | close currently shown tab. error on unsaved changes. ! forces a buffer reset                                                                                                                                               |
+| tabo/tabo!                  | close all hidden tabs. error on unsaved changes. ! forces a buffer reset                                                                                                                                                   |
+| tabs                        | print all open tabs                                                                                                                                                                                                        |
 | w                           | write changes without changing mode                                                                                                                                                                                        |
 | wq                          | write changes and quit yeet                                                                                                                                                                                                |
 | z \<target for z>           | jump to paths with zoxide like in your terminal. `:z foo` will execute zoxide to jump to the given directory                                                                                                               |
