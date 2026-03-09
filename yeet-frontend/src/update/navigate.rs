@@ -102,8 +102,11 @@ pub fn navigate_to_path_with_selection(
         app::get_empty_buffer(&mut app.contents)
     };
 
-    let (parent_vp, current_vp, _) = match app::get_focused_directory_viewports_mut(&mut app.window)
-    {
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(it) => it,
+        Err(_) => return actions,
+    };
+    let (parent_vp, current_vp, _) = match app::get_focused_directory_viewports_mut(window) {
         Some(vps) => vps,
         None => return actions,
     };
@@ -112,7 +115,7 @@ pub fn navigate_to_path_with_selection(
     current_vp.cursor = Cursor::default();
 
     cursor::set_index(
-        &mut app.contents,
+        contents,
         history,
         current_vp,
         &Mode::Normal,
@@ -127,7 +130,7 @@ pub fn navigate_to_path_with_selection(
     parent_vp.cursor = Cursor::default();
 
     cursor::set_index(
-        &mut app.contents,
+        contents,
         history,
         parent_vp,
         &Mode::Normal,
@@ -156,7 +159,11 @@ pub fn navigate_to_path_with_selection(
 
 #[tracing::instrument(skip(app))]
 pub fn parent(app: &mut App) -> Vec<Action> {
-    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(&app.window) {
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (_, current_id, _) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
         None => return Vec::new(),
     };
@@ -170,8 +177,12 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             return Vec::new();
         }
 
+        let (window, contents) = match app.current_window_and_contents_mut() {
+            Ok(it) => it,
+            Err(_) => return Vec::new(),
+        };
         let (parent_vp, current_vp, preview_vp) =
-            match app::get_focused_directory_viewports_mut(&mut app.window) {
+            match app::get_focused_directory_viewports_mut(window) {
                 Some(vps) => vps,
                 None => return Vec::new(),
             };
@@ -185,15 +196,15 @@ pub fn parent(app: &mut App) -> Vec<Action> {
             .map(|oss| oss.to_string_lossy().to_string());
 
         let parent_id = if let Some(parent) = path.parent() {
-            let (id, load) = app::resolve_buffer(&mut app.contents, parent, &selection);
+            let (id, load) = app::resolve_buffer(contents, parent, &selection);
             actions.extend(load);
             id
         } else {
-            app::get_empty_buffer(&mut app.contents)
+            app::get_empty_buffer(contents)
         };
 
         parent_vp.buffer_id = parent_id;
-        let directory = match app.contents.buffers.get_mut(&parent_vp.buffer_id) {
+        let directory = match contents.buffers.get_mut(&parent_vp.buffer_id) {
             Some(Buffer::Directory(it)) => it,
             _ => return actions,
         };
@@ -210,12 +221,16 @@ pub fn parent(app: &mut App) -> Vec<Action> {
 
 #[tracing::instrument(skip(app, history))]
 pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (parent_vp, current_vp, preview_vp) =
-        match app::get_focused_directory_viewports_mut(&mut app.window) {
-            Some(vps) => vps,
-            None => return Vec::new(),
-        };
-    let preview_buffer = match app.contents.buffers.get(&preview_vp.buffer_id) {
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(it) => it,
+        Err(_) => return Vec::new(),
+    };
+    let (parent_vp, current_vp, preview_vp) = match app::get_focused_directory_viewports_mut(window)
+    {
+        Some(vps) => vps,
+        None => return Vec::new(),
+    };
+    let preview_buffer = match contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
         _ => return Vec::new(),
     };
@@ -258,13 +273,10 @@ mod test {
         buffers.insert(12, Buffer::Empty);
         buffers.insert(20, Buffer::Tasks(TasksBuffer::default()));
 
-        App {
-            commandline: Default::default(),
-            contents: Contents {
-                buffers,
-                latest_buffer_id: 20,
-            },
-            window: Window::Horizontal {
+        let mut tabs = HashMap::new();
+        tabs.insert(
+            1,
+            Window::Horizontal {
                 first: Box::new(Window::Directory(
                     ViewPort {
                         buffer_id: 10,
@@ -287,6 +299,16 @@ mod test {
                 })),
                 focus: SplitFocus::Second,
             },
+        );
+
+        App {
+            commandline: Default::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 20,
+            },
+            tabs,
+            current_tab_id: 1,
         }
     }
 
@@ -315,7 +337,8 @@ mod test {
         let _actions = navigate_to_path_with_selection(&history, &mut app, target, &None);
 
         // Task viewport buffer_id unchanged
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => assert_eq!(vp.buffer_id, 20),
                 _ => panic!("expected Tasks"),
@@ -336,7 +359,8 @@ mod test {
         // Should not panic; viewports remain unchanged
         let _actions = mark(&mut app, &history, &marks, &'a');
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => assert_eq!(vp.buffer_id, 20),
                 _ => panic!("expected Tasks"),

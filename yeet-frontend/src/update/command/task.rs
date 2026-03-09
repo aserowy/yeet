@@ -16,19 +16,20 @@ pub fn delete(tasks: &mut Tasks, id: u16) -> Vec<Action> {
 }
 
 pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action> {
-    if focus_tasks(&mut app.window) {
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    if focus_tasks(window) {
         return Vec::new();
     }
 
     let lines = build_task_lines(tasks);
-    let buffer_id = app::get_next_buffer_id(&mut app.contents);
-    app.contents.buffers.insert(
+    let buffer_id = app::get_next_buffer_id(contents);
+    contents.buffers.insert(
         buffer_id,
         Buffer::Tasks(TasksBuffer {
-            buffer: TextBuffer {
-                lines,
-                ..Default::default()
-            },
+            buffer: TextBuffer::from_lines(lines),
         }),
     );
 
@@ -38,8 +39,8 @@ pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action> {
         ..Default::default()
     };
 
-    let old_window = mem::take(&mut app.window);
-    app.window = Window::Horizontal {
+    let old_window = mem::take(window);
+    *window = Window::Horizontal {
         first: Box::new(old_window),
         second: Box::new(Window::Tasks(task_viewport)),
         focus: SplitFocus::Second,
@@ -174,15 +175,16 @@ mod test {
 
         open(&mut app, &tasks);
 
+        let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
-            app.window,
+            window,
             Window::Horizontal {
                 focus: SplitFocus::Second,
                 ..
             }
         ));
 
-        match &app.window {
+        match window {
             Window::Horizontal { first, second, .. } => {
                 assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
                 assert!(matches!(second.as_ref(), Window::Tasks(_)));
@@ -198,7 +200,8 @@ mod test {
 
         open(&mut app, &tasks);
 
-        let task_vp = match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        let task_vp = match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => vp,
                 _ => panic!("expected Tasks"),
@@ -206,9 +209,8 @@ mod test {
             _ => panic!("expected Horizontal"),
         };
 
-        let buffer = app.contents.buffers.get(&task_vp.buffer_id).unwrap();
-        let lines = match buffer {
-            Buffer::Tasks(tb) => &tb.buffer.lines,
+        let lines = match app.contents.buffers.get(&task_vp.buffer_id) {
+            Some(Buffer::Tasks(tb)) => &tb.buffer.lines,
             _ => panic!("expected Buffer::Tasks"),
         };
 
@@ -225,7 +227,8 @@ mod test {
 
         open(&mut app, &tasks);
 
-        let task_vp = match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        let task_vp = match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => vp,
                 _ => panic!("expected Tasks"),
@@ -233,9 +236,8 @@ mod test {
             _ => panic!("expected Horizontal"),
         };
 
-        let buffer = app.contents.buffers.get(&task_vp.buffer_id).unwrap();
-        match buffer {
-            Buffer::Tasks(tb) => assert!(tb.buffer.lines.is_empty()),
+        match app.contents.buffers.get(&task_vp.buffer_id) {
+            Some(Buffer::Tasks(tb)) => assert!(tb.buffer.lines.is_empty()),
             _ => panic!("expected Buffer::Tasks"),
         }
     }
@@ -246,21 +248,24 @@ mod test {
         let tasks = Tasks::default();
 
         open(&mut app, &tasks);
+        let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
-            app.window,
+            window,
             Window::Horizontal {
                 focus: SplitFocus::Second,
                 ..
             }
         ));
 
-        if let Window::Horizontal { focus, .. } = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
 
         open(&mut app, &tasks);
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal {
                 first,
                 second,
@@ -284,7 +289,8 @@ mod test {
 
         assert_eq!(app.contents.buffers.len(), buffers_before + 1);
 
-        let task_vp = match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        let task_vp = match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => vp,
                 _ => panic!("expected Tasks"),
@@ -305,31 +311,31 @@ mod test {
         // Both focus fields start at First (pointing away from Tasks).
         use yeet_buffer::model::viewport::ViewPort;
 
-        let mut app = App {
-            window: Window::Horizontal {
-                first: Box::new(Window::Horizontal {
-                    first: Box::new(Window::Directory(
-                        ViewPort::default(),
-                        ViewPort::default(),
-                        ViewPort::default(),
-                    )),
-                    second: Box::new(Window::Tasks(ViewPort::default())),
-                    focus: SplitFocus::First,
-                }),
-                second: Box::new(Window::Directory(
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Horizontal {
+            first: Box::new(Window::Horizontal {
+                first: Box::new(Window::Directory(
                     ViewPort::default(),
                     ViewPort::default(),
                     ViewPort::default(),
                 )),
-                focus: SplitFocus::Second,
-            },
-            ..Default::default()
+                second: Box::new(Window::Tasks(ViewPort::default())),
+                focus: SplitFocus::First,
+            }),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::Second,
         };
 
         let tasks = Tasks::default();
         open(&mut app, &tasks);
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { first, focus, .. } => {
                 assert_eq!(*focus, SplitFocus::First);
                 match first.as_ref() {
@@ -348,23 +354,23 @@ mod test {
         // Tree: Horizontal { first: Tasks, second: Dir, focus: Second }
         use yeet_buffer::model::viewport::ViewPort;
 
-        let mut app = App {
-            window: Window::Horizontal {
-                first: Box::new(Window::Tasks(ViewPort::default())),
-                second: Box::new(Window::Directory(
-                    ViewPort::default(),
-                    ViewPort::default(),
-                    ViewPort::default(),
-                )),
-                focus: SplitFocus::Second,
-            },
-            ..Default::default()
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Horizontal {
+            first: Box::new(Window::Tasks(ViewPort::default())),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::Second,
         };
 
         let tasks = Tasks::default();
         open(&mut app, &tasks);
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { focus, .. } => {
                 assert_eq!(*focus, SplitFocus::First);
             }
@@ -386,27 +392,27 @@ mod test {
             )
         };
 
-        let mut app = App {
-            window: Window::Horizontal {
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Horizontal {
+            first: Box::new(Window::Horizontal {
                 first: Box::new(Window::Horizontal {
-                    first: Box::new(Window::Horizontal {
-                        first: Box::new(dir()),
-                        second: Box::new(Window::Tasks(ViewPort::default())),
-                        focus: SplitFocus::First,
-                    }),
-                    second: Box::new(dir()),
-                    focus: SplitFocus::Second,
+                    first: Box::new(dir()),
+                    second: Box::new(Window::Tasks(ViewPort::default())),
+                    focus: SplitFocus::First,
                 }),
                 second: Box::new(dir()),
                 focus: SplitFocus::Second,
-            },
-            ..Default::default()
+            }),
+            second: Box::new(dir()),
+            focus: SplitFocus::Second,
         };
 
         let tasks = Tasks::default();
         open(&mut app, &tasks);
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { first, focus, .. } => {
                 assert_eq!(*focus, SplitFocus::First, "root");
                 match first.as_ref() {
@@ -435,9 +441,13 @@ mod test {
         // Cancel the first task (id=1)
         tasks.running.get("rg-1").unwrap().token.cancel();
 
-        super::refresh_tasks_buffer(&mut app.window, &mut app.contents, &tasks);
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        super::refresh_tasks_buffer(window, contents, &tasks);
 
-        let task_vp = match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        let task_vp = match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
                 Window::Tasks(vp) => vp,
                 _ => panic!("expected Tasks"),
@@ -463,8 +473,11 @@ mod test {
     fn refresh_tasks_buffer_noop_without_tasks_window() {
         let tasks = Tasks::default();
         let mut app = App::default();
-        // No :topen — app.window is a plain Directory
-        super::refresh_tasks_buffer(&mut app.window, &mut app.contents, &tasks);
+        // No :topen — current tab is a plain Directory
+        let (window, contents) = app
+            .current_window_and_contents_mut()
+            .expect("test requires current tab");
+        super::refresh_tasks_buffer(window, contents, &tasks);
         // Should not panic
     }
 }

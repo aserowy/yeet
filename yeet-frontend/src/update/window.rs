@@ -5,16 +5,25 @@ use crate::{
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
 pub fn update(app: &mut App, area: Rect) -> Result<(), AppError> {
+    let mut contraints = vec![
+        Constraint::Percentage(100),
+        Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
+    ];
+
+    let mut index_offset = 0;
+    if app.tabs.len() > 1 {
+        contraints.insert(0, Constraint::Length(1));
+        index_offset = 1;
+    }
+
     let main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(100),
-            Constraint::Length(u16::try_from(app.commandline.buffer.lines.len())?),
-        ])
+        .constraints(contraints)
         .split(area);
 
-    set_buffer_vp(&mut app.window, main[0])?;
-    set_commandline_vp(&mut app.commandline, main[1])?;
+    let window = app.current_window_mut()?;
+    set_buffer_vp(window, main[index_offset])?;
+    set_commandline_vp(&mut app.commandline, main[1 + index_offset])?;
 
     Ok(())
 }
@@ -37,6 +46,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             set_buffer_vp(first, layout[0])?;
             set_buffer_vp(second, layout[1])?;
         }
+        // NOTE: the -1 for height is to account for the statusline at the bottom of each pane
         Window::Directory(parent_vp, current_vp, preview_vp) => {
             let layout = Layout::default()
                 .direction(Direction::Horizontal)
@@ -62,6 +72,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             preview_vp.x = preview_rect.x;
             preview_vp.y = preview_rect.y;
         }
+        // NOTE: the -1 for height is to account for the statusline at the bottom of each pane
         Window::Tasks(vp) => {
             vp.height = area.height.saturating_sub(1);
             vp.width = area.width;
@@ -77,6 +88,8 @@ fn set_commandline_vp(
     commandline: &mut crate::model::CommandLine,
     rect: Rect,
 ) -> Result<(), AppError> {
+    commandline.viewport.x = rect.x;
+    commandline.viewport.y = rect.y;
     commandline.viewport.height = rect.height;
 
     let key_sequence_offset = u16::try_from(commandline.key_sequence.chars().count())?;
@@ -87,9 +100,11 @@ fn set_commandline_vp(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use yeet_buffer::model::viewport::ViewPort;
 
-    use crate::model::{SplitFocus, Window};
+    use crate::model::{Buffer, CommandLine, Contents, SplitFocus, Window};
 
     use super::*;
 
@@ -224,34 +239,6 @@ mod test {
     }
 
     #[test]
-    fn get_rendered_height_horizontal_returns_full_area() {
-        let mut tree = Window::Horizontal {
-            first: Box::new(Window::Directory(
-                ViewPort::default(),
-                ViewPort::default(),
-                ViewPort::default(),
-            )),
-            second: Box::new(Window::Tasks(ViewPort::default())),
-            focus: SplitFocus::First,
-        };
-
-        let area = Rect {
-            x: 0,
-            y: 0,
-            width: 80,
-            height: 40,
-        };
-
-        set_buffer_vp(&mut tree, area).unwrap();
-
-        let rendered_height = tree.get_height().unwrap();
-        assert_eq!(
-            rendered_height, area.height,
-            "horizontal rendered height should equal area height"
-        );
-    }
-
-    #[test]
     fn set_buffer_vp_tasks_sets_dimensions() {
         let mut window = Window::Tasks(ViewPort::default());
         let area = Rect {
@@ -357,11 +344,22 @@ mod test {
     }
 
     #[test]
-    fn get_rendered_height_vertical_returns_area_height() {
-        let mut tree = Window::Vertical {
-            first: Box::new(Window::Tasks(ViewPort::default())),
-            second: Box::new(Window::Tasks(ViewPort::default())),
-            focus: SplitFocus::First,
+    fn update_uses_current_tab_window() {
+        let mut tabs = HashMap::new();
+        tabs.insert(1, Window::Tasks(ViewPort::default()));
+        tabs.insert(2, Window::Tasks(ViewPort::default()));
+
+        let mut buffers = HashMap::new();
+        buffers.insert(1, Buffer::Empty);
+
+        let mut app = App {
+            commandline: CommandLine::default(),
+            contents: Contents {
+                buffers,
+                latest_buffer_id: 1,
+            },
+            tabs,
+            current_tab_id: 2,
         };
 
         let area = Rect {
@@ -371,12 +369,21 @@ mod test {
             height: 40,
         };
 
-        set_buffer_vp(&mut tree, area).unwrap();
+        update(&mut app, area).unwrap();
 
-        let rendered_height = tree.get_height().unwrap();
-        assert_eq!(
-            rendered_height, area.height,
-            "vertical rendered height should equal area height"
-        );
+        let tab_one = app.tabs.get(&1).expect("tab 1 exists");
+        let tab_two = app.tabs.get(&2).expect("tab 2 exists");
+
+        let tab_one_height = match tab_one {
+            Window::Tasks(vp) => vp.height,
+            _ => panic!("expected Tasks for tab 1"),
+        };
+        let tab_two_height = match tab_two {
+            Window::Tasks(vp) => vp.height,
+            _ => panic!("expected Tasks for tab 2"),
+        };
+
+        assert_eq!(tab_one_height, 0, "tab 1 should be unchanged");
+        assert_eq!(tab_two_height, 38, "tab 2 should be updated");
     }
 }

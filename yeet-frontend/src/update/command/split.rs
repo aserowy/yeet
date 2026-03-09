@@ -31,8 +31,12 @@ fn create_split(
 ) -> Vec<Action> {
     let empty_buffer = app::get_empty_buffer(&mut app.contents);
     let new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
-    let old_window = mem::take(&mut app.window);
-    app.window = make_split(old_window, new_directory);
+    let window = match app.current_window_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let old_window = mem::take(window);
+    *window = make_split(old_window, new_directory);
 
     vec![action::emit_keymap(KeymapMessage::NavigateToPath(
         target.to_path_buf(),
@@ -65,7 +69,8 @@ mod test {
                 ..Default::default()
             }),
         );
-        if let Window::Directory(parent, current, preview) = &mut app.window {
+        let window = app.current_window_mut().expect("test requires current tab");
+        if let Window::Directory(parent, current, preview) = window {
             parent.buffer_id = 1;
             current.buffer_id = 1;
             preview.buffer_id = 1;
@@ -79,8 +84,9 @@ mod test {
         let mut app = make_app_with_directory();
         let path = env::current_dir().expect("get current dir");
         horizontal(&mut app, &path);
+        let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
-            app.window,
+            window,
             Window::Horizontal {
                 focus: SplitFocus::Second,
                 ..
@@ -93,8 +99,9 @@ mod test {
         let mut app = make_app_with_directory();
         let path = env::current_dir().expect("get current dir");
         vertical(&mut app, &path);
+        let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
-            app.window,
+            window,
             Window::Vertical {
                 focus: SplitFocus::Second,
                 ..
@@ -107,7 +114,8 @@ mod test {
         let mut app = make_app_with_directory();
         let path = env::current_dir().expect("get current dir");
         horizontal(&mut app, &path);
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { first, .. } => {
                 assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
             }
@@ -120,7 +128,8 @@ mod test {
         let mut app = make_app_with_directory();
         let path = env::current_dir().expect("get current dir");
         vertical(&mut app, &path);
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Vertical { second, .. } => {
                 assert!(matches!(second.as_ref(), Window::Directory(_, _, _)));
             }
@@ -131,11 +140,13 @@ mod test {
     #[test]
     fn split_allocates_fresh_buffer_ids() {
         let mut app = make_app_with_directory();
-        let original_ids = app.window.buffer_ids();
+        let window = app.current_window().expect("test requires current tab");
+        let original_ids = window.buffer_ids();
         let path = env::current_dir().expect("get current dir");
         horizontal(&mut app, &path);
 
-        match &app.window {
+        let window = app.current_window().expect("test requires current tab");
+        match window {
             Window::Horizontal { second, .. } => {
                 let new_ids = second.buffer_ids();
                 for id in &new_ids {
@@ -168,21 +179,22 @@ mod test {
 
     #[test]
     fn split_noop_when_tasks_focused() {
-        let mut app = App {
-            window: Window::Tasks(ViewPort::default()),
-            ..Default::default()
-        };
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Tasks(ViewPort::default());
         let path = env::current_dir().expect("get current dir");
         let actions = horizontal(&mut app, &path);
         assert!(!actions.is_empty());
-        assert!(matches!(app.window, Window::Horizontal { .. }));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Horizontal { .. }));
     }
 
     #[test]
     fn split_noop_when_tasks_focused_in_split() {
         let mut app = make_app_with_directory();
-        let old_window = mem::take(&mut app.window);
-        app.window = Window::Horizontal {
+        let window = app.current_window_mut().expect("test requires current tab");
+        let old_window = mem::take(window);
+        *window = Window::Horizontal {
             first: Box::new(old_window),
             second: Box::new(Window::Tasks(ViewPort::default())),
             focus: SplitFocus::Second,
@@ -190,7 +202,8 @@ mod test {
         let path = env::current_dir().expect("get current dir");
         let actions = vertical(&mut app, &path);
         assert!(!actions.is_empty());
-        assert!(matches!(app.window, Window::Vertical { .. }));
+        let window = app.current_window().expect("test requires current tab");
+        assert!(matches!(window, Window::Vertical { .. }));
     }
 
     #[test]
@@ -224,8 +237,9 @@ mod test {
         let target = env::temp_dir();
         let actions = vertical(&mut app, target.as_path());
 
+        let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
-            app.window,
+            window,
             Window::Vertical {
                 focus: SplitFocus::Second,
                 ..

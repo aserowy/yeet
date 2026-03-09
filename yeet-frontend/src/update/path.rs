@@ -29,8 +29,11 @@ pub fn add(
     app: &mut App,
     paths: &[PathBuf],
 ) -> Vec<Action> {
-    let (current_vp, current_buffer) =
-        app::get_focused_current_mut(&mut app.window, &mut app.contents);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
     let previous_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => None,
@@ -133,9 +136,10 @@ fn update_directory_buffers_on_add(mode: &Mode, app: &mut App, path: &Path) {
         _ => return,
     };
 
-    let App {
-        contents, window, ..
-    } = app;
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return,
+    };
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
         let Buffer::Directory(dir) = buffer else {
             continue;
@@ -210,9 +214,10 @@ fn update_directory_buffers_on_remove(
     };
 
     if let Some((parent, name)) = parent_name {
-        let App {
-            contents, window, ..
-        } = &mut *app;
+        let (window, contents) = match app.current_window_and_contents_mut() {
+            Ok(window) => window,
+            Err(_) => return Vec::new(),
+        };
         for (buffer_id, buffer) in contents.buffers.iter_mut() {
             let Buffer::Directory(dir) = buffer else {
                 continue;
@@ -253,7 +258,11 @@ fn update_directory_buffers_on_remove(
         }
     }
 
-    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(&app.window) {
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
         None => return Vec::new(),
     };
@@ -323,12 +332,16 @@ fn find_existing_ancestor(path: &Path) -> Option<PathBuf> {
 
 fn reset_directory_viewports_to_empty(app: &mut App) {
     let buffer_id = app::get_empty_buffer(&mut app.contents);
-    if let Some((parent, current, _)) = app::get_focused_directory_viewports_mut(&mut app.window) {
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return,
+    };
+    if let Some((parent, current, _)) = app::get_focused_directory_viewports_mut(window) {
         parent.buffer_id = buffer_id;
         current.buffer_id = buffer_id;
     }
 
-    preview::set_buffer_id(&mut app.contents, &mut app.window, buffer_id);
+    preview::set_buffer_id(contents, window, buffer_id);
 }
 
 #[cfg(test)]
@@ -388,7 +401,8 @@ mod test {
             }),
         );
 
-        app.window = Window::Directory(
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Directory(
             ViewPort {
                 buffer_id: parent_id,
                 ..Default::default()
@@ -429,7 +443,8 @@ mod test {
             &removed,
         );
 
-        let (_, current_id, _) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
+        let window = app.current_window().expect("test requires current tab");
+        let (_, current_id, _) = app::get_focused_directory_buffer_ids(window).unwrap();
         let current_path = match app.contents.buffers.get(&current_id) {
             Some(Buffer::Directory(buffer)) => buffer.path.clone(),
             Some(Buffer::PathReference(path)) => path.clone(),
@@ -476,13 +491,10 @@ mod test {
             current_id,
             Buffer::Directory(DirectoryBuffer {
                 path: base.clone(),
-                buffer: TextBuffer {
-                    lines: vec![BufferLine {
-                        content: Ansi::new("newfolder/"),
-                        ..Default::default()
-                    }],
+                buffer: TextBuffer::from_lines(vec![BufferLine {
+                    content: Ansi::new("newfolder/"),
                     ..Default::default()
-                },
+                }]),
                 ..Default::default()
             }),
         );
@@ -492,7 +504,8 @@ mod test {
         // landed on it).
         app.contents.buffers.insert(preview_id, Buffer::Empty);
 
-        app.window = Window::Directory(
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Directory(
             ViewPort {
                 buffer_id: parent_id,
                 ..Default::default()
@@ -529,7 +542,8 @@ mod test {
         // The preview viewport must now point at a buffer for "newfolder", not
         // at the old Empty buffer. The buffer should be a PathReference (triggering
         // a Load action) or a Directory if already resolved.
-        let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
+        let window = app.current_window().expect("test requires current tab");
+        let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(window).unwrap();
         let preview_buffer = app.contents.buffers.get(&new_preview_id);
 
         // The preview buffer should no longer be Empty.
@@ -591,7 +605,8 @@ mod test {
             }),
         );
 
-        app.window = Window::Directory(
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Directory(
             ViewPort {
                 buffer_id: parent_id,
                 ..Default::default()
@@ -623,7 +638,8 @@ mod test {
             &removed,
         );
 
-        let (_, _, preview_id) = app::get_focused_directory_buffer_ids(&app.window).unwrap();
+        let window = app.current_window().expect("test requires current tab");
+        let (_, _, preview_id) = app::get_focused_directory_buffer_ids(window).unwrap();
         let preview_buffer = app.contents.buffers.get(&preview_id);
         assert!(preview_buffer.is_some());
 

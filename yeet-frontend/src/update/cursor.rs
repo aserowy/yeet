@@ -88,17 +88,24 @@ pub fn relocate(
         search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
-    let premotion_preview_path =
-        app::get_focused_directory_buffer_ids(&app.window).and_then(|(_, _, preview_id)| {
-            app.contents
-                .buffers
-                .get(&preview_id)
-                .and_then(|b| b.resolve_path())
-                .map(|p| p.to_path_buf())
-        });
+    let premotion_preview_path = match app.current_window() {
+        Ok(window) => {
+            app::get_focused_directory_buffer_ids(window).and_then(|(_, _, preview_id)| {
+                app.contents
+                    .buffers
+                    .get(&preview_id)
+                    .and_then(|b| b.resolve_path())
+                    .map(|p| p.to_path_buf())
+            })
+        }
+        Err(_) => None,
+    };
 
-    let (viewport, buffer) = match app::get_focused_current_mut(&mut app.window, &mut app.contents)
-    {
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (viewport, buffer) = match app::get_focused_current_mut(window, contents) {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),

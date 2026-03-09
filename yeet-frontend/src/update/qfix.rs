@@ -12,7 +12,11 @@ use crate::{
 use super::{app, sign};
 
 pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let (vp, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(window) => window,
+        Err(_) => return Vec::new(),
+    };
+    let (vp, buffer) = app::get_focused_current_mut(window, contents);
     let (vp_cursor, buffer) = match buffer {
         Buffer::Directory(it) => (vp.cursor.clone(), it),
         Buffer::Image(_) => return Vec::new(),

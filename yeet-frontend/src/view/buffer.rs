@@ -11,29 +11,23 @@ use crate::model::{App, Buffer, DirectoryBuffer, SplitFocus, Window};
 
 use super::statusline;
 
-pub fn view(
-    mode: &Mode,
-    app: &App,
-    frame: &mut Frame,
-    horizontal_offset: u16,
-    vertical_offset: u16,
-) {
+pub fn view(mode: &Mode, app: &App, frame: &mut Frame) {
     let context = RenderContext {
         draw_borders: None,
         is_focused: true,
-        horizontal_offset,
-        vertical_offset,
     };
 
-    render_window(mode, &app.window, &app.contents.buffers, frame, context);
+    let window = match app.current_window() {
+        Ok(window) => window,
+        Err(_) => return,
+    };
+    render_window(mode, window, &app.contents.buffers, frame, context);
 }
 
 #[derive(Clone)]
 struct RenderContext {
     draw_borders: Option<bool>,
     is_focused: bool,
-    horizontal_offset: u16,
-    vertical_offset: u16,
 }
 
 fn render_window(
@@ -83,7 +77,6 @@ fn render_window(
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
                     draw_borders: Some(true),
-                    ..context.clone()
                 },
             );
             render_window(
@@ -123,11 +116,8 @@ fn render_window(
             if let Some(buffer) = buffers.get(&current.buffer_id) {
                 let total_width = (preview.x + preview.width).saturating_sub(parent.x);
                 let statusline_rect = Rect {
-                    x: parent.x.saturating_add(context.horizontal_offset),
-                    y: current
-                        .y
-                        .saturating_add(current.height)
-                        .saturating_add(context.vertical_offset),
+                    x: parent.x,
+                    y: current.y.saturating_add(current.height),
                     width: total_width,
                     height: 1,
                 };
@@ -149,11 +139,8 @@ fn render_window(
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
                 let statusline_rect = Rect {
-                    x: vp.x.saturating_add(context.horizontal_offset),
-                    y: vp
-                        .y
-                        .saturating_add(vp.height)
-                        .saturating_add(context.vertical_offset),
+                    x: vp.x,
+                    y: vp.y.saturating_add(vp.height),
                     width: vp.width,
                     height: 1,
                 };
@@ -180,9 +167,6 @@ fn render_buffer_slot(
     buffer: Option<&Buffer>,
     context: RenderContext,
 ) {
-    let x = viewport.x.saturating_add(context.horizontal_offset);
-    let y = viewport.y.saturating_add(context.vertical_offset);
-
     let mut effective_vp = if context.is_focused {
         viewport.clone()
     } else {
@@ -199,25 +183,25 @@ fn render_buffer_slot(
 
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            buffer_view(&effective_vp, mode, &buffer.buffer, frame, x, y);
+            buffer_view(&effective_vp, mode, &buffer.buffer, frame);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, &effective_vp, buffer, x, y);
+            render_directory_buffer(mode, frame, &effective_vp, buffer);
         }
         Some(Buffer::Tasks(tasks_buf)) => {
-            buffer_view(&effective_vp, mode, &tasks_buf.buffer, frame, x, y);
+            buffer_view(&effective_vp, mode, &tasks_buf.buffer, frame);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = effective_vp.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 
-            render_directory_buffer(mode, frame, &vp, &Default::default(), x, y);
+            render_directory_buffer(mode, frame, &vp, &Default::default());
         }
         Some(Buffer::Image(buffer)) => {
             let rect = Rect {
-                x,
-                y,
+                x: viewport.x,
+                y: viewport.y,
                 width: viewport.width,
                 height: viewport.height,
             };
@@ -232,18 +216,9 @@ fn render_directory_buffer(
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: &DirectoryBuffer,
-    horizontal_offset: u16,
-    vertical_offset: u16,
 ) {
     let mut viewport = viewport.clone();
     yeet_buffer::update_viewport_by_cursor(&mut viewport, &buffer.buffer);
 
-    buffer_view(
-        &viewport,
-        mode,
-        &buffer.buffer,
-        frame,
-        horizontal_offset,
-        vertical_offset,
-    );
+    buffer_view(&viewport, mode, &buffer.buffer, frame);
 }

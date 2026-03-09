@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    fmt::{self, Display, Formatter},
+    path::PathBuf,
+};
 
 use regex::Regex;
 use yeet_buffer::{
@@ -135,4 +138,14 @@ pub enum PrintContent {
     Error(String),
     Default(String),
     Information(String),
+}
+
+impl Display for PrintContent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            PrintContent::Error(content)
+            | PrintContent::Default(content)
+            | PrintContent::Information(content) => write!(f, "{content}"),
+        }
+    }
 }

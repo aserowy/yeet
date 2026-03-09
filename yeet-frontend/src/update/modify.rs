@@ -14,7 +14,11 @@ pub fn buffer(
     repeat: &usize,
     modification: &TextModification,
 ) -> Vec<Action> {
-    let (vp, focused) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
+    let (window, contents) = match app.current_window_and_contents_mut() {
+        Ok(it) => it,
+        Err(_) => return Vec::new(),
+    };
+    let (vp, focused) = app::get_focused_current_mut(window, contents);
     match focused {
         Buffer::Tasks(_) => {
             if !matches!(modification, TextModification::DeleteLine) {
@@ -23,7 +27,9 @@ pub fn buffer(
 
             let cursor_index = vp.cursor.vertical_index;
             cancel_task_at_index(&mut state.tasks, cursor_index);
-            task::refresh_tasks_buffer(&mut app.window, &mut app.contents, &state.tasks);
+            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
+                task::refresh_tasks_buffer(window, contents, &state.tasks);
+            }
 
             Vec::new()
         }
@@ -32,8 +38,14 @@ pub fn buffer(
             let msg = BufferMessage::Modification(*repeat, modification.clone());
             yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
 
-            let (_, buffer) = app::get_focused_current_mut(&mut app.window, &mut app.contents);
-            if let Buffer::Directory(_) = buffer {
+            let should_refresh_preview = match app.current_window_and_contents_mut() {
+                Ok((window, contents)) => {
+                    let (_, buffer) = app::get_focused_current_mut(window, contents);
+                    matches!(buffer, Buffer::Directory(_))
+                }
+                Err(_) => return Vec::new(),
+            };
+            if should_refresh_preview {
                 return selection::refresh_preview_from_current_selection(
                     app,
                     &state.history,
@@ -115,7 +127,8 @@ mod test {
         };
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        let vp = app.window.focused_viewport_mut();
+        let window = app.current_window_mut().expect("test requires current tab");
+        let vp = window.focused_viewport_mut();
         vp.cursor.vertical_index = 1;
 
         buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
@@ -234,12 +247,14 @@ mod test {
     }
 
     fn vp_set_cursor(app: &mut App, index: usize) {
-        let vp = app.window.focused_viewport_mut();
+        let window = app.current_window_mut().expect("test requires current tab");
+        let vp = window.focused_viewport_mut();
         vp.cursor.vertical_index = index;
     }
 
     fn get_tasks_buffer_lines(app: &App) -> Vec<yeet_buffer::model::BufferLine> {
-        let vp = app.window.focused_viewport();
+        let window = app.current_window().expect("test requires current tab");
+        let vp = window.focused_viewport();
         match app.contents.buffers.get(&vp.buffer_id) {
             Some(Buffer::Tasks(tb)) => tb.buffer.lines.clone(),
             _ => panic!("expected Buffer::Tasks"),

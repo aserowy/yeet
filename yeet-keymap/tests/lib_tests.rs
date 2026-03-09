@@ -406,6 +406,36 @@ fn add_and_resolve_key_navigation_ctrl_w_ctrl_v() {
 }
 
 #[test]
+fn add_and_resolve_key_navigation_gt() {
+    let mut resolver = MessageResolver::default();
+
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('g'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('t'), vec![]));
+
+    assert_eq!(
+        Some(&KeymapMessage::ExecuteCommandString("tabn".to_string())),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("gt".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
+fn add_and_resolve_key_navigation_g_shift_t() {
+    let mut resolver = MessageResolver::default();
+
+    let _ = resolver.add_key(Key::new(KeyCode::from_char('g'), vec![]));
+    let result = resolver.add_key(Key::new(KeyCode::from_char('t'), vec![KeyModifier::Shift]));
+
+    assert_eq!(
+        Some(&KeymapMessage::ExecuteCommandString("tabp".to_string())),
+        result.0.first()
+    );
+    assert_eq!(KeySequence::Completed("gT".to_string()), result.1);
+    assert_eq!(1, result.0.len());
+}
+
+#[test]
 fn add_and_resolve_key_normal_ctrl_k() {
     let mut resolver = MessageResolver::default();
     resolver.mode = Mode::Normal;
