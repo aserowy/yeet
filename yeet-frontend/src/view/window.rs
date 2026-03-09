@@ -99,7 +99,7 @@ mod test {
 
         let buffer = terminal.backend().buffer();
         let row = read_row(buffer, 0);
-        assert!(row.contains("1:"), "expected tabbar labels");
+        assert!(row.contains(" 1 "), "expected tabbar labels");
     }
 
     fn read_row(buffer: &ratatui::buffer::Buffer, y: u16) -> String {

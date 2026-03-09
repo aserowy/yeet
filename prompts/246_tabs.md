@@ -8,7 +8,8 @@ This feature adds Vim-like tabs to yeet, including a tab bar, commands for creat
 4. [Prompt 4: Tab commands — create/close/switch](#prompt-4-tab-commands--createcloseswitch) — `done`
 5. [Prompt 5: Navigation keymaps `gt`/`gT`](#prompt-5-navigation-keymaps-gtgt) — `done`
 6. [Prompt 6: `:tabs` command output](#prompt-6-tabs-command-output) — `done`
-7. [Prompt 7: Guard tab close on unsaved buffers](#prompt-7-guard-tab-close-on-unsaved-buffers) — `planned`
+7. [Prompt 7: Guard tab close on unsaved buffers](#prompt-7-guard-tab-close-on-unsaved-buffers) — `done`
+8. [Prompt 8: Tab bar styling + fixed-width layout](#prompt-8-tab-bar-styling--fixed-width-layout) — `done`
 
 ---
 
@@ -575,3 +576,98 @@ if tab_has_unsaved_changes(app, app.current_tab_id) {
 - Use the existing `:q` wording and error path for consistency.
 - Forced tab close should mirror `:q!` intent: discard unsaved changes for closed tabs only, leaving kept tabs untouched.
 - Ensure tests assert that the tab count and `current_tab_id` remain unchanged when blocked.
+
+---
+
+# Prompt 8: Tab bar styling + fixed-width layout
+
+**Goal**: Update tab bar styling and layout to use fixed-width tabs with centered titles and distinct active/inactive colors.
+
+**State**: `done`
+
+**Motivation**: A consistent, easily scannable tab bar improves readability. The active tab should stand out, while inactive tabs remain subdued but legible.
+
+## Requirements
+
+- Render each tab as a **fixed-width block of 28 characters**.
+- Tab text format must be `" {index} {spaces}{title}{spaces} "` where:
+  - `index` is the numeric tab id (no punctuation) and **includes a single leading space** before the index.
+  - There is **always a single space after the index** and **a single trailing space at the end** of the tab.
+  - Title centering/truncation must happen **within the remaining space** between those fixed spaces.
+  - `title` is **centered** within the remaining space.
+  - If the title is too long, **truncate** it to fit the available space (do not wrap).
+  - Spaces pad on both sides so the full tab string is exactly 28 chars.
+- Active tab styling:
+  - **Light blue background**.
+  - **Do not use ANSI escape sequences**; use the UI style/color types instead.
+  - Text color must be **inverted** for the active tab (use inverse/reversed styling so fg/bg swap).
+- Inactive tab styling:
+  - **Black background** on the tab block itself.
+  - Normal text color (no inverse/bold).
+  - The **rest of the tab bar row** (outside the 28-char tab blocks) must have **no explicit background color** set.
+- Keep existing behavior of not rendering the bar when only one tab exists.
+
+## Exclusions
+
+- Do not change tab title derivation rules (still use focused window title logic from Prompt 3).
+- Do not alter tab navigation, commands, or `:tabs` output.
+- Do not change layout offsets beyond the existing one-line tab bar.
+
+## Context
+
+- Tab bar rendering logic: @yeet-frontend/src/view/tabbar.rs (or wherever current tab bar rendering lives)
+- Window rendering entrypoint: @yeet-frontend/src/view/window.rs
+- Tab title derivation helper: @yeet-frontend/src/view/tabbar.rs (or equivalent helper)
+- Style usage patterns: @yeet-frontend/src/view/statusline.rs
+- Project conventions: @AGENTS.md
+
+## Implementation Plan
+
+1. **Tab width constant**: introduce a `TAB_WIDTH: usize = 28` constant in the tab bar module.
+2. **Layout helper**:
+   - Build a helper like `format_tab_label(index, title) -> String` that returns a 28-char string.
+   - Reserve space for the `index` at the start; pad remaining width around the (possibly truncated) title to center it.
+3. **Truncation**:
+   - If `title.len()` exceeds the available width after `index`, truncate it to fit.
+4. **Styling**:
+   - For active tab: apply a light blue background to the entire 28-char block; apply inverse/reversed styling to the title portion (or the whole block if that’s easier).
+   - For inactive tab: black background with default text styling.
+5. **Rendering**:
+   - Render tabs sequentially left-to-right with no separators (each tab already fills its width).
+6. **Tests**:
+   - Add a unit test for `format_tab_label` that asserts:
+     - exact 28-char length
+     - centered title behavior
+     - truncation when title is too long
+   - Add a rendering test that active tab style includes blue background and inverse modifier.
+
+```rust
+fn format_tab_label(index: usize, title: &str) -> String {
+    let index_str = format!(" {} ", index);
+    let available = TAB_WIDTH.saturating_sub(index_str.len() + 1);
+    let mut title = title.to_string();
+    if title.len() > available {
+        title.truncate(available);
+    }
+    let padding = available.saturating_sub(title.len());
+    let left = padding / 2;
+    let right = padding - left;
+    format!(
+        "{}{}{}{} ",
+        index_str,
+        " ".repeat(left),
+        title,
+        " ".repeat(right)
+    )
+}
+```
+
+## Examples
+
+- Index `2`, title `src` → `" 2           src            "` (28 chars, centered, fixed spaces around index + trailing space).
+- Index `10`, long title → title truncated to fit remaining width.
+
+## Notes
+
+- Use TUI styling APIs consistent with the statusline (e.g., `Style::default().bg(Color::Blue)` and `Modifier::REVERSED`).
+- If a tab label renders beyond the available frame width, allow it to be clipped by the frame rather than dynamically resizing tabs.

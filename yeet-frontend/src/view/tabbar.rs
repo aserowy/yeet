@@ -10,6 +10,8 @@ use ratatui::{
 
 use crate::model::{App, Buffer, SplitFocus, Window};
 
+const TAB_WIDTH: usize = 28;
+
 pub fn render(app: &App, frame: &mut Frame) -> u16 {
     if app.tabs.len() <= 1 {
         return 0;
@@ -27,9 +29,9 @@ pub fn render(app: &App, frame: &mut Frame) -> u16 {
         &app.tabs,
         &app.contents.buffers,
         app.current_tab_id,
+        width as usize,
     ));
-    let paragraph =
-        Paragraph::new(line).block(Block::default().style(Style::default().bg(Color::Black)));
+    let paragraph = Paragraph::new(line).block(Block::default());
 
     frame.render_widget(paragraph, rect);
 
@@ -40,33 +42,62 @@ fn tab_spans(
     tabs: &HashMap<usize, Window>,
     buffers: &HashMap<usize, Buffer>,
     current_tab_id: usize,
+    total_width: usize,
 ) -> Vec<Span<'static>> {
     let mut ids: Vec<_> = tabs.keys().copied().collect();
     ids.sort_unstable();
 
     let mut spans = Vec::new();
-    for (index, id) in ids.iter().enumerate() {
-        if index > 0 {
-            spans.push(Span::styled(" | ", Style::default().fg(Color::Gray)));
-        }
-
+    for id in ids.iter() {
         let title = tabs
             .get(id)
             .map(|window| tab_title_from_window(window, buffers))
             .unwrap_or_else(|| "(empty)".to_string());
 
-        let label = format!("{}: {}", id, title);
-        let style = if *id == current_tab_id {
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD)
+        if *id == current_tab_id {
+            let label = format_tab_label(*id, &title);
+            spans.push(Span::styled(
+                label,
+                Style::default()
+                    .bg(Color::LightBlue)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::BOLD),
+            ));
         } else {
-            Style::default().fg(Color::Gray)
-        };
-        spans.push(Span::styled(label, style));
+            let label = format_tab_label(*id, &title);
+            spans.push(Span::styled(
+                label,
+                Style::default().bg(Color::DarkGray).fg(Color::White),
+            ));
+        }
+    }
+
+    let used = ids.len().saturating_mul(TAB_WIDTH);
+    let remaining = total_width.saturating_sub(used);
+    if remaining > 0 {
+        spans.push(Span::styled(
+            " ".repeat(remaining),
+            Style::default().bg(Color::Black),
+        ));
     }
 
     spans
+}
+
+fn format_tab_label(index: usize, title: &str) -> String {
+    let index_str = format!(" {} ", index);
+    let available = TAB_WIDTH.saturating_sub(index_str.len() + 1);
+    let mut title = title.to_string();
+    if title.len() > available {
+        title.truncate(available);
+    }
+    let padding = available.saturating_sub(title.len());
+    let left = padding / 2;
+    let right = padding - left;
+    let prefix = format!("{}{}", index_str, " ".repeat(left));
+    let suffix = format!("{} ", " ".repeat(right));
+
+    format!("{}{}{}", prefix, title, suffix)
 }
 
 fn tab_title_from_window(window: &Window, buffers: &HashMap<usize, Buffer>) -> String {
@@ -108,7 +139,7 @@ mod test {
 
     use crate::model::{Buffer, DirectoryBuffer, SplitFocus, Window};
 
-    use super::tab_title_from_window;
+    use super::{format_tab_label, tab_title_from_window, TAB_WIDTH};
 
     #[test]
     fn tab_title_uses_directory_folder_name() {
@@ -169,5 +200,18 @@ mod test {
 
         let title = tab_title_from_window(&window, &buffers);
         assert_eq!(title, "Tasks");
+    }
+
+    #[test]
+    fn format_tab_label_centers_and_truncates() {
+        let label = format_tab_label(2, "src");
+        assert_eq!(label.len(), TAB_WIDTH);
+        assert!(label.starts_with(" 2 "));
+        assert!(label.ends_with(' '));
+
+        let long = format_tab_label(10, "this-title-is-way-too-long-to-fit");
+        assert_eq!(long.len(), TAB_WIDTH);
+        assert!(long.starts_with(" 10 "));
+        assert!(long.ends_with(' '));
     }
 }
