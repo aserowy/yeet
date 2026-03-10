@@ -249,7 +249,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                     mode,
                 );
             }
-            tab::close_tab(app);
+            if let Err(err) = tab::close_tab(app) {
+                tracing::error!("tab close failed: {}", err);
+            }
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         ("tabc!", "") => {
@@ -257,7 +259,9 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
                 return vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))];
             }
             reset_unsaved_changes_for_tab(app, app.current_tab_id);
-            tab::close_tab(app);
+            if let Err(err) = tab::close_tab(app) {
+                tracing::error!("tab close failed: {}", err);
+            }
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         ("tabo", "") => {

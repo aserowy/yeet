@@ -238,9 +238,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, App
 
     current_vp.hide_cursor_line = false;
 
-    Ok(selection::refresh_preview_from_current_selection(
-        app, history, None,
-    ))
+    selection::refresh_preview_from_current_selection(app, history, None)
 }
 
 fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {

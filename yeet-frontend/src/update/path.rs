@@ -79,21 +79,14 @@ pub fn remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-) -> Vec<Action> {
+) -> Result<Vec<Action>, AppError> {
     if path.starts_with(junk.path.clone()) {
         remove_from_junkyard(junk, path);
     }
 
     history::remove_entry(history, path);
 
-    let actions = match update_directory_buffers_on_remove(history, mode, app, path) {
-        Ok(actions) => actions,
-        Err(err) => {
-            tracing::error!("path remove failed: {}", err);
-            Vec::new()
-        }
-    };
-
+    let actions = update_directory_buffers_on_remove(history, mode, app, path)?;
     let removed_marks = remove_marks_for_path(marks, path);
     if !removed_marks.is_empty() {
         sign::unset_sign_for_paths(
@@ -116,7 +109,7 @@ pub fn remove(
         QFIX_SIGN_ID,
     );
 
-    actions
+    Ok(actions)
 }
 
 fn remove_marks_for_path(marks: &mut Marks, path: &Path) -> Vec<PathBuf> {
@@ -308,7 +301,7 @@ fn update_directory_buffers_on_remove(
     {
         actions.extend(selection::refresh_preview_from_current_selection(
             app, history, None,
-        ));
+        )?);
     }
 
     Ok(actions)
@@ -439,7 +432,7 @@ mod test {
         let mut qfix = QuickFix::default();
         let mut junk = JunkYard::default();
 
-        remove(
+        let _ = remove(
             &mut history,
             &mut marks,
             &mut qfix,
@@ -543,7 +536,8 @@ mod test {
             &Mode::Navigation,
             &mut app,
             std::slice::from_ref(&newfolder),
-        );
+        )
+        .expect("path add must succeed");
 
         // The preview viewport must now point at a buffer for "newfolder", not
         // at the old Empty buffer. The buffer should be a PathReference (triggering
@@ -634,7 +628,7 @@ mod test {
         let mut qfix = QuickFix::default();
         let mut junk = JunkYard::default();
 
-        remove(
+        let _ = remove(
             &mut history,
             &mut marks,
             &mut qfix,

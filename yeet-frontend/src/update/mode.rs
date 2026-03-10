@@ -130,28 +130,40 @@ fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
     for event in state.pending_path_events.drain(..) {
         match event {
             PendingPathEvent::Added(paths) => {
-                actions.extend(path::add(
-                    &state.history,
-                    &state.marks,
-                    &state.qfix,
-                    &state.modes.current,
-                    app,
-                    &paths,
-                ));
+                actions.extend(
+                    path::add(
+                        &state.history,
+                        &state.marks,
+                        &state.qfix,
+                        &state.modes.current,
+                        app,
+                        &paths,
+                    )
+                    .unwrap_or_else(|err| {
+                        tracing::error!("pending path add failed: {}", err);
+                        Vec::new()
+                    }),
+                );
                 actions.extend(junkyard::cleanup_if_path_in_junkyard(
                     &mut state.junk,
                     &paths,
                 ));
             }
             PendingPathEvent::Removed(path) => {
-                path::remove(
-                    &mut state.history,
-                    &mut state.marks,
-                    &mut state.qfix,
-                    &mut state.junk,
-                    &state.modes.current,
-                    app,
-                    &path,
+                actions.extend(
+                    path::remove(
+                        &mut state.history,
+                        &mut state.marks,
+                        &mut state.qfix,
+                        &mut state.junk,
+                        &state.modes.current,
+                        app,
+                        &path,
+                    )
+                    .unwrap_or_else(|err| {
+                        tracing::error!("pending path remove failed: {}", err);
+                        Vec::new()
+                    }),
                 );
             }
         }
@@ -282,7 +294,8 @@ mod test {
             .push(PendingPathEvent::Removed(removed_path));
 
         state.modes.current = Mode::Insert;
-        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal);
+        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal)
+            .expect("mode change must succeed");
 
         assert!(actions
             .iter()
@@ -303,12 +316,14 @@ mod test {
         state.modes.current = Mode::Navigation;
 
         // Navigation → Normal should be blocked on Tasks
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal);
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal)
+            .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
 
         // Navigation → Insert should also be blocked
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert);
+        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert)
+            .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
     }
@@ -333,7 +348,8 @@ mod test {
             &mut state,
             &Mode::Navigation,
             &Mode::Command(CommandMode::Command),
-        );
+        )
+        .expect("mode change must succeed");
         assert!(actions
             .iter()
             .any(|a| matches!(a, crate::action::Action::ModeChanged)));
@@ -345,7 +361,8 @@ mod test {
             &mut state,
             &Mode::Command(CommandMode::Command),
             &Mode::Navigation,
-        );
+        )
+        .expect("mode change must succeed");
         assert!(actions
             .iter()
             .any(|a| matches!(a, crate::action::Action::ModeChanged)));

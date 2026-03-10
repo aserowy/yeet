@@ -146,9 +146,5 @@ pub fn relocate(
         );
     };
 
-    Ok(selection::refresh_preview_from_current_selection(
-        app,
-        &state.history,
-        premotion_preview_path,
-    ))
+    selection::refresh_preview_from_current_selection(app, &state.history, premotion_preview_path)
 }

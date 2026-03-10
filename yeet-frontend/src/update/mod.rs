@@ -144,7 +144,7 @@ fn update_with_message(
                     .push(crate::model::PendingPathEvent::Removed(path));
                 Vec::new()
             } else {
-                path::remove(
+                match path::remove(
                     &mut state.history,
                     &mut state.marks,
                     &mut state.qfix,
@@ -152,7 +152,13 @@ fn update_with_message(
                     &state.modes.current,
                     app,
                     &path,
-                )
+                ) {
+                    Ok(actions) => actions,
+                    Err(err) => {
+                        tracing::error!("PathsRemoved failed: {}", err);
+                        Vec::new()
+                    }
+                }
             }
         }
         Message::PathsAdded(paths) => {
@@ -162,14 +168,20 @@ fn update_with_message(
                     .push(crate::model::PendingPathEvent::Added(paths));
                 Vec::new()
             } else {
-                let mut actions = path::add(
+                let mut actions = match path::add(
                     &state.history,
                     &state.marks,
                     &state.qfix,
                     &state.modes.current,
                     app,
                     &paths,
-                );
+                ) {
+                    Ok(actions) => actions,
+                    Err(err) => {
+                        tracing::error!("PathsAdded failed: {}", err);
+                        Vec::new()
+                    }
+                };
                 actions.extend(junkyard::cleanup_if_path_in_junkyard(
                     &mut state.junk,
                     &paths,
@@ -246,7 +258,13 @@ pub fn update_with_keymap_message(
                 Vec::new()
             }
         },
-        KeymapMessage::OpenSelected => open::selected(settings, &state.modes.current, app),
+        KeymapMessage::OpenSelected => match open::selected(settings, &state.modes.current, app) {
+            Ok(actions) => actions,
+            Err(err) => {
+                tracing::error!("OpenSelected failed: {}", err);
+                Vec::new()
+            }
+        },
         KeymapMessage::PasteFromJunkYard(entry_id) => {
             match junkyard::paste(app, &state.junk, entry_id) {
                 Ok(actions) => actions,
@@ -260,7 +278,13 @@ pub fn update_with_keymap_message(
             commandline::print(&mut app.commandline, &mut state.modes, content)
         }
         KeymapMessage::ReplayMacro(char) => register::replay_macro(&mut state.register, char),
-        KeymapMessage::SetMark(char) => mark::add(app, &mut state.marks, *char),
+        KeymapMessage::SetMark(char) => match mark::add(app, &mut state.marks, *char) {
+            Ok(actions) => actions,
+            Err(err) => {
+                tracing::error!("SetMark failed: {}", err);
+                Vec::new()
+            }
+        },
         KeymapMessage::StartMacro(identifier) => {
             mode::print_recording(&mut app.commandline, &mut state.modes, *identifier)
         }
@@ -284,7 +308,15 @@ pub fn update_with_keymap_message(
 
             selection::copy_to_clipboard(&mut state.register, directory, &current_vp.cursor)
         }
-        KeymapMessage::YankToJunkYard(repeat) => junkyard::yank(app, &mut state.junk, repeat),
+        KeymapMessage::YankToJunkYard(repeat) => {
+            match junkyard::yank(app, &mut state.junk, repeat) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("YankToJunkYard failed: {}", err);
+                    Vec::new()
+                }
+            }
+        }
     }
 }
 
@@ -295,10 +327,22 @@ pub fn update_with_buffer_message(
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
-        BufferMessage::ChangeMode(from, to) => mode::change(app, state, from, to),
+        BufferMessage::ChangeMode(from, to) => match mode::change(app, state, from, to) {
+            Ok(actions) => actions,
+            Err(err) => {
+                tracing::error!("ChangeMode failed: {}", err);
+                Vec::new()
+            }
+        },
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
-            Mode::Insert | Mode::Normal => modify::buffer(app, state, repeat, modification),
+            Mode::Insert | Mode::Normal => match modify::buffer(app, state, repeat, modification) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("Modification failed: {}", err);
+                    Vec::new()
+                }
+            },
             Mode::Navigation => {
                 let vp = match app.current_window() {
                     Ok(window) => window.focused_viewport(),
@@ -308,7 +352,13 @@ pub fn update_with_buffer_message(
                     app.contents.buffers.get(&vp.buffer_id),
                     Some(Buffer::Tasks(_))
                 ) {
-                    modify::buffer(app, state, repeat, modification)
+                    match modify::buffer(app, state, repeat, modification) {
+                        Ok(actions) => actions,
+                        Err(err) => {
+                            tracing::error!("Modification failed: {}", err);
+                            Vec::new()
+                        }
+                    }
                 } else {
                     Vec::new()
                 }
@@ -333,10 +383,24 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                viewport::relocate(app, &state.history, &state.modes.current, mtn)
+                match viewport::relocate(app, &state.history, &state.modes.current, mtn) {
+                    Ok(actions) => actions,
+                    Err(err) => {
+                        tracing::error!("MoveViewPort failed: {}", err);
+                        Vec::new()
+                    }
+                }
             }
         },
-        BufferMessage::SaveBuffer => save::current(app, &mut state.junk, &state.modes.current),
+        BufferMessage::SaveBuffer => {
+            match save::current(app, &mut state.junk, &state.modes.current) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("SaveBuffer failed: {}", err);
+                    Vec::new()
+                }
+            }
+        }
 
         BufferMessage::AddLine(_, _)
         | BufferMessage::RemoveLine(_)

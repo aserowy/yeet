@@ -39,7 +39,7 @@ pub fn buffer(
             let (window, contents) = app.current_window_and_contents_mut()?;
             let (_, buffer) = app::get_focused_current_mut(window, contents)?;
             if matches!(buffer, Buffer::Directory(_)) {
-                selection::refresh_preview_from_current_selection(app, &state.history, None)
+                selection::refresh_preview_from_current_selection(app, &state.history, None)?
             } else {
                 Vec::new()
             }
@@ -124,7 +124,7 @@ mod test {
         let vp = window.focused_viewport_mut();
         vp.cursor.vertical_index = 1;
 
-        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
 
         // Task at index 1 (id=5, "fd-2") should be cancelled
         assert!(token_fd.is_cancelled());
@@ -164,7 +164,8 @@ mod test {
         // mode::change blocks Navigation→Normal on Tasks, so mode stays Navigation.
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        let actions = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let actions = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine)
+            .expect("buffer modification must succeed");
 
         // Mode should remain Navigation — no mode change occurred.
         assert_eq!(state.modes.current, yeet_buffer::model::Mode::Navigation);
@@ -184,7 +185,7 @@ mod test {
 
         // Cancel task at index 0 (id=1)
         vp_set_cursor(&mut app, 0);
-        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
 
         // The buffer should be refreshed — cancelled line has ANSI codes
         let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
@@ -204,7 +205,7 @@ mod test {
         let mut state = State::default();
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
         // No panic — test passes if we reach here
     }
 
@@ -224,7 +225,8 @@ mod test {
             &mut state,
             &1,
             &TextModification::Insert("x".to_string()),
-        );
+        )
+        .expect("buffer modification must succeed");
 
         // No task should be cancelled
         for task in state.tasks.running.values() {

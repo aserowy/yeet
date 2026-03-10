@@ -48,12 +48,17 @@ pub fn change(
     let window = app.current_window()?;
     let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
-        None => return Ok(Vec::new()),
+        None => {
+            return Err(AppError::InvalidState(
+                "focused window must have a focused directory buffer".to_string(),
+            ))
+        }
     };
     let current = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer,
-        _ => return Ok(Vec::new()),
+        _ => return Err(AppError::BufferNotFound(current_id)),
     };
+
     if current.path.as_path() != path {
         return Ok(Vec::new());
     }
@@ -65,7 +70,7 @@ pub fn change(
             app,
             &state.history,
             None,
-        ));
+        )?);
     }
 
     Ok(actions)
@@ -162,7 +167,7 @@ pub fn finish(
             app,
             &state.history,
             None,
-        ));
+        )?);
     }
 
     Ok(actions)
