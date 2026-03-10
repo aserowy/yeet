@@ -32,6 +32,8 @@ pub enum AppError {
     PreviewProtocolGenerationFailed,
     #[error("Loading image failed")]
     ImageOperationFailed(#[from] image::ImageError),
+    #[error("Tab with id {0} not found")]
+    TabNotFound(usize),
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
     #[error("Rendering view failed")]

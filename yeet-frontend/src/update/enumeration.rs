@@ -48,14 +48,14 @@ pub fn change(
     let window = app.current_window()?;
     let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
-        None => return Vec::new(),
+        None => return Ok(Vec::new()),
     };
     let current = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer,
-        _ => return Vec::new(),
+        _ => return Ok(Vec::new()),
     };
     if current.path.as_path() != path {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
     let mut actions = Vec::new();
@@ -80,7 +80,7 @@ pub fn finish(
     selection: &Option<String>,
 ) -> Result<Vec<Action>, AppError> {
     if state.modes.current != Mode::Navigation {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
     let mut actions = Vec::new();
@@ -286,11 +286,12 @@ mod test {
             &current_path,
             &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
             &None,
-        );
+        )
+        .expect("change must succeed");
 
         assert!(matches!(
             actions.as_slice(),
-            [Action::Load(path, _)] if path == &selected_file
+            [Action::Load(path, _)] if *path == selected_file
         ));
 
         let window = app.current_window().expect("test requires current tab");

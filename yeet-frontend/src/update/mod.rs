@@ -109,10 +109,22 @@ fn update_with_message(
 ) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            enumeration::change(state, app, &path, &contents, &selection)
+            match enumeration::change(state, app, &path, &contents, &selection) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("EnumerationChanged failed: {}", err);
+                    Vec::new()
+                }
+            }
         }
         Message::EnumerationFinished(path, contents, selection) => {
-            enumeration::finish(state, app, &path, &contents, &selection)
+            match enumeration::finish(state, app, &path, &contents, &selection) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("EnumerationFinished failed: {}", err);
+                    Vec::new()
+                }
+            }
         }
         Message::Error(error) => commandline::print(
             &mut app.commandline,
@@ -216,14 +228,34 @@ pub fn update_with_keymap_message(
         KeymapMessage::NavigateToMark(char) => {
             navigate::mark(app, &state.history, &state.marks, char)
         }
-        KeymapMessage::NavigateToParent => navigate::parent(app),
+        KeymapMessage::NavigateToParent => match navigate::parent(app) {
+            Ok(actions) => actions,
+            Err(err) => {
+                tracing::error!("NavigateToParent failed: {}", err);
+                Vec::new()
+            }
+        },
         KeymapMessage::NavigateToPath(path) => navigate::path(app, &state.history, path),
         KeymapMessage::NavigateToPathAsPreview(path) => {
             navigate::path_as_preview(app, &state.history, path)
         }
-        KeymapMessage::NavigateToSelected => navigate::selected(app, &mut state.history),
+        KeymapMessage::NavigateToSelected => match navigate::selected(app, &mut state.history) {
+            Ok(actions) => actions,
+            Err(err) => {
+                tracing::error!("NavigateToSelected failed: {}", err);
+                Vec::new()
+            }
+        },
         KeymapMessage::OpenSelected => open::selected(settings, &state.modes.current, app),
-        KeymapMessage::PasteFromJunkYard(entry_id) => junkyard::paste(app, &state.junk, entry_id),
+        KeymapMessage::PasteFromJunkYard(entry_id) => {
+            match junkyard::paste(app, &state.junk, entry_id) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("PasteFromJunkYard failed: {}", err);
+                    Vec::new()
+                }
+            }
+        }
         KeymapMessage::Print(content) => {
             commandline::print(&mut app.commandline, &mut state.modes, content)
         }
@@ -240,7 +272,11 @@ pub fn update_with_keymap_message(
                 Ok(window) => window,
                 Err(_) => return Vec::new(),
             };
-            let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
+            let (current_vp, current_buffer) = match app::get_focused_current_mut(window, contents)
+            {
+                Ok((current_vp, current_buffer)) => (current_vp, current_buffer),
+                Err(_) => return Vec::new(),
+            };
             let directory = match current_buffer {
                 Buffer::Directory(directory) => directory,
                 _ => return Vec::new(),
@@ -283,7 +319,13 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                cursor::relocate(app, state, rpt, mtn)
+                match cursor::relocate(app, state, rpt, mtn) {
+                    Ok(actions) => actions,
+                    Err(err) => {
+                        tracing::error!("MoveCursor failed: {}", err);
+                        Vec::new()
+                    }
+                }
             }
         },
         BufferMessage::MoveViewPort(mtn) => match &state.modes.current {

@@ -2,6 +2,7 @@ use yeet_buffer::message::{BufferMessage, TextModification};
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{App, Buffer, State},
     update::app,
 };
@@ -13,23 +14,20 @@ pub fn buffer(
     state: &mut State,
     repeat: &usize,
     modification: &TextModification,
-) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(it) => it,
-        Err(_) => return Vec::new(),
-    };
-    let (vp, focused) = app::get_focused_current_mut(window, contents);
-    match focused {
+) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (vp, focused) = app::get_focused_current_mut(window, contents)?;
+    let result = match focused {
         Buffer::Tasks(_) => {
             if !matches!(modification, TextModification::DeleteLine) {
-                return Vec::new();
+                return Ok(Vec::new());
             }
 
             let cursor_index = vp.cursor.vertical_index;
             cancel_task_at_index(&mut state.tasks, cursor_index);
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                task::refresh_tasks_buffer(window, contents, &state.tasks);
-            }
+
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            task::refresh_tasks_buffer(window, contents, &state.tasks);
 
             Vec::new()
         }
@@ -38,27 +36,19 @@ pub fn buffer(
             let msg = BufferMessage::Modification(*repeat, modification.clone());
             yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
 
-            let should_refresh_preview = match app.current_window_and_contents_mut() {
-                Ok((window, contents)) => {
-                    let (_, buffer) = app::get_focused_current_mut(window, contents);
-                    matches!(buffer, Buffer::Directory(_))
-                }
-                Err(_) => return Vec::new(),
-            };
-            if should_refresh_preview {
-                return selection::refresh_preview_from_current_selection(
-                    app,
-                    &state.history,
-                    None,
-                );
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            let (_, buffer) = app::get_focused_current_mut(window, contents)?;
+            if matches!(buffer, Buffer::Directory(_)) {
+                selection::refresh_preview_from_current_selection(app, &state.history, None)
+            } else {
+                Vec::new()
             }
-
-            Vec::new()
         }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
             Vec::new()
         }
-    }
+    };
+    Ok(result)
 }
 
 fn cancel_task_at_index(tasks: &mut crate::model::Tasks, cursor_index: usize) {
@@ -197,7 +187,7 @@ mod test {
         buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
 
         // The buffer should be refreshed — cancelled line has ANSI codes
-        let lines = get_tasks_buffer_lines(&app);
+        let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
         assert_eq!(lines.len(), 3);
         // Cancelled line: stripped content is the same, but raw content has ANSI
         assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
@@ -242,7 +232,7 @@ mod test {
         }
 
         // Buffer content should be unchanged (3 plain lines)
-        let lines = get_tasks_buffer_lines(&app);
+        let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
         assert_eq!(lines.len(), 3);
         for line in &lines {
             assert!(!line.content.to_string().contains("\x1b["));

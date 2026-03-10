@@ -98,7 +98,7 @@ pub fn relocate(
 
     let current_window = app.current_window()?;
     let premotion_preview_path =
-        app::get_focused_directory_buffer_ids(window).and_then(|(_, _, preview_id)| {
+        app::get_focused_directory_buffer_ids(current_window).and_then(|(_, _, preview_id)| {
             app.contents
                 .buffers
                 .get(&preview_id)
@@ -107,21 +107,20 @@ pub fn relocate(
         });
 
     let (window, contents) = app.current_window_and_contents_mut()?;
-    let (viewport, buffer) = match app::get_focused_current_mut(window, contents) {
+    let (viewport, buffer) = match app::get_focused_current_mut(window, contents)? {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
-        // FIX: should return an error instead of silently doing nothing?
-        (_, Buffer::Image(_)) => return Vec::new(),
-        (_, Buffer::Content(_)) => return Vec::new(),
-        (_, Buffer::PathReference(_)) => return Vec::new(),
-        (_, Buffer::Tasks(_)) => return Vec::new(),
-        (_, Buffer::Empty) => return Vec::new(),
+        (_, Buffer::Image(_))
+        | (_, Buffer::Content(_))
+        | (_, Buffer::PathReference(_))
+        | (_, Buffer::Tasks(_))
+        | (_, Buffer::Empty) => return Ok(Vec::new()),
     };
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(drctn) = mtn {
         let current_drctn = match get_direction_from_search_register(&state.register) {
             Some(it) => it,
-            None => return Vec::new(),
+            None => return Ok(Vec::new()),
         };
 
         let direction = match (drctn, current_drctn) {

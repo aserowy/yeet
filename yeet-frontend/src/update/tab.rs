@@ -22,16 +22,22 @@ pub fn create_tab(app: &mut App, target_path: &Path) -> Vec<Action> {
     ))]
 }
 
-pub fn close_tab(app: &mut App) -> Option<usize> {
+pub fn close_tab(app: &mut App) -> Result<Option<usize>, AppError> {
     if app.tabs.len() <= 1 {
-        return None;
+        return Ok(None);
     }
 
     let ordered = ordered_tab_ids(app);
-    let next_id = next_tab_for_close(app.current_tab_id, &ordered)?;
-    app.tabs.remove(&app.current_tab_id);
+    let Some(next_id) = next_tab_for_close(app.current_tab_id, &ordered) else {
+        return Ok(None);
+    };
+
+    if app.tabs.remove(&app.current_tab_id).is_none() {
+        return Err(AppError::TabNotFound(app.current_tab_id));
+    }
+
     app.current_tab_id = next_id;
-    Some(next_id)
+    Ok(Some(next_id))
 }
 
 pub fn close_other_tabs(app: &mut App) {
@@ -83,11 +89,14 @@ pub fn tabnew_target_path(app: &App) -> Result<PathBuf, AppError> {
                 app::get_focused_directory_buffer_ids(window)
                     .ok_or(AppError::InvalidTargetPath)?
                     .1,
-            ),
+            )
+            .ok()
+            .flatten(),
             Window::Tasks(_) => None,
             Window::Horizontal { .. } | Window::Vertical { .. } => {
-                app::get_focused_directory_buffer_ids(window)
-                    .and_then(|(_, current_id, _)| app::get_buffer_path(app, current_id))
+                app::get_focused_directory_buffer_ids(window).and_then(|(_, current_id, _)| {
+                    app::get_buffer_path(app, current_id).ok().flatten()
+                })
             }
         },
         Err(_) => None,

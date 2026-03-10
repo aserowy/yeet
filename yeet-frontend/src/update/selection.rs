@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use yeet_buffer::model::{Cursor, Mode};
 
+use crate::error::AppError;
 use crate::model;
 use crate::update::{cursor, preview};
 use crate::{
@@ -17,32 +18,31 @@ pub fn refresh_preview_from_current_selection(
     app: &mut App,
     history: &History,
     previous_selection: Option<PathBuf>,
-) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
+) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents)?;
     let current_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
-        _ => return Vec::new(),
+        _ => return Ok(Vec::new()),
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
-        if let Ok(window) = app.current_window() {
-            if preview_matches_selection(window, &app.contents, &current_selection) {
-                tracing::trace!("skipping preview refresh: selection unchanged");
-                return Vec::new();
-            }
-        } else {
-            return Vec::new();
+        let window = app.current_window()?;
+        if preview_matches_selection(window, &app.contents, &current_selection) {
+            tracing::trace!("skipping preview refresh: selection unchanged");
+            return Ok(Vec::new());
         }
+
         tracing::debug!("selection unchanged but preview buffer does not match; refreshing");
     }
 
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
 
-    set_preview_buffer_for_selection(app, history, current_selection)
+    Ok(set_preview_buffer_for_selection(
+        app,
+        history,
+        current_selection,
+    ))
 }
 
 fn preview_matches_selection(
@@ -100,7 +100,7 @@ pub fn set_preview_buffer_for_selection(
         preview_vp.vertical_index = 0;
 
         let mut cursor_vp = preview_vp.clone();
-        cursor::set_index(contents, history, &mut cursor_vp, &Mode::Normal, None);
+        let _ = cursor::set_index(contents, history, &mut cursor_vp, &Mode::Normal, None);
         *preview_vp = cursor_vp;
     }
 

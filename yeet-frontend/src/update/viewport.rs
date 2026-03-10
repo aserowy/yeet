@@ -5,6 +5,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{history::History, App, Buffer},
     update::app,
 };
@@ -16,20 +17,17 @@ pub fn relocate(
     history: &History,
     mode: &Mode,
     direction: &ViewPortDirection,
-) -> Vec<Action> {
+) -> Result<Vec<Action>, AppError> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (vp, buffer) = match app::get_focused_current_mut(window, contents) {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (vp, buffer) = match app::get_focused_current_mut(window, contents)? {
         (vp, Buffer::Directory(it)) => (vp, it),
-        (_vp, Buffer::Image(_)) => return Vec::new(),
-        (_vp, Buffer::Content(_)) => return Vec::new(),
-        (_vp, Buffer::PathReference(_)) => return Vec::new(),
-        (_vp, Buffer::Tasks(_)) => return Vec::new(),
-        (_vp, Buffer::Empty) => return Vec::new(),
+        (_vp, Buffer::Image(_))
+        | (_vp, Buffer::Content(_))
+        | (_vp, Buffer::PathReference(_))
+        | (_vp, Buffer::Tasks(_))
+        | (_vp, Buffer::Empty) => return Ok(Vec::new()),
     };
 
     yeet_buffer::update(

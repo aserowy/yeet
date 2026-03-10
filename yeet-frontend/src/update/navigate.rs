@@ -115,7 +115,7 @@ pub fn navigate_to_path_with_selection(
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
 
-    cursor::set_index(
+    let _ = cursor::set_index(
         contents,
         history,
         current_vp,
@@ -130,7 +130,7 @@ pub fn navigate_to_path_with_selection(
     parent_vp.buffer_id = parent_id;
     parent_vp.cursor = Cursor::default();
 
-    cursor::set_index(
+    let _ = cursor::set_index(
         contents,
         history,
         parent_vp,
@@ -163,11 +163,7 @@ pub fn parent(app: &mut App) -> Result<Vec<Action>, AppError> {
     let window = app.current_window()?;
     let (_, current_id, _) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
-        None => {
-            return Err(AppError::InvalidState(
-                "no focused buffer ids found in current window".to_string(),
-            ))
-        }
+        None => return Ok(Vec::new()),
     };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
@@ -218,7 +214,7 @@ pub fn parent(app: &mut App) -> Result<Vec<Action>, AppError> {
 
         Ok(actions)
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 
@@ -228,11 +224,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, App
     let (parent_vp, current_vp, preview_vp) = match app::get_focused_directory_viewports_mut(window)
     {
         Some(vps) => vps,
-        None => {
-            return Err(AppError::InvalidState(
-                "no focused directory viewports found in current window".to_string(),
-            ))
-        }
+        None => return Ok(Vec::new()),
     };
     let preview_buffer = match contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
@@ -321,7 +313,7 @@ mod test {
     #[test]
     fn parent_noop_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let actions = parent(&mut app);
+        let actions = parent(&mut app).expect("parent must succeed");
         assert!(actions.is_empty());
     }
 
@@ -329,7 +321,7 @@ mod test {
     fn selected_noop_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
         let mut history = History::default();
-        let actions = selected(&mut app, &mut history);
+        let actions = selected(&mut app, &mut history).expect("selected must succeed");
         assert!(actions.is_empty());
     }
 

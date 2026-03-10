@@ -16,7 +16,10 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
         Ok(window) => window,
         Err(_) => return Vec::new(),
     };
-    let (vp, buffer) = app::get_focused_current_mut(window, contents);
+    let (vp, buffer) = match app::get_focused_current_mut(window, contents) {
+        Ok((vp, buffer)) => (vp, buffer),
+        Err(_) => return Vec::new(),
+    };
     let (vp_cursor, buffer) = match buffer {
         Buffer::Directory(it) => (vp.cursor.clone(), it),
         Buffer::Image(_) => return Vec::new(),

@@ -29,12 +29,9 @@ pub fn add(
     mode: &Mode,
     app: &mut App,
     paths: &[PathBuf],
-) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
+) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents)?;
     let previous_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => None,
@@ -89,7 +86,13 @@ pub fn remove(
 
     history::remove_entry(history, path);
 
-    let actions = update_directory_buffers_on_remove(history, mode, app, path);
+    let actions = match update_directory_buffers_on_remove(history, mode, app, path) {
+        Ok(actions) => actions,
+        Err(err) => {
+            tracing::error!("path remove failed: {}", err);
+            Vec::new()
+        }
+    };
 
     let removed_marks = remove_marks_for_path(marks, path);
     if !removed_marks.is_empty() {
@@ -208,7 +211,7 @@ fn update_directory_buffers_on_remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-) -> Result<Vec<Action>> {
+) -> Result<Vec<Action>, AppError> {
     let parent_name = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => Some((parent, name.to_string_lossy().to_string())),
         _ => None,
@@ -295,7 +298,7 @@ fn update_directory_buffers_on_remove(
             reset_directory_viewports_to_empty(app);
         }
 
-        return actions;
+        return Ok(actions);
     }
 
     if preview_path
@@ -308,7 +311,7 @@ fn update_directory_buffers_on_remove(
         ));
     }
 
-    actions
+    Ok(actions)
 }
 
 fn remove_buffers_under_path(app: &mut App, path: &Path) {

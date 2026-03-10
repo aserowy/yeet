@@ -39,11 +39,16 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
             mode,
             qfix::reset(&mut state.qfix, app.contents.buffers.values_mut().collect()),
         ),
-        ("clearcl", path) => add_change_mode(
-            mode_before,
-            mode,
-            qfix::clear_in(app, &mut state.qfix, path),
-        ),
+        ("clearcl", path) => {
+            let actions = match qfix::clear_in(app, &mut state.qfix, path) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("clearcl failed: {}", err);
+                    Vec::new()
+                }
+            };
+            add_change_mode(mode_before, mode, actions)
+        }
         ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
         ("cp", target) => {
@@ -100,7 +105,16 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("e!", "") => add_change_mode(mode_before, mode, file::refresh(app)),
+        ("e!", "") => {
+            let actions = match file::refresh(app) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("refresh failed: {}", err);
+                    Vec::new()
+                }
+            };
+            add_change_mode(mode_before, mode, actions)
+        }
         ("fd", params) => {
             let current_path = get_current_path(app);
             let actions = match current_path {
@@ -115,11 +129,16 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("invertcl", "") => add_change_mode(
-            mode_before,
-            mode,
-            qfix::invert_in_current(app, &mut state.qfix),
-        ),
+        ("invertcl", "") => {
+            let actions = match qfix::invert_in_current(app, &mut state.qfix) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("invertcl failed: {}", err);
+                    Vec::new()
+                }
+            };
+            add_change_mode(mode_before, mode, actions)
+        }
         ("junk", "") => print::junkyard(&state.junk),
         ("marks", "") => print::marks(&state.marks),
         ("mv", target) => {
@@ -353,13 +372,13 @@ pub fn execute(app: &mut App, state: &mut State, cmd: &str) -> Vec<Action> {
 fn get_current_path(app: &App) -> Option<&Path> {
     let window = app.current_window().ok()?;
     let (_, current_id, _) = app::get_focused_directory_buffer_ids(window)?;
-    app::get_buffer_path(app, current_id)
+    app::get_buffer_path(app, current_id).ok()?
 }
 
 fn get_preview_path(app: &App) -> Option<&Path> {
     let window = app.current_window().ok()?;
     let (_, _, preview_id) = app::get_focused_directory_buffer_ids(window)?;
-    app::get_buffer_path(app, preview_id)
+    app::get_buffer_path(app, preview_id).ok()?
 }
 
 fn add_change_mode(mode_before: Mode, mode: Mode, mut actions: Vec<Action>) -> Vec<Action> {

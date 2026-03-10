@@ -6,6 +6,7 @@ use yeet_keymap::message::PrintContent;
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{
         register::{Register, RegisterScope},
         App, Buffer, CommandLine, ModeState, PendingPathEvent, State,
@@ -14,25 +15,27 @@ use crate::{
 
 use super::{app, commandline, junkyard, path, register::get_macro_register, save};
 
-pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<Action> {
+pub fn change(
+    app: &mut App,
+    state: &mut State,
+    from: &Mode,
+    to: &Mode,
+) -> Result<Vec<Action>, AppError> {
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
         | (Mode::Insert, Mode::Insert)
         | (Mode::Navigation, Mode::Navigation)
-        | (Mode::Normal, Mode::Normal) => return Vec::new(),
+        | (Mode::Normal, Mode::Normal) => return Ok(Vec::new()),
         _ => {}
     }
 
     if !to.is_command() && to != &Mode::Navigation {
-        let vp = match app.current_window() {
-            Ok(window) => window.focused_viewport(),
-            Err(_) => return Vec::new(),
-        };
+        let vp = app.current_window()?.focused_viewport();
         if matches!(
             app.contents.buffers.get(&vp.buffer_id),
             Some(Buffer::Tasks(_))
         ) {
-            return Vec::new();
+            return Ok(Vec::new());
         }
     }
 
@@ -46,11 +49,8 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert | Mode::Navigation | Mode::Normal => {
-            let (window, contents) = match app.current_window_and_contents_mut() {
-                Ok(window) => window,
-                Err(_) => return vec![],
-            };
-            let (vp, _buffer) = app::get_focused_current_mut(window, contents);
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            let (vp, _buffer) = app::get_focused_current_mut(window, contents)?;
             vp.hide_cursor = true;
 
             vec![]
@@ -66,11 +66,8 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             update_commandline_on_mode_change(&mut app.commandline, &mut state.modes)
         }
         Mode::Insert => {
-            let (window, contents) = match app.current_window_and_contents_mut() {
-                Ok(window) => window,
-                Err(_) => return vec![],
-            };
-            let (vp, buffer) = app::get_focused_current_mut(window, contents);
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            let (vp, buffer) = app::get_focused_current_mut(window, contents)?;
             if let Buffer::Directory(dir) = buffer {
                 vp.hide_cursor = false;
 
@@ -85,11 +82,8 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
             vec![]
         }
         Mode::Navigation => {
-            let (window, contents) = match app.current_window_and_contents_mut() {
-                Ok(window) => window,
-                Err(_) => return vec![],
-            };
-            let (vp, buffer) = app::get_focused_current_mut(window, contents);
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            let (vp, buffer) = app::get_focused_current_mut(window, contents)?;
             if let Buffer::Directory(dir) = buffer {
                 // TODO: handle file operations: show pending with gray, refresh on operation success
                 // TODO: sort and refresh current on PathEnumerationFinished while not in Navigation mode
@@ -103,18 +97,12 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
                 );
             }
 
-            let (window, contents) = match app.current_window_and_contents_mut() {
-                Ok(window) => window,
-                Err(_) => return vec![],
-            };
+            let (window, contents) = app.current_window_and_contents_mut()?;
             save::all(window, contents, &mut state.junk, &state.modes.current)
         }
         Mode::Normal => {
-            let (window, contents) = match app.current_window_and_contents_mut() {
-                Ok(window) => window,
-                Err(_) => return vec![],
-            };
-            let (vp, buffer) = app::get_focused_current_mut(window, contents);
+            let (window, contents) = app.current_window_and_contents_mut()?;
+            let (vp, buffer) = app::get_focused_current_mut(window, contents)?;
             if let Buffer::Directory(dir) = buffer {
                 vp.hide_cursor = false;
 
@@ -134,7 +122,7 @@ pub fn change(app: &mut App, state: &mut State, from: &Mode, to: &Mode) -> Vec<A
         actions.extend(flush_pending_paths(state, app));
     }
 
-    actions
+    Ok(actions)
 }
 
 fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
