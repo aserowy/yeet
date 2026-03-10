@@ -78,16 +78,9 @@ fn add_cursor_styles(
         } => current.saturating_sub(vp.horizontal_index),
     };
 
-    // FIX: reset should just use the ansi code for reset inverse (27)
-    // https://github.com/ratatui/ansi-to-tui/issues/50
-    let reset = format!(
-        "\x1b[0m{}",
-        content.get_ansi_escape_sequences_till_char(cursor_index + 1)
-    );
-
     let (code, reset) = match mode {
-        Mode::Command(_) | Mode::Normal => ("\x1b[7m", reset.as_str()),
-        Mode::Insert => ("\x1b[4m", reset.as_str()),
+        Mode::Command(_) | Mode::Normal => ("\x1b[7m", "\x1b[27m"),
+        Mode::Insert => ("\x1b[4m", "\x1b[24m"),
         Mode::Navigation => ("", ""),
     };
 
