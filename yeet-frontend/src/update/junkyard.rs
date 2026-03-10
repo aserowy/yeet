@@ -6,9 +6,10 @@ use std::{
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{
         junkyard::{FileEntry, FileEntryStatus, FileEntryType, FileTransaction, JunkYard},
-        Buffer,
+        App, Buffer,
     },
     task::Task,
     update::app,
@@ -134,18 +135,20 @@ fn decompose_compression_path(path: &Path) -> Option<(String, String, PathBuf)> 
     }
 }
 
-pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> Vec<Action> {
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+pub fn paste(app: &mut App, junk: &JunkYard, entry_id: &char) -> Result<Vec<Action>, AppError> {
+    let window = app.current_window()?;
     let (_, current_id, _) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
         None => return Vec::new(),
     };
     let buffer = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it,
-        _ => return Vec::new(),
+        _ => {
+            return Err(AppError::InvalidState(format!(
+                "paste called on non-directory buffer with buffer_id {}",
+                current_id
+            )))
+        }
     };
 
     if let Some(transaction) = get_junkyard_transaction(junk, entry_id) {
@@ -156,9 +159,9 @@ pub fn paste(app: &mut crate::model::App, junk: &JunkYard, entry_id: &char) -> V
                 buffer.path.clone(),
             )));
         }
-        actions
+        Ok(actions)
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 

@@ -73,9 +73,12 @@ fn cancel_task_at_index(tasks: &mut crate::model::Tasks, cursor_index: usize) {
 #[cfg(test)]
 mod test {
     use tokio_util::sync::CancellationToken;
-    use yeet_buffer::message::TextModification;
+    use yeet_buffer::{message::TextModification, model::BufferLine};
 
-    use crate::model::{App, Buffer, CurrentTask, State, Tasks};
+    use crate::{
+        error::AppError,
+        model::{App, Buffer, CurrentTask, State, Tasks},
+    };
 
     use super::buffer;
 
@@ -252,12 +255,15 @@ mod test {
         vp.cursor.vertical_index = index;
     }
 
-    fn get_tasks_buffer_lines(app: &App) -> Vec<yeet_buffer::model::BufferLine> {
-        let window = app.current_window().expect("test requires current tab");
+    fn get_tasks_buffer_lines(app: &App) -> Result<Vec<BufferLine>, AppError> {
+        let window = app.current_window()?;
         let vp = window.focused_viewport();
         match app.contents.buffers.get(&vp.buffer_id) {
-            Some(Buffer::Tasks(tb)) => tb.buffer.lines.clone(),
-            _ => panic!("expected Buffer::Tasks"),
+            Some(Buffer::Tasks(tb)) => Ok(tb.buffer.lines.clone()),
+            _ => Err(AppError::InvalidState(format!(
+                "Expected Tasks buffer at id {}",
+                vp.buffer_id,
+            ))),
         }
     }
 }

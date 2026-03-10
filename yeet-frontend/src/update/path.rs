@@ -7,6 +7,7 @@ use yeet_buffer::{message::BufferMessage, model::Mode};
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{
         self,
         history::History,
@@ -207,17 +208,14 @@ fn update_directory_buffers_on_remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-) -> Vec<Action> {
+) -> Result<Vec<Action>> {
     let parent_name = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => Some((parent, name.to_string_lossy().to_string())),
         _ => None,
     };
 
     if let Some((parent, name)) = parent_name {
-        let (window, contents) = match app.current_window_and_contents_mut() {
-            Ok(window) => window,
-            Err(_) => return Vec::new(),
-        };
+        let (window, contents) = app.current_window_and_contents_mut()?;
         for (buffer_id, buffer) in contents.buffers.iter_mut() {
             let Buffer::Directory(dir) = buffer else {
                 continue;
@@ -258,17 +256,22 @@ fn update_directory_buffers_on_remove(
         }
     }
 
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+    let window = app.current_window()?;
     let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
-        None => return Vec::new(),
+        None => {
+            return Err(AppError::InvalidState(
+                "expected a directory window with focused current and preview buffers".to_string(),
+            ))
+        }
     };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(buffer)) => buffer.resolve_path().map(|p| p.to_path_buf()),
-        _ => None,
+        _ => {
+            return Err(AppError::InvalidState(
+                "expected current buffer to be a directory buffer".to_string(),
+            ))
+        }
     };
     let preview_path = app
         .contents

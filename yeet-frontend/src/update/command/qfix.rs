@@ -4,6 +4,7 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 
 use crate::{
     action::{self, Action},
+    error::AppError,
     model::{
         qfix::{CdoState, QuickFix, QFIX_SIGN_ID},
         App, Buffer,
@@ -19,19 +20,16 @@ pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (_, buffer) = app::get_focused_current_mut(window, contents);
+pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (_, buffer) = app::get_focused_current_mut(window, contents)?;
     let buffer = match buffer {
         Buffer::Directory(it) => it,
-        Buffer::Image(_) => return Vec::new(),
-        Buffer::Content(_) => return Vec::new(),
-        Buffer::PathReference(_) => return Vec::new(),
-        Buffer::Tasks(_) => return Vec::new(),
-        Buffer::Empty => return Vec::new(),
+        Buffer::Image(_) => return Ok(Vec::new()),
+        Buffer::Content(_) => return Ok(Vec::new()),
+        Buffer::PathReference(_) => return Ok(Vec::new()),
+        Buffer::Tasks(_) => return Ok(Vec::new()),
+        Buffer::Empty => return Ok(Vec::new()),
     };
 
     let path = Path::new(path);
@@ -58,7 +56,7 @@ pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Vec<Action> {
         QFIX_SIGN_ID,
     );
 
-    Vec::new()
+    Ok(Vec::new())
 }
 
 pub fn cdo(qfix: &mut QuickFix, command: &str) -> Vec<Action> {
@@ -162,19 +160,16 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
     }
 }
 
-pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (_, buffer) = app::get_focused_current_mut(window, contents);
+pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (_, buffer) = app::get_focused_current_mut(window, contents)?;
     let buffer = match buffer {
         Buffer::Directory(it) => it,
-        Buffer::Image(_) => return Vec::new(),
-        Buffer::Content(_) => return Vec::new(),
-        Buffer::PathReference(_) => return Vec::new(),
-        Buffer::Tasks(_) => return Vec::new(),
-        Buffer::Empty => return Vec::new(),
+        Buffer::Image(_) => return Ok(Vec::new()),
+        Buffer::Content(_) => return Ok(Vec::new()),
+        Buffer::PathReference(_) => return Ok(Vec::new()),
+        Buffer::Tasks(_) => return Ok(Vec::new()),
+        Buffer::Empty => return Ok(Vec::new()),
     };
 
     let mut added_paths = Vec::new();
@@ -208,5 +203,5 @@ pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
         QFIX_SIGN_ID,
     );
 
-    Vec::new()
+    Ok(Vec::new())
 }

@@ -4,21 +4,23 @@ use yeet_buffer::model::viewport::ViewPort;
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{App, Buffer, Contents, SplitFocus, Window},
 };
 
 pub fn get_focused_current_mut<'a>(
     window: &'a mut Window,
     contents: &'a mut Contents,
-) -> (&'a mut ViewPort, &'a mut Buffer) {
+) -> Result<(&'a mut ViewPort, &'a mut Buffer), AppError> {
     let vp = window.focused_viewport_mut();
     let focused_id = vp.buffer_id;
+
     match contents.buffers.get_mut(&focused_id) {
-        Some(it) => (vp, it),
-        None => panic!(
+        Some(it) => Ok((vp, it)),
+        None => Err(AppError::InvalidState(format!(
             "focused viewport references non-existent buffer {}",
             focused_id
-        ),
+        ))),
     }
 }
 
@@ -198,8 +200,16 @@ pub fn get_empty_buffer(contents: &mut Contents) -> usize {
     id
 }
 
-pub fn get_buffer_path(app: &App, buffer_id: usize) -> Option<&Path> {
-    app.contents.buffers.get(&buffer_id)?.resolve_path()
+pub fn get_buffer_path(app: &App, buffer_id: usize) -> Result<Option<&Path>, AppError> {
+    let buffer = app.contents.buffers.get(&buffer_id);
+
+    match buffer {
+        Some(buffer) => Ok(buffer.resolve_path()),
+        None => Err(AppError::InvalidState(format!(
+            "Buffer with id {} does not exist",
+            buffer_id
+        ))),
+    }
 }
 
 pub fn get_next_buffer_id(contents: &mut Contents) -> usize {
@@ -285,7 +295,10 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        let (vp, buffer) = get_focused_current_mut(window, contents);
+
+        let (vp, buffer) = get_focused_current_mut(window, contents)
+            .expect("focused viewport should have a valid buffer");
+
         assert_eq!(vp.buffer_id, 20);
         assert!(matches!(buffer, Buffer::Tasks(_)));
     }

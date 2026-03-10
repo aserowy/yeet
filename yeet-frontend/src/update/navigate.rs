@@ -4,6 +4,7 @@ use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{history::History, mark::Marks, App, Buffer},
     update::{app, cursor, selection},
 };
@@ -158,33 +159,35 @@ pub fn navigate_to_path_with_selection(
 }
 
 #[tracing::instrument(skip(app))]
-pub fn parent(app: &mut App) -> Vec<Action> {
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+pub fn parent(app: &mut App) -> Result<Vec<Action>, AppError> {
+    let window = app.current_window()?;
     let (_, current_id, _) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
-        None => return Vec::new(),
+        None => {
+            return Err(AppError::InvalidState(
+                "no focused buffer ids found in current window".to_string(),
+            ))
+        }
     };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
-        _ => return Vec::new(),
+        _ => return Err(AppError::BufferNotFound(current_id)),
     };
 
     if let Some(path) = current_path.parent() {
         if current_path == path {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
-        let (window, contents) = match app.current_window_and_contents_mut() {
-            Ok(it) => it,
-            Err(_) => return Vec::new(),
-        };
+        let (window, contents) = app.current_window_and_contents_mut()?;
         let (parent_vp, current_vp, preview_vp) =
             match app::get_focused_directory_viewports_mut(window) {
                 Some(vps) => vps,
-                None => return Vec::new(),
+                None => {
+                    return Err(AppError::InvalidState(
+                        "no focused directory viewports found in current window".to_string(),
+                    ))
+                }
             };
         swap_viewport(parent_vp, preview_vp);
         swap_viewport(current_vp, preview_vp);
@@ -206,33 +209,34 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         parent_vp.buffer_id = parent_id;
         let directory = match contents.buffers.get_mut(&parent_vp.buffer_id) {
             Some(Buffer::Directory(it)) => it,
-            _ => return actions,
+            _ => return Ok(actions),
         };
 
         if let Some(selection) = selection {
             cursor::set_cursor_index_to_selection(parent_vp, &Mode::Normal, directory, &selection);
         }
 
-        actions
+        Ok(actions)
     } else {
         Vec::new()
     }
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(it) => it,
-        Err(_) => return Vec::new(),
-    };
+pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
     let (parent_vp, current_vp, preview_vp) = match app::get_focused_directory_viewports_mut(window)
     {
         Some(vps) => vps,
-        None => return Vec::new(),
+        None => {
+            return Err(AppError::InvalidState(
+                "no focused directory viewports found in current window".to_string(),
+            ))
+        }
     };
     let preview_buffer = match contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
-        _ => return Vec::new(),
+        _ => return Err(AppError::BufferNotFound(preview_vp.buffer_id)),
     };
 
     history::add_history_entry(history, preview_buffer.path.as_path());
@@ -242,7 +246,9 @@ pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
 
     current_vp.hide_cursor_line = false;
 
-    selection::refresh_preview_from_current_selection(app, history, None)
+    Ok(selection::refresh_preview_from_current_selection(
+        app, history, None,
+    ))
 }
 
 fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {

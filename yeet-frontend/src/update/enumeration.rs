@@ -7,6 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
+    error::AppError,
     event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
     update::{
@@ -22,11 +23,8 @@ pub fn change(
     path: &PathBuf,
     content: &[(ContentKind, String)],
     selection: &Option<String>,
-) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
@@ -47,10 +45,7 @@ pub fn change(
         }
     }
 
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+    let window = app.current_window()?;
     let (current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some((_, current_id, preview_id)) => (current_id, preview_id),
         None => return Vec::new(),
@@ -64,7 +59,6 @@ pub fn change(
     }
 
     let mut actions = Vec::new();
-
     let preview_is_empty = matches!(app.contents.buffers.get(&preview_id), Some(Buffer::Empty));
     if preview_is_empty {
         actions.extend(selection::refresh_preview_from_current_selection(
@@ -74,7 +68,7 @@ pub fn change(
         ));
     }
 
-    actions
+    Ok(actions)
 }
 
 #[tracing::instrument(skip(state, app, content))]
@@ -84,16 +78,14 @@ pub fn finish(
     path: &PathBuf,
     content: &[(ContentKind, String)],
     selection: &Option<String>,
-) -> Vec<Action> {
+) -> Result<Vec<Action>, AppError> {
     if state.modes.current != Mode::Navigation {
         return Vec::new();
     }
 
     let mut actions = Vec::new();
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+    // FIX: must respect all tabs
+    let (window, contents) = app.current_window_and_contents_mut()?;
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
         if let Buffer::PathReference(referenced_path) = buffer {
             if referenced_path == path {
@@ -113,6 +105,7 @@ pub fn finish(
             continue;
         }
 
+        // FIX: must respect all tabs
         let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
         set_directory_content(
             state,
@@ -156,16 +149,14 @@ pub fn finish(
         );
     }
 
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+    let window = app.current_window()?;
     let current_id = app::get_focused_directory_buffer_ids(window).map(|(_, id, _)| id);
     let is_current_buffer = match current_id.and_then(|id| app.contents.buffers.get(&id)) {
         Some(Buffer::Directory(buffer)) => buffer.path.as_path() == path,
         _ => false,
     };
 
+    // FIX: must respect all shown windows
     if is_current_buffer {
         actions.extend(selection::refresh_preview_from_current_selection(
             app,
@@ -174,7 +165,7 @@ pub fn finish(
         ));
     }
 
-    actions
+    Ok(actions)
 }
 
 fn set_directory_content(

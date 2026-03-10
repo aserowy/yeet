@@ -7,6 +7,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{history::History, App, Buffer, Contents, DirectoryBuffer, State},
     update::history,
 };
@@ -24,13 +25,20 @@ pub fn set_index(
     viewport: &mut ViewPort,
     mode: &Mode,
     selection: Option<&str>,
-) -> bool {
+) -> Result<bool, AppError> {
     let directory = match contents.buffers.get_mut(&viewport.buffer_id) {
         Some(Buffer::Directory(it)) => it,
-        _ => return false,
+        _ => {
+            return Err(AppError::InvalidState(format!(
+                "set_index called on non-directory buffer with buffer_id {}",
+                viewport.buffer_id
+            )))
+        }
     };
 
-    set_cursor_index_for_directory(directory, history, viewport, mode, selection)
+    Ok(set_cursor_index_for_directory(
+        directory, history, viewport, mode, selection,
+    ))
 }
 
 pub fn set_cursor_index_for_directory(
@@ -82,31 +90,26 @@ pub fn relocate(
     state: &mut State,
     rpt: &usize,
     mtn: &CursorDirection,
-) -> Vec<Action> {
+) -> Result<Vec<Action>, AppError> {
     if matches!(*mtn, CursorDirection::Search(_)) {
         let term = get_register(&state.register, &'/');
         search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
-    let premotion_preview_path = match app.current_window() {
-        Ok(window) => {
-            app::get_focused_directory_buffer_ids(window).and_then(|(_, _, preview_id)| {
-                app.contents
-                    .buffers
-                    .get(&preview_id)
-                    .and_then(|b| b.resolve_path())
-                    .map(|p| p.to_path_buf())
-            })
-        }
-        Err(_) => None,
-    };
+    let current_window = app.current_window()?;
+    let premotion_preview_path =
+        app::get_focused_directory_buffer_ids(window).and_then(|(_, _, preview_id)| {
+            app.contents
+                .buffers
+                .get(&preview_id)
+                .and_then(|b| b.resolve_path())
+                .map(|p| p.to_path_buf())
+        });
 
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+    let (window, contents) = app.current_window_and_contents_mut()?;
     let (viewport, buffer) = match app::get_focused_current_mut(window, contents) {
         (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
+        // FIX: should return an error instead of silently doing nothing?
         (_, Buffer::Image(_)) => return Vec::new(),
         (_, Buffer::Content(_)) => return Vec::new(),
         (_, Buffer::PathReference(_)) => return Vec::new(),
@@ -144,5 +147,9 @@ pub fn relocate(
         );
     };
 
-    selection::refresh_preview_from_current_selection(app, &state.history, premotion_preview_path)
+    Ok(selection::refresh_preview_from_current_selection(
+        app,
+        &state.history,
+        premotion_preview_path,
+    ))
 }
