@@ -8,6 +8,8 @@ pub enum AppError {
     ActionSendFailed(#[from] tokio::sync::mpsc::error::SendError<Envelope>),
     #[error("Error aggregation")]
     Aggregate(Vec<AppError>),
+    #[error("Buffer with id {0} not found")]
+    BufferNotFound(usize),
     #[error("Command execution failed")]
     ExecutionFailed(String),
     #[error("File operation failed")]
@@ -30,6 +32,8 @@ pub enum AppError {
     PreviewProtocolGenerationFailed,
     #[error("Loading image failed")]
     ImageOperationFailed(#[from] image::ImageError),
+    #[error("Tab with id {0} not found")]
+    TabNotFound(usize),
     #[error("Terminal not initialized")]
     TerminalNotInitialized,
     #[error("Rendering view failed")]

@@ -3,27 +3,25 @@ use yeet_keymap::message::QuitMode;
 
 use crate::{
     action::Action,
-    model::{self, Buffer},
+    error::AppError,
+    model::{self, App, Buffer},
     settings::Settings,
     update::app,
 };
 
-pub fn selected(settings: &Settings, mode: &Mode, app: &mut crate::model::App) -> Vec<Action> {
+pub fn selected(settings: &Settings, mode: &Mode, app: &mut App) -> Result<Vec<Action>, AppError> {
     if mode != &Mode::Navigation {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents);
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents)?;
     let selected = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => None,
     };
 
-    if let Some(selected) = selected {
+    let result = if let Some(selected) = selected {
         if settings.selection_to_file_on_open.is_some() || settings.selection_to_stdout_on_open {
             vec![Action::Quit(
                 QuitMode::FailOnRunningTasks,
@@ -34,5 +32,7 @@ pub fn selected(settings: &Settings, mode: &Mode, app: &mut crate::model::App) -
         }
     } else {
         Vec::new()
-    }
+    };
+
+    Ok(result)
 }

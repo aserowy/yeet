@@ -4,6 +4,7 @@ use yeet_keymap::message::KeymapMessage;
 
 use crate::{
     action::{self, Action},
+    error::AppError,
     event::Message,
     model::{mark::Marks, App},
     task::Task,
@@ -94,21 +95,17 @@ fn expand_and_validate_path(
     Ok(target_file)
 }
 
-pub fn refresh(app: &mut App) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (_, buffer) = app::get_focused_current_mut(window, contents);
+pub fn refresh(app: &mut App) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (_, buffer) = app::get_focused_current_mut(window, contents)?;
     let path = buffer.resolve_path();
-
     let navigation = if let Some(path) = path {
         KeymapMessage::NavigateToPath(path.to_path_buf())
     } else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
 
-    vec![action::emit_keymap(navigation)]
+    Ok(vec![action::emit_keymap(navigation)])
 }
 
 pub fn expand_path(marks: &Marks, target: &str, source_path: &Path) -> Result<PathBuf, String> {

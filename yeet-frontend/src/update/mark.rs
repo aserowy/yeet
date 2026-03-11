@@ -1,5 +1,6 @@
 use crate::{
     action::Action,
+    error::AppError,
     model::{
         self,
         mark::{Marks, MARK_SIGN_ID},
@@ -10,18 +11,15 @@ use crate::{
 
 use super::{app, sign};
 
-pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (vp, buffer) = match app::get_focused_current_mut(window, contents) {
+pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (vp, buffer) = match app::get_focused_current_mut(window, contents)? {
         (vp, Buffer::Directory(it)) => (vp, it),
-        (_, Buffer::Image(_)) => return Vec::new(),
-        (_, Buffer::Content(_)) => return Vec::new(),
-        (_, Buffer::PathReference(_)) => return Vec::new(),
-        (_, Buffer::Tasks(_)) => return Vec::new(),
-        (_, Buffer::Empty) => return Vec::new(),
+        (_, Buffer::Image(_))
+        | (_, Buffer::Content(_))
+        | (_, Buffer::PathReference(_))
+        | (_, Buffer::Tasks(_))
+        | (_, Buffer::Empty) => return Ok(Vec::new()),
     };
 
     let selected = model::get_selected_path(buffer, &vp.cursor);
@@ -42,7 +40,7 @@ pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Vec<Action> {
         );
     }
 
-    Vec::new()
+    Ok(Vec::new())
 }
 
 pub fn delete(marks: &mut Marks, buffers: Vec<&mut Buffer>, delete: &Vec<char>) -> Vec<Action> {

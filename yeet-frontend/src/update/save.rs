@@ -9,6 +9,7 @@ use yeet_buffer::{
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{junkyard::JunkYard, App, Buffer, Contents, DirectoryBuffer, Window},
     task::Task,
 };
@@ -16,21 +17,18 @@ use crate::{
 use super::{app, junkyard::trash_to_junkyard};
 
 #[tracing::instrument(skip(app))]
-pub fn current(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
-    let (vp, buffer) = match app::get_focused_current_mut(window, contents) {
+pub fn current(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
+    let (vp, buffer) = match app::get_focused_current_mut(window, contents)? {
         (vp, Buffer::Directory(it)) => (vp, it),
-        (_vp, Buffer::Image(_)) => return Vec::new(),
-        (_vp, Buffer::Content(_)) => return Vec::new(),
-        (_vp, Buffer::PathReference(_)) => return Vec::new(),
-        (_vp, Buffer::Tasks(_)) => return Vec::new(),
-        (_vp, Buffer::Empty) => return Vec::new(),
+        (_vp, Buffer::Image(_))
+        | (_vp, Buffer::Content(_))
+        | (_vp, Buffer::PathReference(_))
+        | (_vp, Buffer::Tasks(_))
+        | (_vp, Buffer::Empty) => return Ok(Vec::new()),
     };
 
-    save_directory_buffer(Some(vp), buffer, junk, mode)
+    Ok(save_directory_buffer(Some(vp), buffer, junk, mode))
 }
 
 pub fn all(

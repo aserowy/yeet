@@ -28,6 +28,11 @@ pub fn update_viewport_by_direction(
     update::viewport::update_by_direction(viewport, buffer, direction);
 }
 
+pub fn update_viewport_by_buffer(viewport: &mut ViewPort, mode: &Mode, buffer: &TextBuffer) {
+    update::cursor::set_to_inbound_position(&mut viewport.cursor, buffer, mode);
+    update::viewport::update_by_cursor(viewport, buffer);
+}
+
 pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
     view::view(viewport, mode, buffer, frame)
 }

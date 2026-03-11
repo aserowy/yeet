@@ -4,6 +4,7 @@ use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
 
 use crate::{
     action::Action,
+    error::AppError,
     model::{history::History, mark::Marks, App, Buffer},
     update::{app, cursor, selection},
 };
@@ -11,7 +12,7 @@ use crate::{
 use super::history;
 
 #[tracing::instrument(skip(app))]
-pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
+pub fn mark(app: &mut App, history: &mut History, marks: &Marks, char: &char) -> Vec<Action> {
     let path = match marks.entries.get(char) {
         Some(it) => it.clone(),
         None => return Vec::new(),
@@ -29,7 +30,7 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+pub fn path(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
 
@@ -53,7 +54,7 @@ pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
     navigate_to_path_with_selection(history, app, path, &selection)
 }
 
-pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+pub fn path_as_preview(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
@@ -68,7 +69,7 @@ pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Act
 
 #[tracing::instrument(skip(app, history))]
 pub fn navigate_to_path_with_selection(
-    history: &History,
+    history: &mut History,
     app: &mut App,
     path: &Path,
     selection: &Option<String>,
@@ -114,7 +115,7 @@ pub fn navigate_to_path_with_selection(
     current_vp.buffer_id = current_id;
     current_vp.cursor = Cursor::default();
 
-    cursor::set_index(
+    let _ = cursor::set_index(
         contents,
         history,
         current_vp,
@@ -129,7 +130,7 @@ pub fn navigate_to_path_with_selection(
     parent_vp.buffer_id = parent_id;
     parent_vp.cursor = Cursor::default();
 
-    cursor::set_index(
+    let _ = cursor::set_index(
         contents,
         history,
         parent_vp,
@@ -144,7 +145,8 @@ pub fn navigate_to_path_with_selection(
     });
 
     actions.extend(selection::set_preview_buffer_for_selection(
-        app,
+        window,
+        contents,
         history,
         preview_path,
     ));
@@ -158,33 +160,31 @@ pub fn navigate_to_path_with_selection(
 }
 
 #[tracing::instrument(skip(app))]
-pub fn parent(app: &mut App) -> Vec<Action> {
-    let window = match app.current_window() {
-        Ok(window) => window,
-        Err(_) => return Vec::new(),
-    };
+pub fn parent(app: &mut App) -> Result<Vec<Action>, AppError> {
+    let window = app.current_window()?;
     let (_, current_id, _) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
-        None => return Vec::new(),
+        None => return Ok(Vec::new()),
     };
     let current_path = match app.contents.buffers.get(&current_id) {
         Some(Buffer::Directory(it)) => it.path.clone(),
-        _ => return Vec::new(),
+        _ => return Err(AppError::BufferNotFound(current_id)),
     };
 
     if let Some(path) = current_path.parent() {
         if current_path == path {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
-        let (window, contents) = match app.current_window_and_contents_mut() {
-            Ok(it) => it,
-            Err(_) => return Vec::new(),
-        };
+        let (window, contents) = app.current_window_and_contents_mut()?;
         let (parent_vp, current_vp, preview_vp) =
             match app::get_focused_directory_viewports_mut(window) {
                 Some(vps) => vps,
-                None => return Vec::new(),
+                None => {
+                    return Err(AppError::InvalidState(
+                        "no focused directory viewports found in current window".to_string(),
+                    ))
+                }
             };
         swap_viewport(parent_vp, preview_vp);
         swap_viewport(current_vp, preview_vp);
@@ -206,33 +206,30 @@ pub fn parent(app: &mut App) -> Vec<Action> {
         parent_vp.buffer_id = parent_id;
         let directory = match contents.buffers.get_mut(&parent_vp.buffer_id) {
             Some(Buffer::Directory(it)) => it,
-            _ => return actions,
+            _ => return Ok(actions),
         };
 
         if let Some(selection) = selection {
             cursor::set_cursor_index_to_selection(parent_vp, &Mode::Normal, directory, &selection);
         }
 
-        actions
+        Ok(actions)
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn selected(app: &mut App, history: &mut History) -> Vec<Action> {
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(it) => it,
-        Err(_) => return Vec::new(),
-    };
+pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, AppError> {
+    let (window, contents) = app.current_window_and_contents_mut()?;
     let (parent_vp, current_vp, preview_vp) = match app::get_focused_directory_viewports_mut(window)
     {
         Some(vps) => vps,
-        None => return Vec::new(),
+        None => return Ok(Vec::new()),
     };
     let preview_buffer = match contents.buffers.get(&preview_vp.buffer_id) {
         Some(Buffer::Directory(it)) => it,
-        _ => return Vec::new(),
+        _ => return Err(AppError::BufferNotFound(preview_vp.buffer_id)),
     };
 
     history::add_history_entry(history, preview_buffer.path.as_path());
@@ -315,7 +312,7 @@ mod test {
     #[test]
     fn parent_noop_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let actions = parent(&mut app);
+        let actions = parent(&mut app).expect("parent must succeed");
         assert!(actions.is_empty());
     }
 
@@ -323,18 +320,18 @@ mod test {
     fn selected_noop_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
         let mut history = History::default();
-        let actions = selected(&mut app, &mut history);
+        let actions = selected(&mut app, &mut history).expect("selected must succeed");
         assert!(actions.is_empty());
     }
 
     #[test]
     fn navigate_to_path_does_not_panic_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let history = History::default();
+        let mut history = History::default();
         let target = Path::new("/nonexistent/test/path");
 
         // Should not panic; viewports remain unchanged
-        let _actions = navigate_to_path_with_selection(&history, &mut app, target, &None);
+        let _actions = navigate_to_path_with_selection(&mut history, &mut app, target, &None);
 
         // Task viewport buffer_id unchanged
         let window = app.current_window().expect("test requires current tab");
@@ -350,14 +347,14 @@ mod test {
     #[test]
     fn mark_does_not_panic_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let history = History::default();
+        let mut history = History::default();
         let mut marks = Marks::default();
         marks
             .entries
             .insert('a', std::path::PathBuf::from("/nonexistent/test/path"));
 
         // Should not panic; viewports remain unchanged
-        let _actions = mark(&mut app, &history, &marks, &'a');
+        let _actions = mark(&mut app, &mut history, &marks, &'a');
 
         let window = app.current_window().expect("test requires current tab");
         match window {
