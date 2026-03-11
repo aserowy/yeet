@@ -89,86 +89,100 @@ pub fn finish(
     }
 
     let mut actions = Vec::new();
-    // FIX: must respect all tabs
-    let (window, contents) = app.current_window_and_contents_mut()?;
-    for (buffer_id, buffer) in contents.buffers.iter_mut() {
-        if let Buffer::PathReference(referenced_path) = buffer {
-            if referenced_path == path {
-                *buffer = Buffer::Directory(DirectoryBuffer {
-                    path: path.clone(),
-                    ..Default::default()
-                });
+    let (tabs, contents) = (&mut app.tabs, &mut app.contents);
+    for window in tabs.values_mut() {
+        for (buffer_id, buffer) in contents.buffers.iter_mut() {
+            if let Buffer::PathReference(referenced_path) = buffer {
+                if referenced_path == path {
+                    *buffer = Buffer::Directory(DirectoryBuffer {
+                        path: path.clone(),
+                        ..Default::default()
+                    });
+                }
             }
-        }
 
-        let buffer = match buffer {
-            Buffer::Directory(it) => it,
-            _ => continue,
-        };
+            let buffer = match buffer {
+                Buffer::Directory(it) => it,
+                _ => continue,
+            };
 
-        if buffer.path.as_path() != path {
-            continue;
-        }
+            if buffer.path.as_path() != path {
+                continue;
+            }
 
-        // FIX: must respect all tabs
-        let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-        set_directory_content(
-            state,
-            viewport.as_deref_mut(),
-            buffer,
-            path,
-            content,
-            selection,
-        );
-
-        yeet_buffer::update(
-            viewport.as_deref_mut(),
-            &state.modes.current,
-            &mut buffer.buffer,
-            slice::from_ref(&BufferMessage::SortContent(super::SORT)),
-        );
-
-        if let Some(viewport) = viewport.as_deref_mut() {
-            cursor::set_cursor_index_for_directory(
+            let mut viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
+            set_directory_content(
+                state,
+                viewport.as_deref_mut(),
                 buffer,
-                &state.history,
+                path,
+                content,
+                selection,
+            );
+
+            yeet_buffer::update(
+                viewport.as_deref_mut(),
+                &state.modes.current,
+                &mut buffer.buffer,
+                slice::from_ref(&BufferMessage::SortContent(super::SORT)),
+            );
+
+            if let Some(viewport) = viewport.as_deref_mut() {
+                cursor::set_cursor_index_for_directory(
+                    buffer,
+                    &state.history,
+                    viewport,
+                    &state.modes.current,
+                    selection.as_deref(),
+                );
+            }
+
+            let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
+            yeet_buffer::update(
                 viewport,
                 &state.modes.current,
-                selection.as_deref(),
+                &mut buffer.buffer,
+                slice::from_ref(&message),
+            );
+
+            buffer.state = DirectoryBufferState::Ready;
+            tracing::trace!(
+                "finished enumeration for path {:?}, state is now {:?}",
+                path,
+                buffer.state,
             );
         }
-
-        let message = BufferMessage::MoveViewPort(ViewPortDirection::CenterOnCursor);
-        yeet_buffer::update(
-            viewport,
-            &state.modes.current,
-            &mut buffer.buffer,
-            slice::from_ref(&message),
-        );
-
-        buffer.state = DirectoryBufferState::Ready;
-        tracing::trace!(
-            "finished enumeration for path {:?}, state is now {:?}",
-            path,
-            buffer.state,
-        );
     }
 
-    let window = app.current_window()?;
-    let current_id = app::get_focused_directory_buffer_ids(window).map(|(_, id, _)| id);
-    let is_current_buffer = match current_id.and_then(|id| app.contents.buffers.get(&id)) {
-        Some(Buffer::Directory(buffer)) => buffer.path.as_path() == path,
-        _ => false,
-    };
+    let mut refresh_tabs: Vec<usize> = app
+        .tabs
+        .iter()
+        .filter_map(|(tab_id, window)| {
+            app::get_focused_directory_buffer_ids(window)
+                .and_then(|(_, id, _)| app.contents.buffers.get(&id).map(|buffer| (tab_id, buffer)))
+                .and_then(|(tab_id, buffer)| match buffer {
+                    Buffer::Directory(buffer) if buffer.path.as_path() == path => Some(*tab_id),
+                    _ => None,
+                })
+        })
+        .collect();
 
-    // FIX: must respect all shown windows
-    if is_current_buffer {
+    refresh_tabs.sort_unstable();
+    refresh_tabs.dedup();
+
+    let original_tab = app.current_tab_id;
+    for tab_id in refresh_tabs {
+        if app.current_tab_id != tab_id {
+            app.current_tab_id = tab_id;
+        }
+
         actions.extend(selection::refresh_preview_from_current_selection(
             app,
             &state.history,
             None,
         )?);
     }
+    app.current_tab_id = original_tab;
 
     Ok(actions)
 }
@@ -239,16 +253,25 @@ pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
 
 #[cfg(test)]
 mod test {
-    use std::env;
+    use std::{env, fs, time::SystemTime};
 
-    use yeet_buffer::model::{ansi::Ansi, Cursor, TextBuffer};
+    use yeet_buffer::model::{ansi::Ansi, viewport::ViewPort, Cursor, TextBuffer};
 
     use crate::{
         action::Action,
         model::{App, Buffer, DirectoryBuffer, Window},
+        update::app,
     };
 
-    use super::change;
+    use super::{change, finish};
+
+    fn unique_temp_dir() -> std::path::PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("yeet-enum-test-{}", nanos))
+    }
 
     #[test]
     fn change_loads_preview_when_empty_for_current() {
@@ -306,5 +329,91 @@ mod test {
             app.contents.buffers.get(&preview_id),
             Some(Buffer::PathReference(path)) if path == &selected_file
         ));
+    }
+
+    #[test]
+    fn finish_refreshes_preview_for_all_tabs_with_matching_path() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(&base).expect("create base dir");
+        let file_name = "file.txt";
+        let selected_path = base.join(file_name);
+        fs::write(&selected_path, "content").expect("create file");
+
+        let mut app = App::default();
+        app.tabs.clear();
+        app.contents.buffers.clear();
+        app.contents.latest_buffer_id = 0;
+
+        let make_tab = |app: &mut App, tab_id: usize, path: &std::path::PathBuf| {
+            let parent_id = app::get_next_buffer_id(&mut app.contents);
+            let current_id = app::get_next_buffer_id(&mut app.contents);
+            let preview_id = app::get_next_buffer_id(&mut app.contents);
+
+            app.contents.buffers.insert(
+                parent_id,
+                Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                }),
+            );
+            app.contents.buffers.insert(
+                current_id,
+                Buffer::Directory(DirectoryBuffer {
+                    path: path.clone(),
+                    ..Default::default()
+                }),
+            );
+            app.contents.buffers.insert(preview_id, Buffer::Empty);
+
+            app.tabs.insert(
+                tab_id,
+                Window::Directory(
+                    ViewPort {
+                        buffer_id: parent_id,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: current_id,
+                        ..Default::default()
+                    },
+                    ViewPort {
+                        buffer_id: preview_id,
+                        ..Default::default()
+                    },
+                ),
+            );
+        };
+
+        make_tab(&mut app, 1, &base);
+        make_tab(&mut app, 2, &base);
+        app.current_tab_id = 1;
+
+        let mut state = crate::model::State::default();
+        state.modes.current = yeet_buffer::model::Mode::Navigation;
+
+        let _ = finish(
+            &mut state,
+            &mut app,
+            &base,
+            &[(crate::event::ContentKind::File, file_name.to_string())],
+            &None,
+        )
+        .expect("finish must succeed");
+
+        for tab_id in [1, 2] {
+            let window = app.tabs.get(&tab_id).expect("tab exists");
+            let (_, _, preview_id) = app::get_focused_directory_buffer_ids(window).unwrap();
+            let preview_path = app
+                .contents
+                .buffers
+                .get(&preview_id)
+                .and_then(|buffer| buffer.resolve_path())
+                .map(|path| path.to_path_buf());
+            assert_eq!(preview_path, Some(selected_path.clone()));
+        }
+
+        assert_eq!(app.current_tab_id, 1);
+
+        let _ = fs::remove_dir_all(&base);
     }
 }

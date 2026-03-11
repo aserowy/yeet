@@ -20,15 +20,34 @@ pub fn refresh_preview_from_current_selection(
     previous_selection: Option<PathBuf>,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
-    let (current_vp, current_buffer) = app::get_focused_current_mut(window, contents)?;
+    let current_window = window.focused_window_mut();
+
+    refresh_preview_from_selection(history, current_window, contents, previous_selection)
+}
+
+pub fn refresh_preview_from_selection(
+    history: &History,
+    window: &mut Window,
+    contents: &mut Contents,
+    previous_selection: Option<PathBuf>,
+) -> Result<Vec<Action>, AppError> {
+    let Window::Directory(_, current_vp, _) = window else {
+        return Ok(Vec::new());
+    };
+
+    let current_buffer_id = current_vp.buffer_id;
+    let current_buffer = contents
+        .buffers
+        .get(&current_buffer_id)
+        .ok_or_else(|| AppError::BufferNotFound(current_buffer_id))?;
+
     let current_selection = match current_buffer {
         Buffer::Directory(buffer) => model::get_selected_path(buffer, &current_vp.cursor),
         _ => return Ok(Vec::new()),
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
-        let window = app.current_window()?;
-        if preview_matches_selection(window, &app.contents, &current_selection) {
+        if preview_matches_selection(window, &contents, &current_selection) {
             tracing::trace!("skipping preview refresh: selection unchanged");
             return Ok(Vec::new());
         }
@@ -39,7 +58,8 @@ pub fn refresh_preview_from_current_selection(
     tracing::debug!("refreshing preview for selection: {:?}", current_selection);
 
     Ok(set_preview_buffer_for_selection(
-        app,
+        window,
+        contents,
         history,
         current_selection,
     ))
@@ -60,7 +80,7 @@ fn preview_matches_selection(
         None => return false,
     };
 
-    match (preview_buffer, selection) {
+    let matches = match (preview_buffer, selection) {
         (Buffer::Empty, None) => true,
         (Buffer::Empty, Some(_)) | (Buffer::PathReference(_), Some(_)) => false,
         (buffer, Some(selected_path)) => buffer
@@ -68,29 +88,28 @@ fn preview_matches_selection(
             .map(|p| p == selected_path.as_path())
             .unwrap_or(false),
         (_, None) => false,
-    }
+    };
+
+    matches
 }
 
 pub fn set_preview_buffer_for_selection(
-    app: &mut App,
+    window: &mut Window,
+    contents: &mut Contents,
     history: &History,
     path_to_preview: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     let preview_id = if let Some(path_to_preview) = path_to_preview {
         let selection = history::selection(history, &path_to_preview).map(|s| s.to_owned());
-        let (id, load) = app::resolve_buffer(&mut app.contents, &path_to_preview, &selection);
+        let (id, load) = app::resolve_buffer(contents, &path_to_preview, &selection);
         actions.extend(load);
 
         id
     } else {
-        app::get_empty_buffer(&mut app.contents)
+        app::get_empty_buffer(contents)
     };
 
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(window) => window,
-        Err(_) => return actions,
-    };
     preview::set_buffer_id(contents, window, preview_id);
 
     if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports_mut(window) {

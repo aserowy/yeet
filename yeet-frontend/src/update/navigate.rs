@@ -145,7 +145,8 @@ pub fn navigate_to_path_with_selection(
     });
 
     actions.extend(selection::set_preview_buffer_for_selection(
-        app,
+        window,
+        contents,
         history,
         preview_path,
     ));

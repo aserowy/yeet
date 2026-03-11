@@ -3,7 +3,7 @@ use crate::{
     model::{viewport::ViewPort, BufferResult, CursorPosition, Mode, TextBuffer},
 };
 
-mod cursor;
+pub(crate) mod cursor;
 mod find;
 mod modification;
 pub mod viewport;
