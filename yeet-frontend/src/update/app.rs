@@ -17,10 +17,7 @@ pub fn get_focused_current_mut<'a>(
 
     match contents.buffers.get_mut(&focused_id) {
         Some(it) => Ok((vp, it)),
-        None => Err(AppError::InvalidState(format!(
-            "focused viewport references non-existent buffer {}",
-            focused_id
-        ))),
+        None => Err(AppError::BufferNotFound(focused_id)),
     }
 }
 
@@ -205,10 +202,7 @@ pub fn get_buffer_path(app: &App, buffer_id: usize) -> Result<Option<&Path>, App
 
     match buffer {
         Some(buffer) => Ok(buffer.resolve_path()),
-        None => Err(AppError::InvalidState(format!(
-            "Buffer with id {} does not exist",
-            buffer_id
-        ))),
+        None => Err(AppError::BufferNotFound(buffer_id)),
     }
 }
 

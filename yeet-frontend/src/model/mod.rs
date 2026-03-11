@@ -59,7 +59,7 @@ impl App {
         match self.tabs.get(&self.current_tab_id) {
             Some(window) => Ok(window),
             None => {
-                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                let err = AppError::TabNotFound(self.current_tab_id);
                 tracing::error!("Failed to resolve current window: {}", err);
                 Err(err)
             }
@@ -70,7 +70,7 @@ impl App {
         match self.tabs.get_mut(&self.current_tab_id) {
             Some(window) => Ok(window),
             None => {
-                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                let err = AppError::TabNotFound(self.current_tab_id);
                 tracing::error!("Failed to resolve current window: {}", err);
                 Err(err)
             }
@@ -89,7 +89,7 @@ impl App {
         let window = match tabs.get_mut(current_tab_id) {
             Some(window) => window,
             None => {
-                let err = AppError::InvalidState("current_tab_id missing from tabs".to_string());
+                let err = AppError::TabNotFound(*current_tab_id);
                 tracing::error!("Failed to resolve current window: {}", err);
                 return Err(err);
             }
