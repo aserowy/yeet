@@ -16,7 +16,7 @@ use crate::{
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer, Contents, Window,
     },
-    update::{app, selection},
+    update::{app, cursor, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
@@ -80,7 +80,8 @@ pub fn remove(
 
     history::remove_entry(history, path);
 
-    let actions = update_directory_buffers_on_remove(history, mode, app, path)?;
+    let mut actions = update_directory_buffers_on_remove(history, mode, app, path)?;
+    actions.extend(cleanup_removed_buffers(history, mode, app, path));
     let removed_marks = remove_marks_for_path(marks, path);
     if !removed_marks.is_empty() {
         sign::unset_sign_for_paths(
@@ -288,6 +289,172 @@ fn update_directory_buffers_on_remove(
     };
 
     Ok(actions)
+}
+
+fn cleanup_removed_buffers(
+    history: &mut History,
+    mode: &Mode,
+    app: &mut App,
+    removed: &Path,
+) -> Vec<Action> {
+    let mut actions = Vec::new();
+    let (tabs, contents) = (&mut app.tabs, &mut app.contents);
+    for window in tabs.values_mut() {
+        actions.extend(cleanup_removed_buffers_in_window(
+            history, mode, window, contents, removed,
+        ));
+    }
+
+    prune_removed_buffers(app, removed);
+
+    actions
+}
+
+fn cleanup_removed_buffers_in_window(
+    history: &mut History,
+    mode: &Mode,
+    window: &mut Window,
+    contents: &mut Contents,
+    removed: &Path,
+) -> Vec<Action> {
+    let mut actions = Vec::new();
+    match window {
+        Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
+            actions.extend(cleanup_removed_buffers_in_window(
+                history, mode, first, contents, removed,
+            ));
+            actions.extend(cleanup_removed_buffers_in_window(
+                history, mode, second, contents, removed,
+            ));
+        }
+        Window::Directory(parent, current, preview) => {
+            let old_preview_path = contents
+                .buffers
+                .get(&preview.buffer_id)
+                .and_then(|buffer| buffer.resolve_path())
+                .map(|path| path.to_path_buf());
+
+            let mut refresh_preview = relocate_viewport_if_removed(
+                history,
+                mode,
+                contents,
+                parent,
+                removed,
+                &mut actions,
+            );
+            refresh_preview |= relocate_viewport_if_removed(
+                history,
+                mode,
+                contents,
+                current,
+                removed,
+                &mut actions,
+            );
+
+            if contents
+                .buffers
+                .get(&preview.buffer_id)
+                .and_then(|buffer| buffer.resolve_path())
+                .map(|path| path.starts_with(removed))
+                .unwrap_or(false)
+            {
+                refresh_preview = true;
+            }
+
+            if refresh_preview {
+                let current_is_directory = matches!(
+                    contents.buffers.get(&current.buffer_id),
+                    Some(Buffer::Directory(_))
+                );
+                if !current_is_directory {
+                    actions.extend(selection::set_preview_buffer_for_selection(
+                        window, contents, history, None,
+                    ));
+                    return actions;
+                }
+
+                actions.extend(
+                    selection::refresh_preview_from_selection(
+                        history,
+                        window,
+                        contents,
+                        old_preview_path,
+                    )
+                    .unwrap_or_default(),
+                );
+            }
+        }
+        Window::Tasks(_) => {}
+    }
+
+    actions
+}
+
+fn relocate_viewport_if_removed(
+    history: &mut History,
+    mode: &Mode,
+    contents: &mut Contents,
+    viewport: &mut ViewPort,
+    removed: &Path,
+    actions: &mut Vec<Action>,
+) -> bool {
+    let path = match contents
+        .buffers
+        .get(&viewport.buffer_id)
+        .and_then(|buffer| buffer.resolve_path())
+    {
+        Some(path) if path.starts_with(removed) => path.to_path_buf(),
+        _ => return false,
+    };
+
+    let replacement = nearest_existing_ancestor(&path);
+    let selection = history::selection(history, &replacement).map(|s| s.to_owned());
+    let (new_id, load) = app::resolve_buffer(contents, &replacement, &selection);
+    if let Some(load) = load {
+        actions.push(load);
+    }
+
+    viewport.buffer_id = new_id;
+    viewport.cursor = Default::default();
+    let _ = cursor::set_index(contents, history, viewport, mode, selection.as_deref());
+
+    true
+}
+
+fn nearest_existing_ancestor(path: &Path) -> PathBuf {
+    for ancestor in path.ancestors() {
+        if ancestor.exists() {
+            return ancestor.to_path_buf();
+        }
+    }
+
+    PathBuf::new()
+}
+
+fn prune_removed_buffers(app: &mut App, removed: &Path) {
+    let mut referenced_ids = HashSet::new();
+    for window in app.tabs.values() {
+        referenced_ids.extend(window.buffer_ids());
+    }
+
+    let removed_ids: Vec<usize> = app
+        .contents
+        .buffers
+        .iter()
+        .filter_map(|(id, buffer)| {
+            if referenced_ids.contains(id) {
+                return None;
+            }
+            buffer
+                .resolve_path()
+                .filter(|path| path.starts_with(removed))
+                .map(|_| *id)
+        })
+        .collect();
+
+    for id in removed_ids {
+        app.contents.buffers.remove(&id);
+    }
 }
 
 fn update_viewports_for_buffers(
