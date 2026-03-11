@@ -132,7 +132,7 @@ fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
             PendingPathEvent::Added(paths) => {
                 actions.extend(
                     path::add(
-                        &state.history,
+                        &mut state.history,
                         &state.marks,
                         &state.qfix,
                         &state.modes.current,

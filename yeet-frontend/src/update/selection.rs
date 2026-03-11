@@ -16,7 +16,7 @@ use super::{app, history};
 #[tracing::instrument(skip(app, history))]
 pub fn refresh_preview_from_current_selection(
     app: &mut App,
-    history: &History,
+    history: &mut History,
     previous_selection: Option<PathBuf>,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
@@ -26,7 +26,7 @@ pub fn refresh_preview_from_current_selection(
 }
 
 pub fn refresh_preview_from_selection(
-    history: &History,
+    history: &mut History,
     window: &mut Window,
     contents: &mut Contents,
     previous_selection: Option<PathBuf>,
@@ -47,7 +47,7 @@ pub fn refresh_preview_from_selection(
     };
 
     if previous_selection.is_some() && previous_selection == current_selection {
-        if preview_matches_selection(window, &contents, &current_selection) {
+        if preview_matches_selection(window, contents, &current_selection) {
             tracing::trace!("skipping preview refresh: selection unchanged");
             return Ok(Vec::new());
         }
@@ -96,7 +96,7 @@ fn preview_matches_selection(
 pub fn set_preview_buffer_for_selection(
     window: &mut Window,
     contents: &mut Contents,
-    history: &History,
+    history: &mut History,
     path_to_preview: Option<PathBuf>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
@@ -104,6 +104,8 @@ pub fn set_preview_buffer_for_selection(
         let selection = history::selection(history, &path_to_preview).map(|s| s.to_owned());
         let (id, load) = app::resolve_buffer(contents, &path_to_preview, &selection);
         actions.extend(load);
+
+        history::add_history_entry(history, &path_to_preview);
 
         id
     } else {

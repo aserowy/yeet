@@ -68,7 +68,7 @@ pub fn change(
     if preview_is_empty {
         actions.extend(selection::refresh_preview_from_current_selection(
             app,
-            &state.history,
+            &mut state.history,
             None,
         )?);
     }
@@ -178,7 +178,7 @@ pub fn finish(
 
         actions.extend(selection::refresh_preview_from_current_selection(
             app,
-            &state.history,
+            &mut state.history,
             None,
         )?);
     }

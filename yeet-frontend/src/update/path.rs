@@ -23,7 +23,7 @@ use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
 
 #[tracing::instrument(skip(app))]
 pub fn add(
-    history: &History,
+    history: &mut History,
     marks: &Marks,
     qfix: &QuickFix,
     mode: &Mode,
@@ -122,7 +122,7 @@ fn remove_marks_for_path(marks: &mut Marks, path: &Path) -> Vec<PathBuf> {
 }
 
 fn update_directory_buffers_on_add(
-    history: &History,
+    history: &mut History,
     mode: &Mode,
     app: &mut App,
     path: &Path,
@@ -215,7 +215,7 @@ fn update_directory_buffers_on_add(
 }
 
 fn update_directory_buffers_on_remove(
-    history: &History,
+    history: &mut History,
     mode: &Mode,
     app: &mut App,
     path: &Path,
@@ -291,7 +291,7 @@ fn update_directory_buffers_on_remove(
 }
 
 fn update_viewports_for_buffers(
-    history: &History,
+    history: &mut History,
     app: &mut App,
     mode: &Mode,
     buffer_ids: &[usize],
@@ -321,7 +321,7 @@ fn update_viewports_for_buffers(
 }
 
 fn update_viewports_for_buffers_in_window(
-    history: &History,
+    history: &mut History,
     window: &mut Window,
     contents: &mut Contents,
     mode: &Mode,
@@ -353,13 +353,10 @@ fn update_viewports_for_buffers_in_window(
             update_viewport_for_buffer(current, contents, mode, buffer_ids, selection_by_viewport);
             update_viewport_for_buffer(preview, contents, mode, buffer_ids, selection_by_viewport);
 
-            let selection =
-                contents.buffers.get(&preview.buffer_id).and_then(|buffer| {
-                    match buffer.resolve_path() {
-                        Some(path) => Some(path.to_path_buf()),
-                        None => None,
-                    }
-                });
+            let selection = contents
+                .buffers
+                .get(&preview.buffer_id)
+                .and_then(|buffer| buffer.resolve_path().map(|path| path.to_path_buf()));
 
             actions.extend(
                 selection::refresh_preview_from_selection(history, window, contents, selection)
@@ -844,14 +841,14 @@ mod test {
             },
         );
 
-        let history = History::default();
+        let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
         // Simulate PathsAdded for the new folder (path without trailing slash,
         // as the filesystem watcher reports it).
         let actions = add(
-            &history,
+            &mut history,
             &marks,
             &qfix,
             &Mode::Navigation,
@@ -986,12 +983,12 @@ mod test {
         insert_tab_with_directory(&mut app, 2, &base, Vec::new());
         app.current_tab_id = 1;
 
-        let history = History::default();
+        let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
         let _ = add(
-            &history,
+            &mut history,
             &marks,
             &qfix,
             &Mode::Navigation,
@@ -1111,12 +1108,12 @@ mod test {
         app.tabs.insert(1, split);
         app.current_tab_id = 1;
 
-        let history = History::default();
+        let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
         let _ = add(
-            &history,
+            &mut history,
             &marks,
             &qfix,
             &Mode::Navigation,
@@ -1425,12 +1422,12 @@ mod test {
         let shared_id = insert_shared_current_split(&mut app, &base, vec!["b.txt".to_string()]);
         set_split_current_cursors(&mut app, 0, 0);
 
-        let history = History::default();
+        let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
         let _ = add(
-            &history,
+            &mut history,
             &marks,
             &qfix,
             &Mode::Navigation,

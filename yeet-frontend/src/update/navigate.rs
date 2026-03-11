@@ -12,7 +12,7 @@ use crate::{
 use super::history;
 
 #[tracing::instrument(skip(app))]
-pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec<Action> {
+pub fn mark(app: &mut App, history: &mut History, marks: &Marks, char: &char) -> Vec<Action> {
     let path = match marks.entries.get(char) {
         Some(it) => it.clone(),
         None => return Vec::new(),
@@ -30,7 +30,7 @@ pub fn mark(app: &mut App, history: &History, marks: &Marks, char: &char) -> Vec
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+pub fn path(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
 
@@ -54,7 +54,7 @@ pub fn path(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
     navigate_to_path_with_selection(history, app, path, &selection)
 }
 
-pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Action> {
+pub fn path_as_preview(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
@@ -69,7 +69,7 @@ pub fn path_as_preview(app: &mut App, history: &History, path: &Path) -> Vec<Act
 
 #[tracing::instrument(skip(app, history))]
 pub fn navigate_to_path_with_selection(
-    history: &History,
+    history: &mut History,
     app: &mut App,
     path: &Path,
     selection: &Option<String>,
@@ -327,11 +327,11 @@ mod test {
     #[test]
     fn navigate_to_path_does_not_panic_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let history = History::default();
+        let mut history = History::default();
         let target = Path::new("/nonexistent/test/path");
 
         // Should not panic; viewports remain unchanged
-        let _actions = navigate_to_path_with_selection(&history, &mut app, target, &None);
+        let _actions = navigate_to_path_with_selection(&mut history, &mut app, target, &None);
 
         // Task viewport buffer_id unchanged
         let window = app.current_window().expect("test requires current tab");
@@ -347,14 +347,14 @@ mod test {
     #[test]
     fn mark_does_not_panic_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
-        let history = History::default();
+        let mut history = History::default();
         let mut marks = Marks::default();
         marks
             .entries
             .insert('a', std::path::PathBuf::from("/nonexistent/test/path"));
 
         // Should not panic; viewports remain unchanged
-        let _actions = mark(&mut app, &history, &marks, &'a');
+        let _actions = mark(&mut app, &mut history, &marks, &'a');
 
         let window = app.current_window().expect("test requires current tab");
         match window {

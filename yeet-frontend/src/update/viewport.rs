@@ -14,7 +14,7 @@ use super::selection;
 
 pub fn relocate(
     app: &mut App,
-    history: &History,
+    history: &mut History,
     mode: &Mode,
     direction: &ViewPortDirection,
 ) -> Result<Vec<Action>, AppError> {

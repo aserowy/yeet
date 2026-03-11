@@ -9,13 +9,10 @@ use crate::{
     action::Action,
     error::AppError,
     model::{history::History, App, Buffer, Contents, DirectoryBuffer, State},
-    update::history,
+    update::{history, register},
 };
 
-use super::{
-    register::{get_direction_from_search_register, get_register},
-    search, selection,
-};
+use super::{search, selection};
 
 use crate::update::app;
 
@@ -92,7 +89,7 @@ pub fn relocate(
     mtn: &CursorDirection,
 ) -> Result<Vec<Action>, AppError> {
     if matches!(*mtn, CursorDirection::Search(_)) {
-        let term = get_register(&state.register, &'/');
+        let term = register::get_register(&state.register, &'/');
         search::buffers(app.contents.buffers.values_mut().collect(), term);
     }
 
@@ -118,7 +115,7 @@ pub fn relocate(
 
     let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
     if let CursorDirection::Search(drctn) = mtn {
-        let current_drctn = match get_direction_from_search_register(&state.register) {
+        let current_drctn = match register::get_direction_from_search_register(&state.register) {
             Some(it) => it,
             None => return Ok(Vec::new()),
         };
@@ -130,21 +127,25 @@ pub fn relocate(
             (Search::Previous, SearchDirection::Up) => Search::Next,
         };
 
-        let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(direction.clone()));
+        let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(direction));
         yeet_buffer::update(
             Some(viewport),
             &state.modes.current,
             &mut buffer.buffer,
             slice::from_ref(&msg),
-        );
+        )
     } else {
         yeet_buffer::update(
             Some(viewport),
             &state.modes.current,
             &mut buffer.buffer,
             slice::from_ref(&msg),
-        );
+        )
     };
 
-    selection::refresh_preview_from_current_selection(app, &state.history, premotion_preview_path)
+    selection::refresh_preview_from_current_selection(
+        app,
+        &mut state.history,
+        premotion_preview_path,
+    )
 }
