@@ -172,7 +172,7 @@ fn expand_target_path(target: &str, base_dir: &Path) -> PathBuf {
 mod test {
     use std::{
         fs,
-        path::PathBuf,
+        path::{Path, PathBuf},
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -216,12 +216,13 @@ mod test {
     #[test]
     fn expand_directorypath_with_relative_target() {
         let marks = Marks::default();
-        let source = PathBuf::from("/home/");
+        let source = unique_temp_dir();
         let target = "dest";
 
         let result = expand_path(&marks, target, &source).expect("expand path");
 
-        assert_eq!(result, PathBuf::from("/home/dest/"));
+        let target = source.join(Path::new("dest/"));
+        assert_eq!(result, target);
     }
 
     #[test]
