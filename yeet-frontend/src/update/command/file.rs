@@ -150,7 +150,7 @@ pub fn expand_path(marks: &Marks, target: &str, source_path: &Path) -> Result<Pa
 
 fn expand_target_path(target: &str, base_dir: &Path) -> PathBuf {
     let target_path = Path::new(target);
-    if target.starts_with("/") {
+    if target_path.is_absolute() {
         tracing::trace!(
             target = %target,
             "target path is absolute, using as-is"
