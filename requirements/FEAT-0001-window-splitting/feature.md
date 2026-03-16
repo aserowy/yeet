@@ -12,8 +12,7 @@ Enable users to split the window into multiple panes and manage those splits for
 ## Scope
 
 - Provide split creation in at least two directions (vertical and horizontal).
-- Allow choosing the target pane when creating a split.
-- Ensure the split is applied to the most inner window in the window tree.
+- Ensure the split targets the focused pane and applies to the most inner window in the window tree.
 - Support nested splits so users can iteratively split panes within existing splits.
 - Ensure split creation integrates with the existing window/pane model without regressions.
 
