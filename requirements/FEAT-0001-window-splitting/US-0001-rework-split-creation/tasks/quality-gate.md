@@ -2,11 +2,11 @@
 
 ## Gate Checks
 
-- [ ] Tasks are non-overlapping and have clear ownership of focused-pane logic.
-- [ ] Split targeting changes specify "most inner window" behavior explicitly.
-- [ ] Tests cover both horizontal and vertical splits.
-- [ ] Tests include nested split scenarios.
-- [ ] No task changes layout rendering, keybindings, or unrelated window sizing.
+- [x] Tasks are non-overlapping and have clear ownership of focused-pane logic.
+- [x] Split targeting changes specify "most inner window" behavior explicitly.
+- [x] Tests cover both horizontal and vertical splits.
+- [x] Tests include nested split scenarios.
+- [x] No task changes layout rendering, keybindings, or unrelated window sizing.
 
 ## Conflict Review
 

@@ -35,8 +35,9 @@ fn create_split(
         Ok(window) => window,
         Err(_) => return Vec::new(),
     };
-    let old_window = mem::take(window);
-    *window = make_split(old_window, new_directory);
+    let focused_leaf = window.focused_window_mut();
+    let old_window = mem::take(focused_leaf);
+    *focused_leaf = make_split(old_window, new_directory);
 
     vec![action::emit_keymap(KeymapMessage::NavigateToPath(
         target.to_path_buf(),
@@ -45,6 +46,7 @@ fn create_split(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
     use std::env;
 
     use yeet_buffer::model::viewport::ViewPort;
@@ -77,6 +79,23 @@ mod test {
         }
 
         app
+    }
+
+    fn make_directory_window(parent_id: usize, current_id: usize, preview_id: usize) -> Window {
+        Window::Directory(
+            ViewPort {
+                buffer_id: parent_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: current_id,
+                ..Default::default()
+            },
+            ViewPort {
+                buffer_id: preview_id,
+                ..Default::default()
+            },
+        )
     }
 
     #[test]
@@ -203,7 +222,13 @@ mod test {
         let actions = vertical(&mut app, &path);
         assert!(!actions.is_empty());
         let window = app.current_window().expect("test requires current tab");
-        assert!(matches!(window, Window::Vertical { .. }));
+        match window {
+            Window::Horizontal { second, focus, .. } => {
+                assert!(matches!(focus, SplitFocus::Second));
+                assert!(matches!(second.as_ref(), Window::Vertical { .. }));
+            }
+            _ => panic!("expected root to remain horizontal"),
+        }
     }
 
     #[test]
@@ -270,5 +295,113 @@ mod test {
             }),
             _ => false,
         }));
+    }
+
+    #[test]
+    fn horizontal_split_targets_focused_leaf() {
+        let mut app = make_app_with_directory();
+        let window = app.current_window_mut().expect("test requires current tab");
+        let left = make_directory_window(10, 11, 12);
+        let inner_first = make_directory_window(20, 21, 22);
+        let focused_leaf = make_directory_window(30, 31, 32);
+        let focused_ids = HashSet::from([30, 31, 32]);
+
+        *window = Window::Horizontal {
+            first: Box::new(left),
+            second: Box::new(Window::Vertical {
+                first: Box::new(inner_first),
+                second: Box::new(focused_leaf),
+                focus: SplitFocus::Second,
+            }),
+            focus: SplitFocus::Second,
+        };
+
+        let path = env::current_dir().expect("get current dir");
+        horizontal(&mut app, &path);
+
+        let window = app.current_window().expect("test requires current tab");
+        match window {
+            Window::Horizontal {
+                first,
+                second,
+                focus,
+            } => {
+                assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
+                assert!(matches!(focus, SplitFocus::Second));
+                match second.as_ref() {
+                    Window::Vertical {
+                        first,
+                        second,
+                        focus,
+                    } => {
+                        assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
+                        assert!(matches!(focus, SplitFocus::Second));
+                        match second.as_ref() {
+                            Window::Horizontal { first, focus, .. } => {
+                                assert!(matches!(focus, SplitFocus::Second));
+                                assert_eq!(first.buffer_ids(), focused_ids);
+                            }
+                            _ => panic!("expected focused leaf to be horizontal split"),
+                        }
+                    }
+                    _ => panic!("expected second child to remain vertical"),
+                }
+            }
+            _ => panic!("expected root to remain horizontal"),
+        }
+    }
+
+    #[test]
+    fn vertical_split_targets_focused_leaf() {
+        let mut app = make_app_with_directory();
+        let window = app.current_window_mut().expect("test requires current tab");
+        let left = make_directory_window(40, 41, 42);
+        let inner_first = make_directory_window(50, 51, 52);
+        let focused_leaf = make_directory_window(60, 61, 62);
+        let focused_ids = HashSet::from([60, 61, 62]);
+
+        *window = Window::Horizontal {
+            first: Box::new(left),
+            second: Box::new(Window::Vertical {
+                first: Box::new(inner_first),
+                second: Box::new(focused_leaf),
+                focus: SplitFocus::Second,
+            }),
+            focus: SplitFocus::Second,
+        };
+
+        let path = env::current_dir().expect("get current dir");
+        vertical(&mut app, &path);
+
+        let window = app.current_window().expect("test requires current tab");
+        match window {
+            Window::Horizontal {
+                first,
+                second,
+                focus,
+            } => {
+                assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
+                assert!(matches!(focus, SplitFocus::Second));
+                match second.as_ref() {
+                    Window::Vertical {
+                        first,
+                        second,
+                        focus,
+                    } => {
+                        assert!(matches!(first.as_ref(), Window::Directory(_, _, _)));
+                        assert!(matches!(focus, SplitFocus::Second));
+                        match second.as_ref() {
+                            Window::Vertical { first, focus, .. } => {
+                                assert!(matches!(focus, SplitFocus::Second));
+                                assert_eq!(first.buffer_ids(), focused_ids);
+                            }
+                            _ => panic!("expected focused leaf to be vertical split"),
+                        }
+                    }
+                    _ => panic!("expected second child to remain vertical"),
+                }
+            }
+            _ => panic!("expected root to remain horizontal"),
+        }
     }
 }

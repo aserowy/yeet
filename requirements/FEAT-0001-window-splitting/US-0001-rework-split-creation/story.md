@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: US-0001
-- Status: plan
+- Status: done
 - Feature: FEAT-0001
 - As a: user
 
