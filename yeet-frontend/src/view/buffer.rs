@@ -9,9 +9,11 @@ use yeet_buffer::{
 
 use crate::model::{App, Buffer, DirectoryBuffer, SplitFocus, Window};
 
+use crate::settings::Settings;
+
 use super::statusline;
 
-pub fn view(mode: &Mode, app: &App, frame: &mut Frame) {
+pub fn view(mode: &Mode, app: &App, settings: &Settings, frame: &mut Frame) {
     let context = RenderContext {
         draw_borders: None,
         is_focused: true,
@@ -21,7 +23,14 @@ pub fn view(mode: &Mode, app: &App, frame: &mut Frame) {
         Ok(window) => window,
         Err(_) => return,
     };
-    render_window(mode, window, &app.contents.buffers, frame, context);
+    render_window(
+        mode,
+        window,
+        &app.contents.buffers,
+        settings,
+        frame,
+        context,
+    );
 }
 
 #[derive(Clone)]
@@ -34,6 +43,7 @@ fn render_window(
     mode: &Mode,
     window: &Window,
     buffers: &HashMap<usize, Buffer>,
+    settings: &Settings,
     frame: &mut Frame,
     context: RenderContext,
 ) {
@@ -47,6 +57,7 @@ fn render_window(
                 mode,
                 first,
                 buffers,
+                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -57,6 +68,7 @@ fn render_window(
                 mode,
                 second,
                 buffers,
+                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -73,6 +85,7 @@ fn render_window(
                 mode,
                 first,
                 buffers,
+                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -83,6 +96,7 @@ fn render_window(
                 mode,
                 second,
                 buffers,
+                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -128,6 +142,7 @@ fn render_window(
                 statusline::view(
                     buffer,
                     &statusline_vp,
+                    settings.theme,
                     frame,
                     statusline_rect,
                     context.is_focused,
@@ -151,6 +166,7 @@ fn render_window(
                 statusline::view(
                     buffer,
                     &statusline_vp,
+                    settings.theme,
                     frame,
                     statusline_rect,
                     context.is_focused,

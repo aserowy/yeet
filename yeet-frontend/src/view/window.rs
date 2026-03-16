@@ -5,8 +5,13 @@ use crate::{error::AppError, model::Model};
 use super::{buffer, tabbar};
 
 pub fn view(model: &Model, frame: &mut Frame) -> Result<(), AppError> {
-    tabbar::render(&model.app, frame);
-    buffer::view(&model.state.modes.current, &model.app, frame);
+    tabbar::render(&model.app, &model.settings, frame);
+    buffer::view(
+        &model.state.modes.current,
+        &model.app,
+        &model.settings,
+        frame,
+    );
 
     Ok(())
 }

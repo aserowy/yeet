@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: FEAT-0002
-- Status: plan
+- Status: done
 
 ## Summary
 
