@@ -12,7 +12,30 @@ use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, Tex
 mod line;
 mod prefix;
 
-pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
+#[derive(Clone, Copy, Debug)]
+pub struct RenderStyles {
+    pub buffer_bg: Color,
+    pub border_bg: Color,
+    pub border_fg: Color,
+}
+
+impl Default for RenderStyles {
+    fn default() -> Self {
+        Self {
+            buffer_bg: Color::Reset,
+            border_bg: Color::Reset,
+            border_fg: Color::Black,
+        }
+    }
+}
+
+pub fn view(
+    viewport: &ViewPort,
+    mode: &Mode,
+    buffer: &TextBuffer,
+    frame: &mut Frame,
+    styles: RenderStyles,
+) {
     let rendered = get_rendered_lines(viewport, buffer);
     let styled = get_styled_lines(viewport, mode, &viewport.cursor, rendered);
 
@@ -26,7 +49,7 @@ pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut F
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Black));
+            .border_style(Style::default().fg(styles.border_fg).bg(styles.border_bg));
 
         let inner = block.inner(rect);
 
@@ -37,7 +60,10 @@ pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut F
         rect
     };
 
-    frame.render_widget(Paragraph::new(styled), rect);
+    frame.render_widget(
+        Paragraph::new(styled).style(Style::default().bg(styles.buffer_bg)),
+        rect,
+    );
 }
 
 fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLine> {

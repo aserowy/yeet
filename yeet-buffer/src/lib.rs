@@ -5,7 +5,7 @@ use ratatui::Frame;
 pub mod message;
 pub mod model;
 mod update;
-mod view;
+pub mod view;
 
 pub fn update(
     viewport: Option<&mut ViewPort>,
@@ -33,6 +33,12 @@ pub fn update_viewport_by_buffer(viewport: &mut ViewPort, mode: &Mode, buffer: &
     update::viewport::update_by_cursor(viewport, buffer);
 }
 
-pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
-    view::view(viewport, mode, buffer, frame)
+pub fn view(
+    viewport: &ViewPort,
+    mode: &Mode,
+    buffer: &TextBuffer,
+    frame: &mut Frame,
+    styles: view::RenderStyles,
+) {
+    view::view(viewport, mode, buffer, frame, styles)
 }

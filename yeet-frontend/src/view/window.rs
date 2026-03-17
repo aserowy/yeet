@@ -20,8 +20,10 @@ pub fn view(model: &Model, frame: &mut Frame) -> Result<(), AppError> {
 mod test {
     use std::collections::HashMap;
 
+    use ratatui::style::Color;
     use ratatui::{backend::TestBackend, Terminal};
     use yeet_buffer::model::viewport::ViewPort;
+    use yeet_buffer::model::TextBuffer;
 
     use crate::{
         model::{App, Buffer, CommandLine, Contents, Model, TasksBuffer, Window},
@@ -65,6 +67,123 @@ mod test {
             settings: Settings::default(),
             state: Default::default(),
         }
+    }
+
+    #[test]
+    fn view_applies_buffer_background_color() {
+        let mut model = make_model(1);
+        model.settings.theme.buffer_bg = Color::Rgb(0x10, 0x20, 0x30);
+
+        let backend = TestBackend::new(20, 6);
+        let mut terminal = Terminal::new(backend).expect("create terminal");
+
+        terminal
+            .draw(|frame| {
+                view(&model, frame).expect("render view");
+            })
+            .expect("draw frame");
+
+        let buffer = terminal.backend().buffer();
+        let cell = buffer.cell((0, 1)).expect("cell exists");
+        assert_eq!(cell.bg, Color::Rgb(0x10, 0x20, 0x30));
+    }
+
+    #[test]
+    fn view_applies_distinct_border_backgrounds() {
+        let mut model = make_model(1);
+        model.settings.theme.miller_border_bg = Color::Rgb(0x11, 0x11, 0x11);
+        model.settings.theme.split_border_bg = Color::Rgb(0x22, 0x22, 0x22);
+
+        let buffer_id = 1;
+        model.app.contents.buffers.insert(
+            buffer_id,
+            Buffer::Directory(crate::model::DirectoryBuffer {
+                buffer: TextBuffer::default(),
+                path: Default::default(),
+                state: Default::default(),
+            }),
+        );
+
+        let left = ViewPort {
+            buffer_id,
+            x: 0,
+            y: 0,
+            width: 8,
+            height: 3,
+            show_border: true,
+            ..Default::default()
+        };
+        let right = ViewPort {
+            buffer_id,
+            x: 8,
+            y: 0,
+            width: 8,
+            height: 3,
+            show_border: true,
+            ..Default::default()
+        };
+        let preview = ViewPort {
+            buffer_id,
+            x: 16,
+            y: 0,
+            width: 4,
+            height: 3,
+            show_border: false,
+            ..Default::default()
+        };
+
+        let right_tasks = ViewPort {
+            buffer_id,
+            x: 20,
+            y: 0,
+            width: 6,
+            height: 3,
+            show_border: true,
+            ..Default::default()
+        };
+
+        model.app.tabs.insert(
+            1,
+            Window::Vertical {
+                first: Box::new(Window::Directory(left, right, preview)),
+                second: Box::new(Window::Tasks(right_tasks)),
+                focus: crate::model::SplitFocus::First,
+            },
+        );
+
+        let backend = TestBackend::new(26, 6);
+        let mut terminal = Terminal::new(backend).expect("create terminal");
+
+        terminal
+            .draw(|frame| {
+                view(&model, frame).expect("render view");
+            })
+            .expect("draw frame");
+
+        let buffer = terminal.backend().buffer();
+        let miller_border_cell = buffer.cell((7, 0)).expect("miller border cell");
+        let split_border_cell = buffer.cell((25, 0)).expect("split border cell");
+
+        assert_eq!(miller_border_cell.bg, Color::Rgb(0x11, 0x11, 0x11));
+        assert_eq!(split_border_cell.bg, Color::Rgb(0x22, 0x22, 0x22));
+    }
+
+    #[test]
+    fn view_keeps_default_border_background_reset() {
+        let model = make_model(1);
+
+        let backend = TestBackend::new(20, 6);
+        let mut terminal = Terminal::new(backend).expect("create terminal");
+
+        terminal
+            .draw(|frame| {
+                view(&model, frame).expect("render view");
+            })
+            .expect("draw frame");
+
+        let buffer = terminal.backend().buffer();
+        let cell = buffer.cell((0, 1)).expect("cell exists");
+        assert_eq!(cell.bg, Color::Reset);
     }
 
     #[test]

@@ -8,6 +8,12 @@ use yeet_buffer::model::viewport::WindowSettings;
 /// Defaults mirror the previous hard-coded values so existing output remains unchanged.
 #[derive(Clone, Copy, Debug)]
 pub struct ThemePalette {
+    /// Background color for buffer content surfaces.
+    pub buffer_bg: Color,
+    /// Background color for miller column borders in the directory view.
+    pub miller_border_bg: Color,
+    /// Background color for split borders.
+    pub split_border_bg: Color,
     /// Background color for the active tab label.
     pub tab_active_bg: Color,
     /// Foreground color for the active tab label.
@@ -37,6 +43,9 @@ pub struct ThemePalette {
 impl Default for ThemePalette {
     fn default() -> Self {
         Self {
+            buffer_bg: Color::Reset,
+            miller_border_bg: Color::Reset,
+            split_border_bg: Color::Reset,
             tab_active_bg: Color::LightBlue,
             tab_active_fg: Color::Black,
             tab_inactive_bg: Color::DarkGray,

@@ -8,6 +8,9 @@ use crate::settings::{Settings, ThemePalette};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ThemePaletteOverrides {
+    pub buffer_bg: Option<Color>,
+    pub miller_border_bg: Option<Color>,
+    pub split_border_bg: Option<Color>,
     pub tab_active_bg: Option<Color>,
     pub tab_active_fg: Option<Color>,
     pub tab_inactive_bg: Option<Color>,
@@ -24,6 +27,9 @@ pub struct ThemePaletteOverrides {
 
 pub fn apply_theme_overrides(base: ThemePalette, overrides: ThemePaletteOverrides) -> ThemePalette {
     ThemePalette {
+        buffer_bg: overrides.buffer_bg.unwrap_or(base.buffer_bg),
+        miller_border_bg: overrides.miller_border_bg.unwrap_or(base.miller_border_bg),
+        split_border_bg: overrides.split_border_bg.unwrap_or(base.split_border_bg),
         tab_active_bg: overrides.tab_active_bg.unwrap_or(base.tab_active_bg),
         tab_active_fg: overrides.tab_active_fg.unwrap_or(base.tab_active_fg),
         tab_inactive_bg: overrides.tab_inactive_bg.unwrap_or(base.tab_inactive_bg),
@@ -147,6 +153,9 @@ fn read_theme_palette_overrides(lua: &mlua::Lua) -> ThemePaletteOverrides {
     };
 
     apply_color("tab_active_bg", &mut overrides.tab_active_bg);
+    apply_color("buffer_bg", &mut overrides.buffer_bg);
+    apply_color("miller_border_bg", &mut overrides.miller_border_bg);
+    apply_color("split_border_bg", &mut overrides.split_border_bg);
     apply_color("tab_active_fg", &mut overrides.tab_active_fg);
     apply_color("tab_inactive_bg", &mut overrides.tab_inactive_bg);
     apply_color("tab_inactive_fg", &mut overrides.tab_inactive_fg);
@@ -206,6 +215,7 @@ mod tests {
         let source = r###"
             y = {
               theme = {
+                buffer_bg = "#0B0C0D",
                 tab_active_bg = "#87CEFA",
                 statusline_fg = "#FFFFFF",
               }
@@ -216,6 +226,7 @@ mod tests {
         let base = ThemePalette::default();
         let updated = apply_theme_overrides(base, overrides);
 
+        assert_eq!(updated.buffer_bg, Color::Rgb(0x0B, 0x0C, 0x0D));
         assert_eq!(updated.tab_active_bg, Color::Rgb(0x87, 0xCE, 0xFA));
         assert_eq!(updated.statusline_fg, Color::Rgb(0xFF, 0xFF, 0xFF));
         assert_eq!(updated.tab_active_fg, base.tab_active_fg);

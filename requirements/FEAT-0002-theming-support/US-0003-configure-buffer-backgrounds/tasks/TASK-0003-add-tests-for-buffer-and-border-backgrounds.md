@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: TASK-0003
-- Status: plan
+- Status: done
 - Userstory: US-0003
 
 ## Motivation

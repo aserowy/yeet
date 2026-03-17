@@ -1,10 +1,16 @@
 use ratatui::{layout::Rect, widgets::Paragraph, Frame};
-use yeet_buffer::{model::Mode, view as buffer_view};
+use yeet_buffer::{model::Mode, view::RenderStyles};
 
 use crate::{error::AppError, model::CommandLine};
 
 pub fn view(commandline: &CommandLine, mode: &Mode, frame: &mut Frame) -> Result<(), AppError> {
-    buffer_view(&commandline.viewport, mode, &commandline.buffer, frame);
+    yeet_buffer::view(
+        &commandline.viewport,
+        mode,
+        &commandline.buffer,
+        frame,
+        RenderStyles::default(),
+    );
 
     let rect = Rect {
         x: commandline.viewport.width,
