@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: FEAT-0002
-- Status: done
+- Status: execution
 
 ## Summary
 
@@ -24,6 +24,7 @@ Enable users to customize the rendered color palette so the UI can match their p
 ## User Stories
 
 - US-0001 change rendered colors
+- US-0002 define settings via lua on startup
 
 ## Notes
 

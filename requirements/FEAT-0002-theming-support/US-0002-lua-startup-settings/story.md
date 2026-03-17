@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: US-0002
-- Status: plan
+- Status: execution
 - Feature: FEAT-0002
 - As a: user
 
@@ -18,5 +18,6 @@ So that: I can customize the theme using a familiar, scriptable approach without
 ## Acceptance Criteria
 
 - Given a Lua configuration is available through the application's config discovery
+- And config discovery checks `$XDG_CONFIG_HOME/yeet/init.lua` with `~/.config/yeet/init.lua` as the fallback
 - When the application starts
 - Then it executes the Lua config and applies the defined theming settings
