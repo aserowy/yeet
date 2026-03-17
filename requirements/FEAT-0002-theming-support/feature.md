@@ -25,6 +25,7 @@ Enable users to customize the rendered color palette so the UI can match their p
 
 - US-0001 change rendered colors
 - US-0002 define settings via lua on startup
+- US-0003 configure buffer backgrounds
 
 ## Notes
 
