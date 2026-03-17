@@ -13,7 +13,7 @@ Enable users to customize the rendered color palette so the UI can match their p
 
 - Provide a theming system that defines rendered colors via configurable palette values.
 - Allow users to select or supply color values for the rendered UI.
-- Ensure theme changes are reflected consistently across rendered surfaces.
+- Ensure theme changes are reflected consistently across rendered surfaces, including buffer areas, miller column borders, and split borders.
 
 ## Out of Scope
 
