@@ -17,8 +17,6 @@ Use this file as the default playbook for agentic changes in this repo.
 - avoid making large, sweeping changes without discussion
 - prefer small, incremental PRs that are easier to review
 - always lint and format code after making changes
-- add tests for new features and bug fixes
-- add or update tests for any code you change
 - update documentation if you change public APIs or behavior
 - logs are found in `~/.cache/yeet/logs/`
 
