@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: US-0002
-- Status: execution
+- Status: done
 - Feature: FEAT-0002
 - As a: user
 

@@ -64,6 +64,7 @@ pub struct Settings {
     pub show_quickfix_signs: bool,
     pub show_mark_signs: bool,
     pub startup_path: Option<PathBuf>,
+    pub lua_config_path: Option<PathBuf>,
 }
 
 impl Default for Settings {
@@ -80,6 +81,7 @@ impl Default for Settings {
             show_mark_signs: true,
             show_quickfix_signs: true,
             startup_path: None,
+            lua_config_path: None,
         }
     }
 }

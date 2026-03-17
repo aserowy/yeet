@@ -171,6 +171,22 @@ Options:
           Print help
 ```
 
+## configuration
+
+Yeet loads a Lua configuration file on startup (if present) from:
+
+1. `$XDG_CONFIG_HOME/yeet/init.lua`
+2. `~/.config/yeet/init.lua` (fallback)
+
+Use the `theme` table to override theme palette values:
+
+```lua
+theme = {
+  tab_active_bg = "#87CEFA",
+  statusline_fg = "#FFFFFF",
+}
+```
+
 ## faq
 
 ### how fast is yeet
