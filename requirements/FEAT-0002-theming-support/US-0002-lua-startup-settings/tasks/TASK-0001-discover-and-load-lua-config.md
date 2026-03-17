@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: TASK-0001
-- Status: done
+- Status: execution
 - Userstory: US-0002
 
 ## Motivation
@@ -58,6 +58,8 @@ Wire discovery into startup so the Lua config is executed before rendering begin
 ### Step 3: Handle error and no-config cases
 
 Ensure the no-config path is silent (no error). Ensure error cases are logged or emitted via existing `PrintContent::Error` patterns without crashing the app.
+
+When surfacing errors, include context indicating that the Lua config is expected to define settings under the top-level `y` table (e.g., `y.theme`).
 
 ## Examples
 

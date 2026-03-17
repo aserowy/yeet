@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: TASK-0002
-- Status: done
+- Status: execution
 - Userstory: US-0002
 
 ## Motivation
@@ -18,11 +18,11 @@ Users need a clear Lua API to set theme palette values so their configuration ca
 
 ## Requirements
 
-- Define a minimal Lua API surface dedicated to theme palette settings (no general scripting).
-- Map Lua-defined values directly to existing `ThemePalette` fields, keeping field names consistent or clearly documented.
+- Define a minimal Lua API surface dedicated to theme palette settings (no general scripting) under a top-level `y` table.
+- Map Lua-defined values from `y.theme` directly to existing `ThemePalette` fields, keeping field names consistent or clearly documented.
 - Support overriding a subset of palette values while leaving unspecified values at defaults.
 - Validate value types and report errors for invalid Lua values (e.g., non-color values) without crashing.
-- Apply parsed Lua settings to the `Settings.theme` before rendering begins.
+- Apply parsed Lua settings from `y.theme` to the `Settings.theme` before rendering begins.
 
 ## Exclusions
 
@@ -40,7 +40,7 @@ Users need a clear Lua API to set theme palette values so their configuration ca
 
 ### Step 1: Define Lua schema and mapping
 
-Decide a Lua table shape (e.g., `theme = { tab_active_bg = "#RRGGBB" }`) and map keys to `ThemePalette` fields. Document the mapping in code comments for maintainability.
+Use a top-level `y` table and map `y.theme` keys to `ThemePalette` fields. Document the mapping in code comments for maintainability.
 
 ### Step 2: Implement parsing and validation
 
@@ -53,9 +53,11 @@ Merge parsed values with `ThemePalette::default()` and assign to `Settings.theme
 ## Examples
 
 ```lua
-theme = {
-  tab_active_bg = "#87CEFA",
-  statusline_fg = "#FFFFFF",
+y = {
+  theme = {
+    tab_active_bg = "#87CEFA",
+    statusline_fg = "#FFFFFF",
+  }
 }
 ```
 
