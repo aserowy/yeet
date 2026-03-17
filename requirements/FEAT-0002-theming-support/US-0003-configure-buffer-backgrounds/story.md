@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: US-0003
-- Status: plan
+- Status: execution
 - Feature: FEAT-0002
 - As a: user
 
