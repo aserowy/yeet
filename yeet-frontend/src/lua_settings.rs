@@ -77,7 +77,7 @@ pub fn apply_lua_theme_settings(mut settings: Settings) -> Settings {
         Ok(overrides) => overrides,
         Err(err) => {
             error!(
-                "failed to load lua config {}: {err}",
+                "failed to load lua config {}: {err} (expected y.theme settings)",
                 lua_config_path.display()
             );
             return settings;
@@ -90,10 +90,27 @@ pub fn apply_lua_theme_settings(mut settings: Settings) -> Settings {
 
 fn read_theme_palette_overrides(lua: &mlua::Lua) -> ThemePaletteOverrides {
     let globals = lua.globals();
-    let theme_value = match globals.get::<mlua::Value>("theme") {
+    let y_value = match globals.get::<mlua::Value>("y") {
         Ok(value) => value,
         Err(err) => {
-            error!("failed to read lua theme table: {err}");
+            error!("failed to read lua 'y' table: {err}");
+            return ThemePaletteOverrides::default();
+        }
+    };
+
+    let y_table = match y_value {
+        Value::Nil => return ThemePaletteOverrides::default(),
+        Value::Table(table) => table,
+        other => {
+            error!("lua 'y' must be a table, got {:?}", other.type_name());
+            return ThemePaletteOverrides::default();
+        }
+    };
+
+    let theme_value = match y_table.get::<mlua::Value>("theme") {
+        Ok(value) => value,
+        Err(err) => {
+            error!("failed to read lua y.theme table: {err}");
             return ThemePaletteOverrides::default();
         }
     };
@@ -102,7 +119,7 @@ fn read_theme_palette_overrides(lua: &mlua::Lua) -> ThemePaletteOverrides {
         Value::Nil => return ThemePaletteOverrides::default(),
         Value::Table(table) => table,
         other => {
-            error!("lua theme must be a table, got {:?}", other.type_name());
+            error!("lua y.theme must be a table, got {:?}", other.type_name());
             return ThemePaletteOverrides::default();
         }
     };
@@ -120,12 +137,12 @@ fn read_theme_palette_overrides(lua: &mlua::Lua) -> ThemePaletteOverrides {
         },
         Ok(other) => {
             error!(
-                "lua theme value for '{key}' must be a string, got {:?}",
+                "lua y.theme value for '{key}' must be a string, got {:?}",
                 other.type_name()
             );
         }
         Err(err) => {
-            error!("failed to read lua theme key '{key}': {err}");
+            error!("failed to read lua y.theme key '{key}': {err}");
         }
     };
 
@@ -187,9 +204,11 @@ mod tests {
     #[test]
     fn overrides_apply_only_specified_values() {
         let source = r###"
-            theme = {
-              tab_active_bg = "#87CEFA",
-              statusline_fg = "#FFFFFF",
+            y = {
+              theme = {
+                tab_active_bg = "#87CEFA",
+                statusline_fg = "#FFFFFF",
+              }
             }
         "###;
 
@@ -205,9 +224,11 @@ mod tests {
     #[test]
     fn invalid_values_fall_back_to_defaults() {
         let source = r###"
-            theme = {
-              statusline_fg = 12,
-              tab_active_bg = "#GGGGGG",
+            y = {
+              theme = {
+                statusline_fg = 12,
+                tab_active_bg = "#GGGGGG",
+              }
             }
         "###;
 
@@ -235,8 +256,10 @@ mod tests {
         let dir = create_temp_dir("yeet-lua-theme");
         let path = dir.join("init.lua");
         let source = r###"
-            theme = {
-              statusline_dim_fg = "#123456",
+            y = {
+              theme = {
+                statusline_dim_fg = "#123456",
+              }
             }
         "###;
         fs::write(&path, source).expect("write lua config");

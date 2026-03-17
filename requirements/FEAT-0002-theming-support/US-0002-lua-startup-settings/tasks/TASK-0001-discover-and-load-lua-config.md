@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: TASK-0001
-- Status: execution
+- Status: done
 - Userstory: US-0002
 
 ## Motivation
