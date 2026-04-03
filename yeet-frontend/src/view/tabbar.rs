@@ -8,7 +8,10 @@ use ratatui::{
     Frame,
 };
 
-use crate::{model::{App, Buffer, SplitFocus, Window}, theme::Theme};
+use crate::{
+    model::{App, Buffer, SplitFocus, Window},
+    theme::Theme,
+};
 
 const TAB_WIDTH: usize = 28;
 

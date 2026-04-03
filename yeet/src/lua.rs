@@ -16,14 +16,14 @@ pub fn load_theme() -> Theme {
     };
 
     if !config_path.exists() {
-        tracing::info!("no init.lua found at {:?}, using default theme", config_path);
+        tracing::info!(
+            "no init.lua found at {:?}, using default theme",
+            config_path
+        );
         return theme;
     }
 
-    let lua = match Lua::new() {
-        lua => lua,
-    };
-
+    let lua = Lua::new();
     if let Err(err) = run_init_lua(&lua, &config_path, &mut theme) {
         tracing::error!("error loading init.lua: {:?}", err);
     }
@@ -67,7 +67,11 @@ fn run_init_lua(lua: &Lua, config_path: &PathBuf, theme: &mut Theme) -> LuaResul
                     theme.set_color(key, color);
                 }
                 None => {
-                    tracing::error!("invalid color value '{}' for token '{}', using default", hex, key);
+                    tracing::error!(
+                        "invalid color value '{}' for token '{}', using default",
+                        hex,
+                        key
+                    );
                 }
             }
         }

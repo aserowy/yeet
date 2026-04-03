@@ -1,11 +1,22 @@
 use ratatui::{layout::Rect, widgets::Paragraph, Frame};
-use yeet_buffer::{model::Mode, view_themed as buffer_view};
+use yeet_buffer::{model::Mode, view as buffer_view};
 
 use crate::{error::AppError, model::CommandLine, theme::Theme};
 
-pub fn view(commandline: &CommandLine, mode: &Mode, theme: &Theme, frame: &mut Frame) -> Result<(), AppError> {
+pub fn view(
+    commandline: &CommandLine,
+    mode: &Mode,
+    theme: &Theme,
+    frame: &mut Frame,
+) -> Result<(), AppError> {
     let buffer_theme = theme.to_buffer_theme();
-    buffer_view(&commandline.viewport, mode, &commandline.buffer, &buffer_theme, frame);
+    buffer_view(
+        &commandline.viewport,
+        mode,
+        &commandline.buffer,
+        &buffer_theme,
+        frame,
+    );
 
     let rect = Rect {
         x: commandline.viewport.width,

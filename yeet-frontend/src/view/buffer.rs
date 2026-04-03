@@ -4,7 +4,7 @@ use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
 use yeet_buffer::{
     model::{viewport::ViewPort, Mode},
-    view_themed as buffer_view,
+    view as buffer_view,
 };
 
 use crate::{
@@ -25,7 +25,15 @@ pub fn view(mode: &Mode, app: &App, theme: &Theme, frame: &mut Frame) {
         Ok(window) => window,
         Err(_) => return,
     };
-    render_window(mode, window, &app.contents.buffers, theme, &buffer_theme, frame, context);
+    render_window(
+        mode,
+        window,
+        &app.contents.buffers,
+        theme,
+        &buffer_theme,
+        frame,
+        context,
+    );
 }
 
 #[derive(Clone)]
@@ -153,7 +161,14 @@ fn render_window(
             }
         }
         Window::Tasks(vp) => {
-            render_buffer_slot(mode, frame, vp, buffers.get(&vp.buffer_id), context.clone(), buffer_theme);
+            render_buffer_slot(
+                mode,
+                frame,
+                vp,
+                buffers.get(&vp.buffer_id),
+                context.clone(),
+                buffer_theme,
+            );
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
                 let statusline_rect = Rect {

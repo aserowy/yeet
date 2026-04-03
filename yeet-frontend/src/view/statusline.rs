@@ -9,7 +9,10 @@ use ratatui::{
 };
 use yeet_buffer::model::{undo, undo::BufferChanged, viewport::ViewPort};
 
-use crate::{model::{self, Buffer, DirectoryBuffer, TasksBuffer}, theme::{tokens, Theme}};
+use crate::{
+    model::{self, Buffer, DirectoryBuffer, TasksBuffer},
+    theme::{tokens, Theme},
+};
 
 pub fn view(
     current: &Buffer,
@@ -52,7 +55,13 @@ pub fn view(
     }
 }
 
-fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect, theme: &Theme) {
+fn tasks_status(
+    buffer: &TasksBuffer,
+    viewport: &ViewPort,
+    frame: &mut Frame,
+    rect: Rect,
+    theme: &Theme,
+) {
     let count = buffer.buffer.lines.len();
     let position = if count == 0 {
         0
@@ -62,12 +71,19 @@ fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, re
 
     let label = Line::from(Span::styled(
         "Tasks",
-        theme.style_fg(tokens::STATUSLINE_FOCUSED_FG)
+        theme
+            .style_fg(tokens::STATUSLINE_FOCUSED_FG)
             .add_modifier(Modifier::BOLD),
     ));
     let position_line = Line::from(vec![
-        Span::styled(format!("{}/", position), theme.style_fg(tokens::STATUSLINE_POSITION_FG)),
-        Span::styled(format!("{}", count), theme.style_fg(tokens::STATUSLINE_POSITION_FG)),
+        Span::styled(
+            format!("{}/", position),
+            theme.style_fg(tokens::STATUSLINE_POSITION_FG),
+        ),
+        Span::styled(
+            format!("{}", count),
+            theme.style_fg(tokens::STATUSLINE_POSITION_FG),
+        ),
     ]);
 
     let layout = Layout::default()
@@ -89,7 +105,10 @@ fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, re
 }
 
 fn tasks_status_unfocused(frame: &mut Frame, rect: Rect, theme: &Theme) {
-    let label = Line::from(Span::styled("Tasks", theme.style_fg(tokens::STATUSLINE_UNFOCUSED_FG)));
+    let label = Line::from(Span::styled(
+        "Tasks",
+        theme.style_fg(tokens::STATUSLINE_UNFOCUSED_FG),
+    ));
 
     frame.render_widget(
         Block::default().style(theme.style_bg(tokens::STATUSLINE_BG)),
@@ -98,7 +117,13 @@ fn tasks_status_unfocused(frame: &mut Frame, rect: Rect, theme: &Theme) {
     frame.render_widget(Paragraph::new(label), rect);
 }
 
-fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect, theme: &Theme) {
+fn filetree_status(
+    buffer: &DirectoryBuffer,
+    viewport: &ViewPort,
+    frame: &mut Frame,
+    rect: Rect,
+    theme: &Theme,
+) {
     let selected = model::get_selected_path(buffer, &viewport.cursor);
     let permissions = get_permissions(&selected);
 
@@ -107,7 +132,8 @@ fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Fr
 
     let path = Line::from(Span::styled(
         buffer.path.to_str().unwrap_or(""),
-        theme.style_fg(tokens::STATUSLINE_FOCUSED_FG)
+        theme
+            .style_fg(tokens::STATUSLINE_FOCUSED_FG)
             .add_modifier(Modifier::BOLD),
     ));
 
@@ -135,7 +161,12 @@ fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Fr
     frame.render_widget(Paragraph::new(position), layout[6]);
 }
 
-fn filetree_status_unfocused(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect, theme: &Theme) {
+fn filetree_status_unfocused(
+    buffer: &DirectoryBuffer,
+    frame: &mut Frame,
+    rect: Rect,
+    theme: &Theme,
+) {
     let content = buffer.path.to_str().unwrap_or("");
     let style = theme.style_fg(tokens::STATUSLINE_UNFOCUSED_FG);
     let path = Line::from(Span::styled(content, style));
@@ -147,7 +178,11 @@ fn filetree_status_unfocused(buffer: &DirectoryBuffer, frame: &mut Frame, rect: 
     frame.render_widget(Paragraph::new(path), rect);
 }
 
-fn get_position_content<'a>(buffer: &'a DirectoryBuffer, viewport: &ViewPort, theme: &Theme) -> Line<'a> {
+fn get_position_content<'a>(
+    buffer: &'a DirectoryBuffer,
+    viewport: &ViewPort,
+    theme: &Theme,
+) -> Line<'a> {
     let count = buffer.buffer.lines.len();
     let mut position = viewport.cursor.vertical_index + 1;
 

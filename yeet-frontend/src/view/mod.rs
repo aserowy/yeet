@@ -13,7 +13,12 @@ pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppErr
 
         window::view(model, theme, frame).expect("Failed to render window view");
 
-        commandline::view(&model.app.commandline, &model.state.modes.current, theme, frame)
-            .expect("Failed to render commandline view");
+        commandline::view(
+            &model.app.commandline,
+            &model.state.modes.current,
+            theme,
+            frame,
+        )
+        .expect("Failed to render commandline view");
     })
 }

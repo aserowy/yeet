@@ -97,10 +97,7 @@ impl Default for Theme {
 
 impl Theme {
     pub fn color(&self, token: &str) -> Color {
-        self.colors
-            .get(token)
-            .copied()
-            .unwrap_or(Color::Reset)
+        self.colors.get(token).copied().unwrap_or(Color::Reset)
     }
 
     pub fn style_fg(&self, token: &str) -> Style {
@@ -258,7 +255,10 @@ mod tests {
     fn theme_style_fg_bg_returns_correct_style() {
         let theme = Theme::default();
         let style = theme.style_fg_bg(tokens::TABBAR_ACTIVE_FG, tokens::TABBAR_ACTIVE_BG);
-        assert_eq!(style, Style::default().fg(Color::Black).bg(Color::LightBlue));
+        assert_eq!(
+            style,
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
+        );
     }
 
     #[test]

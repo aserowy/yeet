@@ -162,7 +162,12 @@ impl Emitter {
         let resolver = Arc::new(Mutex::new(MessageResolver::default()));
 
         let (task_sender, mut task_receiver) = mpsc::channel(1);
-        let tasks = TaskManager::new(task_sender, resolver.clone(), cancellation.child_token(), syntax_theme_name);
+        let tasks = TaskManager::new(
+            task_sender,
+            resolver.clone(),
+            cancellation.child_token(),
+            syntax_theme_name,
+        );
 
         tokio::spawn(async move {
             loop {

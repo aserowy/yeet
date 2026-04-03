@@ -1,10 +1,13 @@
 use std::cmp::Reverse;
 
-use crate::{BufferTheme, model::{
-    ansi::Ansi,
-    viewport::{LineNumber, ViewPort},
-    BufferLine, Cursor,
-}};
+use crate::{
+    model::{
+        ansi::Ansi,
+        viewport::{LineNumber, ViewPort},
+        BufferLine, Cursor,
+    },
+    BufferTheme,
+};
 
 pub fn get_border(vp: &ViewPort) -> Ansi {
     Ansi::new(&" ".repeat(vp.get_border_width()))
@@ -34,7 +37,10 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
     };
 
     if cursor.vertical_index == index {
-        return Ansi::new(&format!("{}{:<width$}\x1b[0m", theme.cur_line_nr_bold, number));
+        return Ansi::new(&format!(
+            "{}{:<width$}\x1b[0m",
+            theme.cur_line_nr_bold, number
+        ));
     }
 
     match vp.line_number {

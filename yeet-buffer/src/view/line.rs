@@ -1,4 +1,7 @@
-use crate::{BufferTheme, model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode}};
+use crate::{
+    model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, CursorPosition, Mode},
+    BufferTheme,
+};
 
 pub fn add_line_styles(
     vp: &ViewPort,
@@ -81,8 +84,14 @@ fn add_cursor_styles(
     };
 
     let (code, reset) = match mode {
-        Mode::Command(_) | Mode::Normal => (theme.cursor_normal_code.as_str(), theme.cursor_normal_reset.as_str()),
-        Mode::Insert => (theme.cursor_insert_code.as_str(), theme.cursor_insert_reset.as_str()),
+        Mode::Command(_) | Mode::Normal => (
+            theme.cursor_normal_code.as_str(),
+            theme.cursor_normal_reset.as_str(),
+        ),
+        Mode::Insert => (
+            theme.cursor_insert_code.as_str(),
+            theme.cursor_insert_reset.as_str(),
+        ),
         Mode::Navigation => ("", ""),
     };
 

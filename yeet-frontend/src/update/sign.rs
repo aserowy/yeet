@@ -52,7 +52,11 @@ pub fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
     generate_sign_with_styles(sign_id, "\x1b[1;95m", "\x1b[1;96m")
 }
 
-fn generate_sign_with_styles(sign_id: SignIdentifier, qfix_style: &str, mark_style: &str) -> Option<Sign> {
+fn generate_sign_with_styles(
+    sign_id: SignIdentifier,
+    qfix_style: &str,
+    mark_style: &str,
+) -> Option<Sign> {
     match sign_id {
         QFIX_SIGN_ID => Some(Sign {
             id: QFIX_SIGN_ID,

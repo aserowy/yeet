@@ -436,16 +436,13 @@ async fn run_task(
                 _ => {
                     let highlighter = highlighter.lock().await;
                     let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                    let theme = theme_set
-                        .themes
-                        .get(syntax_theme_name)
-                        .unwrap_or_else(|| {
-                            tracing::error!(
-                                "syntax theme '{}' not found, falling back to 'base16-eighties.dark'",
-                                syntax_theme_name
-                            );
-                            &theme_set.themes["base16-eighties.dark"]
-                        });
+                    let theme = theme_set.themes.get(syntax_theme_name).unwrap_or_else(|| {
+                        tracing::error!(
+                            "syntax theme '{}' not found, falling back to 'base16-eighties.dark'",
+                            syntax_theme_name
+                        );
+                        &theme_set.themes["base16-eighties.dark"]
+                    });
 
                     syntax::highlight(syntaxes, theme, &path).await
                 }
