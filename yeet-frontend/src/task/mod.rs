@@ -121,12 +121,14 @@ impl TaskManager {
         sender: Sender<Envelope>,
         resolver: Arc<Mutex<MessageResolver>>,
         cancellation: CancellationToken,
+        syntax_theme_name: String,
     ) -> Self {
         let picker = resolve_picker();
 
         tracing::info!("image picker configured: {:?}", picker);
 
         let resolver = resolver.clone();
+        let syntax_theme_name = Arc::new(syntax_theme_name);
         let (task_sender, mut task_receiver) = mpsc::unbounded_channel::<Task>();
         tokio::spawn(async move {
             let highlighter = Arc::new(Mutex::new((
@@ -150,6 +152,7 @@ impl TaskManager {
                         let resolver = resolver.clone();
                         let highlighter = highlighter.clone();
                         let picker = picker.clone();
+                        let syntax_theme_name = syntax_theme_name.clone();
 
                         tokio::spawn(async move {
                             let id = task.to_string();
@@ -161,7 +164,8 @@ impl TaskManager {
                                 highlighter,
                                 picker,
                                 task,
-                                child_token
+                                child_token,
+                                &syntax_theme_name,
                             ).await
                             {
                                 tracing::error!("handling task failed: {:?}", err);
@@ -199,6 +203,7 @@ async fn run_task(
     picker: Arc<Mutex<Option<Picker>>>,
     task: Task,
     cancellation: CancellationToken,
+    syntax_theme_name: &str,
 ) -> Result<(), AppError> {
     match task {
         Task::AddPath(path) => {
@@ -431,7 +436,16 @@ async fn run_task(
                 _ => {
                     let highlighter = highlighter.lock().await;
                     let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
-                    let theme = &theme_set.themes["base16-eighties.dark"];
+                    let theme = theme_set
+                        .themes
+                        .get(syntax_theme_name)
+                        .unwrap_or_else(|| {
+                            tracing::error!(
+                                "syntax theme '{}' not found, falling back to 'base16-eighties.dark'",
+                                syntax_theme_name
+                            );
+                            &theme_set.themes["base16-eighties.dark"]
+                        });
 
                     syntax::highlight(syntaxes, theme, &path).await
                 }

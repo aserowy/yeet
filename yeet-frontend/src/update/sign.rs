@@ -48,18 +48,22 @@ pub fn set_sign_for_paths(buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>, sign_i
     }
 }
 
-fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
+pub fn generate_sign(sign_id: SignIdentifier) -> Option<Sign> {
+    generate_sign_with_styles(sign_id, "\x1b[1;95m", "\x1b[1;96m")
+}
+
+fn generate_sign_with_styles(sign_id: SignIdentifier, qfix_style: &str, mark_style: &str) -> Option<Sign> {
     match sign_id {
         QFIX_SIGN_ID => Some(Sign {
             id: QFIX_SIGN_ID,
             content: 'c',
-            style: "\x1b[1;95m".to_string(),
+            style: qfix_style.to_string(),
             priority: 0,
         }),
         MARK_SIGN_ID => Some(Sign {
             id: MARK_SIGN_ID,
             content: 'm',
-            style: "\x1b[1;96m".to_string(),
+            style: mark_style.to_string(),
             priority: 0,
         }),
         _ => None,

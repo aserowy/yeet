@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use ratatui::{
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::Modifier,
     text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
 };
 
-use crate::model::{App, Buffer, SplitFocus, Window};
+use crate::{model::{App, Buffer, SplitFocus, Window}, theme::Theme};
 
 const TAB_WIDTH: usize = 28;
 
-pub fn render(app: &App, frame: &mut Frame) -> u16 {
+pub fn render(app: &App, theme: &Theme, frame: &mut Frame) -> u16 {
     if app.tabs.len() <= 1 {
         return 0;
     }
@@ -30,6 +30,7 @@ pub fn render(app: &App, frame: &mut Frame) -> u16 {
         &app.contents.buffers,
         app.current_tab_id,
         width as usize,
+        theme,
     ));
     let paragraph = Paragraph::new(line).block(Block::default());
 
@@ -43,7 +44,10 @@ fn tab_spans(
     buffers: &HashMap<usize, Buffer>,
     current_tab_id: usize,
     total_width: usize,
+    theme: &Theme,
 ) -> Vec<Span<'static>> {
+    use crate::theme::tokens;
+
     let mut ids: Vec<_> = tabs.keys().copied().collect();
     ids.sort_unstable();
 
@@ -58,16 +62,15 @@ fn tab_spans(
             let label = format_tab_label(*id, &title);
             spans.push(Span::styled(
                 label,
-                Style::default()
-                    .bg(Color::LightBlue)
-                    .fg(Color::Black)
+                theme
+                    .style_fg_bg(tokens::TABBAR_ACTIVE_FG, tokens::TABBAR_ACTIVE_BG)
                     .add_modifier(Modifier::BOLD),
             ));
         } else {
             let label = format_tab_label(*id, &title);
             spans.push(Span::styled(
                 label,
-                Style::default().bg(Color::DarkGray).fg(Color::White),
+                theme.style_fg_bg(tokens::TABBAR_INACTIVE_FG, tokens::TABBAR_INACTIVE_BG),
             ));
         }
     }
@@ -77,7 +80,7 @@ fn tab_spans(
     if remaining > 0 {
         spans.push(Span::styled(
             " ".repeat(remaining),
-            Style::default().bg(Color::Black),
+            theme.style_bg(tokens::TABBAR_BG),
         ));
     }
 

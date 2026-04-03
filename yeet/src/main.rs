@@ -5,6 +5,8 @@ use thiserror::Error;
 use tracing::Level;
 use yeet_frontend::settings::Settings;
 
+mod lua;
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Initialization error")]
@@ -35,7 +37,10 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    match yeet_frontend::run(get_settings(&cli)).await {
+    let theme = lua::load_theme();
+    tracing::info!("theme loaded: syntax_theme={}", theme.syntax_theme);
+
+    match yeet_frontend::run(get_settings(&cli, theme)).await {
         Ok(()) => {
             tracing::info!("closing application");
         }
@@ -101,11 +106,12 @@ fn get_logging_path() -> Result<String, Error> {
     Ok(format!("{}{}", cache_dir, "/yeet/logs"))
 }
 
-fn get_settings(args: &ArgMatches) -> Settings {
+fn get_settings(args: &ArgMatches, theme: yeet_frontend::theme::Theme) -> Settings {
     Settings {
         selection_to_file_on_open: args.get_one("selection-to-file-on-open").cloned(),
         selection_to_stdout_on_open: args.get_flag("selection-to-stdout-on-open"),
         startup_path: expand_startup_path(args.get_one("path").cloned()),
+        theme,
         ..Default::default()
     }
 }

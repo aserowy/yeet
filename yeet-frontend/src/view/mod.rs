@@ -7,12 +7,13 @@ pub mod tabbar;
 mod window;
 
 pub fn model(terminal: &mut TerminalWrapper, model: &Model) -> Result<(), AppError> {
+    let theme = &model.settings.theme;
     terminal.draw(|frame| {
         tracing::debug!("Rendering with area: {}", frame.area());
 
-        window::view(model, frame).expect("Failed to render window view");
+        window::view(model, theme, frame).expect("Failed to render window view");
 
-        commandline::view(&model.app.commandline, &model.state.modes.current, frame)
+        commandline::view(&model.app.commandline, &model.state.modes.current, theme, frame)
             .expect("Failed to render commandline view");
     })
 }

@@ -1,10 +1,10 @@
 use std::cmp::Reverse;
 
-use crate::model::{
+use crate::{BufferTheme, model::{
     ansi::Ansi,
     viewport::{LineNumber, ViewPort},
     BufferLine, Cursor,
-};
+}};
 
 pub fn get_border(vp: &ViewPort) -> Ansi {
     Ansi::new(&" ".repeat(vp.get_border_width()))
@@ -18,7 +18,7 @@ pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     }
 }
 
-pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
+pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &BufferTheme) -> Ansi {
     if vp.line_number == LineNumber::None {
         return Ansi::new("");
     }
@@ -34,7 +34,7 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
     };
 
     if cursor.vertical_index == index {
-        return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
+        return Ansi::new(&format!("{}{:<width$}\x1b[0m", theme.cur_line_nr_bold, number));
     }
 
     match vp.line_number {
@@ -43,7 +43,7 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
         LineNumber::Relative => {
             let relative = cursor.vertical_index.abs_diff(index);
 
-            Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
+            Ansi::new(&format!("{}{:>width$}\x1b[0m", theme.line_nr, relative))
         }
     }
 }

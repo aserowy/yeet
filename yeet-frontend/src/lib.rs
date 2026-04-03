@@ -24,6 +24,7 @@ mod model;
 mod open;
 pub mod settings;
 mod task;
+pub mod theme;
 mod terminal;
 mod update;
 mod view;
@@ -31,7 +32,7 @@ mod view;
 pub async fn run(settings: Settings) -> Result<(), AppError> {
     let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
-    let mut emitter = Emitter::start(cancellation.child_token());
+    let mut emitter = Emitter::start(cancellation.child_token(), settings.theme.syntax_theme.clone());
 
     let initial_path = get_initial_path(&settings.startup_path);
     emitter.run(Task::EmitMessages(vec![
