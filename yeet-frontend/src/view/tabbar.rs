@@ -2,20 +2,17 @@ use std::collections::HashMap;
 
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
 };
 
-use crate::{
-    model::{App, Buffer, SplitFocus, Window},
-    settings::Settings,
-};
+use crate::model::{App, Buffer, SplitFocus, Window};
 
 const TAB_WIDTH: usize = 28;
 
-pub fn render(app: &App, settings: &Settings, frame: &mut Frame) -> u16 {
+pub fn render(app: &App, frame: &mut Frame) -> u16 {
     if app.tabs.len() <= 1 {
         return 0;
     }
@@ -33,7 +30,6 @@ pub fn render(app: &App, settings: &Settings, frame: &mut Frame) -> u16 {
         &app.contents.buffers,
         app.current_tab_id,
         width as usize,
-        settings,
     ));
     let paragraph = Paragraph::new(line).block(Block::default());
 
@@ -47,9 +43,7 @@ fn tab_spans(
     buffers: &HashMap<usize, Buffer>,
     current_tab_id: usize,
     total_width: usize,
-    settings: &Settings,
 ) -> Vec<Span<'static>> {
-    let palette = settings.theme;
     let mut ids: Vec<_> = tabs.keys().copied().collect();
     ids.sort_unstable();
 
@@ -65,17 +59,15 @@ fn tab_spans(
             spans.push(Span::styled(
                 label,
                 Style::default()
-                    .bg(palette.tab_active_bg)
-                    .fg(palette.tab_active_fg)
+                    .bg(Color::LightBlue)
+                    .fg(Color::Black)
                     .add_modifier(Modifier::BOLD),
             ));
         } else {
             let label = format_tab_label(*id, &title);
             spans.push(Span::styled(
                 label,
-                Style::default()
-                    .bg(palette.tab_inactive_bg)
-                    .fg(palette.tab_inactive_fg),
+                Style::default().bg(Color::DarkGray).fg(Color::White),
             ));
         }
     }
@@ -85,7 +77,7 @@ fn tab_spans(
     if remaining > 0 {
         spans.push(Span::styled(
             " ".repeat(remaining),
-            Style::default().bg(palette.tab_fill_bg),
+            Style::default().bg(Color::Black),
         ));
     }
 

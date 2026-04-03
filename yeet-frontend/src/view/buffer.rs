@@ -4,16 +4,14 @@ use ratatui::{layout::Rect, Frame};
 use ratatui_image::Image;
 use yeet_buffer::{
     model::{viewport::ViewPort, Mode},
-    view::RenderStyles,
+    view as buffer_view,
 };
 
 use crate::model::{App, Buffer, DirectoryBuffer, SplitFocus, Window};
 
-use crate::settings::Settings;
-
 use super::statusline;
 
-pub fn view(mode: &Mode, app: &App, settings: &Settings, frame: &mut Frame) {
+pub fn view(mode: &Mode, app: &App, frame: &mut Frame) {
     let context = RenderContext {
         draw_borders: None,
         is_focused: true,
@@ -23,14 +21,7 @@ pub fn view(mode: &Mode, app: &App, settings: &Settings, frame: &mut Frame) {
         Ok(window) => window,
         Err(_) => return,
     };
-    render_window(
-        mode,
-        window,
-        &app.contents.buffers,
-        settings,
-        frame,
-        context,
-    );
+    render_window(mode, window, &app.contents.buffers, frame, context);
 }
 
 #[derive(Clone)]
@@ -43,7 +34,6 @@ fn render_window(
     mode: &Mode,
     window: &Window,
     buffers: &HashMap<usize, Buffer>,
-    settings: &Settings,
     frame: &mut Frame,
     context: RenderContext,
 ) {
@@ -57,7 +47,6 @@ fn render_window(
                 mode,
                 first,
                 buffers,
-                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -68,7 +57,6 @@ fn render_window(
                 mode,
                 second,
                 buffers,
-                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -85,7 +73,6 @@ fn render_window(
                 mode,
                 first,
                 buffers,
-                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -96,7 +83,6 @@ fn render_window(
                 mode,
                 second,
                 buffers,
-                settings,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -110,8 +96,6 @@ fn render_window(
                 frame,
                 parent,
                 buffers.get(&parent.buffer_id),
-                settings,
-                BorderContext::Miller,
                 context.clone(),
             );
             render_buffer_slot(
@@ -119,8 +103,6 @@ fn render_window(
                 frame,
                 current,
                 buffers.get(&current.buffer_id),
-                settings,
-                BorderContext::Miller,
                 context.clone(),
             );
             render_buffer_slot(
@@ -128,8 +110,6 @@ fn render_window(
                 frame,
                 preview,
                 buffers.get(&preview.buffer_id),
-                settings,
-                BorderContext::Miller,
                 context.clone(),
             );
 
@@ -148,7 +128,6 @@ fn render_window(
                 statusline::view(
                     buffer,
                     &statusline_vp,
-                    settings.theme,
                     frame,
                     statusline_rect,
                     context.is_focused,
@@ -156,15 +135,7 @@ fn render_window(
             }
         }
         Window::Tasks(vp) => {
-            render_buffer_slot(
-                mode,
-                frame,
-                vp,
-                buffers.get(&vp.buffer_id),
-                settings,
-                BorderContext::Split,
-                context.clone(),
-            );
+            render_buffer_slot(mode, frame, vp, buffers.get(&vp.buffer_id), context.clone());
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
                 let statusline_rect = Rect {
@@ -180,7 +151,6 @@ fn render_window(
                 statusline::view(
                     buffer,
                     &statusline_vp,
-                    settings.theme,
                     frame,
                     statusline_rect,
                     context.is_focused,
@@ -190,19 +160,11 @@ fn render_window(
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-enum BorderContext {
-    Miller,
-    Split,
-}
-
 fn render_buffer_slot(
     mode: &Mode,
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: Option<&Buffer>,
-    settings: &Settings,
-    border_context: BorderContext,
     context: RenderContext,
 ) {
     let mut effective_vp = if context.is_focused {
@@ -219,32 +181,22 @@ fn render_buffer_slot(
         effective_vp.show_border = true;
     }
 
-    let border_bg = match border_context {
-        BorderContext::Miller => settings.theme.miller_border_bg,
-        BorderContext::Split => settings.theme.split_border_bg,
-    };
-    let styles = RenderStyles {
-        buffer_bg: settings.theme.buffer_bg,
-        border_bg,
-        border_fg: ratatui::style::Color::Black,
-    };
-
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            yeet_buffer::view(&effective_vp, mode, &buffer.buffer, frame, styles);
+            buffer_view(&effective_vp, mode, &buffer.buffer, frame);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, &effective_vp, buffer, styles);
+            render_directory_buffer(mode, frame, &effective_vp, buffer);
         }
         Some(Buffer::Tasks(tasks_buf)) => {
-            yeet_buffer::view(&effective_vp, mode, &tasks_buf.buffer, frame, styles);
+            buffer_view(&effective_vp, mode, &tasks_buf.buffer, frame);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = effective_vp.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 
-            render_directory_buffer(mode, frame, &vp, &Default::default(), styles);
+            render_directory_buffer(mode, frame, &vp, &Default::default());
         }
         Some(Buffer::Image(buffer)) => {
             let rect = Rect {
@@ -264,10 +216,9 @@ fn render_directory_buffer(
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: &DirectoryBuffer,
-    styles: RenderStyles,
 ) {
     let mut viewport = viewport.clone();
     yeet_buffer::update_viewport_by_cursor(&mut viewport, &buffer.buffer);
 
-    yeet_buffer::view(&viewport, mode, &buffer.buffer, frame, styles);
+    buffer_view(&viewport, mode, &buffer.buffer, frame);
 }

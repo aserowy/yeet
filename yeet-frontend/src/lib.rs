@@ -20,7 +20,6 @@ mod action;
 pub mod error;
 mod event;
 mod init;
-mod lua_settings;
 mod model;
 mod open;
 pub mod settings;
@@ -30,7 +29,6 @@ mod update;
 mod view;
 
 pub async fn run(settings: Settings) -> Result<(), AppError> {
-    let settings = lua_settings::apply_lua_theme_settings(settings);
     let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
     let mut emitter = Emitter::start(cancellation.child_token());

@@ -2,22 +2,18 @@ use std::path::PathBuf;
 
 use ratatui::{
     prelude::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 use yeet_buffer::model::{undo, undo::BufferChanged, viewport::ViewPort};
 
-use crate::{
-    model::{self, Buffer, DirectoryBuffer, TasksBuffer},
-    settings::ThemePalette,
-};
+use crate::model::{self, Buffer, DirectoryBuffer, TasksBuffer};
 
 pub fn view(
     current: &Buffer,
     viewport: &ViewPort,
-    palette: ThemePalette,
     frame: &mut Frame,
     rect: Rect,
     is_focused: bool,
@@ -25,7 +21,7 @@ pub fn view(
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(Style::default().fg(palette.statusline_border_fg));
+            .border_style(Style::default().fg(Color::Black));
 
         let inner = block.inner(rect);
 
@@ -39,29 +35,23 @@ pub fn view(
     match current {
         Buffer::Directory(it) => {
             if is_focused {
-                filetree_status(it, viewport, palette, frame, rect)
+                filetree_status(it, viewport, frame, rect)
             } else {
-                filetree_status_unfocused(it, palette, frame, rect)
+                filetree_status_unfocused(it, frame, rect)
             }
         }
         Buffer::Tasks(it) => {
             if is_focused {
-                tasks_status(it, viewport, palette, frame, rect)
+                tasks_status(it, viewport, frame, rect)
             } else {
-                tasks_status_unfocused(palette, frame, rect)
+                tasks_status_unfocused(frame, rect)
             }
         }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
 }
 
-fn tasks_status(
-    buffer: &TasksBuffer,
-    viewport: &ViewPort,
-    palette: ThemePalette,
-    frame: &mut Frame,
-    rect: Rect,
-) {
+fn tasks_status(buffer: &TasksBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
     let count = buffer.buffer.lines.len();
     let position = if count == 0 {
         0
@@ -72,18 +62,12 @@ fn tasks_status(
     let label = Line::from(Span::styled(
         "Tasks",
         Style::default()
-            .fg(palette.statusline_fg)
+            .fg(Color::White)
             .add_modifier(Modifier::BOLD),
     ));
     let position_line = Line::from(vec![
-        Span::styled(
-            format!("{}/", position),
-            Style::default().fg(palette.statusline_dim_fg),
-        ),
-        Span::styled(
-            format!("{}", count),
-            Style::default().fg(palette.statusline_dim_fg),
-        ),
+        Span::styled(format!("{}/", position), Style::default().fg(Color::Gray)),
+        Span::styled(format!("{}", count), Style::default().fg(Color::Gray)),
     ]);
 
     let layout = Layout::default()
@@ -96,7 +80,7 @@ fn tasks_status(
         .split(rect);
 
     frame.render_widget(
-        Block::default().style(Style::default().bg(palette.statusline_bg)),
+        Block::default().style(Style::default().bg(Color::Black)),
         rect,
     );
 
@@ -104,36 +88,27 @@ fn tasks_status(
     frame.render_widget(Paragraph::new(position_line), layout[2]);
 }
 
-fn tasks_status_unfocused(palette: ThemePalette, frame: &mut Frame, rect: Rect) {
-    let label = Line::from(Span::styled(
-        "Tasks",
-        Style::default().fg(palette.statusline_dim_fg),
-    ));
+fn tasks_status_unfocused(frame: &mut Frame, rect: Rect) {
+    let label = Line::from(Span::styled("Tasks", Style::default().fg(Color::Gray)));
 
     frame.render_widget(
-        Block::default().style(Style::default().bg(palette.statusline_bg)),
+        Block::default().style(Style::default().bg(Color::Black)),
         rect,
     );
     frame.render_widget(Paragraph::new(label), rect);
 }
 
-fn filetree_status(
-    buffer: &DirectoryBuffer,
-    viewport: &ViewPort,
-    palette: ThemePalette,
-    frame: &mut Frame,
-    rect: Rect,
-) {
+fn filetree_status(buffer: &DirectoryBuffer, viewport: &ViewPort, frame: &mut Frame, rect: Rect) {
     let selected = model::get_selected_path(buffer, &viewport.cursor);
     let permissions = get_permissions(&selected);
 
-    let changes = get_changes_content(buffer, palette);
-    let position = get_position_content(buffer, viewport, palette);
+    let changes = get_changes_content(buffer);
+    let position = get_position_content(buffer, viewport);
 
     let path = Line::from(Span::styled(
         buffer.path.to_str().unwrap_or(""),
         Style::default()
-            .fg(palette.statusline_fg)
+            .fg(Color::White)
             .add_modifier(Modifier::BOLD),
     ));
 
@@ -151,7 +126,7 @@ fn filetree_status(
         .split(rect);
 
     frame.render_widget(
-        Block::default().style(Style::default().bg(palette.statusline_bg)),
+        Block::default().style(Style::default().bg(Color::Black)),
         rect,
     );
 
@@ -161,28 +136,19 @@ fn filetree_status(
     frame.render_widget(Paragraph::new(position), layout[6]);
 }
 
-fn filetree_status_unfocused(
-    buffer: &DirectoryBuffer,
-    palette: ThemePalette,
-    frame: &mut Frame,
-    rect: Rect,
-) {
+fn filetree_status_unfocused(buffer: &DirectoryBuffer, frame: &mut Frame, rect: Rect) {
     let content = buffer.path.to_str().unwrap_or("");
-    let style = Style::default().fg(palette.statusline_dim_fg);
+    let style = Style::default().fg(Color::Gray);
     let path = Line::from(Span::styled(content, style));
 
     frame.render_widget(
-        Block::default().style(Style::default().bg(palette.statusline_bg)),
+        Block::default().style(Style::default().bg(Color::Black)),
         rect,
     );
     frame.render_widget(Paragraph::new(path), rect);
 }
 
-fn get_position_content<'a>(
-    buffer: &'a DirectoryBuffer,
-    viewport: &ViewPort,
-    palette: ThemePalette,
-) -> Line<'a> {
+fn get_position_content<'a>(buffer: &'a DirectoryBuffer, viewport: &ViewPort) -> Line<'a> {
     let count = buffer.buffer.lines.len();
     let mut position = viewport.cursor.vertical_index + 1;
 
@@ -193,18 +159,18 @@ fn get_position_content<'a>(
 
     content.push(Span::styled(
         format!("{}/", position),
-        Style::default().fg(palette.statusline_dim_fg),
+        Style::default().fg(Color::Gray),
     ));
 
     content.push(Span::styled(
         format!("{}", count),
-        Style::default().fg(palette.statusline_dim_fg),
+        Style::default().fg(Color::Gray),
     ));
 
     Line::from(content)
 }
 
-fn get_changes_content(buffer: &DirectoryBuffer, palette: ThemePalette) -> Line<'_> {
+fn get_changes_content(buffer: &DirectoryBuffer) -> Line<'_> {
     let modifications = buffer.buffer.uncommitted_changes();
     let changes = undo::consolidate_modifications(&modifications);
 
@@ -221,21 +187,21 @@ fn get_changes_content(buffer: &DirectoryBuffer, palette: ThemePalette) -> Line<
     if added > 0 {
         content.push(Span::styled(
             format!("+{} ", added),
-            Style::default().fg(palette.statusline_success_fg),
+            Style::default().fg(Color::Green),
         ));
     }
 
     if changed > 0 {
         content.push(Span::styled(
             format!("~{} ", changed),
-            Style::default().fg(palette.statusline_warning_fg),
+            Style::default().fg(Color::Yellow),
         ));
     }
 
     if removed > 0 {
         content.push(Span::styled(
             format!("-{} ", removed),
-            Style::default().fg(palette.statusline_error_fg),
+            Style::default().fg(Color::Red),
         ));
     }
 
