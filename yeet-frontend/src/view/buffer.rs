@@ -19,21 +19,11 @@ pub fn view(mode: &Mode, app: &App, theme: &Theme, frame: &mut Frame) {
         draw_borders: None,
         is_focused: true,
     };
-    let buffer_theme = theme.to_buffer_theme();
-
     let window = match app.current_window() {
         Ok(window) => window,
         Err(_) => return,
     };
-    render_window(
-        mode,
-        window,
-        &app.contents.buffers,
-        theme,
-        &buffer_theme,
-        frame,
-        context,
-    );
+    render_window(mode, window, &app.contents.buffers, theme, frame, context);
 }
 
 #[derive(Clone)]
@@ -47,7 +37,6 @@ fn render_window(
     window: &Window,
     buffers: &HashMap<usize, Buffer>,
     theme: &Theme,
-    buffer_theme: &yeet_buffer::BufferTheme,
     frame: &mut Frame,
     context: RenderContext,
 ) {
@@ -62,7 +51,6 @@ fn render_window(
                 first,
                 buffers,
                 theme,
-                buffer_theme,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -74,7 +62,6 @@ fn render_window(
                 second,
                 buffers,
                 theme,
-                buffer_theme,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -92,7 +79,6 @@ fn render_window(
                 first,
                 buffers,
                 theme,
-                buffer_theme,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
@@ -104,7 +90,6 @@ fn render_window(
                 second,
                 buffers,
                 theme,
-                buffer_theme,
                 frame,
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::Second,
@@ -119,7 +104,7 @@ fn render_window(
                 parent,
                 buffers.get(&parent.buffer_id),
                 context.clone(),
-                buffer_theme,
+                theme,
             );
             render_buffer_slot(
                 mode,
@@ -127,7 +112,7 @@ fn render_window(
                 current,
                 buffers.get(&current.buffer_id),
                 context.clone(),
-                buffer_theme,
+                theme,
             );
             render_buffer_slot(
                 mode,
@@ -135,7 +120,7 @@ fn render_window(
                 preview,
                 buffers.get(&preview.buffer_id),
                 context.clone(),
-                buffer_theme,
+                theme,
             );
 
             if let Some(buffer) = buffers.get(&current.buffer_id) {
@@ -167,7 +152,7 @@ fn render_window(
                 vp,
                 buffers.get(&vp.buffer_id),
                 context.clone(),
-                buffer_theme,
+                theme,
             );
 
             if let Some(buffer) = buffers.get(&vp.buffer_id) {
@@ -200,7 +185,7 @@ fn render_buffer_slot(
     viewport: &ViewPort,
     buffer: Option<&Buffer>,
     context: RenderContext,
-    buffer_theme: &yeet_buffer::BufferTheme,
+    theme: &Theme,
 ) {
     let mut effective_vp = if context.is_focused {
         viewport.clone()
@@ -218,20 +203,22 @@ fn render_buffer_slot(
 
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            buffer_view(&effective_vp, mode, &buffer.buffer, buffer_theme, frame);
+            let buffer_theme = theme.to_buffer_theme();
+            buffer_view(&effective_vp, mode, &buffer.buffer, &buffer_theme, frame);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, &effective_vp, buffer, buffer_theme);
+            render_directory_buffer(mode, frame, &effective_vp, buffer, theme);
         }
         Some(Buffer::Tasks(tasks_buf)) => {
-            buffer_view(&effective_vp, mode, &tasks_buf.buffer, buffer_theme, frame);
+            let buffer_theme = theme.to_buffer_theme();
+            buffer_view(&effective_vp, mode, &tasks_buf.buffer, &buffer_theme, frame);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = effective_vp.clone();
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 
-            render_directory_buffer(mode, frame, &vp, &Default::default(), buffer_theme);
+            render_directory_buffer(mode, frame, &vp, &Default::default(), theme);
         }
         Some(Buffer::Image(buffer)) => {
             let rect = Rect {
@@ -251,10 +238,11 @@ fn render_directory_buffer(
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: &DirectoryBuffer,
-    buffer_theme: &yeet_buffer::BufferTheme,
+    theme: &Theme,
 ) {
     let mut viewport = viewport.clone();
     yeet_buffer::update_viewport_by_cursor(&mut viewport, &buffer.buffer);
 
-    buffer_view(&viewport, mode, &buffer.buffer, buffer_theme, frame);
+    let buffer_theme = theme.to_buffer_theme();
+    buffer_view(&viewport, mode, &buffer.buffer, &buffer_theme, frame);
 }
