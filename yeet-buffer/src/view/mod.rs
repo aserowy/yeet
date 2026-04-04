@@ -14,6 +14,7 @@ use crate::{
 
 mod line;
 mod prefix;
+pub(crate) mod style;
 
 pub fn view(
     viewport: &ViewPort,
@@ -35,7 +36,7 @@ pub fn view(
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(Style::default().fg(theme.border_fg_color).bg(theme.border_bg_color));
+            .border_style(Style::default().fg(theme.border_fg).bg(theme.border_bg));
 
         let inner = block.inner(rect);
 
@@ -104,19 +105,14 @@ mod test {
     use super::get_styled_lines;
 
     fn test_theme() -> BufferTheme {
+        use ratatui::style::Color;
         BufferTheme {
-            cursor_line_bg: "\x1b[100m".to_string(),
-            cursor_line_reset: "\x1b[0m".to_string(),
-            search_bg: "\x1b[41m".to_string(),
-            cursor_normal_code: "\x1b[7m".to_string(),
-            cursor_normal_reset: "\x1b[27m".to_string(),
-            cursor_insert_code: "\x1b[4m".to_string(),
-            cursor_insert_reset: "\x1b[24m".to_string(),
-            line_nr: "\x1b[90m".to_string(),
-            cur_line_nr_bold: "\x1b[1m".to_string(),
-            border_fg: "\x1b[30m".to_string(),
-            border_fg_color: ratatui::style::Color::Black,
-            border_bg_color: ratatui::style::Color::Reset,
+            cursor_line_bg: Color::Rgb(128, 128, 128),
+            search_bg: Color::Red,
+            line_nr: Color::Rgb(128, 128, 128),
+            cur_line_nr: Color::White,
+            border_fg: Color::Black,
+            border_bg: Color::Reset,
         }
     }
 

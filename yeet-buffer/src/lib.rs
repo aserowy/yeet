@@ -7,22 +7,16 @@ pub mod model;
 mod update;
 mod view;
 
-/// Theme data for buffer rendering. All values are ANSI escape code strings
-/// unless noted otherwise.
+/// Theme data for buffer rendering. All fields are `ratatui::style::Color`.
+/// Cursor mode codes and reset sequences are constants in the view module.
 #[derive(Debug, Clone)]
 pub struct BufferTheme {
-    pub cursor_line_bg: String,
-    pub cursor_line_reset: String,
-    pub search_bg: String,
-    pub cursor_normal_code: String,
-    pub cursor_normal_reset: String,
-    pub cursor_insert_code: String,
-    pub cursor_insert_reset: String,
-    pub line_nr: String,
-    pub cur_line_nr_bold: String,
-    pub border_fg: String,
-    pub border_fg_color: ratatui::style::Color,
-    pub border_bg_color: ratatui::style::Color,
+    pub cursor_line_bg: ratatui::style::Color,
+    pub search_bg: ratatui::style::Color,
+    pub line_nr: ratatui::style::Color,
+    pub cur_line_nr: ratatui::style::Color,
+    pub border_fg: ratatui::style::Color,
+    pub border_bg: ratatui::style::Color,
 }
 
 pub fn update(

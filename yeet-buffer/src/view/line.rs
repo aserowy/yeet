@@ -3,6 +3,11 @@ use crate::{
     BufferTheme,
 };
 
+use super::style::{
+    self, CURSOR_INSERT_CODE, CURSOR_INSERT_RESET, CURSOR_LINE_RESET, CURSOR_NORMAL_CODE,
+    CURSOR_NORMAL_RESET,
+};
+
 pub fn add_line_styles(
     vp: &ViewPort,
     mode: &Mode,
@@ -29,6 +34,7 @@ pub fn add_line_styles(
 
 fn add_search_styles(line: &BufferLine, ansi: &Ansi, theme: &BufferTheme) -> Ansi {
     if let Some(search_char_position) = &line.search_char_position {
+        let search_bg = style::color_to_ansi_bg(theme.search_bg);
         let mut content = ansi.clone();
         for (index, length) in search_char_position.iter() {
             let reset = format!(
@@ -36,7 +42,7 @@ fn add_search_styles(line: &BufferLine, ansi: &Ansi, theme: &BufferTheme) -> Ans
                 content.get_ansi_escape_sequences_till_char(*index + 1)
             );
 
-            content.insert(*index, &theme.search_bg);
+            content.insert(*index, &search_bg);
             content.insert(index + length, &reset);
         }
         content
@@ -65,9 +71,10 @@ fn add_cursor_styles(
     if vp.hide_cursor_line {
         content.append(" ".repeat(repeat_count).as_str());
     } else {
-        content.prepend(&theme.cursor_line_bg);
+        let cursor_line_bg = style::color_to_ansi_bg(theme.cursor_line_bg);
+        content.prepend(&cursor_line_bg);
         content.append(" ".repeat(repeat_count).as_str());
-        content.append(&theme.cursor_line_reset);
+        content.append(CURSOR_LINE_RESET);
     };
 
     if vp.hide_cursor {
@@ -84,14 +91,8 @@ fn add_cursor_styles(
     };
 
     let (code, reset) = match mode {
-        Mode::Command(_) | Mode::Normal => (
-            theme.cursor_normal_code.as_str(),
-            theme.cursor_normal_reset.as_str(),
-        ),
-        Mode::Insert => (
-            theme.cursor_insert_code.as_str(),
-            theme.cursor_insert_reset.as_str(),
-        ),
+        Mode::Command(_) | Mode::Normal => (CURSOR_NORMAL_CODE, CURSOR_NORMAL_RESET),
+        Mode::Insert => (CURSOR_INSERT_CODE, CURSOR_INSERT_RESET),
         Mode::Navigation => ("", ""),
     };
 

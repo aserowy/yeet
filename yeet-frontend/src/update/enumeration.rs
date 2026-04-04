@@ -203,12 +203,10 @@ fn set_directory_content(
     tracing::trace!("enumeration changed for buffer: {:?}", path);
 
     let is_first_changed_event = buffer.buffer.lines.is_empty();
-    let file_fg_ansi = theme.ansi_fg(tokens::BUFFER_FILE_FG);
-    let dir_fg_ansi = theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG);
     let content: Vec<BufferLine> = contents
         .iter()
         .map(|(knd, cntnt)| {
-            let mut line = from_enumeration(cntnt, knd, &file_fg_ansi, &dir_fg_ansi);
+            let mut line = from_enumeration(cntnt, knd, theme);
             set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt));
             set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt));
 
@@ -246,16 +244,12 @@ fn set_directory_content(
     );
 }
 
-pub fn from_enumeration(
-    content: &String,
-    kind: &ContentKind,
-    file_fg_ansi: &str,
-    directory_fg_ansi: &str,
-) -> BufferLine {
-    let content = match kind {
-        ContentKind::Directory => format!("{}{}\x1b[39m", directory_fg_ansi, content),
-        _ => format!("{}{}\x1b[39m", file_fg_ansi, content),
+pub fn from_enumeration(content: &String, kind: &ContentKind, theme: &Theme) -> BufferLine {
+    let fg_ansi = match kind {
+        ContentKind::Directory => theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
+        _ => theme.ansi_fg(tokens::BUFFER_FILE_FG),
     };
+    let content = format!("{}{}\x1b[39m", fg_ansi, content);
 
     BufferLine {
         content: Ansi::new(&content),

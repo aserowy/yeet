@@ -9,6 +9,8 @@ use crate::{
     BufferTheme,
 };
 
+use super::style::{self, CUR_LINE_NR_BOLD};
+
 pub fn get_border(vp: &ViewPort) -> Ansi {
     Ansi::new(&" ".repeat(vp.get_border_width()))
 }
@@ -37,9 +39,10 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
     };
 
     if cursor.vertical_index == index {
+        let cur_line_nr_fg = style::color_to_ansi_fg(theme.cur_line_nr);
         return Ansi::new(&format!(
-            "{}{:<width$}\x1b[0m",
-            theme.cur_line_nr_bold, number
+            "{}{}{:<width$}\x1b[0m",
+            CUR_LINE_NR_BOLD, cur_line_nr_fg, number
         ));
     }
 
@@ -48,8 +51,9 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             let relative = cursor.vertical_index.abs_diff(index);
+            let line_nr_fg = style::color_to_ansi_fg(theme.line_nr);
 
-            Ansi::new(&format!("{}{:>width$}\x1b[0m", theme.line_nr, relative))
+            Ansi::new(&format!("{}{:>width$}\x1b[0m", line_nr_fg, relative))
         }
     }
 }

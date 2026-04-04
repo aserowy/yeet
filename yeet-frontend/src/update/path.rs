@@ -191,9 +191,7 @@ fn update_directory_buffers_on_add(
                 crate::event::ContentKind::File
             };
 
-            let file_fg_ansi = theme.ansi_fg(crate::theme::tokens::BUFFER_FILE_FG);
-            let dir_fg_ansi = theme.ansi_fg(crate::theme::tokens::BUFFER_DIRECTORY_FG);
-            let bufferline = enumeration::from_enumeration(&name, &kind, &file_fg_ansi, &dir_fg_ansi);
+            let bufferline = enumeration::from_enumeration(&name, &kind, theme);
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {
                     *line = bufferline;

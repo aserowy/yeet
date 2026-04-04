@@ -222,18 +222,12 @@ impl Theme {
         border_bg_token: &str,
     ) -> yeet_buffer::BufferTheme {
         yeet_buffer::BufferTheme {
-            cursor_line_bg: self.ansi_bg(tokens::CURSOR_LINE_BG),
-            cursor_line_reset: "\x1b[0m".to_string(),
-            search_bg: self.ansi_bg(tokens::SEARCH_BG),
-            cursor_normal_code: "\x1b[7m".to_string(),
-            cursor_normal_reset: "\x1b[27m".to_string(),
-            cursor_insert_code: "\x1b[4m".to_string(),
-            cursor_insert_reset: "\x1b[24m".to_string(),
-            line_nr: self.ansi_fg(tokens::LINE_NR),
-            cur_line_nr_bold: format!("\x1b[1m{}", self.ansi_fg(tokens::CUR_LINE_NR)),
-            border_fg: self.ansi_fg(border_fg_token),
-            border_fg_color: self.color(border_fg_token),
-            border_bg_color: self.color(border_bg_token),
+            cursor_line_bg: self.color(tokens::CURSOR_LINE_BG),
+            search_bg: self.color(tokens::SEARCH_BG),
+            line_nr: self.color(tokens::LINE_NR),
+            cur_line_nr: self.color(tokens::CUR_LINE_NR),
+            border_fg: self.color(border_fg_token),
+            border_bg: self.color(border_bg_token),
         }
     }
 
@@ -325,10 +319,10 @@ mod tests {
     fn buffer_theme_conversion() {
         let theme = Theme::default();
         let bt = theme.to_buffer_theme();
-        assert!(!bt.cursor_line_bg.is_empty());
-        assert!(!bt.search_bg.is_empty());
-        assert_eq!(bt.cursor_normal_code, "\x1b[7m");
-        assert_eq!(bt.cursor_insert_code, "\x1b[4m");
+        assert_eq!(bt.cursor_line_bg, Color::Rgb(128, 128, 128));
+        assert_eq!(bt.search_bg, Color::Red);
+        assert_eq!(bt.line_nr, Color::Rgb(128, 128, 128));
+        assert_eq!(bt.cur_line_nr, Color::White);
     }
 
     #[test]
@@ -412,17 +406,16 @@ mod tests {
             tokens::DIRECTORY_BORDER_FG,
             tokens::DIRECTORY_BORDER_BG,
         );
-        assert_eq!(bt.border_fg_color, Color::Black);
-        assert_eq!(bt.border_bg_color, Color::Reset);
+        assert_eq!(bt.border_fg, Color::Black);
+        assert_eq!(bt.border_bg, Color::Reset);
     }
 
     #[test]
     fn buffer_theme_with_split_border_tokens() {
         let theme = Theme::default();
         let bt = theme.to_buffer_theme();
-        assert_eq!(bt.border_fg_color, Color::Black);
-        assert_eq!(bt.border_bg_color, Color::Reset);
-        assert_eq!(bt.border_fg, "\x1b[30m");
+        assert_eq!(bt.border_fg, Color::Black);
+        assert_eq!(bt.border_bg, Color::Reset);
     }
 
     #[test]
