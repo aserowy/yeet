@@ -7,11 +7,12 @@ use crate::{
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer,
     },
+    theme::Theme,
 };
 
 use super::{app, sign};
 
-pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
+pub fn toggle(app: &mut App, qfix: &mut QuickFix, theme: &Theme) -> Vec<Action> {
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(window) => window,
         Err(_) => return Vec::new(),
@@ -46,6 +47,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
                 app.contents.buffers.values_mut().collect(),
                 vec![selected],
                 QFIX_SIGN_ID,
+                theme,
             );
         }
     }
@@ -53,7 +55,12 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn add(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>) -> Vec<Action> {
+pub fn add(
+    qfix: &mut QuickFix,
+    buffers: Vec<&mut Buffer>,
+    paths: Vec<PathBuf>,
+    theme: &Theme,
+) -> Vec<Action> {
     let mut added_paths = Vec::new();
     for path in paths {
         if !qfix.entries.contains(&path) {
@@ -62,7 +69,7 @@ pub fn add(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>, paths: Vec<PathBuf>) 
         };
     }
 
-    sign::set_sign_for_paths(buffers, added_paths, QFIX_SIGN_ID);
+    sign::set_sign_for_paths(buffers, added_paths, QFIX_SIGN_ID, theme);
 
     Vec::new()
 }

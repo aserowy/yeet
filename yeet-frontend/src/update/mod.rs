@@ -109,7 +109,7 @@ fn update_with_message(
 ) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            match enumeration::change(state, app, &path, &contents, &selection) {
+            match enumeration::change(state, app, &path, &contents, &selection, &settings.theme) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationChanged failed: {}", err);
@@ -118,7 +118,7 @@ fn update_with_message(
             }
         }
         Message::EnumerationFinished(path, contents, selection) => {
-            match enumeration::finish(state, app, &path, &contents, &selection) {
+            match enumeration::finish(state, app, &path, &contents, &selection, &settings.theme) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationFinished failed: {}", err);
@@ -135,6 +135,7 @@ fn update_with_message(
             &mut state.qfix,
             app.contents.buffers.values_mut().collect(),
             paths,
+            &settings.theme,
         ),
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => {
@@ -175,6 +176,7 @@ fn update_with_message(
                     &state.modes.current,
                     app,
                     &paths,
+                    &settings.theme,
                 ) {
                     Ok(actions) => actions,
                     Err(err) => {
@@ -214,7 +216,7 @@ pub fn update_with_keymap_message(
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
-        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, msg),
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, msg),
         KeymapMessage::ClearSearchHighlight => {
             search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
@@ -228,7 +230,9 @@ pub fn update_with_keymap_message(
         KeymapMessage::ExecuteCommand => {
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
-        KeymapMessage::ExecuteCommandString(command) => command::execute(app, state, command),
+        KeymapMessage::ExecuteCommandString(command) => {
+            command::execute(app, state, &settings.theme, command)
+        }
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             state.remaining_keysequence.replace(key_sequence.clone());
             Vec::new()
@@ -278,18 +282,20 @@ pub fn update_with_keymap_message(
             commandline::print(&mut app.commandline, &mut state.modes, content)
         }
         KeymapMessage::ReplayMacro(char) => register::replay_macro(&mut state.register, char),
-        KeymapMessage::SetMark(char) => match mark::add(app, &mut state.marks, *char) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("SetMark failed: {}", err);
-                Vec::new()
+        KeymapMessage::SetMark(char) => {
+            match mark::add(app, &mut state.marks, *char, &settings.theme) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("SetMark failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         KeymapMessage::StartMacro(identifier) => {
             mode::print_recording(&mut app.commandline, &mut state.modes, *identifier)
         }
         KeymapMessage::StopMacro => mode::print_mode(&mut app.commandline, &mut state.modes),
-        KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix),
+        KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix, &settings.theme),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
             let (window, contents) = match app.current_window_and_contents_mut() {
@@ -324,16 +330,19 @@ pub fn update_with_keymap_message(
 pub fn update_with_buffer_message(
     app: &mut App,
     state: &mut State,
+    settings: &Settings,
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
-        BufferMessage::ChangeMode(from, to) => match mode::change(app, state, from, to) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("ChangeMode failed: {}", err);
-                Vec::new()
+        BufferMessage::ChangeMode(from, to) => {
+            match mode::change(app, state, from, to, &settings.theme) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("ChangeMode failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
             Mode::Insert | Mode::Normal => match modify::buffer(app, state, repeat, modification) {

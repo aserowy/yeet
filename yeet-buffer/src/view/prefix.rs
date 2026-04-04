@@ -1,10 +1,15 @@
 use std::cmp::Reverse;
 
-use crate::model::{
-    ansi::Ansi,
-    viewport::{LineNumber, ViewPort},
-    BufferLine, Cursor,
+use crate::{
+    model::{
+        ansi::Ansi,
+        viewport::{LineNumber, ViewPort},
+        BufferLine, Cursor,
+    },
+    BufferTheme,
 };
+
+use super::style::{self, CUR_LINE_NR_BOLD};
 
 pub fn get_border(vp: &ViewPort) -> Ansi {
     Ansi::new(&" ".repeat(vp.get_border_width()))
@@ -18,7 +23,7 @@ pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     }
 }
 
-pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
+pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &BufferTheme) -> Ansi {
     if vp.line_number == LineNumber::None {
         return Ansi::new("");
     }
@@ -33,8 +38,14 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
         }
     };
 
+    let reset = style::ansi_reset_with_bg(theme.buffer_bg);
+
     if cursor.vertical_index == index {
-        return Ansi::new(&format!("\x1b[1m{:<width$}\x1b[0m", number));
+        let cur_line_nr_fg = style::color_to_ansi_fg(theme.cur_line_nr);
+        return Ansi::new(&format!(
+            "{}{}{:<width$}{}",
+            CUR_LINE_NR_BOLD, cur_line_nr_fg, number, reset
+        ));
     }
 
     match vp.line_number {
@@ -42,14 +53,16 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor) -> Ansi {
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             let relative = cursor.vertical_index.abs_diff(index);
+            let line_nr_fg = style::color_to_ansi_fg(theme.line_nr);
 
-            Ansi::new(&format!("\x1b[90m{:>width$}\x1b[0m", relative))
+            Ansi::new(&format!("{}{:>width$}{}", line_nr_fg, relative, reset))
         }
     }
 }
 
-pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> Ansi {
+pub fn get_signs(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
     let max_sign_count = vp.sign_column_width;
+    let reset = style::ansi_reset_with_bg(theme.buffer_bg);
 
     let mut filtered: Vec<_> = bl
         .signs
@@ -63,7 +76,7 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine) -> Ansi {
         .iter()
         .take(max_sign_count)
         .fold("".to_string(), |acc, s| {
-            format!("{}{}{}\x1b[0m", acc, s.style, s.content)
+            format!("{}{}{}{}", acc, s.style, s.content, reset)
         });
 
     let signs = Ansi::new(&signs_string);

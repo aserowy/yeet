@@ -7,6 +7,19 @@ pub mod model;
 mod update;
 mod view;
 
+/// Theme data for buffer rendering. All fields are `ratatui::style::Color`.
+/// Cursor mode codes and reset sequences are constants in the view module.
+#[derive(Debug, Clone)]
+pub struct BufferTheme {
+    pub buffer_bg: ratatui::style::Color,
+    pub cursor_line_bg: ratatui::style::Color,
+    pub search_bg: ratatui::style::Color,
+    pub line_nr: ratatui::style::Color,
+    pub cur_line_nr: ratatui::style::Color,
+    pub border_fg: ratatui::style::Color,
+    pub border_bg: ratatui::style::Color,
+}
+
 pub fn update(
     viewport: Option<&mut ViewPort>,
     mode: &Mode,
@@ -33,6 +46,12 @@ pub fn update_viewport_by_buffer(viewport: &mut ViewPort, mode: &Mode, buffer: &
     update::viewport::update_by_cursor(viewport, buffer);
 }
 
-pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
-    view::view(viewport, mode, buffer, frame)
+pub fn view(
+    viewport: &ViewPort,
+    mode: &Mode,
+    buffer: &TextBuffer,
+    theme: &BufferTheme,
+    frame: &mut Frame,
+) {
+    view::view(viewport, mode, buffer, theme, frame)
 }

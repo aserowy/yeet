@@ -1,12 +1,12 @@
 use ratatui::Frame;
 
-use crate::{error::AppError, model::Model};
+use crate::{error::AppError, model::Model, theme::Theme};
 
 use super::{buffer, tabbar};
 
-pub fn view(model: &Model, frame: &mut Frame) -> Result<(), AppError> {
-    tabbar::render(&model.app, frame);
-    buffer::view(&model.state.modes.current, &model.app, frame);
+pub fn view(model: &Model, theme: &Theme, frame: &mut Frame) -> Result<(), AppError> {
+    tabbar::render(&model.app, theme, frame);
+    buffer::view(&model.state.modes.current, &model.app, theme, frame);
 
     Ok(())
 }
@@ -21,6 +21,7 @@ mod test {
     use crate::{
         model::{App, Buffer, CommandLine, Contents, Model, TasksBuffer, Window},
         settings::Settings,
+        theme::Theme,
     };
 
     use super::view;
@@ -71,7 +72,7 @@ mod test {
 
         terminal
             .draw(|frame| {
-                result = Some(view(&model, frame));
+                result = Some(view(&model, &Theme::default(), frame));
             })
             .expect("draw frame");
 
@@ -91,7 +92,7 @@ mod test {
 
         terminal
             .draw(|frame| {
-                result = Some(view(&model, frame));
+                result = Some(view(&model, &Theme::default(), frame));
             })
             .expect("draw frame");
 

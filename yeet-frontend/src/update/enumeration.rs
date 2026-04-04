@@ -10,19 +10,21 @@ use crate::{
     error::AppError,
     event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
+    theme::{tokens, Theme},
     update::{
         app, cursor, selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
 
-#[tracing::instrument(skip(state, app, content))]
+#[tracing::instrument(skip(state, app, content, theme))]
 pub fn change(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
     content: &[(ContentKind, String)],
     selection: &Option<String>,
+    theme: &Theme,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
@@ -41,7 +43,7 @@ pub fn change(
             }
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            set_directory_content(state, viewport, buffer, path, content, selection);
+            set_directory_content(state, viewport, buffer, path, content, selection, theme);
         }
     }
 
@@ -76,13 +78,14 @@ pub fn change(
     Ok(actions)
 }
 
-#[tracing::instrument(skip(state, app, content))]
+#[tracing::instrument(skip(state, app, content, theme))]
 pub fn finish(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
     content: &[(ContentKind, String)],
     selection: &Option<String>,
+    theme: &Theme,
 ) -> Result<Vec<Action>, AppError> {
     if state.modes.current != Mode::Navigation {
         return Ok(Vec::new());
@@ -118,6 +121,7 @@ pub fn finish(
                 path,
                 content,
                 selection,
+                theme,
             );
 
             yeet_buffer::update(
@@ -194,6 +198,7 @@ fn set_directory_content(
     path: &PathBuf,
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
+    theme: &Theme,
 ) {
     tracing::trace!("enumeration changed for buffer: {:?}", path);
 
@@ -201,9 +206,9 @@ fn set_directory_content(
     let content: Vec<BufferLine> = contents
         .iter()
         .map(|(knd, cntnt)| {
-            let mut line = from_enumeration(cntnt, knd);
-            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt));
-            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt));
+            let mut line = from_enumeration(cntnt, knd, theme);
+            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt), theme);
+            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt), theme);
 
             line
         })
@@ -239,11 +244,12 @@ fn set_directory_content(
     );
 }
 
-pub fn from_enumeration(content: &String, kind: &ContentKind) -> BufferLine {
-    let content = match kind {
-        ContentKind::Directory => format!("\x1b[94m{}\x1b[39m", content),
-        _ => content.to_string(),
+pub fn from_enumeration(content: &String, kind: &ContentKind, theme: &Theme) -> BufferLine {
+    let fg_ansi = match kind {
+        ContentKind::Directory => theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
+        _ => theme.ansi_fg(tokens::BUFFER_FILE_FG),
     };
+    let content = format!("{}{}\x1b[39m", fg_ansi, content);
 
     BufferLine {
         content: Ansi::new(&content),
@@ -260,6 +266,7 @@ mod test {
     use crate::{
         action::Action,
         model::{App, Buffer, DirectoryBuffer, Window},
+        theme::Theme,
         update::app,
     };
 
@@ -308,12 +315,14 @@ mod test {
         }
 
         let mut state = crate::model::State::default();
+        let theme = Theme::default();
         let actions = change(
             &mut state,
             &mut app,
             &current_path,
             &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
             &None,
+            &theme,
         )
         .expect("change must succeed");
 
@@ -390,6 +399,7 @@ mod test {
 
         let mut state = crate::model::State::default();
         state.modes.current = yeet_buffer::model::Mode::Navigation;
+        let theme = Theme::default();
 
         let _ = finish(
             &mut state,
@@ -397,6 +407,7 @@ mod test {
             &base,
             &[(crate::event::ContentKind::File, file_name.to_string())],
             &None,
+            &theme,
         )
         .expect("finish must succeed");
 

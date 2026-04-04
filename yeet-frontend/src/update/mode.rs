@@ -11,6 +11,7 @@ use crate::{
         register::{Register, RegisterScope},
         App, Buffer, CommandLine, ModeState, PendingPathEvent, State,
     },
+    theme::Theme,
 };
 
 use super::{app, commandline, junkyard, path, register::get_macro_register, save};
@@ -20,6 +21,7 @@ pub fn change(
     state: &mut State,
     from: &Mode,
     to: &Mode,
+    theme: &Theme,
 ) -> Result<Vec<Action>, AppError> {
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
@@ -119,13 +121,13 @@ pub fn change(
     });
 
     if matches!(from, Mode::Insert) {
-        actions.extend(flush_pending_paths(state, app));
+        actions.extend(flush_pending_paths(state, app, theme));
     }
 
     Ok(actions)
 }
 
-fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
+fn flush_pending_paths(state: &mut State, app: &mut App, theme: &Theme) -> Vec<Action> {
     let mut actions = Vec::new();
     for event in state.pending_path_events.drain(..) {
         match event {
@@ -138,6 +140,7 @@ fn flush_pending_paths(state: &mut State, app: &mut App) -> Vec<Action> {
                         &state.modes.current,
                         app,
                         &paths,
+                        theme,
                     )
                     .unwrap_or_else(|err| {
                         tracing::error!("pending path add failed: {}", err);
@@ -268,6 +271,7 @@ mod test {
 
     use crate::{
         model::{Buffer, DirectoryBuffer, PendingPathEvent},
+        theme::Theme,
         update::mode,
     };
 
@@ -294,7 +298,8 @@ mod test {
             .push(PendingPathEvent::Removed(removed_path));
 
         state.modes.current = Mode::Insert;
-        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal)
+        let theme = Theme::default();
+        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal, &theme)
             .expect("mode change must succeed");
 
         assert!(actions
@@ -315,15 +320,29 @@ mod test {
         let mut state = crate::model::State::default();
         state.modes.current = Mode::Navigation;
 
+        let theme = Theme::default();
+
         // Navigation → Normal should be blocked on Tasks
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal)
-            .expect("mode change must succeed");
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Normal,
+            &theme,
+        )
+        .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
 
         // Navigation → Insert should also be blocked
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert)
-            .expect("mode change must succeed");
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Insert,
+            &theme,
+        )
+        .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
     }
@@ -342,12 +361,15 @@ mod test {
         let mut state = crate::model::State::default();
         state.modes.current = Mode::Navigation;
 
+        let theme = Theme::default();
+
         // Navigation → Command should be allowed on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
             &Mode::Navigation,
             &Mode::Command(CommandMode::Command),
+            &theme,
         )
         .expect("mode change must succeed");
         assert!(actions
@@ -361,6 +383,7 @@ mod test {
             &mut state,
             &Mode::Command(CommandMode::Command),
             &Mode::Navigation,
+            &theme,
         )
         .expect("mode change must succeed");
         assert!(actions

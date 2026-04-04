@@ -14,8 +14,13 @@ yeet-frontend = { path = "../yeet-frontend" }
 
 clap.workspace = true
 dirs.workspace = true
+mlua.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber.workspace = true
+
+[dev-dependencies]
+ratatui.workspace = true
+tempfile = "3"

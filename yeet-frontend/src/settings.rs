@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use yeet_buffer::model::viewport::WindowSettings;
 
+use crate::theme::Theme;
+
 #[derive(Debug)]
 pub struct Settings {
     pub current: WindowSettings,
@@ -12,6 +14,7 @@ pub struct Settings {
     pub show_quickfix_signs: bool,
     pub show_mark_signs: bool,
     pub startup_path: Option<PathBuf>,
+    pub theme: Theme,
 }
 
 impl Default for Settings {
@@ -27,6 +30,7 @@ impl Default for Settings {
             show_mark_signs: true,
             show_quickfix_signs: true,
             startup_path: None,
+            theme: Theme::default(),
         }
     }
 }

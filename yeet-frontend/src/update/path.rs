@@ -16,12 +16,13 @@ use crate::{
         qfix::{QuickFix, QFIX_SIGN_ID},
         App, Buffer, Contents, Window,
     },
+    theme::Theme,
     update::{app, cursor, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
 
-#[tracing::instrument(skip(app))]
+#[tracing::instrument(skip(app, theme))]
 pub fn add(
     history: &mut History,
     marks: &Marks,
@@ -29,10 +30,13 @@ pub fn add(
     mode: &Mode,
     app: &mut App,
     paths: &[PathBuf],
+    theme: &Theme,
 ) -> Result<Vec<Action>, AppError> {
     let mut actions = Vec::new();
     for path in paths {
-        actions.extend(update_directory_buffers_on_add(history, mode, app, path));
+        actions.extend(update_directory_buffers_on_add(
+            history, mode, app, path, theme,
+        ));
     }
 
     let marked_paths: Vec<_> = paths
@@ -45,6 +49,7 @@ pub fn add(
             app.contents.buffers.values_mut().collect(),
             marked_paths,
             MARK_SIGN_ID,
+            theme,
         );
     }
 
@@ -58,6 +63,7 @@ pub fn add(
             app.contents.buffers.values_mut().collect(),
             qfix_paths,
             QFIX_SIGN_ID,
+            theme,
         );
     }
 
@@ -127,6 +133,7 @@ fn update_directory_buffers_on_add(
     mode: &Mode,
     app: &mut App,
     path: &Path,
+    theme: &Theme,
 ) -> Vec<Action> {
     let (parent, name) = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => (parent, name.to_string_lossy().to_string()),
@@ -188,7 +195,7 @@ fn update_directory_buffers_on_add(
                 crate::event::ContentKind::File
             };
 
-            let bufferline = enumeration::from_enumeration(&name, &kind);
+            let bufferline = enumeration::from_enumeration(&name, &kind, theme);
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {
                     *line = bufferline;
@@ -1014,6 +1021,7 @@ mod test {
 
         // Simulate PathsAdded for the new folder (path without trailing slash,
         // as the filesystem watcher reports it).
+        let theme = Theme::default();
         let actions = add(
             &mut history,
             &marks,
@@ -1021,6 +1029,7 @@ mod test {
             &Mode::Navigation,
             &mut app,
             std::slice::from_ref(&newfolder),
+            &theme,
         )
         .expect("path add must succeed");
 
@@ -1153,6 +1162,7 @@ mod test {
         let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
+        let theme = Theme::default();
 
         let _ = add(
             &mut history,
@@ -1161,6 +1171,7 @@ mod test {
             &Mode::Navigation,
             &mut app,
             std::slice::from_ref(&added),
+            &theme,
         )
         .expect("path add must succeed");
 
@@ -1278,6 +1289,7 @@ mod test {
         let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
+        let theme = Theme::default();
 
         let _ = add(
             &mut history,
@@ -1286,6 +1298,7 @@ mod test {
             &Mode::Navigation,
             &mut app,
             std::slice::from_ref(&added),
+            &theme,
         )
         .expect("path add must succeed");
 
@@ -1592,6 +1605,7 @@ mod test {
         let mut history = History::default();
         let marks = Marks::default();
         let qfix = QuickFix::default();
+        let theme = Theme::default();
 
         let _ = add(
             &mut history,
@@ -1600,6 +1614,7 @@ mod test {
             &Mode::Navigation,
             &mut app,
             std::slice::from_ref(&added),
+            &theme,
         )
         .expect("path add must succeed");
 

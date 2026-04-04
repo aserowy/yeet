@@ -7,11 +7,17 @@ use crate::{
         App, Buffer,
     },
     task::Task,
+    theme::Theme,
 };
 
 use super::{app, sign};
 
-pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Result<Vec<Action>, AppError> {
+pub fn add(
+    app: &mut App,
+    marks: &mut Marks,
+    char: char,
+    theme: &Theme,
+) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     let (vp, buffer) = match app::get_focused_current_mut(window, contents)? {
         (vp, Buffer::Directory(it)) => (vp, it),
@@ -37,6 +43,7 @@ pub fn add(app: &mut App, marks: &mut Marks, char: char) -> Result<Vec<Action>, 
             app.contents.buffers.values_mut().collect(),
             vec![selected],
             MARK_SIGN_ID,
+            theme,
         );
     }
 

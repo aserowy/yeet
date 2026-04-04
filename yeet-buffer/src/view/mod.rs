@@ -1,20 +1,30 @@
 use ansi_to_tui::IntoText;
 use ratatui::{
     prelude::Rect,
-    style::{Color, Style},
+    style::Style,
     text::Line,
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
-use crate::model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, TextBuffer};
+use crate::{
+    model::{ansi::Ansi, viewport::ViewPort, BufferLine, Cursor, Mode, TextBuffer},
+    BufferTheme,
+};
 
 mod line;
 mod prefix;
+pub(crate) mod style;
 
-pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut Frame) {
+pub fn view(
+    viewport: &ViewPort,
+    mode: &Mode,
+    buffer: &TextBuffer,
+    theme: &BufferTheme,
+    frame: &mut Frame,
+) {
     let rendered = get_rendered_lines(viewport, buffer);
-    let styled = get_styled_lines(viewport, mode, &viewport.cursor, rendered);
+    let styled = get_styled_lines(viewport, mode, &viewport.cursor, rendered, theme);
 
     let rect = Rect {
         x: viewport.x,
@@ -26,7 +36,7 @@ pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut F
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Black));
+            .border_style(Style::default().fg(theme.border_fg).bg(theme.border_bg));
 
         let inner = block.inner(rect);
 
@@ -37,7 +47,10 @@ pub fn view(viewport: &ViewPort, mode: &Mode, buffer: &TextBuffer, frame: &mut F
         rect
     };
 
-    frame.render_widget(Paragraph::new(styled), rect);
+    frame.render_widget(
+        Paragraph::new(styled).style(Style::default().bg(theme.buffer_bg)),
+        rect,
+    );
 }
 
 fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLine> {
@@ -55,6 +68,7 @@ fn get_styled_lines<'a>(
     mode: &Mode,
     cursor: &Cursor,
     lines: Vec<BufferLine>,
+    theme: &BufferTheme,
 ) -> Vec<Line<'a>> {
     let lines = if lines.is_empty() {
         vec![BufferLine::default()]
@@ -67,11 +81,11 @@ fn get_styled_lines<'a>(
         let corrected_index = i + vp.vertical_index;
 
         let content = Ansi::new("")
-            .join(&prefix::get_signs(vp, &bl))
-            .join(&prefix::get_line_number(vp, corrected_index, cursor))
+            .join(&prefix::get_signs(vp, &bl, theme))
+            .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
             .join(&prefix::get_custom_prefix(&bl))
             .join(&prefix::get_border(vp))
-            .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl));
+            .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl, theme));
 
         if let Ok(text) = content.to_string().into_text() {
             result.push(text.lines);
@@ -83,12 +97,28 @@ fn get_styled_lines<'a>(
 
 #[cfg(test)]
 mod test {
-    use crate::model::{
-        viewport::{LineNumber, ViewPort},
-        BufferLine, Cursor, CursorPosition, Mode,
+    use crate::{
+        model::{
+            viewport::{LineNumber, ViewPort},
+            BufferLine, Cursor, CursorPosition, Mode,
+        },
+        BufferTheme,
     };
 
     use super::get_styled_lines;
+
+    fn test_theme() -> BufferTheme {
+        use ratatui::style::Color;
+        BufferTheme {
+            buffer_bg: Color::Reset,
+            cursor_line_bg: Color::Rgb(128, 128, 128),
+            search_bg: Color::Red,
+            line_nr: Color::Rgb(128, 128, 128),
+            cur_line_nr: Color::White,
+            border_fg: Color::Black,
+            border_bg: Color::Reset,
+        }
+    }
 
     fn tasks_viewport(width: u16, height: u16) -> ViewPort {
         ViewPort {
@@ -137,7 +167,7 @@ mod test {
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine::from("1    rg foo")];
 
-        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty(), "should produce at least one line");
         let cursor_line = &styled[0];
@@ -153,7 +183,7 @@ mod test {
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine::default()];
 
-        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
@@ -169,7 +199,7 @@ mod test {
         let vp = directory_current_viewport(40, 10);
         let lines = vec![BufferLine::from("documents")];
 
-        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
@@ -195,7 +225,7 @@ mod test {
             BufferLine::from("2    fd bar"),
         ];
 
-        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(styled.len() >= 2);
         // First line is NOT the cursor line (cursor is on index 1)
@@ -222,7 +252,7 @@ mod test {
         // Cancelled task line with strikethrough + gray ANSI styling
         let lines = vec![BufferLine::from("\x1b[9;90m1    rg foo\x1b[0m")];
 
-        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
@@ -238,7 +268,7 @@ mod test {
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine::from("1    rg foo")];
 
-        let styled = get_styled_lines(&vp, &Mode::Normal, &vp.cursor, lines);
+        let styled = get_styled_lines(&vp, &Mode::Normal, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
