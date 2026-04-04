@@ -104,48 +104,69 @@ pub fn relocate(
         });
 
     let (window, contents) = app.current_window_and_contents_mut()?;
-    let (viewport, buffer) = match app::get_focused_current_mut(window, contents)? {
-        (viewport, Buffer::Directory(buffer)) => (viewport, buffer),
-        (_, Buffer::Image(_))
-        | (_, Buffer::Content(_))
-        | (_, Buffer::PathReference(_))
-        | (_, Buffer::Tasks(_))
-        | (_, Buffer::Empty) => return Ok(Vec::new()),
-    };
+    let (viewport, focused) = app::get_focused_current_mut(window, contents)?;
 
-    let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
-    if let CursorDirection::Search(drctn) = mtn {
-        let current_drctn = match register::get_direction_from_search_register(&state.register) {
-            Some(it) => it,
-            None => return Ok(Vec::new()),
-        };
+    match focused {
+        Buffer::Directory(buffer) => {
+            let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
+            if let CursorDirection::Search(drctn) = mtn {
+                let current_drctn =
+                    match register::get_direction_from_search_register(&state.register) {
+                        Some(it) => it,
+                        None => return Ok(Vec::new()),
+                    };
 
-        let direction = match (drctn, current_drctn) {
-            (Search::Next, SearchDirection::Down) => Search::Next,
-            (Search::Next, SearchDirection::Up) => Search::Previous,
-            (Search::Previous, SearchDirection::Down) => Search::Previous,
-            (Search::Previous, SearchDirection::Up) => Search::Next,
-        };
+                let direction = match (drctn, current_drctn) {
+                    (Search::Next, SearchDirection::Down) => Search::Next,
+                    (Search::Next, SearchDirection::Up) => Search::Previous,
+                    (Search::Previous, SearchDirection::Down) => Search::Previous,
+                    (Search::Previous, SearchDirection::Up) => Search::Next,
+                };
 
-        let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(direction));
-        yeet_buffer::update(
-            Some(viewport),
-            &state.modes.current,
-            &mut buffer.buffer,
-            slice::from_ref(&msg),
-        )
-    } else {
-        yeet_buffer::update(
-            Some(viewport),
-            &state.modes.current,
-            &mut buffer.buffer,
-            slice::from_ref(&msg),
-        )
-    };
+                let msg = BufferMessage::MoveCursor(*rpt, CursorDirection::Search(direction));
+                yeet_buffer::update(
+                    Some(viewport),
+                    &state.modes.current,
+                    &mut buffer.buffer,
+                    slice::from_ref(&msg),
+                );
+            } else {
+                yeet_buffer::update(
+                    Some(viewport),
+                    &state.modes.current,
+                    &mut buffer.buffer,
+                    slice::from_ref(&msg),
+                );
+            }
 
-    selection::refresh_preview_from_current_selection(
-        app,
-        &mut state.history,
-        premotion_preview_path,
-    )
+            selection::refresh_preview_from_current_selection(
+                app,
+                &mut state.history,
+                premotion_preview_path,
+            )
+        }
+        Buffer::Tasks(tasks_buf) => {
+            let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
+            yeet_buffer::update(
+                Some(viewport),
+                &state.modes.current,
+                &mut tasks_buf.buffer,
+                slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
+        Buffer::QuickFix(qfix_buf) => {
+            let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
+            yeet_buffer::update(
+                Some(viewport),
+                &state.modes.current,
+                &mut qfix_buf.buffer,
+                slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
+        Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
+            Ok(Vec::new())
+        }
+    }
 }

@@ -7,7 +7,7 @@ use crate::{
     update::app,
 };
 
-use super::{command::task, selection};
+use super::{command::qfix::window, command::task, selection};
 
 pub fn buffer(
     app: &mut App,
@@ -43,6 +43,14 @@ pub fn buffer(
             } else {
                 Vec::new()
             }
+        }
+        Buffer::QuickFix(_) => {
+            if !matches!(modification, TextModification::DeleteLine) {
+                return Ok(Vec::new());
+            }
+
+            let cursor_index = vp.cursor.vertical_index;
+            window::remove_entry(app, &mut state.qfix, cursor_index)
         }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
             Vec::new()

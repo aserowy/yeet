@@ -88,6 +88,8 @@ fn add_cursor_styles(
     } else {
         let cursor_line_bg = style::color_to_ansi_bg(theme.cursor_line_bg);
         let cursor_line_reset = &style::ansi_reset_with_bg(theme.buffer_bg);
+        let reset_with_bg = format!("\x1b[0m{}", cursor_line_bg);
+        content.replace_resets_with(&reset_with_bg);
         content.prepend(&cursor_line_bg);
         content.append(" ".repeat(repeat_count).as_str());
         content.append(cursor_line_reset);

@@ -131,12 +131,18 @@ fn update_with_message(
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) | Message::RgResult(paths) => qfix::add(
-            &mut state.qfix,
-            app.contents.buffers.values_mut().collect(),
-            paths,
-            &settings.theme,
-        ),
+        Message::FdResult(paths) | Message::RgResult(paths) => {
+            let actions = qfix::add(
+                &mut state.qfix,
+                app.contents.buffers.values_mut().collect(),
+                paths,
+                &settings.theme,
+            );
+            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
+                command::qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
+            }
+            actions
+        }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::PathRemoved(path) => {
             if state.modes.current == Mode::Insert {
@@ -295,7 +301,13 @@ pub fn update_with_keymap_message(
             mode::print_recording(&mut app.commandline, &mut state.modes, *identifier)
         }
         KeymapMessage::StopMacro => mode::print_mode(&mut app.commandline, &mut state.modes),
-        KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix, &settings.theme),
+        KeymapMessage::ToggleQuickFix => {
+            let actions = qfix::toggle(app, &mut state.qfix, &settings.theme);
+            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
+                command::qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
+            }
+            actions
+        }
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
             let (window, contents) = match app.current_window_and_contents_mut() {
@@ -359,7 +371,7 @@ pub fn update_with_buffer_message(
                 };
                 if matches!(
                     app.contents.buffers.get(&vp.buffer_id),
-                    Some(Buffer::Tasks(_))
+                    Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_))
                 ) {
                     match modify::buffer(app, state, repeat, modification) {
                         Ok(actions) => actions,

@@ -25,6 +25,7 @@ pub fn current(app: &mut App, junk: &mut JunkYard, mode: &Mode) -> Result<Vec<Ac
         | (_vp, Buffer::Content(_))
         | (_vp, Buffer::PathReference(_))
         | (_vp, Buffer::Tasks(_))
+        | (_vp, Buffer::QuickFix(_))
         | (_vp, Buffer::Empty) => return Ok(Vec::new()),
     };
 

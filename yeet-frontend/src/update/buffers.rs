@@ -11,7 +11,11 @@ pub fn update(app: &mut App) {
         .buffers
         .iter()
         .filter_map(|(id, buffer)| {
-            if matches!(buffer, Buffer::Image(_) | Buffer::Tasks(_)) && !referenced.contains(id) {
+            if matches!(
+                buffer,
+                Buffer::Image(_) | Buffer::Tasks(_) | Buffer::QuickFix(_)
+            ) && !referenced.contains(id)
+            {
                 Some(*id)
             } else {
                 None

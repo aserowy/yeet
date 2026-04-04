@@ -163,7 +163,7 @@ fn render_window(
                 );
             }
         }
-        Window::Tasks(vp) => {
+        Window::Tasks(vp) | Window::QuickFix(vp) => {
             render_buffer_slot(
                 mode,
                 frame,
@@ -234,6 +234,9 @@ fn render_buffer_slot(
         }
         Some(Buffer::Tasks(tasks_buf)) => {
             buffer_view(&effective_vp, mode, &tasks_buf.buffer, &buffer_theme, frame);
+        }
+        Some(Buffer::QuickFix(qfix_buf)) => {
+            buffer_view(&effective_vp, mode, &qfix_buf.buffer, &buffer_theme, frame);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
             let mut vp = effective_vp.clone();

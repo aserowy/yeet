@@ -66,7 +66,7 @@ fn try_move(window: &mut Window, direction: &FocusDirection) -> bool {
                 _ => false,
             }
         }
-        Window::Directory(_, _, _) | Window::Tasks(_) => false,
+        Window::Directory(_, _, _) | Window::QuickFix(_) | Window::Tasks(_) => false,
     }
 }
 
@@ -100,7 +100,7 @@ fn enter_from(window: &mut Window, direction: &FocusDirection) {
                 enter_from(second, direction);
             }
         },
-        Window::Directory(_, _, _) | Window::Tasks(_) => {}
+        Window::Directory(_, _, _) | Window::QuickFix(_) | Window::Tasks(_) => {}
     }
 }
 

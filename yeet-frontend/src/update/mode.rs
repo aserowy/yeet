@@ -35,7 +35,7 @@ pub fn change(
         let vp = app.current_window()?.focused_viewport();
         if matches!(
             app.contents.buffers.get(&vp.buffer_id),
-            Some(Buffer::Tasks(_))
+            Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_))
         ) {
             return Ok(Vec::new());
         }

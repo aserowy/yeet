@@ -123,6 +123,7 @@ pub enum Window {
         focus: SplitFocus,
     },
     Directory(ViewPort, ViewPort, ViewPort),
+    QuickFix(ViewPort),
     Tasks(ViewPort),
 }
 
@@ -168,6 +169,7 @@ impl Window {
                 SplitFocus::Second => second.focused_viewport(),
             },
             Window::Directory(_, vp, _) => vp,
+            Window::QuickFix(vp) => vp,
             Window::Tasks(vp) => vp,
         }
     }
@@ -188,6 +190,7 @@ impl Window {
                 SplitFocus::Second => second.focused_window_mut(),
             },
             Window::Directory(..) => self,
+            Window::QuickFix(_) => self,
             Window::Tasks(_) => self,
         }
     }
@@ -195,6 +198,7 @@ impl Window {
     pub fn focused_viewport_mut(&mut self) -> &mut ViewPort {
         match self.focused_window_mut() {
             Window::Directory(_, vp, _) => vp,
+            Window::QuickFix(vp) => vp,
             Window::Tasks(vp) => vp,
             Window::Horizontal { .. } | Window::Vertical { .. } => {
                 unreachable!("focused_window_mut should have returned a non-split window")
@@ -212,6 +216,7 @@ impl Window {
             Window::Directory(parent, current, preview) => {
                 HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
             }
+            Window::QuickFix(vp) => HashSet::from([vp.buffer_id]),
             Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
         }
     }
@@ -221,8 +226,18 @@ impl Window {
             Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
                 first.contains_tasks() || second.contains_tasks()
             }
-            Window::Directory(_, _, _) => false,
+            Window::Directory(_, _, _) | Window::QuickFix(_) => false,
             Window::Tasks(_) => true,
+        }
+    }
+
+    pub fn contains_quickfix(&self) -> bool {
+        match self {
+            Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
+                first.contains_quickfix() || second.contains_quickfix()
+            }
+            Window::Directory(_, _, _) | Window::Tasks(_) => false,
+            Window::QuickFix(_) => true,
         }
     }
 }
@@ -304,6 +319,7 @@ pub enum Buffer {
     Image(PreviewImageBuffer),
     Content(ContentBuffer),
     PathReference(PathBuf),
+    QuickFix(QuickFixBuffer),
     Tasks(TasksBuffer),
     Empty,
 }
@@ -321,9 +337,14 @@ impl Buffer {
                     Some(path.as_path())
                 }
             }
-            Buffer::Tasks(_) | Buffer::Empty => None,
+            Buffer::QuickFix(_) | Buffer::Tasks(_) | Buffer::Empty => None,
         }
     }
+}
+
+#[derive(Default)]
+pub struct QuickFixBuffer {
+    pub buffer: TextBuffer,
 }
 
 #[derive(Default)]
@@ -616,5 +637,96 @@ mod test {
             focus: SplitFocus::First,
         };
         assert!(!tree.contains_tasks());
+    }
+
+    #[test]
+    fn window_quickfix_construction_and_pattern_match() {
+        let qf_window = Window::QuickFix(ViewPort::default());
+        assert!(matches!(qf_window, Window::QuickFix(_)));
+    }
+
+    #[test]
+    fn buffer_quickfix_construction_and_pattern_match() {
+        let buf = Buffer::QuickFix(QuickFixBuffer {
+            buffer: TextBuffer::default(),
+        });
+        assert!(matches!(buf, Buffer::QuickFix(_)));
+    }
+
+    #[test]
+    fn contains_quickfix_true_in_horizontal() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::QuickFix(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+        assert!(tree.contains_quickfix());
+        assert!(!tree.contains_tasks());
+    }
+
+    #[test]
+    fn contains_quickfix_false_without_quickfix() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::First,
+        };
+        assert!(!tree.contains_quickfix());
+    }
+
+    #[test]
+    fn focused_viewport_follows_quickfix_in_split() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    height: 42,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::QuickFix(ViewPort {
+                height: 10,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+        assert_eq!(tree.focused_viewport().height, 10);
+    }
+
+    #[test]
+    fn buffer_ids_collects_quickfix() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort {
+                    buffer_id: 1,
+                    ..Default::default()
+                },
+                ViewPort {
+                    buffer_id: 2,
+                    ..Default::default()
+                },
+                ViewPort {
+                    buffer_id: 3,
+                    ..Default::default()
+                },
+            )),
+            second: Box::new(Window::QuickFix(ViewPort {
+                buffer_id: 4,
+                ..Default::default()
+            })),
+            focus: SplitFocus::First,
+        };
+        let ids = tree.buffer_ids();
+        assert_eq!(ids.len(), 4);
+        assert!(ids.contains(&4));
     }
 }
