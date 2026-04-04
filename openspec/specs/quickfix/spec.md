@@ -16,7 +16,7 @@ The `:copen` command SHALL create a horizontal split at the currently focused wi
 - **THEN** focus SHALL move to the existing copen window without creating a new one
 
 ### Requirement: Bold rendering of current quickfix entry
-The copen buffer SHALL render the entry at `QuickFix.current_index` with ANSI bold styling. All other entries SHALL be rendered without bold. The bold indicator SHALL update whenever `current_index` changes. When the cursor line coincides with the bold-formatted current entry and the copen window is focused, the cursor line background SHALL be preserved through the embedded ANSI reset codes in the bold formatting.
+The copen buffer SHALL render the entry at `QuickFix.current_index` with ANSI bold styling. All other entries SHALL be rendered without bold. The bold indicator SHALL update whenever `current_index` changes. The buffer background SHALL be preserved through embedded ANSI reset codes in the bold formatting in all focus states — both when the copen window is focused (cursor line background) and when it is unfocused (buffer background).
 
 #### Scenario: Current entry is bold after cfirst
 - **WHEN** the copen window is open and the user executes `:cfirst`
@@ -34,16 +34,20 @@ The copen buffer SHALL render the entry at `QuickFix.current_index` with ANSI bo
 - **WHEN** the copen window is focused and the cursor is on the line matching `QuickFix.current_index`
 - **THEN** the entire cursor line SHALL display the cursor line background color, not the buffer background color, despite the ANSI reset in the bold formatting
 
+#### Scenario: Buffer background preserved on unfocused current entry
+- **WHEN** the copen window is not focused
+- **THEN** the bold-formatted current entry SHALL maintain the buffer background color through the ANSI reset, not reverting to terminal default
+
 ### Requirement: Open entry in nearest directory window with enter
-When the user presses `enter` on a selected entry in the copen buffer, the system SHALL navigate to that entry's path in the nearest directory window and SHALL move focus from the copen window to that directory window. The nearest directory window SHALL be found by: identifying the split that contains the copen buffer, traversing the sibling subtree (the other child of that split), and finding the first `Directory` window by following the focus path.
+When the user presses `enter` on a selected entry in the copen buffer, the system SHALL navigate to that entry's path in the nearest directory window and SHALL move focus from the copen window to that directory window. The system SHALL also update `QuickFix.current_index` to match the selected entry and refresh the copen buffer so the bold indicator reflects the new current entry. The nearest directory window SHALL be found by: identifying the split that contains the copen buffer, traversing the sibling subtree (the other child of that split), and finding the first `Directory` window by following the focus path.
 
 #### Scenario: Enter opens path in sibling directory window
 - **WHEN** the copen window is the second child of a horizontal split, the first child is a Directory window, and the user presses enter on an entry
-- **THEN** the entry's path SHALL be opened in the first child's directory window and focus SHALL move to that directory window
+- **THEN** the entry's path SHALL be opened in the first child's directory window, focus SHALL move to that directory window, `current_index` SHALL be updated to the selected entry, and the copen buffer SHALL refresh with bold on the new current entry
 
 #### Scenario: Enter opens path in nested sibling directory window
 - **WHEN** the copen window is inside a nested split and the sibling subtree contains multiple directory windows
-- **THEN** the entry's path SHALL be opened in the directory window found by following the focus path of the sibling subtree and focus SHALL move to that directory window
+- **THEN** the entry's path SHALL be opened in the directory window found by following the focus path of the sibling subtree, focus SHALL move to that directory window, and `current_index` SHALL be updated
 
 #### Scenario: Enter with no directory window in sibling
 - **WHEN** the sibling subtree of the copen split contains no directory window
