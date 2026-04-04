@@ -6,12 +6,17 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     error::AppError,
-    model::{self, App, Buffer, QuickFixBuffer},
+    model::{self, qfix::QuickFix, App, Buffer, QuickFixBuffer},
     settings::Settings,
     update::{app, command::qfix::window as qfix_window},
 };
 
-pub fn selected(settings: &Settings, mode: &Mode, app: &mut App) -> Result<Vec<Action>, AppError> {
+pub fn selected(
+    settings: &Settings,
+    mode: &Mode,
+    app: &mut App,
+    qfix: &mut QuickFix,
+) -> Result<Vec<Action>, AppError> {
     if mode != &Mode::Navigation {
         return Ok(Vec::new());
     }
@@ -21,10 +26,16 @@ pub fn selected(settings: &Settings, mode: &Mode, app: &mut App) -> Result<Vec<A
 
     match current_buffer {
         Buffer::QuickFix(qfix_buf) => {
-            let path = get_quickfix_entry_path(qfix_buf, current_vp.cursor.vertical_index);
+            let cursor_index = current_vp.cursor.vertical_index;
+            let path = get_quickfix_entry_path(qfix_buf, cursor_index);
             if let Some(path) = path {
-                let window = app.current_window()?;
+                let window = app.current_window_mut()?;
                 if qfix_window::find_nearest_directory_in_sibling(window).is_some() {
+                    qfix.current_index = cursor_index;
+                    let (window, contents) = app.current_window_and_contents_mut()?;
+                    qfix_window::refresh_quickfix_buffer(window, contents, qfix);
+                    let window = app.current_window_mut()?;
+                    qfix_window::focus_nearest_directory(window);
                     return Ok(vec![action::emit_keymap(
                         KeymapMessage::NavigateToPathAsPreview(path),
                     )]);

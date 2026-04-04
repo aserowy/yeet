@@ -268,13 +268,15 @@ pub fn update_with_keymap_message(
                 Vec::new()
             }
         },
-        KeymapMessage::OpenSelected => match open::selected(settings, &state.modes.current, app) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("OpenSelected failed: {}", err);
-                Vec::new()
+        KeymapMessage::OpenSelected => {
+            match open::selected(settings, &state.modes.current, app, &mut state.qfix) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("OpenSelected failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         KeymapMessage::PasteFromJunkYard(entry_id) => {
             match junkyard::paste(app, &state.junk, entry_id) {
                 Ok(actions) => actions,

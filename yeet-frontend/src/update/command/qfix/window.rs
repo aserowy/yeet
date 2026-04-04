@@ -69,6 +69,37 @@ fn focus_quickfix(window: &mut Window) -> bool {
     }
 }
 
+pub fn focus_nearest_directory(window: &mut Window) -> bool {
+    match window {
+        Window::Horizontal {
+            first,
+            second,
+            focus,
+        }
+        | Window::Vertical {
+            first,
+            second,
+            focus,
+        } => {
+            let focused_is_qfix = match focus {
+                SplitFocus::First => matches!(first.as_ref(), Window::QuickFix(_)),
+                SplitFocus::Second => matches!(second.as_ref(), Window::QuickFix(_)),
+            };
+
+            if focused_is_qfix {
+                *focus = match focus {
+                    SplitFocus::First => SplitFocus::Second,
+                    SplitFocus::Second => SplitFocus::First,
+                };
+                true
+            } else {
+                focus_nearest_directory(first) || focus_nearest_directory(second)
+            }
+        }
+        Window::QuickFix(_) | Window::Tasks(_) | Window::Directory(_, _, _) => false,
+    }
+}
+
 pub fn build_qfix_lines(qfix: &QuickFix) -> Vec<BufferLine> {
     let max_width = (qfix.entries.len() + 1).to_string().len();
     qfix.entries
@@ -208,7 +239,7 @@ mod test {
 
     use crate::model::{qfix::QuickFix, App, Buffer, SplitFocus, Window};
 
-    use super::{build_qfix_lines, open, remove_entry};
+    use super::{build_qfix_lines, focus_nearest_directory, open, remove_entry};
 
     fn make_qfix_with_entries(paths: Vec<PathBuf>) -> QuickFix {
         QuickFix {
@@ -529,6 +560,29 @@ mod test {
         match app.contents.buffers.get(&qfix_vp.buffer_id) {
             Some(Buffer::QuickFix(qb)) => assert!(qb.buffer.lines.is_empty()),
             _ => panic!("expected Buffer::QuickFix"),
+        }
+    }
+
+    #[test]
+    fn focus_nearest_directory_flips_to_sibling() {
+        let mut window = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::QuickFix(ViewPort::default())),
+            focus: SplitFocus::Second,
+        };
+
+        let result = focus_nearest_directory(&mut window);
+        assert!(result);
+
+        match &window {
+            Window::Horizontal { focus, .. } => {
+                assert_eq!(*focus, SplitFocus::First);
+            }
+            _ => panic!("expected Horizontal"),
         }
     }
 }
