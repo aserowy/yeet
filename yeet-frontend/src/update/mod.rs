@@ -109,7 +109,7 @@ fn update_with_message(
 ) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            match enumeration::change(state, app, &path, &contents, &selection) {
+            match enumeration::change(state, app, &path, &contents, &selection, &settings.theme) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationChanged failed: {}", err);
@@ -118,7 +118,7 @@ fn update_with_message(
             }
         }
         Message::EnumerationFinished(path, contents, selection) => {
-            match enumeration::finish(state, app, &path, &contents, &selection) {
+            match enumeration::finish(state, app, &path, &contents, &selection, &settings.theme) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationFinished failed: {}", err);
@@ -175,6 +175,7 @@ fn update_with_message(
                     &state.modes.current,
                     app,
                     &paths,
+                    &settings.theme,
                 ) {
                     Ok(actions) => actions,
                     Err(err) => {
@@ -214,7 +215,7 @@ pub fn update_with_keymap_message(
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
-        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, msg),
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, msg),
         KeymapMessage::ClearSearchHighlight => {
             search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
@@ -324,10 +325,11 @@ pub fn update_with_keymap_message(
 pub fn update_with_buffer_message(
     app: &mut App,
     state: &mut State,
+    settings: &Settings,
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
-        BufferMessage::ChangeMode(from, to) => match mode::change(app, state, from, to) {
+        BufferMessage::ChangeMode(from, to) => match mode::change(app, state, from, to, &settings.theme) {
             Ok(actions) => actions,
             Err(err) => {
                 tracing::error!("ChangeMode failed: {}", err);

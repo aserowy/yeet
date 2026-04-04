@@ -9,7 +9,7 @@ use yeet_buffer::{
 
 use crate::{
     model::{App, Buffer, DirectoryBuffer, SplitFocus, Window},
-    theme::Theme,
+    theme::{tokens, Theme},
 };
 
 use super::statusline;
@@ -18,6 +18,7 @@ pub fn view(mode: &Mode, app: &App, theme: &Theme, frame: &mut Frame) {
     let context = RenderContext {
         draw_borders: None,
         is_focused: true,
+        is_directory_pane: false,
     };
     let window = match app.current_window() {
         Ok(window) => window,
@@ -30,6 +31,7 @@ pub fn view(mode: &Mode, app: &App, theme: &Theme, frame: &mut Frame) {
 struct RenderContext {
     draw_borders: Option<bool>,
     is_focused: bool,
+    is_directory_pane: bool,
 }
 
 fn render_window(
@@ -83,6 +85,7 @@ fn render_window(
                 RenderContext {
                     is_focused: context.is_focused && focus == &SplitFocus::First,
                     draw_borders: Some(true),
+                    is_directory_pane: false,
                 },
             );
             render_window(
@@ -98,12 +101,16 @@ fn render_window(
             );
         }
         Window::Directory(parent, current, preview) => {
+            let dir_context = RenderContext {
+                is_directory_pane: true,
+                ..context.clone()
+            };
             render_buffer_slot(
                 mode,
                 frame,
                 parent,
                 buffers.get(&parent.buffer_id),
-                context.clone(),
+                dir_context.clone(),
                 theme,
             );
             render_buffer_slot(
@@ -111,7 +118,7 @@ fn render_window(
                 frame,
                 current,
                 buffers.get(&current.buffer_id),
-                context.clone(),
+                dir_context.clone(),
                 theme,
             );
             render_buffer_slot(
@@ -119,7 +126,7 @@ fn render_window(
                 frame,
                 preview,
                 buffers.get(&preview.buffer_id),
-                context.clone(),
+                dir_context.clone(),
                 theme,
             );
 
@@ -201,16 +208,20 @@ fn render_buffer_slot(
         effective_vp.show_border = true;
     }
 
+    let buffer_theme = if context.is_directory_pane {
+        theme.to_buffer_theme_with_border(tokens::DIRECTORY_BORDER_FG, tokens::DIRECTORY_BORDER_BG)
+    } else {
+        theme.to_buffer_theme()
+    };
+
     match buffer {
         Some(Buffer::Content(buffer)) => {
-            let buffer_theme = theme.to_buffer_theme();
             buffer_view(&effective_vp, mode, &buffer.buffer, &buffer_theme, frame);
         }
         Some(Buffer::Directory(buffer)) => {
-            render_directory_buffer(mode, frame, &effective_vp, buffer, theme);
+            render_directory_buffer(mode, frame, &effective_vp, buffer, &buffer_theme);
         }
         Some(Buffer::Tasks(tasks_buf)) => {
-            let buffer_theme = theme.to_buffer_theme();
             buffer_view(&effective_vp, mode, &tasks_buf.buffer, &buffer_theme, frame);
         }
         Some(Buffer::PathReference(_)) | Some(Buffer::Empty) | None => {
@@ -218,7 +229,7 @@ fn render_buffer_slot(
             vp.hide_cursor = true;
             vp.hide_cursor_line = true;
 
-            render_directory_buffer(mode, frame, &vp, &Default::default(), theme);
+            render_directory_buffer(mode, frame, &vp, &Default::default(), &buffer_theme);
         }
         Some(Buffer::Image(buffer)) => {
             let rect = Rect {
@@ -238,11 +249,10 @@ fn render_directory_buffer(
     frame: &mut Frame,
     viewport: &ViewPort,
     buffer: &DirectoryBuffer,
-    theme: &Theme,
+    buffer_theme: &yeet_buffer::BufferTheme,
 ) {
     let mut viewport = viewport.clone();
     yeet_buffer::update_viewport_by_cursor(&mut viewport, &buffer.buffer);
 
-    let buffer_theme = theme.to_buffer_theme();
-    buffer_view(&viewport, mode, &buffer.buffer, &buffer_theme, frame);
+    buffer_view(&viewport, mode, &buffer.buffer, buffer_theme, frame);
 }

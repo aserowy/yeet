@@ -25,7 +25,7 @@ pub fn view(
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(theme.style_fg(tokens::STATUSLINE_BORDER_FG));
+            .border_style(theme.style_fg_bg(tokens::STATUSLINE_BORDER_FG, tokens::STATUSLINE_BORDER_BG));
 
         let inner = block.inner(rect);
 
@@ -125,7 +125,8 @@ fn filetree_status(
     theme: &Theme,
 ) {
     let selected = model::get_selected_path(buffer, &viewport.cursor);
-    let permissions = get_permissions(&selected);
+    let permissions = get_permissions(&selected)
+        .patch_style(theme.style_fg(tokens::STATUSLINE_PERMISSIONS_FG));
 
     let changes = get_changes_content(buffer, theme);
     let position = get_position_content(buffer, viewport, theme);

@@ -7,4 +7,5 @@
 1. Always write tests which ensures your code works as expected.
 1. Always run `cargo test` to ensure your tests pass.
 1. Always run `cargo clippy` and `cargo fmt` to ensure your code is clean and well-formatted.
+1. Never write comments in your code. If you need to explain something, refactor the code into a function with a descriptive name instead.
 

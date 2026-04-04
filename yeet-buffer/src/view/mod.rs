@@ -1,7 +1,7 @@
 use ansi_to_tui::IntoText;
 use ratatui::{
     prelude::Rect,
-    style::{Color, Style},
+    style::Style,
     text::Line,
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -35,7 +35,7 @@ pub fn view(
     let rect = if viewport.show_border {
         let block = Block::default()
             .borders(Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Black));
+            .border_style(Style::default().fg(theme.border_fg_color).bg(theme.border_bg_color));
 
         let inner = block.inner(rect);
 
@@ -115,6 +115,8 @@ mod test {
             line_nr: "\x1b[90m".to_string(),
             cur_line_nr_bold: "\x1b[1m".to_string(),
             border_fg: "\x1b[30m".to_string(),
+            border_fg_color: ratatui::style::Color::Black,
+            border_bg_color: ratatui::style::Color::Reset,
         }
     }
 

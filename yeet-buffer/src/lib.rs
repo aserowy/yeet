@@ -7,7 +7,8 @@ pub mod model;
 mod update;
 mod view;
 
-/// Theme data for buffer rendering. All values are ANSI escape code strings.
+/// Theme data for buffer rendering. All values are ANSI escape code strings
+/// unless noted otherwise.
 #[derive(Debug, Clone)]
 pub struct BufferTheme {
     pub cursor_line_bg: String,
@@ -20,6 +21,8 @@ pub struct BufferTheme {
     pub line_nr: String,
     pub cur_line_nr_bold: String,
     pub border_fg: String,
+    pub border_fg_color: ratatui::style::Color,
+    pub border_bg_color: ratatui::style::Color,
 }
 
 pub fn update(
