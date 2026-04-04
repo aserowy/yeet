@@ -9,7 +9,9 @@ pub fn view(
     theme: &Theme,
     frame: &mut Frame,
 ) -> Result<(), AppError> {
-    let buffer_theme = theme.to_buffer_theme();
+    use crate::theme::tokens;
+    let buffer_theme =
+        theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
     buffer_view(
         &commandline.viewport,
         mode,

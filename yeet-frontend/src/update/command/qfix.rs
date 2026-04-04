@@ -9,6 +9,7 @@ use crate::{
         qfix::{CdoState, QuickFix, QFIX_SIGN_ID},
         App, Buffer,
     },
+    theme::Theme,
     update::{app, sign},
 };
 
@@ -160,7 +161,11 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
     }
 }
 
-pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Result<Vec<Action>, AppError> {
+pub fn invert_in_current(
+    app: &mut App,
+    qfix: &mut QuickFix,
+    theme: &Theme,
+) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     let (_, buffer) = app::get_focused_current_mut(window, contents)?;
     let buffer = match buffer {
@@ -195,6 +200,7 @@ pub fn invert_in_current(app: &mut App, qfix: &mut QuickFix) -> Result<Vec<Actio
         app.contents.buffers.values_mut().collect(),
         added_paths,
         QFIX_SIGN_ID,
+        theme,
     );
 
     sign::unset_sign_for_paths(

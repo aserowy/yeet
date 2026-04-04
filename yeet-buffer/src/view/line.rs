@@ -4,8 +4,7 @@ use crate::{
 };
 
 use super::style::{
-    self, CURSOR_INSERT_CODE, CURSOR_INSERT_RESET, CURSOR_LINE_RESET, CURSOR_NORMAL_CODE,
-    CURSOR_NORMAL_RESET,
+    self, CURSOR_INSERT_CODE, CURSOR_INSERT_RESET, CURSOR_NORMAL_CODE, CURSOR_NORMAL_RESET,
 };
 
 pub fn add_line_styles(
@@ -26,7 +25,10 @@ pub fn add_line_styles(
     };
 
     if cursor_line_offset != *index {
-        ansi
+        let buffer_bg = style::color_to_ansi_bg(theme.buffer_bg);
+        let mut result = ansi;
+        result.prepend(&buffer_bg);
+        result
     } else {
         add_cursor_styles(vp, mode, cursor, content_width, &ansi, theme)
     }
@@ -35,10 +37,12 @@ pub fn add_line_styles(
 fn add_search_styles(line: &BufferLine, ansi: &Ansi, theme: &BufferTheme) -> Ansi {
     if let Some(search_char_position) = &line.search_char_position {
         let search_bg = style::color_to_ansi_bg(theme.search_bg);
+        let bg_reset = style::ansi_reset_with_bg(theme.buffer_bg);
         let mut content = ansi.clone();
         for (index, length) in search_char_position.iter() {
             let reset = format!(
-                "\x1b[0m{}",
+                "{}{}",
+                bg_reset,
                 content.get_ansi_escape_sequences_till_char(*index + 1)
             );
 
@@ -72,9 +76,10 @@ fn add_cursor_styles(
         content.append(" ".repeat(repeat_count).as_str());
     } else {
         let cursor_line_bg = style::color_to_ansi_bg(theme.cursor_line_bg);
+        let cursor_line_reset = &style::ansi_reset_with_bg(theme.buffer_bg);
         content.prepend(&cursor_line_bg);
         content.append(" ".repeat(repeat_count).as_str());
-        content.append(CURSOR_LINE_RESET);
+        content.append(cursor_line_reset);
     };
 
     if vp.hide_cursor {

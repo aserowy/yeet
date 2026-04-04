@@ -47,6 +47,7 @@ pub fn add(
             app.contents.buffers.values_mut().collect(),
             marked_paths,
             MARK_SIGN_ID,
+            theme,
         );
     }
 
@@ -60,6 +61,7 @@ pub fn add(
             app.contents.buffers.values_mut().collect(),
             qfix_paths,
             QFIX_SIGN_ID,
+            theme,
         );
     }
 

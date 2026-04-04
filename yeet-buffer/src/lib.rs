@@ -11,6 +11,7 @@ mod view;
 /// Cursor mode codes and reset sequences are constants in the view module.
 #[derive(Debug, Clone)]
 pub struct BufferTheme {
+    pub buffer_bg: ratatui::style::Color,
     pub cursor_line_bg: ratatui::style::Color,
     pub search_bg: ratatui::style::Color,
     pub line_nr: ratatui::style::Color,

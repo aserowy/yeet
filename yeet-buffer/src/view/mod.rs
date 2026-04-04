@@ -47,7 +47,10 @@ pub fn view(
         rect
     };
 
-    frame.render_widget(Paragraph::new(styled), rect);
+    frame.render_widget(
+        Paragraph::new(styled).style(Style::default().bg(theme.buffer_bg)),
+        rect,
+    );
 }
 
 fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLine> {
@@ -78,7 +81,7 @@ fn get_styled_lines<'a>(
         let corrected_index = i + vp.vertical_index;
 
         let content = Ansi::new("")
-            .join(&prefix::get_signs(vp, &bl))
+            .join(&prefix::get_signs(vp, &bl, theme))
             .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
             .join(&prefix::get_custom_prefix(&bl))
             .join(&prefix::get_border(vp))
@@ -107,6 +110,7 @@ mod test {
     fn test_theme() -> BufferTheme {
         use ratatui::style::Color;
         BufferTheme {
+            buffer_bg: Color::Reset,
             cursor_line_bg: Color::Rgb(128, 128, 128),
             search_bg: Color::Red,
             line_nr: Color::Rgb(128, 128, 128),

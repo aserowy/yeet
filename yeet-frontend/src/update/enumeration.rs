@@ -207,8 +207,8 @@ fn set_directory_content(
         .iter()
         .map(|(knd, cntnt)| {
             let mut line = from_enumeration(cntnt, knd, theme);
-            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt));
-            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt));
+            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt), theme);
+            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt), theme);
 
             line
         })

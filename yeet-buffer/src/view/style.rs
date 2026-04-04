@@ -1,6 +1,8 @@
 use ratatui::style::Color;
 
-pub const CURSOR_LINE_RESET: &str = "\x1b[0m";
+pub fn ansi_reset_with_bg(bg: Color) -> String {
+    format!("\x1b[0m{}", color_to_ansi_bg(bg))
+}
 pub const CURSOR_NORMAL_CODE: &str = "\x1b[7m";
 pub const CURSOR_NORMAL_RESET: &str = "\x1b[27m";
 pub const CURSOR_INSERT_CODE: &str = "\x1b[4m";

@@ -24,15 +24,12 @@ pub mod tokens {
     pub const DIFF_MODIFIED: &str = "DiffModified";
     pub const DIFF_REMOVED: &str = "DiffRemoved";
 
-    // Commandline
-    pub const COMMANDLINE_FG: &str = "CommandLineFg";
-    pub const COMMANDLINE_BG: &str = "CommandLineBg";
-
     // Buffer
     pub const CURSOR_LINE_BG: &str = "CursorLineBg";
     pub const SEARCH_BG: &str = "SearchBg";
     pub const LINE_NR: &str = "LineNr";
     pub const CUR_LINE_NR: &str = "CurLineNr";
+    pub const BUFFER_BG: &str = "BufferBg";
     pub const BUFFER_FILE_FG: &str = "BufferFileFg";
     pub const BUFFER_DIRECTORY_FG: &str = "BufferDirectoryFg";
 
@@ -86,6 +83,7 @@ impl Default for Theme {
         colors.insert(tokens::DIFF_REMOVED.to_string(), Color::Red);
 
         // Buffer defaults
+        colors.insert(tokens::BUFFER_BG.to_string(), Color::Reset);
         colors.insert(
             tokens::CURSOR_LINE_BG.to_string(),
             Color::Rgb(128, 128, 128),
@@ -210,16 +208,13 @@ fn color_to_ansi_bg(color: Color) -> String {
 }
 
 impl Theme {
-    pub fn to_buffer_theme(&self) -> yeet_buffer::BufferTheme {
-        self.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG)
-    }
-
     pub fn to_buffer_theme_with_border(
         &self,
         border_fg_token: &str,
         border_bg_token: &str,
     ) -> yeet_buffer::BufferTheme {
         yeet_buffer::BufferTheme {
+            buffer_bg: self.color(tokens::BUFFER_BG),
             cursor_line_bg: self.color(tokens::CURSOR_LINE_BG),
             search_bg: self.color(tokens::SEARCH_BG),
             line_nr: self.color(tokens::LINE_NR),
@@ -314,9 +309,16 @@ mod tests {
     }
 
     #[test]
+    fn buffer_bg_default_is_reset() {
+        let theme = Theme::default();
+        assert_eq!(theme.color(tokens::BUFFER_BG), Color::Reset);
+    }
+
+    #[test]
     fn buffer_theme_conversion() {
         let theme = Theme::default();
-        let bt = theme.to_buffer_theme();
+        let bt = theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
+        assert_eq!(bt.buffer_bg, Color::Reset);
         assert_eq!(bt.cursor_line_bg, Color::Rgb(128, 128, 128));
         assert_eq!(bt.search_bg, Color::Red);
         assert_eq!(bt.line_nr, Color::Rgb(128, 128, 128));
@@ -411,7 +413,7 @@ mod tests {
     #[test]
     fn buffer_theme_with_split_border_tokens() {
         let theme = Theme::default();
-        let bt = theme.to_buffer_theme();
+        let bt = theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
         assert_eq!(bt.border_fg, Color::Black);
         assert_eq!(bt.border_bg, Color::Reset);
     }
