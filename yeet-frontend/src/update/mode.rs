@@ -323,14 +323,26 @@ mod test {
         let theme = Theme::default();
 
         // Navigation → Normal should be blocked on Tasks
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Normal, &theme)
-            .expect("mode change must succeed");
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Normal,
+            &theme,
+        )
+        .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
 
         // Navigation → Insert should also be blocked
-        let actions = mode::change(&mut app, &mut state, &Mode::Navigation, &Mode::Insert, &theme)
-            .expect("mode change must succeed");
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Insert,
+            &theme,
+        )
+        .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
     }

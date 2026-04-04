@@ -34,7 +34,9 @@ pub fn add(
 ) -> Result<Vec<Action>, AppError> {
     let mut actions = Vec::new();
     for path in paths {
-        actions.extend(update_directory_buffers_on_add(history, mode, app, path, theme));
+        actions.extend(update_directory_buffers_on_add(
+            history, mode, app, path, theme,
+        ));
     }
 
     let marked_paths: Vec<_> = paths

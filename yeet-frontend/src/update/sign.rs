@@ -174,8 +174,8 @@ fn unset_sign_for_paths_in_buffer(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::qfix::QFIX_SIGN_ID;
     use crate::model::mark::MARK_SIGN_ID;
+    use crate::model::qfix::QFIX_SIGN_ID;
 
     #[test]
     fn generate_sign_uses_theme_qfix_style() {
@@ -197,10 +197,16 @@ mod tests {
     fn generate_sign_custom_theme_colors() {
         use ratatui::style::Color;
         let mut theme = Theme::default();
-        theme.set_color(crate::theme::tokens::SIGN_QFIX.to_string(), Color::Rgb(255, 0, 0));
+        theme.set_color(
+            crate::theme::tokens::SIGN_QFIX.to_string(),
+            Color::Rgb(255, 0, 0),
+        );
 
         let sign = generate_sign(QFIX_SIGN_ID, &theme).expect("qfix sign should be Some");
-        assert!(sign.style.contains("\x1b[38;2;255;0;0m"), "sign style should contain custom red color");
+        assert!(
+            sign.style.contains("\x1b[38;2;255;0;0m"),
+            "sign style should contain custom red color"
+        );
     }
 }
 

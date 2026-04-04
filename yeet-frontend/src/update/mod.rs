@@ -334,13 +334,15 @@ pub fn update_with_buffer_message(
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
-        BufferMessage::ChangeMode(from, to) => match mode::change(app, state, from, to, &settings.theme) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("ChangeMode failed: {}", err);
-                Vec::new()
+        BufferMessage::ChangeMode(from, to) => {
+            match mode::change(app, state, from, to, &settings.theme) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("ChangeMode failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
             Mode::Insert | Mode::Normal => match modify::buffer(app, state, repeat, modification) {

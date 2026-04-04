@@ -282,11 +282,7 @@ mod test {
 
     use super::*;
 
-    fn make_directory_window(
-        parent_id: usize,
-        current_id: usize,
-        preview_id: usize,
-    ) -> Window {
+    fn make_directory_window(parent_id: usize, current_id: usize, preview_id: usize) -> Window {
         Window::Directory(
             ViewPort {
                 buffer_id: parent_id,
@@ -360,8 +356,8 @@ mod test {
         // Verify the theme produces the right border colors
         let dir_bt = theme
             .to_buffer_theme_with_border(tokens::DIRECTORY_BORDER_FG, tokens::DIRECTORY_BORDER_BG);
-        let split_bt = theme
-            .to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
+        let split_bt =
+            theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
 
         // Directory panes should use DIRECTORY_BORDER colors
         assert_eq!(dir_bt.border_fg, theme.color(tokens::DIRECTORY_BORDER_FG));

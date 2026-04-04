@@ -93,10 +93,7 @@ impl Default for Theme {
         colors.insert(tokens::CUR_LINE_NR.to_string(), Color::White);
         colors.insert(tokens::BUFFER_FILE_FG.to_string(), Color::White);
         colors.insert(tokens::BUFFER_DIRECTORY_FG.to_string(), Color::LightBlue);
-        colors.insert(
-            tokens::STATUSLINE_PERMISSIONS_FG.to_string(),
-            Color::Gray,
-        );
+        colors.insert(tokens::STATUSLINE_PERMISSIONS_FG.to_string(), Color::Gray);
         colors.insert(tokens::STATUSLINE_BORDER_BG.to_string(), Color::Black);
         colors.insert(tokens::DIRECTORY_BORDER_FG.to_string(), Color::Black);
         colors.insert(tokens::DIRECTORY_BORDER_BG.to_string(), Color::Reset);
@@ -317,7 +314,8 @@ mod tests {
     #[test]
     fn buffer_theme_conversion() {
         let theme = Theme::default();
-        let bt = theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
+        let bt =
+            theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
         assert_eq!(bt.buffer_bg, Color::Reset);
         assert_eq!(bt.cursor_line_bg, Color::Rgb(128, 128, 128));
         assert_eq!(bt.search_bg, Color::Red);
@@ -376,8 +374,14 @@ mod tests {
 
         // Custom override should produce correct ANSI
         let mut custom = Theme::default();
-        custom.set_color(tokens::BUFFER_DIRECTORY_FG.to_string(), Color::Rgb(0, 255, 0));
-        assert_eq!(custom.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[38;2;0;255;0m");
+        custom.set_color(
+            tokens::BUFFER_DIRECTORY_FG.to_string(),
+            Color::Rgb(0, 255, 0),
+        );
+        assert_eq!(
+            custom.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
+            "\x1b[38;2;0;255;0m"
+        );
     }
 
     #[test]
@@ -389,10 +393,8 @@ mod tests {
         assert_eq!(perm_style, Style::default().fg(Color::Gray));
 
         // Statusline border combined fg+bg style
-        let border_style = theme.style_fg_bg(
-            tokens::STATUSLINE_BORDER_FG,
-            tokens::STATUSLINE_BORDER_BG,
-        );
+        let border_style =
+            theme.style_fg_bg(tokens::STATUSLINE_BORDER_FG, tokens::STATUSLINE_BORDER_BG);
         assert_eq!(
             border_style,
             Style::default().fg(Color::Black).bg(Color::Black)
@@ -402,10 +404,8 @@ mod tests {
     #[test]
     fn buffer_theme_with_directory_border_tokens() {
         let theme = Theme::default();
-        let bt = theme.to_buffer_theme_with_border(
-            tokens::DIRECTORY_BORDER_FG,
-            tokens::DIRECTORY_BORDER_BG,
-        );
+        let bt = theme
+            .to_buffer_theme_with_border(tokens::DIRECTORY_BORDER_FG, tokens::DIRECTORY_BORDER_BG);
         assert_eq!(bt.border_fg, Color::Black);
         assert_eq!(bt.border_bg, Color::Reset);
     }
@@ -413,7 +413,8 @@ mod tests {
     #[test]
     fn buffer_theme_with_split_border_tokens() {
         let theme = Theme::default();
-        let bt = theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
+        let bt =
+            theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
         assert_eq!(bt.border_fg, Color::Black);
         assert_eq!(bt.border_bg, Color::Reset);
     }
