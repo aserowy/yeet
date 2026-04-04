@@ -37,7 +37,9 @@ pub fn add_line_styles(
             return ansi;
         }
         let buffer_bg = style::color_to_ansi_bg(theme.buffer_bg);
+        let reset_with_bg = format!("\x1b[0m{}", buffer_bg);
         let mut result = ansi;
+        result.replace_resets_with(&reset_with_bg);
         result.prepend(&buffer_bg);
         result
     } else {
@@ -84,6 +86,9 @@ fn add_cursor_styles(
 
     let repeat_count = content_width.saturating_sub(line_length);
     if vp.hide_cursor_line {
+        let buffer_bg = style::color_to_ansi_bg(theme.buffer_bg);
+        let reset_with_bg = format!("\x1b[0m{}", buffer_bg);
+        content.replace_resets_with(&reset_with_bg);
         content.append(" ".repeat(repeat_count).as_str());
     } else {
         let cursor_line_bg = style::color_to_ansi_bg(theme.cursor_line_bg);
