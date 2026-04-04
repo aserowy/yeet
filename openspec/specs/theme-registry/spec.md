@@ -12,15 +12,21 @@ The system SHALL maintain a `Theme` struct that maps named color tokens to resol
 ### Requirement: Color token names cover all UI elements
 The system SHALL define color tokens for at minimum the following UI elements:
 - Tabbar: active tab foreground/background, inactive tab foreground/background, tabbar background
-- Statusline: foreground, background (focused and unfocused variants), diff added/modified/removed colors
-- Commandline: foreground, background
-- Buffer: cursor line background, search highlight background, line number foreground, current line number foreground, sign column foreground
-- Cursor: normal mode style, insert mode style
+- Statusline: foreground, background (focused and unfocused variants), diff added/modified/removed colors, permissions foreground, border foreground, border background
+- Buffer: cursor line background, search highlight background, line number foreground, current line number foreground, sign column foreground, file entry foreground, directory entry foreground
+- Directory window: border foreground, border background
+- Split: border foreground, border background
 - Signs: quickfix sign color, mark sign color
+
+The system SHALL NOT define token constants for UI elements that have no rendering code consuming them. Specifically, `CommandLineFg`, `CommandLineBg`, `CursorNormal`, `CursorInsert`, and `syntax` (as a token constant) SHALL NOT exist as constants or default registrations until rendering code uses them.
 
 #### Scenario: All hardcoded colors have corresponding tokens
 - **WHEN** the default theme is loaded with no user overrides
 - **THEN** the rendered UI is visually identical to the current hardcoded appearance
+
+#### Scenario: No dead token constants
+- **WHEN** inspecting the `tokens` module
+- **THEN** every constant is referenced by at least one rendering or theme conversion function outside of the `Default` impl
 
 ### Requirement: Theme provides ratatui Style accessors
 The system SHALL provide a method to retrieve a `ratatui::Style` value for any token, suitable for use in ratatui widget rendering.

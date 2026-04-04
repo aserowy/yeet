@@ -15,7 +15,9 @@ pub mod tokens {
     pub const STATUSLINE_UNFOCUSED_FG: &str = "StatusLineUnfocusedFg";
     pub const STATUSLINE_BG: &str = "StatusLineBg";
     pub const STATUSLINE_POSITION_FG: &str = "StatusLinePositionFg";
+    pub const STATUSLINE_BORDER_BG: &str = "StatusLineBorderBg";
     pub const STATUSLINE_BORDER_FG: &str = "StatusLineBorderFg";
+    pub const STATUSLINE_PERMISSIONS_FG: &str = "StatusLinePermissionsFg";
 
     // Diff indicators
     pub const DIFF_ADDED: &str = "DiffAdded";
@@ -33,10 +35,6 @@ pub mod tokens {
     pub const CUR_LINE_NR: &str = "CurLineNr";
     pub const BUFFER_FILE_FG: &str = "BufferFileFg";
     pub const BUFFER_DIRECTORY_FG: &str = "BufferDirectoryFg";
-
-    // Statusline (additional)
-    pub const STATUSLINE_PERMISSIONS_FG: &str = "StatusLinePermissionsFg";
-    pub const STATUSLINE_BORDER_BG: &str = "StatusLineBorderBg";
 
     // Directory window borders
     pub const DIRECTORY_BORDER_FG: &str = "DirectoryBorderFg";

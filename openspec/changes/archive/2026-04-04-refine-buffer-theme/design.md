@@ -9,6 +9,7 @@
 - Compile-time constants (reset codes, cursor mode codes) are removed from `BufferTheme` and defined as constants in the buffer view module
 - The unused `border_fg` ANSI string field is removed
 - `from_enumeration` accepts `&Theme` to allow future extensions without signature changes
+- Unused token constants are removed from the registry: `COMMANDLINE_FG`, `COMMANDLINE_BG` (registered with defaults but never read in any view code), `CURSOR_NORMAL`, `CURSOR_INSERT` (defined but never registered or used), and `SYNTAX_THEME` (defined but never referenced)
 
 **Non-Goals:**
 - Changing the buffer crate's ANSI-based line rendering pipeline to use ratatui `Style` objects
@@ -52,6 +53,22 @@ These duplicates the existing functions in `yeet-frontend/src/theme.rs`. A share
 Instead of two ANSI strings (`file_fg_ansi`, `directory_fg_ansi`), `from_enumeration` takes `&Theme`. This lets future changes add per-entry styling (e.g., symlink colors, executable colors) without changing the function signature. The function extracts the tokens it needs internally.
 
 This adds a compile-time dependency from the function to `Theme`, but `enumeration.rs` already imports theme types.
+
+### Remove unused token constants
+
+Five token constants in the `tokens` module are dead code:
+
+| Constant | Issue |
+|----------|-------|
+| `COMMANDLINE_FG` | Registered with default `Color::White` but never used in any view |
+| `COMMANDLINE_BG` | Registered with default `Color::Black` but never used in any view |
+| `CURSOR_NORMAL` | Defined but never registered in `Default` impl and never used |
+| `CURSOR_INSERT` | Defined but never registered in `Default` impl and never used |
+| `SYNTAX_THEME` | Defined but never referenced anywhere |
+
+These are removed along with their default color registrations (for `COMMANDLINE_FG`/`COMMANDLINE_BG`). The commandline view currently uses no theme tokens — when it needs them in the future, the constants and defaults should be re-added at that time.
+
+Note: `COMMANDLINE_FG`/`COMMANDLINE_BG` tokens may be set by users in `init.lua`. Removing them means those user settings become silently ignored. This is acceptable since the tokens have no effect today.
 
 ## Risks / Trade-offs
 

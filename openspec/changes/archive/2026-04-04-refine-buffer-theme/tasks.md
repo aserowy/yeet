@@ -22,7 +22,13 @@
 - [x] 4.3 Update `from_enumeration` call in `yeet-frontend/src/update/path.rs` to pass `&Theme`
 - [x] 4.4 Remove unused ANSI string parameters from `set_directory_content` and callers if no longer needed
 
-## 5. Verify
+## 5. Remove Unused Token Constants
 
-- [x] 5.1 Run `cargo check` and fix any remaining compilation errors
-- [x] 5.2 Run `cargo test` and fix any test failures
+- [x] 5.1 Remove `COMMANDLINE_FG`, `COMMANDLINE_BG`, `CURSOR_NORMAL`, `CURSOR_INSERT`, `SYNTAX_THEME` constants from `tokens` module in `yeet-frontend/src/theme.rs`
+- [x] 5.2 Remove default color registrations for `COMMANDLINE_FG` and `COMMANDLINE_BG` from the `Theme::default()` impl (already absent)
+- [x] 5.3 Update theme tests if any reference removed tokens (none did)
+
+## 6. Verify
+
+- [x] 6.1 Run `cargo check` and fix any remaining compilation errors
+- [x] 6.2 Run `cargo test` and fix any test failures

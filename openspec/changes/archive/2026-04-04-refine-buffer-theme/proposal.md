@@ -1,6 +1,6 @@
 ## Why
 
-`BufferTheme` mixes `String` (ANSI escape codes) and `ratatui::style::Color` fields, includes an unused `border_fg` field, and embeds compile-time constants (cursor mode codes, reset sequences) that aren't theme-configurable. The `from_enumeration` function accepts two individual ANSI strings instead of the theme, limiting extensibility for future per-entry styling.
+`BufferTheme` mixes `String` (ANSI escape codes) and `ratatui::style::Color` fields, includes an unused `border_fg` field, and embeds compile-time constants (cursor mode codes, reset sequences) that aren't theme-configurable. The `from_enumeration` function accepts two individual ANSI strings instead of the theme, limiting extensibility for future per-entry styling. Additionally, the theme token registry contains dead constants: `COMMANDLINE_FG`, `COMMANDLINE_BG` (registered but never used in rendering), `CURSOR_NORMAL`, `CURSOR_INSERT` (defined but never registered), and `SYNTAX_THEME` (defined but never referenced).
 
 ## What Changes
 
@@ -10,6 +10,7 @@
 - Rename `border_fg_color`/`border_bg_color` to `border_fg`/`border_bg` (now the only border fields)
 - Change `from_enumeration` to accept `&Theme` instead of two individual ANSI strings
 - Add a Color-to-ANSI-fg and Color-to-ANSI-bg helper in `yeet-buffer` view internals for line rendering
+- Remove unused token constants: `COMMANDLINE_FG`, `COMMANDLINE_BG`, `CURSOR_NORMAL`, `CURSOR_INSERT`, `SYNTAX_THEME` and their default color registrations
 
 ## Capabilities
 
@@ -18,6 +19,7 @@
 ### Modified Capabilities
 
 - `buffer-theme-injection`: `BufferTheme` field types change from mixed String/Color to all `Color`, and constants are removed from the struct
+- `theme-registry`: Unused token constants and their default registrations are removed
 - `internal-refactor`: `from_enumeration` signature changes to accept `&Theme`
 
 ## Impact
