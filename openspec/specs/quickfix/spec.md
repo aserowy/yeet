@@ -135,3 +135,43 @@ The copen window SHALL display a statusline with "QuickFix" as the label (bold w
 #### Scenario: Unfocused statusline
 - **WHEN** the copen window is not focused
 - **THEN** the statusline SHALL show "QuickFix" without bold styling
+
+### Requirement: Combined match patterns for Tasks and QuickFix window variants
+Where `Window::Tasks` and `Window::QuickFix` match arms have identical bodies, they SHALL be combined using `|` patterns.
+
+#### Scenario: Duplicate arms are combined
+- **WHEN** a match statement has separate `Window::Tasks` and `Window::QuickFix` arms with the same body
+- **THEN** they SHALL be combined into a single `Window::QuickFix(vp) | Window::Tasks(vp) =>` arm
+
+### Requirement: Locality of behavior for quickfix refresh
+Quickfix commands that mutate state SHALL emit the refresh message themselves. The refresh function SHALL handle cross-tab iteration internally. Callers SHALL not need to emit refresh messages after calling qfix mutation functions.
+
+#### Scenario: Command emits refresh
+- **WHEN** a qfix command (select_first, next, previous, reset, clear_in, toggle, add) mutates quickfix state
+- **THEN** the command SHALL include the refresh emit in its returned actions
+
+#### Scenario: Refresh iterates all tabs
+- **WHEN** the refresh function is called
+- **THEN** it SHALL iterate all tabs and refresh any quickfix buffer found
+
+### Requirement: Open handler uses message-based refresh
+The quickfix Enter handler in `open.rs` SHALL emit `Message::QuickFixChanged` instead of calling `refresh_quickfix_buffer_in_window` directly, ensuring cross-tab refresh.
+
+#### Scenario: Enter refreshes all tabs
+- **WHEN** the user presses Enter on a copen entry
+- **THEN** all copen buffers across all tabs SHALL be refreshed
+
+### Requirement: README documents all implemented commands and keybindings
+The README.md SHALL list every implemented command and keybinding in its shortcuts and commands tables.
+
+#### Scenario: copen command is documented
+- **WHEN** a user reads the README commands table
+- **THEN** the `:copen` command SHALL be listed with its description
+
+#### Scenario: gg and G keybindings are documented
+- **WHEN** a user reads the navigation and normal mode keybindings table
+- **THEN** `gg` and `G` SHALL be listed for jumping to top/bottom
+
+#### Scenario: Enter keybinding is documented
+- **WHEN** a user reads the navigation mode keybindings table
+- **THEN** `Enter` SHALL be listed for opening the selected entry
