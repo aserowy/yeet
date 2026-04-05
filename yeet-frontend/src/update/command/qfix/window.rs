@@ -65,7 +65,7 @@ fn focus_quickfix(window: &mut Window) -> bool {
             }
         }
         Window::QuickFix(_) => true,
-        Window::Tasks(_) | Window::Directory(_, _, _) => false,
+        Window::Tasks(_) | Window::Help(_) | Window::Directory(_, _, _) => false,
     }
 }
 
@@ -96,7 +96,9 @@ pub fn focus_nearest_directory(window: &mut Window) -> bool {
                 focus_nearest_directory(first) || focus_nearest_directory(second)
             }
         }
-        Window::QuickFix(_) | Window::Tasks(_) | Window::Directory(_, _, _) => false,
+        Window::QuickFix(_) | Window::Tasks(_) | Window::Help(_) | Window::Directory(_, _, _) => {
+            false
+        }
     }
 }
 
@@ -154,7 +156,7 @@ pub fn find_quickfix_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> 
             find_quickfix_viewport_mut(first).or_else(|| find_quickfix_viewport_mut(second))
         }
         Window::QuickFix(vp) => Some(vp),
-        Window::Tasks(_) | Window::Directory(_, _, _) => None,
+        Window::Tasks(_) | Window::Help(_) | Window::Directory(_, _, _) => None,
     }
 }
 
@@ -216,7 +218,9 @@ pub fn find_nearest_directory_in_sibling(window: &Window) -> Option<(usize, usiz
 
             find_nearest_directory_in_sibling(focused_child)
         }
-        Window::QuickFix(_) | Window::Tasks(_) | Window::Directory(_, _, _) => None,
+        Window::QuickFix(_) | Window::Tasks(_) | Window::Help(_) | Window::Directory(_, _, _) => {
+            None
+        }
     }
 }
 
@@ -238,7 +242,7 @@ fn find_first_directory_by_focus(window: &Window) -> Option<(usize, usize, usize
             SplitFocus::First => find_first_directory_by_focus(first),
             SplitFocus::Second => find_first_directory_by_focus(second),
         },
-        Window::QuickFix(_) | Window::Tasks(_) => None,
+        Window::QuickFix(_) | Window::Tasks(_) | Window::Help(_) => None,
     }
 }
 

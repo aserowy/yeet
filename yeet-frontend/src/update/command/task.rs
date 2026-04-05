@@ -72,7 +72,7 @@ fn focus_tasks(window: &mut Window) -> bool {
             }
         }
         Window::Tasks(_) => true,
-        Window::QuickFix(_) => false,
+        Window::QuickFix(_) | Window::Help(_) => false,
         Window::Directory(_, _, _) => false,
     }
 }
@@ -121,7 +121,7 @@ fn find_tasks_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> {
             find_tasks_viewport_mut(first).or_else(|| find_tasks_viewport_mut(second))
         }
         Window::Tasks(vp) => Some(vp),
-        Window::QuickFix(_) => None,
+        Window::QuickFix(_) | Window::Help(_) => None,
         Window::Directory(_, _, _) => None,
     }
 }

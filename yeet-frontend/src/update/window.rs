@@ -73,7 +73,7 @@ fn set_buffer_vp(window: &mut Window, area: Rect) -> Result<(), AppError> {
             preview_vp.y = preview_rect.y;
         }
         // NOTE: the -1 for height is to account for the statusline at the bottom of each pane
-        Window::Tasks(vp) | Window::QuickFix(vp) => {
+        Window::Tasks(vp) | Window::QuickFix(vp) | Window::Help(vp) => {
             vp.height = area.height.saturating_sub(1);
             vp.width = area.width;
             vp.x = area.x;

@@ -123,6 +123,7 @@ pub enum Window {
         focus: SplitFocus,
     },
     Directory(ViewPort, ViewPort, ViewPort),
+    Help(ViewPort),
     QuickFix(ViewPort),
     Tasks(ViewPort),
 }
@@ -168,7 +169,10 @@ impl Window {
                 SplitFocus::First => first.focused_viewport(),
                 SplitFocus::Second => second.focused_viewport(),
             },
-            Window::Directory(_, vp, _) | Window::QuickFix(vp) | Window::Tasks(vp) => vp,
+            Window::Directory(_, vp, _)
+            | Window::Help(vp)
+            | Window::QuickFix(vp)
+            | Window::Tasks(vp) => vp,
         }
     }
 
@@ -187,13 +191,18 @@ impl Window {
                 SplitFocus::First => first.focused_window_mut(),
                 SplitFocus::Second => second.focused_window_mut(),
             },
-            Window::Directory(..) | Window::QuickFix(_) | Window::Tasks(_) => self,
+            Window::Directory(..) | Window::Help(_) | Window::QuickFix(_) | Window::Tasks(_) => {
+                self
+            }
         }
     }
 
     pub fn focused_viewport_mut(&mut self) -> &mut ViewPort {
         match self.focused_window_mut() {
-            Window::Directory(_, vp, _) | Window::QuickFix(vp) | Window::Tasks(vp) => vp,
+            Window::Directory(_, vp, _)
+            | Window::Help(vp)
+            | Window::QuickFix(vp)
+            | Window::Tasks(vp) => vp,
             Window::Horizontal { .. } | Window::Vertical { .. } => {
                 unreachable!("focused_window_mut should have returned a non-split window")
             }
@@ -210,7 +219,9 @@ impl Window {
             Window::Directory(parent, current, preview) => {
                 HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
             }
-            Window::QuickFix(vp) | Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
+            Window::Help(vp) | Window::QuickFix(vp) | Window::Tasks(vp) => {
+                HashSet::from([vp.buffer_id])
+            }
         }
     }
 
@@ -219,7 +230,7 @@ impl Window {
             Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
                 first.contains_tasks() || second.contains_tasks()
             }
-            Window::Directory(_, _, _) | Window::QuickFix(_) => false,
+            Window::Directory(_, _, _) | Window::Help(_) | Window::QuickFix(_) => false,
             Window::Tasks(_) => true,
         }
     }
@@ -283,7 +294,7 @@ impl Window {
             Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
                 first.contains_quickfix() || second.contains_quickfix()
             }
-            Window::Directory(_, _, _) | Window::Tasks(_) => false,
+            Window::Directory(_, _, _) | Window::Help(_) | Window::Tasks(_) => false,
             Window::QuickFix(_) => true,
         }
     }
@@ -365,6 +376,7 @@ pub enum Buffer {
     Directory(DirectoryBuffer),
     Image(PreviewImageBuffer),
     Content(ContentBuffer),
+    Help(HelpBuffer),
     PathReference(PathBuf),
     QuickFix(QuickFixBuffer),
     Tasks(TasksBuffer),
@@ -384,9 +396,14 @@ impl Buffer {
                     Some(path.as_path())
                 }
             }
-            Buffer::QuickFix(_) | Buffer::Tasks(_) | Buffer::Empty => None,
+            Buffer::Help(_) | Buffer::QuickFix(_) | Buffer::Tasks(_) | Buffer::Empty => None,
         }
     }
+}
+
+#[derive(Default)]
+pub struct HelpBuffer {
+    pub buffer: TextBuffer,
 }
 
 #[derive(Default)]

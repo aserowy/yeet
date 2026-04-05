@@ -207,6 +207,7 @@ fn tab_title_from_window_full_path(
         }
         Window::Tasks(_) => "Tasks".to_string(),
         Window::QuickFix(_) => "QuickFix".to_string(),
+        Window::Help(_) => "Help".to_string(),
     }
 }
 

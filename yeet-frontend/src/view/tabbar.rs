@@ -135,6 +135,7 @@ fn tab_title_from_window(window: &Window, buffers: &HashMap<usize, Buffer>) -> S
         }
         Window::QuickFix(_) => "QuickFix".to_string(),
         Window::Tasks(_) => "Tasks".to_string(),
+        Window::Help(_) => "Help".to_string(),
     }
 }
 
