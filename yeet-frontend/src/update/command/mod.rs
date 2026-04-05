@@ -6,7 +6,7 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     event::Message,
-    model::{App, Buffer, Contents, SplitFocus, State, Window},
+    model::{App, Buffer, Contents, State, Window},
     task::Task,
     theme::Theme,
     update::{app, tab},
@@ -482,22 +482,8 @@ fn close_focused_window_or_quit(
         Err(_) => return Vec::new(),
     };
     let old_window = mem::take(window);
-    match old_window {
-        Window::Horizontal {
-            first,
-            second,
-            focus,
-        }
-        | Window::Vertical {
-            first,
-            second,
-            focus,
-        } => {
-            let (kept, dropped) = match focus {
-                SplitFocus::First => (*second, *first),
-                SplitFocus::Second => (*first, *second),
-            };
-
+    match old_window.close_focused() {
+        Ok((kept, dropped)) => {
             if discard_changes {
                 reset_unsaved_changes_for_buffer_ids(dropped.buffer_ids(), contents);
             }
@@ -505,8 +491,8 @@ fn close_focused_window_or_quit(
             *window = kept;
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
-        other => {
-            *window = other;
+        Err(leaf) => {
+            *window = leaf;
             vec![action::emit_keymap(KeymapMessage::Quit(quit_mode))]
         }
     }
