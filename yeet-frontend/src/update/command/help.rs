@@ -46,7 +46,7 @@ struct TopicMatch {
 
 fn resolve_topic(topic: &str) -> Option<TopicMatch> {
     for page in HELP_PAGES {
-        if page.name == topic {
+        if page.name.eq_ignore_ascii_case(topic) {
             return Some(TopicMatch {
                 content: page.content,
                 line_offset: 0,
@@ -58,14 +58,14 @@ fn resolve_topic(topic: &str) -> Option<TopicMatch> {
         for (line_idx, line) in page.content.lines().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.starts_with("# ") && trimmed[2..].trim() == topic {
+            if trimmed.starts_with("# ") && trimmed[2..].trim().eq_ignore_ascii_case(topic) {
                 return Some(TopicMatch {
                     content: page.content,
                     line_offset: line_idx,
                 });
             }
 
-            if trimmed.starts_with("## ") && trimmed[3..].trim() == topic {
+            if trimmed.starts_with("## ") && trimmed[3..].trim().eq_ignore_ascii_case(topic) {
                 return Some(TopicMatch {
                     content: page.content,
                     line_offset: line_idx,
@@ -74,7 +74,7 @@ fn resolve_topic(topic: &str) -> Option<TopicMatch> {
 
             if trimmed.starts_with("### `") && trimmed.ends_with('`') {
                 let identifier = &trimmed[5..trimmed.len() - 1];
-                if identifier == topic {
+                if identifier.eq_ignore_ascii_case(topic) {
                     return Some(TopicMatch {
                         content: page.content,
                         line_offset: line_idx,
@@ -313,6 +313,29 @@ mod test {
         let vp = window.focused_viewport();
         assert!(vp.cursor.vertical_index > 0);
         assert_eq!(vp.vertical_index, vp.cursor.vertical_index);
+    }
+
+    #[test]
+    fn resolve_topic_page_name_case_insensitive() {
+        let result = resolve_topic("Commands");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().line_offset, 0);
+    }
+
+    #[test]
+    fn resolve_topic_section_heading_case_insensitive() {
+        let result = resolve_topic("file operations");
+        assert!(result.is_some());
+        assert!(result.unwrap().line_offset > 0);
+    }
+
+    #[test]
+    fn resolve_topic_entry_identifier_case_insensitive() {
+        let result = resolve_topic("Split");
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert!(m.line_offset > 0);
+        assert!(m.content.contains("# Commands"));
     }
 
     #[test]
