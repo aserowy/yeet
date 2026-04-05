@@ -6,7 +6,12 @@ use std::{
 
 use ratatui::layout::Rect;
 use ratatui_image::picker::Picker;
-use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::ThemeSet,
+    parsing::SyntaxSet,
+    util::{as_24_bit_terminal_escaped, LinesWithEndings},
+};
 use tokio::{
     fs,
     sync::{
@@ -46,6 +51,7 @@ pub enum Task {
     ExecuteFd(PathBuf, String),
     ExecuteRg(PathBuf, String),
     ExecuteZoxide(String),
+    HighlightHelp(usize, String),
     LoadPreview(PathBuf, Rect),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
@@ -66,6 +72,7 @@ impl Task {
             Task::ExecuteFd(base, params) => write!(f, "ExecuteFd({:?}, {:?})", base, params),
             Task::ExecuteRg(base, params) => write!(f, "ExecuteRg({:?}, {:?})", base, params),
             Task::ExecuteZoxide(params) => write!(f, "ExecuteZoxide({:?})", params),
+            Task::HighlightHelp(id, _) => write!(f, "HighlightHelp({})", id),
             Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
             Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
             Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
@@ -100,6 +107,7 @@ impl PartialEq for Task {
             (Task::EnumerateDirectory(p1, s1), Task::EnumerateDirectory(p2, s2)) => {
                 p1 == p2 && s1 == s2
             }
+            (Task::HighlightHelp(i1, c1), Task::HighlightHelp(i2, c2)) => i1 == i2 && c1 == c2,
             (Task::LoadPreview(p1, r1), Task::LoadPreview(p2, r2)) => p1 == p2 && r1 == r2,
             (Task::RenamePath(o1, n1), Task::RenamePath(o2, n2)) => o1 == o2 && n1 == n2,
             (Task::RestorePath(e1, p1), Task::RestorePath(e2, p2)) => e1 == e2 && p1 == p2,
@@ -416,6 +424,39 @@ async fn run_task(
                 emit_error(sender, err).await;
             }
         },
+        Task::HighlightHelp(buffer_id, content) => {
+            let highlighter = highlighter.lock().await;
+            let (syntaxes, theme_set) = (&highlighter.0, &highlighter.1);
+            let theme = theme_set.themes.get(syntax_theme_name).unwrap_or_else(|| {
+                tracing::error!(
+                    "syntax theme '{}' not found, falling back to 'base16-eighties.dark'",
+                    syntax_theme_name
+                );
+                &theme_set.themes["base16-eighties.dark"]
+            });
+
+            let syntax = syntaxes
+                .find_syntax_by_extension("md")
+                .unwrap_or_else(|| syntaxes.find_syntax_plain_text());
+
+            let mut hl = HighlightLines::new(syntax, theme);
+            let mut result = Vec::new();
+            for line in LinesWithEndings::from(&content) {
+                let highlighted = match hl.highlight_line(line, syntaxes) {
+                    Ok(ranges) => as_24_bit_terminal_escaped(&ranges[..], false),
+                    Err(err) => {
+                        tracing::error!("unable to highlight help line: {:?}", err);
+                        line.to_string()
+                    }
+                };
+                result.push(highlighted);
+            }
+
+            let msg = Message::HelpHighlighted(buffer_id, result);
+            if let Err(error) = sender.send(to_envelope(vec![msg])).await {
+                tracing::error!("sending message failed: {:?}", error);
+            }
+        }
         Task::LoadPreview(path, rect) => {
             let mime = if let Some(mime) = infer::get_from_path(&path)? {
                 let kind = mime.mime_type().split('/').collect::<Vec<_>>();

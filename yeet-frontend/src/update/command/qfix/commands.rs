@@ -32,6 +32,7 @@ pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Result<Vec<Ac
         Buffer::PathReference(_) => return Ok(Vec::new()),
         Buffer::Tasks(_) => return Ok(Vec::new()),
         Buffer::QuickFix(_) => return Ok(Vec::new()),
+        Buffer::Help(_) => return Ok(Vec::new()),
         Buffer::Empty => return Ok(Vec::new()),
     };
 
@@ -183,6 +184,7 @@ pub fn invert_in_current(
         Buffer::PathReference(_) => return Ok(Vec::new()),
         Buffer::Tasks(_) => return Ok(Vec::new()),
         Buffer::QuickFix(_) => return Ok(Vec::new()),
+        Buffer::Help(_) => return Ok(Vec::new()),
         Buffer::Empty => return Ok(Vec::new()),
     };
 

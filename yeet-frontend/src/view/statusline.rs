@@ -58,6 +58,13 @@ pub fn view(
                 quickfix_status_unfocused(frame, rect, theme)
             }
         }
+        Buffer::Help(it) => {
+            if is_focused {
+                help_status(it, viewport, frame, rect, theme)
+            } else {
+                help_status_unfocused(frame, rect, theme)
+            }
+        }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }
 }
@@ -176,6 +183,68 @@ fn quickfix_status(
 fn quickfix_status_unfocused(frame: &mut Frame, rect: Rect, theme: &Theme) {
     let label = Line::from(Span::styled(
         "QuickFix",
+        theme.style_fg(tokens::STATUSLINE_UNFOCUSED_FG),
+    ));
+
+    frame.render_widget(
+        Block::default().style(theme.style_bg(tokens::STATUSLINE_BG)),
+        rect,
+    );
+    frame.render_widget(Paragraph::new(label), rect);
+}
+
+fn help_status(
+    buffer: &crate::model::HelpBuffer,
+    viewport: &ViewPort,
+    frame: &mut Frame,
+    rect: Rect,
+    theme: &Theme,
+) {
+    let count = buffer.buffer.lines.len();
+    let position = if count == 0 {
+        0
+    } else {
+        viewport.cursor.vertical_index + 1
+    };
+
+    let label = Line::from(Span::styled(
+        "Help",
+        theme
+            .style_fg(tokens::STATUSLINE_FOCUSED_FG)
+            .add_modifier(Modifier::BOLD),
+    ));
+    let position_line = Line::from(vec![
+        Span::styled(
+            format!("{}/", position),
+            theme.style_fg(tokens::STATUSLINE_POSITION_FG),
+        ),
+        Span::styled(
+            format!("{}", count),
+            theme.style_fg(tokens::STATUSLINE_POSITION_FG),
+        ),
+    ]);
+
+    let layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(label.width() as u16),
+            Constraint::Min(3),
+            Constraint::Length(position_line.width() as u16),
+        ])
+        .split(rect);
+
+    frame.render_widget(
+        Block::default().style(theme.style_bg(tokens::STATUSLINE_BG)),
+        rect,
+    );
+
+    frame.render_widget(Paragraph::new(label), layout[0]);
+    frame.render_widget(Paragraph::new(position_line), layout[2]);
+}
+
+fn help_status_unfocused(frame: &mut Frame, rect: Rect, theme: &Theme) {
+    let label = Line::from(Span::styled(
+        "Help",
         theme.style_fg(tokens::STATUSLINE_UNFOCUSED_FG),
     ));
 

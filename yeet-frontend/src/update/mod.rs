@@ -199,6 +199,10 @@ fn update_with_message(
                 actions
             }
         }
+        Message::HelpHighlighted(buffer_id, lines) => {
+            command::help::apply_highlighted(app, buffer_id, lines);
+            Vec::new()
+        }
         Message::PreviewLoaded(content) => preview::update(app, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],

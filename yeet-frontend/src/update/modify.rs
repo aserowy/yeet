@@ -52,6 +52,7 @@ pub fn buffer(
             let cursor_index = vp.cursor.vertical_index;
             window::remove_entry(app, &mut state.qfix, cursor_index)
         }
+        Buffer::Help(_) => Vec::new(),
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
             Vec::new()
         }

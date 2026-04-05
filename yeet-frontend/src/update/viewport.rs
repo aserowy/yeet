@@ -51,6 +51,15 @@ pub fn relocate(
             );
             Ok(Vec::new())
         }
+        Buffer::Help(help_buf) => {
+            yeet_buffer::update(
+                Some(vp),
+                mode,
+                &mut help_buf.buffer,
+                std::slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
             Ok(Vec::new())
         }

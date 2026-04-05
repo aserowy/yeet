@@ -29,6 +29,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix, theme: &Theme) -> Vec<Action> 
         Buffer::PathReference(_) => return Vec::new(),
         Buffer::Tasks(_) => return Vec::new(),
         Buffer::QuickFix(_) => return Vec::new(),
+        Buffer::Help(_) => return Vec::new(),
         Buffer::Empty => return Vec::new(),
     };
 
