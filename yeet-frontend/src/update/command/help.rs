@@ -165,6 +165,7 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
             Err(_) => return Vec::new(),
         };
         vp.cursor.vertical_index = topic_match.line_offset;
+        vp.vertical_index = topic_match.line_offset;
     }
 
     Vec::new()
@@ -261,6 +262,17 @@ mod test {
     }
 
     #[test]
+    fn open_bare_help_starts_at_line_zero() {
+        let mut app = App::default();
+        open(&mut app, None);
+
+        let window = app.current_window().expect("should have current tab");
+        let vp = window.focused_viewport();
+        assert_eq!(vp.cursor.vertical_index, 0);
+        assert_eq!(vp.vertical_index, 0);
+    }
+
+    #[test]
     fn open_help_with_known_topic_creates_split() {
         let mut app = App::default();
         let actions = open(&mut app, Some("commands"));
@@ -290,6 +302,17 @@ mod test {
         let window = app.current_window().expect("should have current tab");
         let vp = window.focused_viewport();
         assert!(vp.cursor.vertical_index > 0);
+    }
+
+    #[test]
+    fn open_help_with_topic_positions_viewport_at_cursor() {
+        let mut app = App::default();
+        open(&mut app, Some("File Operations"));
+
+        let window = app.current_window().expect("should have current tab");
+        let vp = window.focused_viewport();
+        assert!(vp.cursor.vertical_index > 0);
+        assert_eq!(vp.vertical_index, vp.cursor.vertical_index);
     }
 
     #[test]
