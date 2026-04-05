@@ -1,4 +1,4 @@
-use std::mem;
+use std::{collections::HashMap, mem};
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
@@ -117,7 +117,21 @@ pub fn build_qfix_lines(qfix: &QuickFix) -> Vec<BufferLine> {
         .collect()
 }
 
-pub fn refresh_quickfix_buffer(window: &mut Window, contents: &mut Contents, qfix: &QuickFix) {
+pub fn refresh_quickfix_buffer(
+    tabs: &mut HashMap<usize, Window>,
+    contents: &mut Contents,
+    qfix: &QuickFix,
+) {
+    for window in tabs.values_mut() {
+        refresh_quickfix_buffer_in_window(window, contents, qfix);
+    }
+}
+
+fn refresh_quickfix_buffer_in_window(
+    window: &mut Window,
+    contents: &mut Contents,
+    qfix: &QuickFix,
+) {
     let vp = match find_quickfix_viewport_mut(window) {
         Some(vp) => vp,
         None => return,
@@ -174,11 +188,7 @@ pub fn remove_entry(app: &mut App, qfix: &mut QuickFix, cursor_index: usize) -> 
         QFIX_SIGN_ID,
     );
 
-    let (window, contents) = match app.current_window_and_contents_mut() {
-        Ok(wc) => wc,
-        Err(_) => return Vec::new(),
-    };
-    refresh_quickfix_buffer(window, contents, qfix);
+    refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, qfix);
 
     Vec::new()
 }
@@ -515,7 +525,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
     }
 
     #[test]
@@ -528,7 +538,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {
@@ -560,7 +570,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {

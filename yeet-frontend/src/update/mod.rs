@@ -131,25 +131,19 @@ fn update_with_message(
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
         ),
-        Message::FdResult(paths) | Message::RgResult(paths) => {
-            let mut actions = qfix::add(
-                &mut state.qfix,
-                app.contents.buffers.values_mut().collect(),
-                paths,
-                &settings.theme,
-            );
-            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
-            actions
-        }
+        Message::FdResult(paths) | Message::RgResult(paths) => qfix::add(
+            &mut state.qfix,
+            app.contents.buffers.values_mut().collect(),
+            paths,
+            &settings.theme,
+        ),
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
         Message::QuickFixChanged => {
-            for window in app.tabs.values_mut() {
-                command::qfix::window::refresh_quickfix_buffer(
-                    window,
-                    &mut app.contents,
-                    &state.qfix,
-                );
-            }
+            command::qfix::window::refresh_quickfix_buffer(
+                &mut app.tabs,
+                &mut app.contents,
+                &state.qfix,
+            );
             Vec::new()
         }
         Message::PathRemoved(path) => {
@@ -311,11 +305,7 @@ pub fn update_with_keymap_message(
             mode::print_recording(&mut app.commandline, &mut state.modes, *identifier)
         }
         KeymapMessage::StopMacro => mode::print_mode(&mut app.commandline, &mut state.modes),
-        KeymapMessage::ToggleQuickFix => {
-            let mut actions = qfix::toggle(app, &mut state.qfix, &settings.theme);
-            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
-            actions
-        }
+        KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix, &settings.theme),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {
             let (window, contents) = match app.current_window_and_contents_mut() {

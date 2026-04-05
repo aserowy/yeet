@@ -5,6 +5,7 @@ use yeet_keymap::message::{KeymapMessage, PrintContent};
 use crate::{
     action::{self, Action},
     error::AppError,
+    event::Message,
     model::{
         qfix::{CdoState, QuickFix, QFIX_SIGN_ID},
         App, Buffer,
@@ -18,7 +19,7 @@ pub fn reset(qfix: &mut QuickFix, buffers: Vec<&mut Buffer>) -> Vec<Action> {
     qfix.current_index = 0;
     sign::unset_sign_on_all_buffers(buffers, QFIX_SIGN_ID);
 
-    Vec::new()
+    vec![Action::EmitMessages(vec![Message::QuickFixChanged])]
 }
 
 pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Result<Vec<Action>, AppError> {
@@ -58,7 +59,7 @@ pub fn clear_in(app: &mut App, qfix: &mut QuickFix, path: &str) -> Result<Vec<Ac
         QFIX_SIGN_ID,
     );
 
-    Ok(Vec::new())
+    Ok(vec![Action::EmitMessages(vec![Message::QuickFixChanged])])
 }
 
 pub fn cdo(qfix: &mut QuickFix, command: &str) -> Vec<Action> {
@@ -74,20 +75,22 @@ pub fn cdo(qfix: &mut QuickFix, command: &str) -> Vec<Action> {
 pub fn select_first(qfix: &mut QuickFix) -> Vec<Action> {
     qfix.current_index = 0;
 
-    match qfix.entries.first() {
+    let mut actions = match qfix.entries.first() {
         Some(it) => {
             if it.exists() {
                 vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
                     it.clone(),
                 ))]
             } else {
-                next(qfix)
+                return next(qfix);
             }
         }
         None => vec![action::emit_keymap(KeymapMessage::Print(vec![
             PrintContent::Error("no more items".to_owned()),
         ]))],
-    }
+    };
+    actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
+    actions
 }
 
 pub fn next(qfix: &mut QuickFix) -> Vec<Action> {
@@ -121,7 +124,7 @@ pub fn next(qfix: &mut QuickFix) -> Vec<Action> {
         }
     });
 
-    match entry.next() {
+    let mut actions = match entry.next() {
         Some((i, p)) => {
             tracing::debug!("qfix::next found entry: index={}, path={:?}", i, p);
             qfix.current_index = i;
@@ -135,7 +138,9 @@ pub fn next(qfix: &mut QuickFix) -> Vec<Action> {
                 PrintContent::Error("no more items".to_owned()),
             ]))]
         }
-    }
+    };
+    actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
+    actions
 }
 
 pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
@@ -147,7 +152,7 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
         }
     });
 
-    match entry.next() {
+    let mut actions = match entry.next() {
         Some((i, p)) => {
             qfix.current_index = i;
             vec![action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(
@@ -159,7 +164,9 @@ pub fn previous(qfix: &mut QuickFix) -> Vec<Action> {
                 PrintContent::Error("no more items".to_owned()),
             ]))]
         }
-    }
+    };
+    actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
+    actions
 }
 
 pub fn invert_in_current(
@@ -211,5 +218,5 @@ pub fn invert_in_current(
         QFIX_SIGN_ID,
     );
 
-    Ok(Vec::new())
+    Ok(vec![Action::EmitMessages(vec![Message::QuickFixChanged])])
 }

@@ -6,6 +6,7 @@ use yeet_keymap::message::{KeymapMessage, QuitMode};
 use crate::{
     action::{self, Action},
     error::AppError,
+    event::Message,
     model::{self, qfix::QuickFix, App, Buffer, QuickFixBuffer, SplitFocus, Window},
     settings::Settings,
     update::{app, command::qfix::window as qfix_window},
@@ -33,16 +34,10 @@ pub fn selected(
 
                 let window = app.current_window_mut()?;
                 if qfix_window::find_nearest_directory_in_sibling(window).is_some() {
-                    let (window, contents) = app.current_window_and_contents_mut()?;
-                    qfix_window::refresh_quickfix_buffer(window, contents, qfix);
-                    let window = app.current_window_mut()?;
                     qfix_window::focus_nearest_directory(window);
                 } else {
                     let empty_buffer = app::get_empty_buffer(&mut app.contents);
                     let new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
-
-                    let (window, contents) = app.current_window_and_contents_mut()?;
-                    qfix_window::refresh_quickfix_buffer(window, contents, qfix);
 
                     let window = app.current_window_mut()?;
                     let focused_leaf = window.focused_window_mut();
@@ -54,9 +49,10 @@ pub fn selected(
                     };
                 }
 
-                return Ok(vec![action::emit_keymap(
-                    KeymapMessage::NavigateToPathAsPreview(path),
-                )]);
+                return Ok(vec![
+                    Action::EmitMessages(vec![Message::QuickFixChanged]),
+                    action::emit_keymap(KeymapMessage::NavigateToPathAsPreview(path)),
+                ]);
             }
             Ok(Vec::new())
         }

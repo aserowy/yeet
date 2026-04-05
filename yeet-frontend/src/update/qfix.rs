@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     action::Action,
+    event::Message,
     model::{
         self,
         qfix::{QuickFix, QFIX_SIGN_ID},
@@ -53,7 +54,7 @@ pub fn toggle(app: &mut App, qfix: &mut QuickFix, theme: &Theme) -> Vec<Action> 
         }
     }
 
-    Vec::new()
+    vec![Action::EmitMessages(vec![Message::QuickFixChanged])]
 }
 
 pub fn add(
@@ -72,5 +73,5 @@ pub fn add(
 
     sign::set_sign_for_paths(buffers, added_paths, QFIX_SIGN_ID, theme);
 
-    Vec::new()
+    vec![Action::EmitMessages(vec![Message::QuickFixChanged])]
 }
