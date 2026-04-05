@@ -1,17 +1,12 @@
 use std::mem;
 
-use syntect::{
-    easy::HighlightLines,
-    highlighting::ThemeSet,
-    parsing::SyntaxSet,
-    util::{as_24_bit_terminal_escaped, LinesWithEndings},
-};
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
 use crate::{
     action::Action,
     event::Message,
     model::{App, Buffer, HelpBuffer, SplitFocus, Window},
+    task::Task,
     update::app,
 };
 
@@ -87,29 +82,6 @@ fn resolve_topic(topic: &str) -> Option<TopicMatch> {
     None
 }
 
-fn highlight_markdown(content: &str) -> Vec<String> {
-    let syntaxes = SyntaxSet::load_defaults_newlines();
-    let theme_set = ThemeSet::load_defaults();
-    let theme = &theme_set.themes["base16-ocean.dark"];
-
-    let syntax = syntaxes
-        .find_syntax_by_extension("md")
-        .unwrap_or_else(|| syntaxes.find_syntax_plain_text());
-
-    let mut highlighter = HighlightLines::new(syntax, theme);
-    let mut result = Vec::new();
-
-    for line in LinesWithEndings::from(content) {
-        let highlighted = match highlighter.highlight_line(line, &syntaxes) {
-            Ok(ranges) => as_24_bit_terminal_escaped(&ranges[..], false),
-            Err(_) => line.to_string(),
-        };
-        result.push(highlighted);
-    }
-
-    result
-}
-
 pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
     let topic_match = match topic {
         Some(t) => match resolve_topic(t) {
@@ -127,11 +99,7 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
         },
     };
 
-    let highlighted_lines = highlight_markdown(topic_match.content);
-    let lines: Vec<BufferLine> = highlighted_lines
-        .iter()
-        .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
-        .collect();
+    let lines: Vec<BufferLine> = topic_match.content.lines().map(BufferLine::from).collect();
 
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(wc) => wc,
@@ -168,7 +136,24 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
         vp.vertical_index = topic_match.line_offset;
     }
 
-    Vec::new()
+    vec![Action::Task(Task::HighlightHelp(
+        buffer_id,
+        topic_match.content.to_string(),
+    ))]
+}
+
+pub fn apply_highlighted(app: &mut App, buffer_id: usize, lines: Vec<String>) {
+    let buffer = match app.contents.buffers.get_mut(&buffer_id) {
+        Some(Buffer::Help(help)) => &mut help.buffer,
+        _ => return,
+    };
+
+    let highlighted: Vec<BufferLine> = lines
+        .iter()
+        .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
+        .collect();
+
+    buffer.lines = highlighted;
 }
 
 #[cfg(test)]
@@ -242,7 +227,11 @@ mod test {
     fn open_bare_help_creates_horizontal_split() {
         let mut app = App::default();
         let actions = open(&mut app, None);
-        assert!(actions.is_empty());
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(
+            actions[0],
+            Action::Task(Task::HighlightHelp(_, _))
+        ));
 
         let window = app.current_window().expect("should have current tab");
         assert!(matches!(
@@ -273,10 +262,50 @@ mod test {
     }
 
     #[test]
+    fn open_help_returns_highlight_task_with_buffer_id() {
+        let mut app = App::default();
+        let actions = open(&mut app, None);
+        assert_eq!(actions.len(), 1);
+
+        let window = app.current_window().expect("should have current tab");
+        let vp = window.focused_viewport();
+
+        match &actions[0] {
+            Action::Task(Task::HighlightHelp(id, content)) => {
+                assert_eq!(*id, vp.buffer_id);
+                assert!(content.contains("Yeet Help"));
+            }
+            _ => panic!("expected Action::Task(Task::HighlightHelp)"),
+        }
+    }
+
+    #[test]
+    fn open_help_buffer_contains_raw_content() {
+        let mut app = App::default();
+        open(&mut app, None);
+
+        let window = app.current_window().expect("should have current tab");
+        let vp = window.focused_viewport();
+        let buffer = app.contents.buffers.get(&vp.buffer_id).unwrap();
+        match buffer {
+            Buffer::Help(help) => {
+                assert!(!help.buffer.lines.is_empty());
+                let first_line = help.buffer.lines[0].content.to_stripped_string();
+                assert_eq!(first_line, "# Yeet Help");
+            }
+            _ => panic!("expected Buffer::Help"),
+        }
+    }
+
+    #[test]
     fn open_help_with_known_topic_creates_split() {
         let mut app = App::default();
         let actions = open(&mut app, Some("commands"));
-        assert!(actions.is_empty());
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(
+            actions[0],
+            Action::Task(Task::HighlightHelp(_, _))
+        ));
 
         let window = app.current_window().expect("should have current tab");
         match window {
@@ -292,6 +321,7 @@ mod test {
         let mut app = App::default();
         let actions = open(&mut app, Some("nonexistent_topic_xyz"));
         assert!(!actions.is_empty());
+        assert!(!matches!(actions[0], Action::Task(_)));
     }
 
     #[test]
@@ -336,23 +366,6 @@ mod test {
         let m = result.unwrap();
         assert!(m.line_offset > 0);
         assert!(m.content.contains("# Commands"));
-    }
-
-    #[test]
-    fn highlight_markdown_split_matches_source_line_count() {
-        let content = "# Title\n\nSome text.\n\n## Section\n\nMore text.\n";
-        let highlighted = highlight_markdown(content);
-        let lines: Vec<BufferLine> = highlighted
-            .iter()
-            .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
-            .collect();
-
-        let source_lines = content.lines().count();
-        assert_eq!(
-            lines.len(),
-            source_lines,
-            "split_terminator should produce same number of BufferLines as source lines"
-        );
     }
 
     #[test]
