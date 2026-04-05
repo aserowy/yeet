@@ -224,6 +224,60 @@ impl Window {
         }
     }
 
+    #[allow(clippy::result_large_err)]
+    pub fn close_focused(self) -> Result<(Window, Window), Window> {
+        match self {
+            Window::Horizontal {
+                first,
+                second,
+                focus,
+            } => Self::close_focused_in_split(*first, *second, focus, |f, s, focus| {
+                Window::Horizontal {
+                    first: Box::new(f),
+                    second: Box::new(s),
+                    focus,
+                }
+            }),
+            Window::Vertical {
+                first,
+                second,
+                focus,
+            } => Self::close_focused_in_split(*first, *second, focus, |f, s, focus| {
+                Window::Vertical {
+                    first: Box::new(f),
+                    second: Box::new(s),
+                    focus,
+                }
+            }),
+            leaf => Err(leaf),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    fn close_focused_in_split(
+        first: Window,
+        second: Window,
+        focus: SplitFocus,
+        rebuild: impl FnOnce(Window, Window, SplitFocus) -> Window,
+    ) -> Result<(Window, Window), Window> {
+        let (focused, sibling, focused_is_first) = match focus {
+            SplitFocus::First => (first, second, true),
+            SplitFocus::Second => (second, first, false),
+        };
+
+        match focused.close_focused() {
+            Ok((kept, dropped)) => {
+                let (new_first, new_second) = if focused_is_first {
+                    (kept, sibling)
+                } else {
+                    (sibling, kept)
+                };
+                Ok((rebuild(new_first, new_second, focus), dropped))
+            }
+            Err(leaf) => Ok((sibling, leaf)),
+        }
+    }
+
     pub fn contains_quickfix(&self) -> bool {
         match self {
             Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
@@ -721,5 +775,115 @@ mod test {
         let ids = tree.buffer_ids();
         assert_eq!(ids.len(), 4);
         assert!(ids.contains(&4));
+    }
+
+    #[test]
+    fn close_focused_horizontal_first_child() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Tasks(ViewPort {
+                buffer_id: 1,
+                ..Default::default()
+            })),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    buffer_id: 2,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        let (kept, dropped) = tree.close_focused().ok().unwrap();
+        assert!(matches!(kept, Window::Directory(..)));
+        assert!(matches!(dropped, Window::Tasks(_)));
+        assert!(dropped.buffer_ids().contains(&1));
+    }
+
+    #[test]
+    fn close_focused_horizontal_second_child() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    buffer_id: 2,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort {
+                buffer_id: 1,
+                ..Default::default()
+            })),
+            focus: SplitFocus::Second,
+        };
+        let (kept, dropped) = tree.close_focused().ok().unwrap();
+        assert!(matches!(kept, Window::Directory(..)));
+        assert!(matches!(dropped, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn close_focused_vertical_second_child() {
+        let tree = Window::Vertical {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::Second,
+        };
+        let (kept, dropped) = tree.close_focused().ok().unwrap();
+        assert!(matches!(kept, Window::Directory(..)));
+        assert!(matches!(dropped, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn close_focused_nested_split_closes_innermost() {
+        let tree = Window::Horizontal {
+            first: Box::new(Window::Vertical {
+                first: Box::new(Window::Directory(
+                    ViewPort::default(),
+                    ViewPort {
+                        buffer_id: 10,
+                        ..Default::default()
+                    },
+                    ViewPort::default(),
+                )),
+                second: Box::new(Window::Tasks(ViewPort {
+                    buffer_id: 20,
+                    ..Default::default()
+                })),
+                focus: SplitFocus::Second,
+            }),
+            second: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort {
+                    buffer_id: 30,
+                    ..Default::default()
+                },
+                ViewPort::default(),
+            )),
+            focus: SplitFocus::First,
+        };
+        let (kept, dropped) = tree.close_focused().ok().unwrap();
+        assert!(matches!(dropped, Window::Tasks(_)));
+        assert!(dropped.buffer_ids().contains(&20));
+        assert!(matches!(kept, Window::Horizontal { .. }));
+        let ids = kept.buffer_ids();
+        assert!(ids.contains(&10));
+        assert!(ids.contains(&30));
+        assert!(!ids.contains(&20));
+    }
+
+    #[test]
+    fn close_focused_leaf_returns_err() {
+        let leaf = Window::Directory(
+            ViewPort::default(),
+            ViewPort::default(),
+            ViewPort::default(),
+        );
+        let result = leaf.close_focused();
+        assert!(result.is_err());
     }
 }
