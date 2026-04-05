@@ -130,7 +130,7 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
     let highlighted_lines = highlight_markdown(topic_match.content);
     let lines: Vec<BufferLine> = highlighted_lines
         .iter()
-        .map(|l| BufferLine::from(l.as_str()))
+        .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
         .collect();
 
     let (window, contents) = match app.current_window_and_contents_mut() {
@@ -336,6 +336,23 @@ mod test {
         let m = result.unwrap();
         assert!(m.line_offset > 0);
         assert!(m.content.contains("# Commands"));
+    }
+
+    #[test]
+    fn highlight_markdown_split_matches_source_line_count() {
+        let content = "# Title\n\nSome text.\n\n## Section\n\nMore text.\n";
+        let highlighted = highlight_markdown(content);
+        let lines: Vec<BufferLine> = highlighted
+            .iter()
+            .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
+            .collect();
+
+        let source_lines = content.lines().count();
+        assert_eq!(
+            lines.len(),
+            source_lines,
+            "split_terminator should produce same number of BufferLines as source lines"
+        );
     }
 
     #[test]

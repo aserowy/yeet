@@ -264,6 +264,39 @@ mod test {
     }
 
     #[test]
+    fn trailing_newline_in_ansi_produces_extra_line() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("\x1b[38;2;255;100;50m# Commands\n\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(
+            styled.len(),
+            2,
+            "a BufferLine with embedded newline produces two rendered lines via ansi_to_tui"
+        );
+        assert!(
+            styled[0].width() < usize::from(vp.width),
+            "first rendered line is shorter than viewport because padding was split across lines"
+        );
+    }
+
+    #[test]
+    fn no_trailing_newline_cursor_line_fills_viewport() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("\x1b[38;2;255;100;50m# Commands\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(styled.len(), 1);
+        assert_eq!(
+            styled[0].width(),
+            usize::from(vp.width),
+            "cursor line without trailing newline should fill viewport width"
+        );
+    }
+
+    #[test]
     fn cursor_line_bg_preserved_through_ansi_reset() {
         use ratatui::style::Color;
 
