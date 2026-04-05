@@ -14,7 +14,7 @@ use crate::{
 
 mod file;
 mod print;
-mod qfix;
+pub mod qfix;
 mod split;
 pub mod task;
 
@@ -32,16 +32,24 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
 
     // NOTE: all file commands like e.g. d! should use preview path as target to enable cdo
     let result = match cmd_with_args {
-        ("cdo", command) => add_change_mode(mode_before, mode, qfix::cdo(&mut state.qfix, command)),
-        ("cfirst", "") => add_change_mode(mode_before, mode, qfix::select_first(&mut state.qfix)),
+        ("cdo", command) => add_change_mode(
+            mode_before,
+            mode,
+            qfix::commands::cdo(&mut state.qfix, command),
+        ),
+        ("cfirst", "") => add_change_mode(
+            mode_before,
+            mode,
+            qfix::commands::select_first(&mut state.qfix),
+        ),
         ("cl", "") => print::qfix(&state.qfix),
         ("clearcl", "") => add_change_mode(
             mode_before,
             mode,
-            qfix::reset(&mut state.qfix, app.contents.buffers.values_mut().collect()),
+            qfix::commands::reset(&mut state.qfix, app.contents.buffers.values_mut().collect()),
         ),
         ("clearcl", path) => {
-            let actions = match qfix::clear_in(app, &mut state.qfix, path) {
+            let actions = match qfix::commands::clear_in(app, &mut state.qfix, path) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("clearcl failed: {}", err);
@@ -50,8 +58,13 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             };
             add_change_mode(mode_before, mode, actions)
         }
-        ("cn", "") => add_change_mode(mode_before, mode, qfix::next(&mut state.qfix)),
-        ("cN", "") => add_change_mode(mode_before, mode, qfix::previous(&mut state.qfix)),
+        ("cn", "") => add_change_mode(mode_before, mode, qfix::commands::next(&mut state.qfix)),
+        ("copen", "") => add_change_mode(
+            mode_before,
+            Mode::Navigation,
+            qfix::window::open(app, &state.qfix),
+        ),
+        ("cN", "") => add_change_mode(mode_before, mode, qfix::commands::previous(&mut state.qfix)),
         ("cp", target) => {
             let path = get_preview_path(app);
             let actions = match path {
@@ -131,13 +144,14 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             add_change_mode(mode_before, mode, actions)
         }
         ("invertcl", "") => {
-            let actions = match qfix::invert_in_current(app, &mut state.qfix, theme) {
+            let actions = match qfix::commands::invert_in_current(app, &mut state.qfix, theme) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("invertcl failed: {}", err);
                     Vec::new()
                 }
             };
+            qfix::window::refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, &state.qfix);
             add_change_mode(mode_before, mode, actions)
         }
         ("junk", "") => print::junkyard(&state.junk),

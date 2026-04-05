@@ -1,17 +1,24 @@
+use std::collections::HashSet;
+
 use crate::model::{App, Buffer};
 
 pub fn update(app: &mut App) {
-    let referenced = match app.current_window() {
-        Ok(window) => window.buffer_ids(),
-        Err(_) => return,
-    };
+    let referenced: HashSet<usize> = app
+        .tabs
+        .values()
+        .flat_map(|window| window.buffer_ids())
+        .collect();
 
     let stale_images: Vec<usize> = app
         .contents
         .buffers
         .iter()
         .filter_map(|(id, buffer)| {
-            if matches!(buffer, Buffer::Image(_) | Buffer::Tasks(_)) && !referenced.contains(id) {
+            if matches!(
+                buffer,
+                Buffer::Image(_) | Buffer::Tasks(_) | Buffer::QuickFix(_)
+            ) && !referenced.contains(id)
+            {
                 Some(*id)
             } else {
                 None
@@ -131,6 +138,59 @@ mod test {
         update(&mut app);
 
         assert!(!app.contents.buffers.contains_key(&buffer_id));
+    }
+
+    #[test]
+    fn keeps_quickfix_buffer_in_non_current_tab() {
+        let mut app = App::default();
+
+        let qfix_buffer_id = 200;
+        app.contents.buffers.insert(
+            qfix_buffer_id,
+            Buffer::QuickFix(crate::model::QuickFixBuffer::default()),
+        );
+
+        let other_tab_id = 99;
+        app.tabs.insert(
+            other_tab_id,
+            Window::QuickFix(ViewPort {
+                buffer_id: qfix_buffer_id,
+                ..Default::default()
+            }),
+        );
+
+        update(&mut app);
+
+        assert!(
+            app.contents.buffers.contains_key(&qfix_buffer_id),
+            "QuickFix buffer in non-current tab should not be removed"
+        );
+    }
+
+    #[test]
+    fn keeps_tasks_buffer_in_non_current_tab() {
+        let mut app = App::default();
+
+        let tasks_buffer_id = 201;
+        app.contents
+            .buffers
+            .insert(tasks_buffer_id, Buffer::Tasks(TasksBuffer::default()));
+
+        let other_tab_id = 99;
+        app.tabs.insert(
+            other_tab_id,
+            Window::Tasks(ViewPort {
+                buffer_id: tasks_buffer_id,
+                ..Default::default()
+            }),
+        );
+
+        update(&mut app);
+
+        assert!(
+            app.contents.buffers.contains_key(&tasks_buffer_id),
+            "Tasks buffer in non-current tab should not be removed"
+        );
     }
 
     #[test]

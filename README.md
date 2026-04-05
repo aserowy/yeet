@@ -39,6 +39,7 @@ register holds all files which got yanked and the last nine trashes.
 
 | keys      | action                                                      |
 | --------- | ----------------------------------------------------------- |
+| Enter     | open selected file/directory                                |
 | gh        | goto home directory                                         |
 | gn        | go into normal mode                                         |
 | gt, gT    | go to next/previous tab                                     |
@@ -57,6 +58,7 @@ register holds all files which got yanked and the last nine trashes.
 | keys       | action                                                                                            |
 | ---------- | ------------------------------------------------------------------------------------------------- |
 | j, k       | navigating the current directory down/up                                                          |
+| gg, G      | jump to top/bottom of the buffer                                                                  |
 | o, O       | add a new line and change to insert mode                                                          |
 | I, A       | jump to line start/end and change to insert mode                                                  |
 | dd         | go into normal and trash\* the current line                                                       |
@@ -117,6 +119,7 @@ In normal mode, all register interactions target the default register (equal to
 | cl                          | list all quick fix entries and highlights the current path                                                                                                                                                                 |
 | clearcl \<empty> or \<path> | clears qfix completely if empty or clears all entries in the given folder.                                                                                                                                                 |
 | cn, cN                      | navigates to next/previous path in quick fix list                                                                                                                                                                          |
+| copen                       | open a split showing the quick fix list. `dd` to remove entries, `enter` to navigate to an entry                                                                                                                          |
 | cdo \<command>              | navigates to each entry in the quick fix list and executes the given command.<br>Cdo starts with the first entry and iterates over the given order. Thus, the list order is important! Non existing paths get ignored.     |
 | cp \<path> or '\<mark>      | copies the selected file to the target directory. The directory must exist without a file with the same name like the source                                                                                               |
 | d!                          | delete selected file/directory                                                                                                                                                                                             |

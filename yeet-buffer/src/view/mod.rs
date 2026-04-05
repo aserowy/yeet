@@ -264,6 +264,52 @@ mod test {
     }
 
     #[test]
+    fn cursor_line_bg_preserved_through_ansi_reset() {
+        use ratatui::style::Color;
+
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("\x1b[1m1    rg foo\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_bg = Color::Rgb(128, 128, 128);
+        for span in &cursor_line.spans {
+            assert_eq!(
+                span.style.bg.unwrap_or(expected_bg),
+                expected_bg,
+                "every span on cursor line should have cursor_line_bg, got {:?} in span {:?}",
+                span.style.bg,
+                span.content,
+            );
+        }
+    }
+
+    #[test]
+    fn unfocused_buffer_bg_preserved_through_ansi_reset() {
+        use ratatui::style::Color;
+
+        let mut vp = tasks_viewport(80, 10);
+        vp.hide_cursor_line = true;
+        vp.hide_cursor = true;
+        let lines = vec![BufferLine::from("\x1b[1m1    rg foo\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        for span in &cursor_line.spans {
+            assert!(
+                span.style.bg.is_none() || span.style.bg == Some(Color::Reset),
+                "unfocused line spans should not override buffer_bg, got {:?} in span {:?}",
+                span.style.bg,
+                span.content,
+            );
+        }
+    }
+
+    #[test]
     fn cursor_line_width_in_normal_mode() {
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine::from("1    rg foo")];

@@ -138,6 +138,14 @@ fn update_with_message(
             &settings.theme,
         ),
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
+        Message::QuickFixChanged => {
+            command::qfix::window::refresh_quickfix_buffer(
+                &mut app.tabs,
+                &mut app.contents,
+                &state.qfix,
+            );
+            Vec::new()
+        }
         Message::PathRemoved(path) => {
             if state.modes.current == Mode::Insert {
                 state
@@ -262,13 +270,15 @@ pub fn update_with_keymap_message(
                 Vec::new()
             }
         },
-        KeymapMessage::OpenSelected => match open::selected(settings, &state.modes.current, app) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("OpenSelected failed: {}", err);
-                Vec::new()
+        KeymapMessage::OpenSelected => {
+            match open::selected(settings, &state.modes.current, app, &mut state.qfix) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("OpenSelected failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         KeymapMessage::PasteFromJunkYard(entry_id) => {
             match junkyard::paste(app, &state.junk, entry_id) {
                 Ok(actions) => actions,
@@ -359,7 +369,7 @@ pub fn update_with_buffer_message(
                 };
                 if matches!(
                     app.contents.buffers.get(&vp.buffer_id),
-                    Some(Buffer::Tasks(_))
+                    Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_))
                 ) {
                     match modify::buffer(app, state, repeat, modification) {
                         Ok(actions) => actions,

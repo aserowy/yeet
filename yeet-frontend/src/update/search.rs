@@ -18,6 +18,7 @@ pub fn buffers(buffers: Vec<&mut Buffer>, search: Option<String>) {
             Buffer::Content(_) => continue,
             Buffer::PathReference(_) => continue,
             Buffer::Tasks(_) => continue,
+            Buffer::QuickFix(_) => continue,
             Buffer::Empty => continue,
         };
         set_search_char_positions(&mut buffer.buffer, search.as_str());
@@ -32,6 +33,7 @@ pub fn clear(buffers: Vec<&mut Buffer>) {
             Buffer::Content(_) => continue,
             Buffer::PathReference(_) => continue,
             Buffer::Tasks(_) => continue,
+            Buffer::QuickFix(_) => continue,
             Buffer::Empty => continue,
         };
 

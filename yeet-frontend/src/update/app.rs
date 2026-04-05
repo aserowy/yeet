@@ -39,7 +39,7 @@ pub fn get_focused_directory_viewports(
             SplitFocus::Second => get_focused_directory_viewports(second),
         },
         Window::Directory(parent, current, preview) => Some((parent, current, preview)),
-        Window::Tasks(_) => None,
+        Window::QuickFix(_) | Window::Tasks(_) => None,
     }
 }
 
@@ -61,7 +61,7 @@ pub fn get_focused_directory_viewports_mut(
             SplitFocus::Second => get_focused_directory_viewports_mut(second),
         },
         Window::Directory(parent, current, preview) => Some((parent, current, preview)),
-        Window::Tasks(_) => None,
+        Window::QuickFix(_) | Window::Tasks(_) => None,
     }
 }
 
@@ -90,7 +90,7 @@ pub fn get_viewport_by_buffer_id_mut(
                 None
             }
         }
-        Window::Tasks(vp) => {
+        Window::QuickFix(vp) | Window::Tasks(vp) => {
             if vp.buffer_id == buffer_id {
                 Some(vp)
             } else {
@@ -155,7 +155,7 @@ pub fn resolve_buffer(
                 Buffer::Content(it) => Some(format!("{}:Content:{}", buf_id, it.path.display())),
                 Buffer::Image(it) => Some(format!("{}:Image:{}", buf_id, it.path.display())),
                 Buffer::PathReference(p) => Some(format!("{}:PathRef:{}", buf_id, p.display())),
-                Buffer::Tasks(_) => None,
+                Buffer::QuickFix(_) | Buffer::Tasks(_) => None,
                 Buffer::Empty => None,
             };
             path_str

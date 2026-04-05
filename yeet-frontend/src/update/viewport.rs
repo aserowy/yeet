@@ -21,21 +21,38 @@ pub fn relocate(
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
     let (window, contents) = app.current_window_and_contents_mut()?;
-    let (vp, buffer) = match app::get_focused_current_mut(window, contents)? {
-        (vp, Buffer::Directory(it)) => (vp, it),
-        (_vp, Buffer::Image(_))
-        | (_vp, Buffer::Content(_))
-        | (_vp, Buffer::PathReference(_))
-        | (_vp, Buffer::Tasks(_))
-        | (_vp, Buffer::Empty) => return Ok(Vec::new()),
-    };
+    let (vp, focused) = app::get_focused_current_mut(window, contents)?;
 
-    yeet_buffer::update(
-        Some(vp),
-        mode,
-        &mut buffer.buffer,
-        std::slice::from_ref(&msg),
-    );
-
-    selection::refresh_preview_from_current_selection(app, history, None)
+    match focused {
+        Buffer::Directory(buffer) => {
+            yeet_buffer::update(
+                Some(vp),
+                mode,
+                &mut buffer.buffer,
+                std::slice::from_ref(&msg),
+            );
+            selection::refresh_preview_from_current_selection(app, history, None)
+        }
+        Buffer::Tasks(tasks_buf) => {
+            yeet_buffer::update(
+                Some(vp),
+                mode,
+                &mut tasks_buf.buffer,
+                std::slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
+        Buffer::QuickFix(qfix_buf) => {
+            yeet_buffer::update(
+                Some(vp),
+                mode,
+                &mut qfix_buf.buffer,
+                std::slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
+        Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
+            Ok(Vec::new())
+        }
+    }
 }

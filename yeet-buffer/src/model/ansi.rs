@@ -118,6 +118,10 @@ impl Ansi {
         result
     }
 
+    pub fn replace_resets_with(&mut self, replacement: &str) {
+        self.content = self.content.replace("\x1b[0m", replacement);
+    }
+
     pub fn is_empty(&self) -> bool {
         self.count_chars() == 0
     }
