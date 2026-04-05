@@ -225,20 +225,19 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         }
         ("split", args) => {
             let preview_path = get_current_path(app);
-            let actions = match preview_path {
-                Some(path) => match file::expand_path(&state.marks, args.trim(), path) {
-                    Ok(target_path) if target_path.exists() => {
-                        split::horizontal(app, target_path.as_path())
-                    }
-                    Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
-                        "Split failed. Path {:?} does not exist.",
-                        target_path
-                    ))])],
-                    Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
-                },
-                None => vec![Action::EmitMessages(vec![Message::Error(
-                    "Split failed. Preview path could not be resolved.".to_string(),
-                )])],
+            let expand_result = match preview_path {
+                Some(path) => file::expand_path(&state.marks, args.trim(), path),
+                None => file::expand_path_without_source(&state.marks, args),
+            };
+            let actions = match expand_result {
+                Ok(target_path) if target_path.exists() => {
+                    split::horizontal(app, target_path.as_path())
+                }
+                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
+                    "Split failed. Path {:?} does not exist.",
+                    target_path
+                ))])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
         }
@@ -339,20 +338,19 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         }
         ("vsplit", args) => {
             let preview_path = get_current_path(app);
-            let actions = match preview_path {
-                Some(path) => match file::expand_path(&state.marks, args.trim(), path) {
-                    Ok(target_path) if target_path.exists() => {
-                        split::vertical(app, target_path.as_path())
-                    }
-                    Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
-                        "Vsplit failed. Path {:?} does not exist.",
-                        target_path
-                    ))])],
-                    Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
-                },
-                None => vec![Action::EmitMessages(vec![Message::Error(
-                    "Vsplit failed. Preview path could not be resolved.".to_string(),
-                )])],
+            let expand_result = match preview_path {
+                Some(path) => file::expand_path(&state.marks, args.trim(), path),
+                None => file::expand_path_without_source(&state.marks, args),
+            };
+            let actions = match expand_result {
+                Ok(target_path) if target_path.exists() => {
+                    split::vertical(app, target_path.as_path())
+                }
+                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
+                    "Vsplit failed. Path {:?} does not exist.",
+                    target_path
+                ))])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
         }
@@ -1418,7 +1416,7 @@ mod test {
         let actions = execute(&mut app, &mut state, &theme, "split foo");
 
         assert!(
-            contains_command_error(&actions, "Split failed"),
+            contains_command_error(&actions, "Relative paths require a directory context"),
             "split with no current path must emit error; actions: {actions:?}",
         );
         assert!(
@@ -1442,7 +1440,7 @@ mod test {
         let actions = execute(&mut app, &mut state, &theme, "vsplit foo");
 
         assert!(
-            contains_command_error(&actions, "Vsplit failed"),
+            contains_command_error(&actions, "Relative paths require a directory context"),
             "vsplit with no current path must emit error; actions: {actions:?}",
         );
         assert!(
@@ -1509,6 +1507,165 @@ mod test {
         let window = app.current_window().expect("test requires current tab");
         assert!(
             matches!(window, Window::Directory(_, _, _)),
+            "no split should have been created",
+        );
+    }
+
+    fn make_app_with_tasks_focused() -> App {
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Tasks(ViewPort::default());
+        app
+    }
+
+    fn contains_navigate_action(actions: &[Action]) -> bool {
+        actions.iter().any(|a| {
+            if let Action::EmitMessages(msgs) = a {
+                msgs.iter()
+                    .any(|m| matches!(m, Message::Keymap(KeymapMessage::NavigateToPath(_))))
+            } else {
+                false
+            }
+        })
+    }
+
+    #[test]
+    fn split_no_args_from_tasks_falls_back_to_home() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split");
+
+        if dirs::home_dir().is_some() {
+            assert!(
+                contains_navigate_action(&actions),
+                "split from tasks with no args should navigate to home; actions: {actions:?}",
+            );
+            let window = app.current_window().expect("test requires current tab");
+            assert!(
+                matches!(window, Window::Horizontal { .. }),
+                "split should have created a horizontal split",
+            );
+        } else {
+            assert!(contains_command_error(
+                &actions,
+                "Home directory could not be resolved"
+            ));
+        }
+    }
+
+    #[test]
+    fn vsplit_no_args_from_tasks_falls_back_to_home() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "vsplit");
+
+        if dirs::home_dir().is_some() {
+            assert!(
+                contains_navigate_action(&actions),
+                "vsplit from tasks with no args should navigate to home; actions: {actions:?}",
+            );
+            let window = app.current_window().expect("test requires current tab");
+            assert!(
+                matches!(window, Window::Vertical { .. }),
+                "vsplit should have created a vertical split",
+            );
+        } else {
+            assert!(contains_command_error(
+                &actions,
+                "Home directory could not be resolved"
+            ));
+        }
+    }
+
+    #[test]
+    fn split_absolute_path_from_tasks() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+        let target = std::env::temp_dir();
+
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            &format!("split {}", target.display()),
+        );
+
+        assert!(
+            contains_navigate_action(&actions),
+            "split with absolute path from tasks should navigate; actions: {actions:?}",
+        );
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Horizontal { .. }),
+            "split should have created a horizontal split",
+        );
+    }
+
+    #[test]
+    fn split_mark_from_tasks() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let target = std::env::temp_dir();
+        state.marks.entries.insert('a', target);
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split 'a");
+
+        assert!(
+            contains_navigate_action(&actions),
+            "split with mark from tasks should navigate; actions: {actions:?}",
+        );
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Horizontal { .. }),
+            "split should have created a horizontal split",
+        );
+    }
+
+    #[test]
+    fn split_relative_path_from_tasks_returns_error() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split some/relative/path");
+
+        assert!(
+            contains_command_error(&actions, "Relative paths require a directory context"),
+            "split with relative path from tasks must error; actions: {actions:?}",
+        );
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Tasks(_)),
+            "no split should have been created",
+        );
+    }
+
+    #[test]
+    fn split_nonexistent_absolute_path_from_tasks_returns_error() {
+        let mut app = make_app_with_tasks_focused();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            "split /nonexistent/path/12345",
+        );
+
+        assert!(
+            contains_command_error(&actions, "does not exist"),
+            "split with non-existent absolute path from tasks must error; actions: {actions:?}",
+        );
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Tasks(_)),
             "no split should have been created",
         );
     }
