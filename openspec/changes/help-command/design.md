@@ -26,9 +26,9 @@ Follow the QuickFix/Tasks pattern: add `HelpBuffer { buffer: TextBuffer }` to th
 
 ### 2. Horizontal split with focus on help pane
 
-Use the same split mechanics as `copen`/`topen`: wrap the focused window leaf in `Window::Horizontal { first: help_window, second: old_window, focus: SplitFocus::First }` so the help pane appears at the top and receives focus.
+Use the same split mechanics as `copen`/`topen`: wrap the focused window leaf in `Window::Horizontal { first: old_window, second: help_window, focus: SplitFocus::Second }` so the help pane appears at the bottom and receives focus.
 
-**Why top, not bottom?** Neovim convention places help at the top. The help pane is the primary focus when opened, and top placement matches user expectation.
+**Why bottom?** Keeps the user's current context visible at the top while help appears below, similar to how QuickFix and Tasks windows open.
 
 ### 3. Read-only via mode blocking
 

@@ -18,7 +18,7 @@
 ## 4. Help command dispatch
 
 - [ ] 4.1 Add `:help` command entry to `command::execute()` in `yeet-frontend/src/update/command/mod.rs`
-- [ ] 4.2 Implement `help::open(app, topic)` function that resolves the topic, creates a `HelpBuffer` with syntax-highlighted content, and opens it in a horizontal split with focus on the help pane (top)
+- [ ] 4.2 Implement `help::open(app, topic)` function that resolves the topic, creates a `HelpBuffer` with syntax-highlighted content, and opens it in a horizontal split with focus on the help pane (bottom)
 - [ ] 4.3 Handle bare `:help` (no args) by opening the index page
 - [ ] 4.4 Handle `:help <topic>` by resolving the topic to a page and entry line offset, opening the matching page scrolled to that entry, or returning an error for unknown topics
 

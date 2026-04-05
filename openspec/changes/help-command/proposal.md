@@ -4,7 +4,7 @@ Yeet has no built-in help system. Users must leave the application to consult th
 
 ## What Changes
 
-- Add a `:help` command that opens a help index page as a read-only markdown buffer in a horizontal split
+- Add a `:help` command that opens a help index page as a read-only markdown buffer in a horizontal split below the current window
 - Add `:help <topic>` to jump directly to a specific help page or section
 - Bundle help pages as markdown files shipped with the application
 - Introduce a new `Help` buffer type for rendering markdown content read-only
