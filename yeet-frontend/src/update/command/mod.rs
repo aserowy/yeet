@@ -38,39 +38,31 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             qfix::commands::cdo(&mut state.qfix, command),
         ),
         ("cfirst", "") => {
-            let actions = qfix::commands::select_first(&mut state.qfix);
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            let mut actions = qfix::commands::select_first(&mut state.qfix);
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             add_change_mode(mode_before, mode, actions)
         }
         ("cl", "") => print::qfix(&state.qfix),
         ("clearcl", "") => {
-            let actions =
+            let mut actions =
                 qfix::commands::reset(&mut state.qfix, app.contents.buffers.values_mut().collect());
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             add_change_mode(mode_before, mode, actions)
         }
         ("clearcl", path) => {
-            let actions = match qfix::commands::clear_in(app, &mut state.qfix, path) {
+            let mut actions = match qfix::commands::clear_in(app, &mut state.qfix, path) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("clearcl failed: {}", err);
                     Vec::new()
                 }
             };
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             add_change_mode(mode_before, mode, actions)
         }
         ("cn", "") => {
-            let actions = qfix::commands::next(&mut state.qfix);
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            let mut actions = qfix::commands::next(&mut state.qfix);
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             add_change_mode(mode_before, mode, actions)
         }
         ("copen", "") => add_change_mode(
@@ -79,10 +71,8 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             qfix::window::open(app, &state.qfix),
         ),
         ("cN", "") => {
-            let actions = qfix::commands::previous(&mut state.qfix);
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            let mut actions = qfix::commands::previous(&mut state.qfix);
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             add_change_mode(mode_before, mode, actions)
         }
         ("cp", target) => {

@@ -132,18 +132,26 @@ fn update_with_message(
             &[PrintContent::Error(error.to_string())],
         ),
         Message::FdResult(paths) | Message::RgResult(paths) => {
-            let actions = qfix::add(
+            let mut actions = qfix::add(
                 &mut state.qfix,
                 app.contents.buffers.values_mut().collect(),
                 paths,
                 &settings.theme,
             );
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                command::qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             actions
         }
         Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
+        Message::QuickFixChanged => {
+            for window in app.tabs.values_mut() {
+                command::qfix::window::refresh_quickfix_buffer(
+                    window,
+                    &mut app.contents,
+                    &state.qfix,
+                );
+            }
+            Vec::new()
+        }
         Message::PathRemoved(path) => {
             if state.modes.current == Mode::Insert {
                 state
@@ -304,10 +312,8 @@ pub fn update_with_keymap_message(
         }
         KeymapMessage::StopMacro => mode::print_mode(&mut app.commandline, &mut state.modes),
         KeymapMessage::ToggleQuickFix => {
-            let actions = qfix::toggle(app, &mut state.qfix, &settings.theme);
-            if let Ok((window, contents)) = app.current_window_and_contents_mut() {
-                command::qfix::window::refresh_quickfix_buffer(window, contents, &state.qfix);
-            }
+            let mut actions = qfix::toggle(app, &mut state.qfix, &settings.theme);
+            actions.push(Action::EmitMessages(vec![Message::QuickFixChanged]));
             actions
         }
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],

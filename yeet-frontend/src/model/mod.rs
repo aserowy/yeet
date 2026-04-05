@@ -168,9 +168,7 @@ impl Window {
                 SplitFocus::First => first.focused_viewport(),
                 SplitFocus::Second => second.focused_viewport(),
             },
-            Window::Directory(_, vp, _) => vp,
-            Window::QuickFix(vp) => vp,
-            Window::Tasks(vp) => vp,
+            Window::Directory(_, vp, _) | Window::QuickFix(vp) | Window::Tasks(vp) => vp,
         }
     }
 
@@ -189,17 +187,13 @@ impl Window {
                 SplitFocus::First => first.focused_window_mut(),
                 SplitFocus::Second => second.focused_window_mut(),
             },
-            Window::Directory(..) => self,
-            Window::QuickFix(_) => self,
-            Window::Tasks(_) => self,
+            Window::Directory(..) | Window::QuickFix(_) | Window::Tasks(_) => self,
         }
     }
 
     pub fn focused_viewport_mut(&mut self) -> &mut ViewPort {
         match self.focused_window_mut() {
-            Window::Directory(_, vp, _) => vp,
-            Window::QuickFix(vp) => vp,
-            Window::Tasks(vp) => vp,
+            Window::Directory(_, vp, _) | Window::QuickFix(vp) | Window::Tasks(vp) => vp,
             Window::Horizontal { .. } | Window::Vertical { .. } => {
                 unreachable!("focused_window_mut should have returned a non-split window")
             }
@@ -216,8 +210,7 @@ impl Window {
             Window::Directory(parent, current, preview) => {
                 HashSet::from([parent.buffer_id, current.buffer_id, preview.buffer_id])
             }
-            Window::QuickFix(vp) => HashSet::from([vp.buffer_id]),
-            Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
+            Window::QuickFix(vp) | Window::Tasks(vp) => HashSet::from([vp.buffer_id]),
         }
     }
 

@@ -39,7 +39,7 @@ The copen buffer SHALL render the entry at `QuickFix.current_index` with ANSI bo
 - **THEN** the bold-formatted current entry SHALL maintain the buffer background color through the ANSI reset, not reverting to terminal default
 
 ### Requirement: Open entry in nearest directory window with enter
-When the user presses `enter` on a selected entry in the copen buffer, the system SHALL navigate to that entry's path in the nearest directory window and SHALL move focus from the copen window to that directory window. The system SHALL also update `QuickFix.current_index` to match the selected entry and refresh the copen buffer so the bold indicator reflects the new current entry. The nearest directory window SHALL be found by: identifying the split that contains the copen buffer, traversing the sibling subtree (the other child of that split), and finding the first `Directory` window by following the focus path.
+When the user presses `enter` on a selected entry in the copen buffer, the system SHALL navigate to that entry's path in the nearest directory window and SHALL move focus from the copen window to that directory window. The system SHALL also update `QuickFix.current_index` to match the selected entry and refresh the copen buffer so the bold indicator reflects the new current entry. The nearest directory window SHALL be found by: identifying the split that contains the copen buffer, traversing the sibling subtree (the other child of that split), and finding the first `Directory` window by following the focus path. If no sibling directory window exists, the system SHALL create a horizontal split with a new directory window as the first child and the copen window as the second child, focus the directory window, and navigate to the selected path.
 
 #### Scenario: Enter opens path in sibling directory window
 - **WHEN** the copen window is the second child of a horizontal split, the first child is a Directory window, and the user presses enter on an entry
@@ -49,12 +49,12 @@ When the user presses `enter` on a selected entry in the copen buffer, the syste
 - **WHEN** the copen window is inside a nested split and the sibling subtree contains multiple directory windows
 - **THEN** the entry's path SHALL be opened in the directory window found by following the focus path of the sibling subtree, focus SHALL move to that directory window, and `current_index` SHALL be updated
 
-#### Scenario: Enter with no directory window in sibling
-- **WHEN** the sibling subtree of the copen split contains no directory window
-- **THEN** pressing enter SHALL have no effect
+#### Scenario: Enter with no directory window creates split
+- **WHEN** the copen window has no sibling directory window and the user presses enter on an entry
+- **THEN** a horizontal split SHALL be created with a new directory window as the first child and the copen window as the second child, focus SHALL move to the directory window, the selected path SHALL be navigated to, and `current_index` SHALL be updated
 
 ### Requirement: Remove entry with dd
-When the user presses `dd` on a selected entry in the copen buffer, the system SHALL remove that entry from the quickfix list, remove its quickfix sign from all directory buffers, rebuild the copen buffer content, and adjust the cursor position.
+When the user presses `dd` on a selected entry in the copen buffer, the system SHALL remove that entry from the quickfix list, remove its quickfix sign from all directory buffers, rebuild the copen buffer content, and adjust the cursor position. If the cursor index exceeds the number of entries, it SHALL be clamped to the last entry before removal proceeds.
 
 #### Scenario: Remove entry before current_index
 - **WHEN** the user presses `dd` on an entry whose index is less than `QuickFix.current_index`
@@ -75,6 +75,10 @@ When the user presses `dd` on a selected entry in the copen buffer, the system S
 #### Scenario: Sign removal on dd
 - **WHEN** the user presses `dd` on an entry
 - **THEN** the quickfix sign for that entry's path SHALL be removed from all directory buffers
+
+#### Scenario: Cursor past end of entries
+- **WHEN** the user presses `dd` and the cursor index is greater than or equal to the number of entries
+- **THEN** the cursor SHALL be clamped to the last entry and that entry SHALL be removed
 
 ### Requirement: Navigation keymaps match topen
 The copen buffer SHALL support the same navigation keymaps as the Tasks (`:topen`) window for cursor movement (j, k, gg, G, and equivalent motions).
@@ -99,7 +103,7 @@ All keymaps not shared with the topen navigation set and not explicitly mapped (
 - **THEN** nothing SHALL happen
 
 ### Requirement: Copen buffer refresh on quickfix mutation
-The copen buffer SHALL be rebuilt whenever the quickfix list is mutated by any command (`:cfirst`, `:cn`, `:cN`, `:clearcl`, toggle, invert, `:cdo`, add).
+The copen buffer SHALL be rebuilt whenever the quickfix list is mutated by any command (`:cfirst`, `:cn`, `:cN`, `:clearcl`, toggle, invert, `:cdo`, add). The refresh SHALL find and update the copen buffer regardless of which tab is currently active. The copen buffer SHALL not be removed by buffer cleanup when it exists in an inactive tab.
 
 #### Scenario: Refresh after clearcl
 - **WHEN** the copen window is open and the user executes `:clearcl`
@@ -108,6 +112,18 @@ The copen buffer SHALL be rebuilt whenever the quickfix list is mutated by any c
 #### Scenario: Refresh after toggle
 - **WHEN** the copen window is open and the user toggles a quickfix entry in a directory window
 - **THEN** the copen buffer SHALL be rebuilt to reflect the updated entries
+
+#### Scenario: Refresh from different tab
+- **WHEN** the copen window is open in tab A and the user executes `:cn` from tab B
+- **THEN** the copen buffer in tab A SHALL be rebuilt to reflect the updated current index
+
+#### Scenario: Copen buffer preserved across tab switches
+- **WHEN** the copen window is open in tab A and the user switches to tab B
+- **THEN** the copen buffer SHALL not be removed by buffer cleanup and SHALL remain intact when tab A is refocused
+
+#### Scenario: Topen buffer preserved across tab switches
+- **WHEN** the topen window is open in tab A and the user switches to tab B
+- **THEN** the topen (Tasks) buffer SHALL not be removed by buffer cleanup and SHALL remain intact when tab A is refocused
 
 ### Requirement: Copen statusline
 The copen window SHALL display a statusline with "QuickFix" as the label (bold when focused) and a position indicator showing cursor position relative to total entries.

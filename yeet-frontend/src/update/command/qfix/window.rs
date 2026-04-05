@@ -145,10 +145,11 @@ pub fn find_quickfix_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> 
 }
 
 pub fn remove_entry(app: &mut App, qfix: &mut QuickFix, cursor_index: usize) -> Vec<Action> {
-    if cursor_index >= qfix.entries.len() {
+    if qfix.entries.is_empty() {
         return Vec::new();
     }
 
+    let cursor_index = cursor_index.min(qfix.entries.len().saturating_sub(1));
     let removed_path = qfix.entries.remove(cursor_index);
 
     match cursor_index.cmp(&qfix.current_index) {
@@ -427,6 +428,19 @@ mod test {
 
         assert_eq!(qfix.current_index, 0);
         assert!(qfix.entries.is_empty());
+    }
+
+    #[test]
+    fn remove_entry_cursor_past_end_clamps_to_last() {
+        let mut app = App::default();
+        let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a"), PathBuf::from("/b")]);
+        qfix.current_index = 0;
+        open(&mut app, &qfix);
+
+        remove_entry(&mut app, &mut qfix, 5);
+
+        assert_eq!(qfix.entries.len(), 1);
+        assert_eq!(qfix.entries[0], PathBuf::from("/a"));
     }
 
     #[test]
