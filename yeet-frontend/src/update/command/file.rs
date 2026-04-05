@@ -148,6 +148,33 @@ pub fn expand_path(marks: &Marks, target: &str, source_path: &Path) -> Result<Pa
     Ok(target_dir)
 }
 
+pub fn expand_path_without_source(marks: &Marks, target: &str) -> Result<PathBuf, String> {
+    let trimmed = target.trim();
+    if trimmed.is_empty() {
+        return dirs::home_dir().ok_or_else(|| "Home directory could not be resolved.".to_string());
+    }
+
+    if trimmed.starts_with('\'') {
+        let mark = match trimmed.chars().nth(1) {
+            Some(it) => it,
+            None => return Err("invalid mark format".to_string()),
+        };
+
+        return marks
+            .entries
+            .get(&mark)
+            .map(|path| path.to_path_buf())
+            .ok_or_else(|| format!("mark '{}' not found", mark));
+    }
+
+    let path = Path::new(trimmed);
+    if path.is_absolute() {
+        Ok(path.to_path_buf())
+    } else {
+        Err("Relative paths require a directory context.".to_string())
+    }
+}
+
 fn expand_target_path(target: &str, base_dir: &Path) -> PathBuf {
     let target_path = Path::new(target);
     if target_path.is_absolute() {
