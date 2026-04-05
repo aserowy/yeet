@@ -225,23 +225,22 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         }
         ("split", args) => {
             let preview_path = get_current_path(app);
-            match preview_path {
-                Some(path) => {
-                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
-                        Ok(target_path) => target_path,
-                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
-                    };
-
-                    add_change_mode(
-                        mode_before,
-                        Mode::Navigation,
-                        split::horizontal(app, target_path.as_path()),
-                    )
-                }
+            let actions = match preview_path {
+                Some(path) => match file::expand_path(&state.marks, args.trim(), path) {
+                    Ok(target_path) if target_path.exists() => {
+                        split::horizontal(app, target_path.as_path())
+                    }
+                    Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
+                        "Split failed. Path {:?} does not exist.",
+                        target_path
+                    ))])],
+                    Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
+                },
                 None => vec![Action::EmitMessages(vec![Message::Error(
                     "Split failed. Preview path could not be resolved.".to_string(),
                 )])],
-            }
+            };
+            add_change_mode(mode_before, Mode::Navigation, actions)
         }
         ("tl", "") => print::tasks(&state.tasks),
         ("tabnew", "") => {
@@ -340,23 +339,22 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         }
         ("vsplit", args) => {
             let preview_path = get_current_path(app);
-            match preview_path {
-                Some(path) => {
-                    let target_path = match file::expand_path(&state.marks, args.trim(), path) {
-                        Ok(target_path) => target_path,
-                        Err(err) => return vec![Action::EmitMessages(vec![Message::Error(err)])],
-                    };
-
-                    add_change_mode(
-                        mode_before,
-                        Mode::Navigation,
-                        split::vertical(app, target_path.as_path()),
-                    )
-                }
+            let actions = match preview_path {
+                Some(path) => match file::expand_path(&state.marks, args.trim(), path) {
+                    Ok(target_path) if target_path.exists() => {
+                        split::vertical(app, target_path.as_path())
+                    }
+                    Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
+                        "Vsplit failed. Path {:?} does not exist.",
+                        target_path
+                    ))])],
+                    Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
+                },
                 None => vec![Action::EmitMessages(vec![Message::Error(
                     "Vsplit failed. Preview path could not be resolved.".to_string(),
                 )])],
-            }
+            };
+            add_change_mode(mode_before, Mode::Navigation, actions)
         }
         ("w", "") => add_change_mode(
             mode_before,
@@ -1370,6 +1368,148 @@ mod test {
         assert!(
             !contains_quit_action(&actions, &QuitMode::FailOnRunningTasks),
             "wq on split should close the pane, not quit the app; actions: {actions:?}",
+        );
+    }
+
+    #[test]
+    fn split_invalid_path_emits_change_mode() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split nonexistent_mark");
+
+        assert!(
+            contains_change_mode(
+                &actions,
+                &Mode::Command(CommandMode::Command),
+                &Mode::Navigation,
+            ),
+            "split with invalid path must emit ChangeMode so app leaves command mode; actions: {actions:?}",
+        );
+    }
+
+    #[test]
+    fn vsplit_invalid_path_emits_change_mode() {
+        let mut app = App::default();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "vsplit nonexistent_mark");
+
+        assert!(
+            contains_change_mode(
+                &actions,
+                &Mode::Command(CommandMode::Command),
+                &Mode::Navigation,
+            ),
+            "vsplit with invalid path must emit ChangeMode so app leaves command mode; actions: {actions:?}",
+        );
+    }
+
+    #[test]
+    fn split_no_current_path_emits_change_mode() {
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Tasks(ViewPort::default());
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split foo");
+
+        assert!(
+            contains_command_error(&actions, "Split failed"),
+            "split with no current path must emit error; actions: {actions:?}",
+        );
+        assert!(
+            contains_change_mode(
+                &actions,
+                &Mode::Command(CommandMode::Command),
+                &Mode::Navigation,
+            ),
+            "split with no current path must emit ChangeMode; actions: {actions:?}",
+        );
+    }
+
+    #[test]
+    fn vsplit_no_current_path_emits_change_mode() {
+        let mut app = App::default();
+        let window = app.current_window_mut().expect("test requires current tab");
+        *window = Window::Tasks(ViewPort::default());
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "vsplit foo");
+
+        assert!(
+            contains_command_error(&actions, "Vsplit failed"),
+            "vsplit with no current path must emit error; actions: {actions:?}",
+        );
+        assert!(
+            contains_change_mode(
+                &actions,
+                &Mode::Command(CommandMode::Command),
+                &Mode::Navigation,
+            ),
+            "vsplit with no current path must emit ChangeMode; actions: {actions:?}",
+        );
+    }
+
+    fn make_app_with_current_path() -> App {
+        let mut app = App::default();
+        let path = std::env::current_dir().expect("get current dir");
+
+        let window = app.current_window().expect("test requires current tab");
+        let (_, current_id, _) =
+            crate::update::app::get_focused_directory_buffer_ids(window).unwrap();
+
+        app.contents.buffers.insert(
+            current_id,
+            Buffer::Directory(DirectoryBuffer {
+                path,
+                ..Default::default()
+            }),
+        );
+        app
+    }
+
+    #[test]
+    fn split_nonexistent_relative_path_returns_error() {
+        let mut app = make_app_with_current_path();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "split nonexistent_dir_12345");
+
+        assert!(
+            contains_command_error(&actions, "does not exist"),
+            "split with non-existent relative path must return error; actions: {actions:?}",
+        );
+
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Directory(_, _, _)),
+            "no split should have been created",
+        );
+    }
+
+    #[test]
+    fn vsplit_nonexistent_relative_path_returns_error() {
+        let mut app = make_app_with_current_path();
+        let mut state = make_state_with_command_mode();
+        let theme = Theme::default();
+
+        let actions = execute(&mut app, &mut state, &theme, "vsplit nonexistent_dir_12345");
+
+        assert!(
+            contains_command_error(&actions, "does not exist"),
+            "vsplit with non-existent relative path must return error; actions: {actions:?}",
+        );
+
+        let window = app.current_window().expect("test requires current tab");
+        assert!(
+            matches!(window, Window::Directory(_, _, _)),
+            "no split should have been created",
         );
     }
 }
