@@ -1,0 +1,59 @@
+name: automated-release
+
+on:
+  push:
+    tags:
+      - "release"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: compute version tag
+        id: version
+        run: |
+          YEAR=$(date +%-Y)
+          MONTH=$(date +%-m)
+          DAY=$(date +%-d)
+
+          TAG="v${YEAR}.${MONTH}.${DAY}"
+          while git tag -l "$TAG" | grep -q .; do
+            DAY=$((DAY + 1))
+            TAG="v${YEAR}.${MONTH}.${DAY}"
+          done
+
+          VERSION="${YEAR}.${MONTH}.${DAY}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: update version in Cargo.toml
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.version }}"/' Cargo.toml
+
+      - name: commit and tag
+        run: |
+          git add Cargo.toml
+          git commit -m "release ${{ steps.version.outputs.tag }}"
+          git tag "${{ steps.version.outputs.tag }}"
+
+      - name: push commit and tag
+        run: |
+          git push origin main
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: delete release tag
+        run: |
+          git push origin :refs/tags/release
