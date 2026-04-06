@@ -15,7 +15,7 @@ Releases are currently triggered by manually pushing a version tag. This require
 
 ### New Capabilities
 
-- `automated-release-pipeline`: Workflow that computes a date-based version tag, updates `Cargo.toml`, commits to `main`, and creates the version tag — triggered by pushing a `release` tag
+- `devops`: Workflow that computes a date-based version tag, updates `Cargo.toml`, commits to `main`, and creates the version tag — triggered by pushing a `release` tag
 
 ### Modified Capabilities
 
