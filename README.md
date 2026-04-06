@@ -16,141 +16,35 @@ In short: y337
   <img src="https://github.com/user-attachments/assets/4a5268ba-e796-45dc-9ae8-8a41386c0a49" alt="yeet showing an image and listing qfix entries with :cl" width="95%">
 </div>
 
-## shortcuts
+## quick start
 
-### changing modes
+Yeet uses four vim-inspired modes: **Navigation** (default, browse files),
+**Normal** (rename/edit), **Insert** (type text), and **Command** (`:` commands).
+Press `Esc` to move up the mode hierarchy. See `:help modes` for details.
 
-In every mode `esc` switches to the next 'level' mode. The order is:
+| key          | action                                       |
+| ------------ | -------------------------------------------- |
+| `h`, `l`     | navigate parent/child directories            |
+| `j`, `k`     | move cursor up/down                          |
+| `Enter`      | open file or enter directory                 |
+| `gg`, `G`    | jump to top/bottom                           |
+| `yy`         | yank file to junk yard                       |
+| `p`          | paste from junk yard                         |
+| `dd`         | trash file (recoverable via junk yard)       |
+| `Space`      | toggle quickfix selection                    |
+| `/`, `?`     | search forward/backward                      |
+| `:`          | enter command mode                           |
 
-navigation < normal < insert
-
-Exception to this order is the command mode. Leaving this mode will restore the
-previous one.
-
-When transition from normal to navigation all changes to the filesystem will get
-persisted. Thus, changes in insert and normal are handled like unsaved buffer changes
-and are not present on the file system till `:w` gets called or the mode changes
-to navigation.
-
-### navigation mode
-
-In navigation mode, all register interactions target the junk yard. The file
-register holds all files which got yanked and the last nine trashes.
-
-| keys      | action                                                      |
-| --------- | ----------------------------------------------------------- |
-| Enter     | open selected file/directory                                |
-| gh        | goto home directory                                         |
-| gn        | go into normal mode                                         |
-| gt, gT    | go to next/previous tab                                     |
-| h, l      | navigating the file tree                                    |
-| p         | paste " from junk yard to current path                      |
-| "p\<char> | paste register named \<char> from junk yard to current path |
-| yp        | copy current selected path to system clipboard              |
-| yy        | yank file to junk yard                                      |
-| C-n, C-p  | navigate to (n)ext or (p) qfix entry                        |
-| C-h/j/k/l | move focus between split windows (left/down/up/right)       |
-| C-w C-s   | split current directory view horizontally (top/bottom)      |
-| C-w C-v   | split current directory view vertically (left/right)        |
-
-### navigation and normal mode
-
-| keys       | action                                                                                            |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| j, k       | navigating the current directory down/up                                                          |
-| gg, G      | jump to top/bottom of the buffer                                                                  |
-| o, O       | add a new line and change to insert mode                                                          |
-| I, A       | jump to line start/end and change to insert mode                                                  |
-| dd         | go into normal and trash\* the current line                                                       |
-| :          | change to command mode                                                                            |
-| /          | change to search downward                                                                         |
-| ?          | change to search upward                                                                           |
-| n, N       | repeat last search in same/reverse direction                                                      |
-| \<space>   | add or remove (toggle) current file to quick fix list                                             |
-| q\<char>   | start recording a macro on register \<char>. Only letters [a-zA-Z] are allowed!                   |
-| q          | while recording a macro, q finishes the recording and writes the input to the specified register. |
-| @\<char>   | replay a recorded macro on register \<char>                                                       |
-| @@         | replay the last played macro                                                                      |
-| m\<char>   | set mark for current selection. Only letters [a-zA-Z] are allowed!                                |
-| '\<char>   | jump to mark                                                                                      |
-| zt, zz, zb | move viewport to start, center, bottom of cursor position                                         |
-| C-u, C-d   | move viewport half screen up/down                                                                 |
-
-\*trash: files are not deleted but moved to yeets cache folder to enable junk yard
-interactions. Trashes get executed when leaving normal to navigation or saving the
-current buffer. To delete the selected path completly, call command `:d!`.
-
-### normal mode
-
-In normal mode, all register interactions target the default register (equal to
-`:reg` in nvim).
-
-| keys               | action                                                           |
-| ------------------ | ---------------------------------------------------------------- |
-| h, l               | move cursor left/right                                           |
-| 0, $               | move cursor to line start/end                                    |
-| f\<char>, F\<char> | move cursor to next char forward/backward                        |
-| t\<char>, T\<char> | move cursor before next char forward/backward                    |
-| ;                  | repeat the last find motion with f or t.                         |
-| ,                  | repeat the last find motion with f or t in reverse direction.    |
-| e                  | move cursor to end of next word                                  |
-| E                  | move cursor to end of next WORD                                  |
-| ge                 | move cursor to end of next word backward                         |
-| gE                 | move cursor to end of next WORD backward                         |
-| w                  | move cursor to next word                                         |
-| W                  | move cursor to next WORD                                         |
-| b                  | move cursor to next word backward                                |
-| B                  | move cursor to next WORD backward                                |
-| i, a               | change to insert mode                                            |
-| c\<motion>         | delete according to motion and change to insert mode             |
-| d\<motion>         | delete according to motion                                       |
-| s                  | delete char on cursor and change to insert mode                  |
-| x                  | delete char on cursor                                            |
-| .                  | repeat last modification. Key sequence is stored in '.' register |
+For the full keybinding reference, run `:help keybindings` inside yeet.
 
 ## commands
 
-> [!NOTE]
-> all paths for path arguments can be absolute or relative to the current path shown!
+Yeet provides commands for file operations (`:w`, `:cp`, `:mv`, `:d!`), window
+management (`:split`, `:vsplit`, `:q`), tabs (`:tabnew`, `:tabc`, `:tabn`),
+search (`:fd`, `:rg`), quickfix (`:copen`, `:cn`, `:cN`), tasks (`:topen`),
+and more.
 
-| :                           | action                                                                                                                                                                                                                     |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cfirst                      | navigates to first entry in quick fix list                                                                                                                                                                                 |
-| cl                          | list all quick fix entries and highlights the current path                                                                                                                                                                 |
-| clearcl \<empty> or \<path> | clears qfix completely if empty or clears all entries in the given folder.                                                                                                                                                 |
-| cn, cN                      | navigates to next/previous path in quick fix list                                                                                                                                                                          |
-| copen                       | open a split showing the quick fix list. `dd` to remove entries, `enter` to navigate to an entry                                                                                                                           |
-| cdo \<command>              | navigates to each entry in the quick fix list and executes the given command.<br>Cdo starts with the first entry and iterates over the given order. Thus, the list order is important! Non existing paths get ignored.     |
-| cp \<path> or '\<mark>      | copies the selected file to the target directory. The directory must exist without a file with the same name like the source                                                                                               |
-| d!                          | delete selected file/directory                                                                                                                                                                                             |
-| delm \<chars>               | delete current and cached marks. Every char represents one mark. ':delm AdfR', ':delm a d f R', and ':delm F' are all valid commands. Whitespaces are ignored.                                                             |
-| delt \<task_id>             | stop a task with the given id. The id can be found by listing tasks with `tl`                                                                                                                                              |
-| e!                          | reload current folder                                                                                                                                                                                                      |
-| fd \<params for fd>         | uses [fd](https://github.com/sharkdp/) to populate qfix. \<params for fd> are passed through to fd. Yeet sets the following params by default: --color never --absolute-path --base-directory current_path                 |
-| invertcl                    | inverts the cl selection in current folder                                                                                                                                                                                 |
-| junk                        | list junk yard contents                                                                                                                                                                                                    |
-| marks                       | list all given marks                                                                                                                                                                                                       |
-| mv \<path> or '\<mark>      | moves the selected file to the target. The directory must exist without a file with the same name like the source                                                                                                          |
-| noh                         | remove search highlights                                                                                                                                                                                                   |
-| q                           | close current buffer or quit yeet if the last buffer gets closed yeet                                                                                                                                                      |
-| q!                          | force tasks to stop, close current buffer resetting all changes, and quit yeet if the last buffer gets closed                                                                                                              |
-| qa                          | close all buffer and quit yeet                                                                                                                                                                                             |
-| qa!                         | force tasks to stop, close all buffer resetting all changes, and quit yeet                                                                                                                                                 |
-| reg                         | print all register entries                                                                                                                                                                                                 |
-| rg \<params for rg>         | uses [rg](https://github.com/BurntSushi/ripgrep/) to populate qfix. \<params for rg> are passed through to rg. Yeet sets the following params by default: --color never --files-with-matches \<params for rg> current_path |
-| topen                       | open a split and show all running tasks. `dd` to close selected tasks                                                                                                                                                      |
-| split \<path>               | split current directory view horizontally (top/bottom). The new pane opens below showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory                  |
-| vsplit \<path>              | split current directory view vertically (left/right). The new pane opens to the right showing \<path>, or the current directory if no path is given. Path can be absolute or relative to the current directory             |
-| tl                          | list all currently running tasks                                                                                                                                                                                           |
-| tabnew                      | opens a new tab                                                                                                                                                                                                            |
-| tabfir/tabl                 | shows the first/last tab                                                                                                                                                                                                   |
-| tabn/tabp                   | shows the next/previous tab                                                                                                                                                                                                |
-| tabc/tabc!                  | close currently shown tab. error on unsaved changes. ! forces a buffer reset                                                                                                                                               |
-| tabo/tabo!                  | close all hidden tabs. error on unsaved changes. ! forces a buffer reset                                                                                                                                                   |
-| tabs                        | print all open tabs                                                                                                                                                                                                        |
-| w                           | write changes without changing mode                                                                                                                                                                                        |
-| wq                          | write changes and quit yeet                                                                                                                                                                                                |
-| z \<target for z>           | jump to paths with zoxide like in your terminal. `:z foo` will execute zoxide to jump to the given directory                                                                                                               |
+For the full command reference, run `:help commands` inside yeet.
 
 ## cli
 
@@ -176,21 +70,20 @@ Options:
 
 ## configuration
 
-Yeet loads a Lua configuration file on startup (if present) from:
-
-1. `$XDG_CONFIG_HOME/yeet/init.lua`
-2. `~/.config/yeet/init.lua` (fallback)
-
-Use the `y.theme` table to override theme palette values:
+Yeet loads `init.lua` from `$XDG_CONFIG_HOME/yeet/init.lua` (or
+`~/.config/yeet/init.lua`) on startup. Use the `y.theme` table to override
+theme colors:
 
 ```lua
 y = {
   theme = {
-    tab_active_bg = "#87CEFA",
-    statusline_fg = "#FFFFFF",
+    TabBarActiveBg = "#87CEFA",
+    StatusLineFocusedFg = "#FFFFFF",
   }
 }
 ```
+
+For the full list of theme tokens, run `:help configuration` inside yeet.
 
 ## faq
 

@@ -12,7 +12,9 @@ use crate::{
 
 const INDEX_CONTENT: &str = include_str!("../../../../docs/help/index.md");
 const COMMANDS_CONTENT: &str = include_str!("../../../../docs/help/commands.md");
+const CONFIGURATION_CONTENT: &str = include_str!("../../../../docs/help/configuration.md");
 const KEYBINDINGS_CONTENT: &str = include_str!("../../../../docs/help/keybindings.md");
+const MODES_CONTENT: &str = include_str!("../../../../docs/help/modes.md");
 
 struct HelpPage {
     name: &'static str,
@@ -29,8 +31,16 @@ const HELP_PAGES: &[HelpPage] = &[
         content: COMMANDS_CONTENT,
     },
     HelpPage {
+        name: "configuration",
+        content: CONFIGURATION_CONTENT,
+    },
+    HelpPage {
         name: "keybindings",
         content: KEYBINDINGS_CONTENT,
+    },
+    HelpPage {
+        name: "modes",
+        content: MODES_CONTENT,
     },
 ];
 
@@ -117,6 +127,7 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
     let help_viewport = ViewPort {
         buffer_id,
         show_border: false,
+        wrap: true,
         ..Default::default()
     };
 
