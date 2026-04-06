@@ -289,6 +289,22 @@ impl Window {
         }
     }
 
+    pub fn set_wrap(&mut self, wrap: bool) {
+        match self.focused_window_mut() {
+            Window::Directory(parent, current, preview) => {
+                parent.wrap = wrap;
+                current.wrap = wrap;
+                preview.wrap = wrap;
+            }
+            Window::Help(vp) | Window::QuickFix(vp) | Window::Tasks(vp) => {
+                vp.wrap = wrap;
+            }
+            Window::Horizontal { .. } | Window::Vertical { .. } => {
+                unreachable!("focused_window_mut should have returned a non-split window")
+            }
+        }
+    }
+
     pub fn contains_quickfix(&self) -> bool {
         match self {
             Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
@@ -902,5 +918,87 @@ mod test {
         );
         let result = leaf.close_focused();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn set_wrap_directory_sets_all_three_viewports() {
+        let mut window = Window::Directory(
+            ViewPort::default(),
+            ViewPort::default(),
+            ViewPort::default(),
+        );
+        assert!(!window.focused_viewport().wrap);
+
+        window.set_wrap(true);
+        match &window {
+            Window::Directory(parent, current, preview) => {
+                assert!(parent.wrap);
+                assert!(current.wrap);
+                assert!(preview.wrap);
+            }
+            _ => panic!("expected Directory"),
+        }
+
+        window.set_wrap(false);
+        match &window {
+            Window::Directory(parent, current, preview) => {
+                assert!(!parent.wrap);
+                assert!(!current.wrap);
+                assert!(!preview.wrap);
+            }
+            _ => panic!("expected Directory"),
+        }
+    }
+
+    #[test]
+    fn set_wrap_tasks_sets_single_viewport() {
+        let mut window = Window::Tasks(ViewPort::default());
+        window.set_wrap(true);
+        assert!(window.focused_viewport().wrap);
+        window.set_wrap(false);
+        assert!(!window.focused_viewport().wrap);
+    }
+
+    #[test]
+    fn set_wrap_help_sets_single_viewport() {
+        let mut window = Window::Help(ViewPort::default());
+        window.set_wrap(true);
+        assert!(window.focused_viewport().wrap);
+    }
+
+    #[test]
+    fn set_wrap_quickfix_sets_single_viewport() {
+        let mut window = Window::QuickFix(ViewPort::default());
+        window.set_wrap(true);
+        assert!(window.focused_viewport().wrap);
+    }
+
+    #[test]
+    fn set_wrap_in_split_affects_focused_leaf() {
+        let mut tree = Window::Horizontal {
+            first: Box::new(Window::Directory(
+                ViewPort::default(),
+                ViewPort::default(),
+                ViewPort::default(),
+            )),
+            second: Box::new(Window::Tasks(ViewPort::default())),
+            focus: SplitFocus::Second,
+        };
+        tree.set_wrap(true);
+
+        match &tree {
+            Window::Horizontal { first, second, .. } => {
+                match first.as_ref() {
+                    Window::Directory(p, c, pr) => {
+                        assert!(!p.wrap);
+                        assert!(!c.wrap);
+                        assert!(!pr.wrap);
+                    }
+                    _ => panic!("expected Directory"),
+                }
+                assert!(second.focused_viewport().wrap);
+            }
+            _ => panic!("expected Horizontal"),
+        }
     }
 }
