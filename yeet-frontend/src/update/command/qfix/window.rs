@@ -27,25 +27,20 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, qfix: &QuickFix) -> V
         }),
     );
 
-    let mut qfix_viewport = ViewPort {
+    let mut qfix_window = Window::QuickFix(ViewPort {
         buffer_id,
         show_border: false,
         ..Default::default()
-    };
+    });
 
     if let Some(lua) = lua {
-        let mut qfix_window = Window::QuickFix(qfix_viewport);
         hook::on_window_create(lua, &mut qfix_window, None);
-        let Window::QuickFix(vp) = qfix_window else {
-            unreachable!("hook::on_window_create does not change Window variant");
-        };
-        qfix_viewport = vp;
     }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
         first: Box::new(old_window),
-        second: Box::new(Window::QuickFix(qfix_viewport)),
+        second: Box::new(qfix_window),
         focus: SplitFocus::Second,
     };
 

@@ -34,25 +34,20 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, tasks: &Tasks) -> Vec
         }),
     );
 
-    let mut task_viewport = ViewPort {
+    let mut task_window = Window::Tasks(ViewPort {
         buffer_id,
         show_border: false,
         ..Default::default()
-    };
+    });
 
     if let Some(lua) = lua {
-        let mut task_window = Window::Tasks(task_viewport);
         hook::on_window_create(lua, &mut task_window, None);
-        let Window::Tasks(vp) = task_window else {
-            unreachable!("hook::on_window_create does not change Window variant");
-        };
-        task_viewport = vp;
     }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
         first: Box::new(old_window),
-        second: Box::new(Window::Tasks(task_viewport)),
+        second: Box::new(task_window),
         focus: SplitFocus::Second,
     };
 

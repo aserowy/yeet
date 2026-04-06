@@ -136,26 +136,21 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
         }),
     );
 
-    let mut help_viewport = ViewPort {
+    let mut help_window = Window::Help(ViewPort {
         buffer_id,
         show_border: false,
         wrap: true,
         ..Default::default()
-    };
+    });
 
     if let Some(lua) = lua {
-        let mut help_window = Window::Help(help_viewport);
         hook::on_window_create(lua, &mut help_window, None);
-        let Window::Help(vp) = help_window else {
-            unreachable!("hook::on_window_create does not change Window variant");
-        };
-        help_viewport = vp;
     }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
         first: Box::new(old_window),
-        second: Box::new(Window::Help(help_viewport)),
+        second: Box::new(help_window),
         focus: SplitFocus::Second,
     };
 
