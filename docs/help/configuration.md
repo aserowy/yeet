@@ -12,6 +12,10 @@ The configuration file is `init.lua` and is loaded from the XDG config directory
 
 If `init.lua` contains syntax errors or runtime errors, yeet logs the error and continues startup with default settings. The application will not crash due to a broken configuration file.
 
+### `y table`
+
+The global `y` table is pre-created by yeet with `y.theme` and `y.hook` subtables. Assigning a table to `y` (e.g., `y = { theme = { ... } }`) merges the new keys into the existing table instead of replacing it. This means `y.hook` and its `:add()` methods are preserved even when using the `y = { ... }` assignment style.
+
 ## Topics
 
 - `:help theme` — theme colors, syntax highlighting, and all color token references

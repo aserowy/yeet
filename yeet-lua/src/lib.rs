@@ -47,13 +47,60 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
 
     y_table.set("theme", theme_table)?;
     y_table.set("hook", hook_table)?;
-    lua.globals().set("y", y_table)?;
+
+    protect_y_table(lua, y_table)?;
 
     let content = std::fs::read_to_string(config_path).map_err(LuaError::external)?;
     lua.load(&content)
         .set_name(config_path.to_string_lossy())
         .exec()?;
 
+    Ok(())
+}
+
+fn protect_y_table(lua: &Lua, y_table: LuaTable) -> LuaResult<()> {
+    let globals = lua.globals();
+    let g_meta = lua.create_table()?;
+
+    let y_for_index = y_table.clone();
+    g_meta.set(
+        "__index",
+        lua.create_function(move |_, (_t, key): (LuaTable, String)| {
+            if key == "y" {
+                Ok(LuaValue::Table(y_for_index.clone()))
+            } else {
+                Ok(LuaValue::Nil)
+            }
+        })?,
+    )?;
+
+    let y_for_newindex = y_table;
+    g_meta.set(
+        "__newindex",
+        lua.create_function(move |_, (t, key, value): (LuaTable, String, LuaValue)| {
+            if key == "y" {
+                match value {
+                    LuaValue::Table(new_table) => {
+                        for pair in new_table.pairs::<LuaValue, LuaValue>() {
+                            let (k, v) = pair?;
+                            y_for_newindex.set(k, v)?;
+                        }
+                    }
+                    _ => {
+                        tracing::warn!(
+                            "attempt to assign non-table value to y (got {}), ignoring",
+                            value.type_name()
+                        );
+                    }
+                }
+            } else {
+                t.raw_set(key, value)?;
+            }
+            Ok(())
+        })?,
+    )?;
+
+    globals.set_metatable(Some(g_meta));
     Ok(())
 }
 
@@ -199,5 +246,57 @@ mod tests {
         let path = tmp.path().to_path_buf();
         let result = setup_and_execute(&lua, &path);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn y_assignment_merges_theme_and_preserves_hook() {
+        let lua = create_lua_from_script(
+            r##"
+            y = { theme = { TabBarActiveBg = "#ff0000" } }
+            y.hook.on_window_create:add(function(ctx) end)
+            "##,
+        );
+        let y: LuaTable = lua.globals().get("y").unwrap();
+
+        let theme: LuaTable = y.get("theme").unwrap();
+        let val: String = theme.get("TabBarActiveBg").unwrap();
+        assert_eq!(val, "#ff0000");
+
+        let hook: LuaTable = y.get("hook").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 1);
+    }
+
+    #[test]
+    fn y_assignment_preserves_hook_add_method() {
+        let lua = create_lua_from_script(
+            r#"
+            y = { theme = { syntax = "base16-ocean.dark" } }
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.preview.wrap = true
+                end
+            end)
+            "#,
+        );
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let hook: LuaTable = y.get("hook").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 1);
+    }
+
+    #[test]
+    fn y_nil_assignment_does_not_destroy_table() {
+        let lua = create_lua_from_script("y = nil");
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let hook: LuaTable = y.get("hook").unwrap();
+        let _owc: LuaTable = hook.get("on_window_create").unwrap();
+    }
+
+    #[test]
+    fn other_globals_still_work() {
+        let lua = create_lua_from_script("foo = 42");
+        let val: i64 = lua.globals().get("foo").unwrap();
+        assert_eq!(val, 42);
     }
 }

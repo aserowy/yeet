@@ -151,6 +151,121 @@ mod tests {
     }
 
     #[test]
+    fn directory_hook_sets_preview_wrap() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.preview.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert!(preview.wrap, "preview.wrap should be true after hook");
+    }
+
+    #[test]
+    fn directory_hook_sets_parent_wrap() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert!(parent.wrap, "parent.wrap should be true after hook");
+    }
+
+    #[test]
+    fn directory_hook_sets_current_wrap() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.current.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert!(current.wrap, "current.wrap should be true after hook");
+    }
+
+    #[test]
+    fn directory_hook_sets_preview_wrap_via_real_init() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.preview.wrap = true
+                end
+            end)
+            "#
+        )
+        .unwrap();
+
+        let lua = Lua::new();
+        crate::setup_and_execute(&lua, &tmp.path().to_path_buf()).unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert!(
+            preview.wrap,
+            "preview.wrap should be true after hook via real init"
+        );
+        assert!(!parent.wrap, "parent.wrap should remain false");
+        assert!(!current.wrap, "current.wrap should remain false");
+    }
+
+    #[test]
     fn empty_hook_list_is_noop() {
         let lua = create_lua_with_hook("");
         let mut vp = ViewPort::default();

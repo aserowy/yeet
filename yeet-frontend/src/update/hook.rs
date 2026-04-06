@@ -99,4 +99,5 @@ mod tests {
         on_window_create(&lua, &mut window, None);
         assert!(matches!(window, Window::Tasks(_)));
     }
+
 }
