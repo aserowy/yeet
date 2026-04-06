@@ -2,12 +2,14 @@ use std::mem;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
+use yeet_lua::LuaConfiguration;
+
 use crate::{
     action::Action,
     event::Message,
     model::{App, Buffer, HelpBuffer, SplitFocus, Window},
     task::Task,
-    update::app,
+    update::{app, hook},
 };
 
 const INDEX_CONTENT: &str = include_str!("../../../../docs/help/index.md");
@@ -102,7 +104,7 @@ fn resolve_topic(topic: &str) -> Option<TopicMatch> {
     None
 }
 
-pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, topic: Option<&str>) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) -> Vec<Action> {
     let topic_match = match topic {
         Some(t) => match resolve_topic(t) {
             Some(m) => m,
@@ -143,11 +145,11 @@ pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, topic: Option<&str>) -> 
 
     if let Some(lua) = lua {
         let mut help_window = Window::Help(help_viewport);
-        super::super::hook::on_window_create(lua, &mut help_window, None);
-        match help_window {
-            Window::Help(vp) => help_viewport = vp,
-            _ => return Vec::new(),
+        hook::on_window_create(lua, &mut help_window, None);
+        let Window::Help(vp) = help_window else {
+            unreachable!("hook::on_window_create does not change Window variant");
         };
+        help_viewport = vp;
     }
 
     let old_window = mem::take(window);

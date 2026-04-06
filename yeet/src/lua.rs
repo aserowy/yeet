@@ -1,7 +1,8 @@
 use mlua::prelude::*;
 use yeet_frontend::theme::{parse_hex_color, Theme};
+use yeet_lua::LuaConfiguration;
 
-pub fn init() -> (Theme, Option<yeet_lua::Lua>) {
+pub fn init() -> (Theme, Option<LuaConfiguration>) {
     let mut theme = Theme::default();
 
     let lua = match yeet_lua::init() {
@@ -13,7 +14,7 @@ pub fn init() -> (Theme, Option<yeet_lua::Lua>) {
     (theme, Some(lua))
 }
 
-fn read_theme_values(lua: &yeet_lua::Lua, theme: &mut Theme) {
+fn read_theme_values(lua: &LuaConfiguration, theme: &mut Theme) {
     for (key, value) in yeet_lua::read_theme_pairs(lua) {
         if key == "syntax" {
             if let LuaValue::String(s) = value {

@@ -1,14 +1,15 @@
 use std::{collections::HashMap, mem};
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
     model::{qfix::QuickFix, App, Buffer, Contents, QuickFixBuffer, SplitFocus, Window},
-    update::app,
+    update::{app, hook},
 };
 
-pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, qfix: &QuickFix) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, qfix: &QuickFix) -> Vec<Action> {
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(window) => window,
         Err(_) => return Vec::new(),
@@ -34,11 +35,11 @@ pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, qfix: &QuickFix) -> Vec<
 
     if let Some(lua) = lua {
         let mut qfix_window = Window::QuickFix(qfix_viewport);
-        crate::update::hook::on_window_create(lua, &mut qfix_window, None);
-        match qfix_window {
-            Window::QuickFix(vp) => qfix_viewport = vp,
-            _ => return Vec::new(),
+        hook::on_window_create(lua, &mut qfix_window, None);
+        let Window::QuickFix(vp) = qfix_window else {
+            unreachable!("hook::on_window_create does not change Window variant");
         };
+        qfix_viewport = vp;
     }
 
     let old_window = mem::take(window);

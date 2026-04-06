@@ -4,6 +4,8 @@ mod viewport;
 pub use hook::invoke_on_window_create;
 pub use mlua::Lua;
 
+pub type LuaConfiguration = Lua;
+
 use std::path::PathBuf;
 
 use mlua::prelude::*;
@@ -93,7 +95,7 @@ fn resolve_config_path() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".config").join("yeet").join("init.lua"))
 }
 
-pub fn read_theme_pairs(lua: &Lua) -> Vec<(String, LuaValue)> {
+pub fn read_theme_pairs(lua: &LuaConfiguration) -> Vec<(String, LuaValue)> {
     let mut pairs = Vec::new();
     let Ok(y) = lua.globals().get::<LuaTable>("y") else {
         return pairs;

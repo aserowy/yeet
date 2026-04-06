@@ -6,7 +6,7 @@ use yeet_buffer::model::viewport::ViewPort;
 use crate::viewport::{table_to_viewport, viewport_to_table};
 
 pub fn invoke_on_window_create(
-    lua: &Lua,
+    lua: &crate::LuaConfiguration,
     window_type: &str,
     path: Option<&Path>,
     viewports: &mut [&mut ViewPort],

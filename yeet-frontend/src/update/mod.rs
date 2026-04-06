@@ -5,6 +5,7 @@ use yeet_buffer::{
     model::{BufferLine, Mode},
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -112,7 +113,7 @@ fn update_with_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
-    lua: Option<&yeet_lua::Lua>,
+    lua: Option<&LuaConfiguration>,
     message: Message,
 ) -> Vec<Action> {
     match message {
@@ -233,7 +234,7 @@ pub fn update_with_keymap_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
-    lua: Option<&yeet_lua::Lua>,
+    lua: Option<&LuaConfiguration>,
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {

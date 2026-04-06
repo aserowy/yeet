@@ -2,6 +2,7 @@ use std::{mem, path::Path};
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, QuitMode};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::{self, Action},
@@ -24,7 +25,7 @@ pub fn execute(
     app: &mut App,
     state: &mut State,
     theme: &Theme,
-    lua: Option<&yeet_lua::Lua>,
+    lua: Option<&LuaConfiguration>,
     cmd: &str,
 ) -> Vec<Action> {
     let cmd_with_args = match cmd.split_once(' ') {

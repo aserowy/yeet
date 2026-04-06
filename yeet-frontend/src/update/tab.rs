@@ -1,20 +1,25 @@
 use std::path::{Path, PathBuf};
 
 use yeet_keymap::message::KeymapMessage;
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::{self, Action},
     error::AppError,
     model::{App, Window},
-    update::app,
+    update::{app, hook},
 };
 
-pub fn create_tab(app: &mut App, lua: Option<&yeet_lua::Lua>, target_path: &Path) -> Vec<Action> {
+pub fn create_tab(
+    app: &mut App,
+    lua: Option<&LuaConfiguration>,
+    target_path: &Path,
+) -> Vec<Action> {
     let empty_buffer = app::get_empty_buffer(&mut app.contents);
     let mut window = Window::create(empty_buffer, empty_buffer, empty_buffer);
 
     if let Some(lua) = lua {
-        super::hook::on_window_create(lua, &mut window, Some(target_path));
+        hook::on_window_create(lua, &mut window, Some(target_path));
     }
 
     let new_id = next_tab_id(app);

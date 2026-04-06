@@ -1,14 +1,15 @@
 use std::{mem, path::Path};
 
 use yeet_keymap::message::KeymapMessage;
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::{self, Action},
     model::{App, SplitFocus, Window},
-    update::app,
+    update::{app, hook},
 };
 
-pub fn horizontal(app: &mut App, lua: Option<&yeet_lua::Lua>, target: &Path) -> Vec<Action> {
+pub fn horizontal(app: &mut App, lua: Option<&LuaConfiguration>, target: &Path) -> Vec<Action> {
     create_split(app, lua, target, |old, new| Window::Horizontal {
         first: Box::new(old),
         second: Box::new(new),
@@ -16,7 +17,7 @@ pub fn horizontal(app: &mut App, lua: Option<&yeet_lua::Lua>, target: &Path) -> 
     })
 }
 
-pub fn vertical(app: &mut App, lua: Option<&yeet_lua::Lua>, target: &Path) -> Vec<Action> {
+pub fn vertical(app: &mut App, lua: Option<&LuaConfiguration>, target: &Path) -> Vec<Action> {
     create_split(app, lua, target, |old, new| Window::Vertical {
         first: Box::new(old),
         second: Box::new(new),
@@ -26,7 +27,7 @@ pub fn vertical(app: &mut App, lua: Option<&yeet_lua::Lua>, target: &Path) -> Ve
 
 fn create_split(
     app: &mut App,
-    lua: Option<&yeet_lua::Lua>,
+    lua: Option<&LuaConfiguration>,
     target: &Path,
     make_split: impl FnOnce(Window, Window) -> Window,
 ) -> Vec<Action> {
@@ -34,7 +35,7 @@ fn create_split(
     let mut new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
 
     if let Some(lua) = lua {
-        super::super::hook::on_window_create(lua, &mut new_directory, Some(target));
+        hook::on_window_create(lua, &mut new_directory, Some(target));
     }
     let window = match app.current_window_mut() {
         Ok(window) => window,

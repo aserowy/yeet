@@ -12,6 +12,7 @@ use settings::Settings;
 use task::Task;
 use terminal::TerminalWrapper;
 use tokio_util::sync::CancellationToken;
+use yeet_lua::LuaConfiguration;
 
 use yeet_buffer::{message::BufferMessage, model::Mode};
 use yeet_keymap::message::{KeymapMessage, PrintContent, QuitMode};
@@ -29,7 +30,7 @@ pub mod theme;
 mod update;
 mod view;
 
-pub async fn run(settings: Settings, lua: Option<yeet_lua::Lua>) -> Result<(), AppError> {
+pub async fn run(settings: Settings, lua: Option<LuaConfiguration>) -> Result<(), AppError> {
     let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
     let mut emitter = Emitter::start(

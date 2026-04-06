@@ -10,6 +10,7 @@ use yeet_buffer::model::{
     viewport::{LineNumber, ViewPort},
     Cursor, Mode, TextBuffer,
 };
+use yeet_lua::LuaConfiguration;
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
@@ -22,7 +23,7 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub app: App,
-    pub lua: Option<yeet_lua::Lua>,
+    pub lua: Option<LuaConfiguration>,
     pub settings: Settings,
     pub state: State,
 }

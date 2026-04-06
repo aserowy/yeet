@@ -2,6 +2,7 @@ use std::{mem, path::PathBuf};
 
 use yeet_buffer::model::Mode;
 use yeet_keymap::message::{KeymapMessage, QuitMode};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::{self, Action},
@@ -9,14 +10,14 @@ use crate::{
     event::Message,
     model::{self, qfix::QuickFix, App, Buffer, QuickFixBuffer, SplitFocus, Window},
     settings::Settings,
-    update::{app, command::qfix::window as qfix_window},
+    update::{app, command::qfix::window as qfix_window, hook},
 };
 
 pub fn selected(
     settings: &Settings,
     mode: &Mode,
     app: &mut App,
-    lua: Option<&yeet_lua::Lua>,
+    lua: Option<&LuaConfiguration>,
     qfix: &mut QuickFix,
 ) -> Result<Vec<Action>, AppError> {
     if mode != &Mode::Navigation {
@@ -42,7 +43,7 @@ pub fn selected(
                         Window::create(empty_buffer, empty_buffer, empty_buffer);
 
                     if let Some(lua) = lua {
-                        super::hook::on_window_create(lua, &mut new_directory, Some(&path));
+                        hook::on_window_create(lua, &mut new_directory, Some(&path));
                     }
 
                     let window = app.current_window_mut()?;

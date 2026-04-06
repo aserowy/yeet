@@ -1,11 +1,12 @@
 use std::mem;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
     model::{App, Buffer, Contents, CurrentTask, SplitFocus, Tasks, TasksBuffer, Window},
-    update::app,
+    update::{app, hook},
 };
 
 pub fn delete(tasks: &mut Tasks, id: u16) -> Vec<Action> {
@@ -15,7 +16,7 @@ pub fn delete(tasks: &mut Tasks, id: u16) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, tasks: &Tasks) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, tasks: &Tasks) -> Vec<Action> {
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(window) => window,
         Err(_) => return Vec::new(),
@@ -41,11 +42,11 @@ pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, tasks: &Tasks) -> Vec<Ac
 
     if let Some(lua) = lua {
         let mut task_window = Window::Tasks(task_viewport);
-        crate::update::hook::on_window_create(lua, &mut task_window, None);
-        match task_window {
-            Window::Tasks(vp) => task_viewport = vp,
-            _ => return Vec::new(),
+        hook::on_window_create(lua, &mut task_window, None);
+        let Window::Tasks(vp) = task_window else {
+            unreachable!("hook::on_window_create does not change Window variant");
         };
+        task_viewport = vp;
     }
 
     let old_window = mem::take(window);
