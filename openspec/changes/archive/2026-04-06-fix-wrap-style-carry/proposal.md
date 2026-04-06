@@ -15,7 +15,7 @@ When a styled line wraps into multiple visual lines, continuation segments lose 
 
 ### Modified Capabilities
 
-- `line-wrap`: Wrapped continuation lines SHALL preserve the ANSI styling active at the wrap boundary.
+- `buffer`: Wrapped continuation lines SHALL preserve the ANSI styling active at the wrap boundary.
 
 ## Impact
 

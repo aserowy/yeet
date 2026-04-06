@@ -15,7 +15,7 @@ Long lines in buffers (e.g., help pages, file previews) overflow the viewport an
 
 ### New Capabilities
 
-- `line-wrap`: Configurable soft line wrapping at word boundaries for buffer content.
+- `buffer`: Configurable soft line wrapping at word boundaries for buffer content.
 
 ### Modified Capabilities
 
