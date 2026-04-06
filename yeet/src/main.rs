@@ -37,10 +37,10 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    let theme = lua::load_theme();
+    let (theme, lua) = lua::init();
     tracing::info!("theme loaded: syntax_theme={}", theme.syntax_theme);
 
-    match yeet_frontend::run(get_settings(&cli, theme)).await {
+    match yeet_frontend::run(get_settings(&cli, theme), lua).await {
         Ok(()) => {
             tracing::info!("closing application");
         }

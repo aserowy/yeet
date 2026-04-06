@@ -153,7 +153,7 @@ mod test {
     fn add_refreshes_task_buffer() {
         let tasks = make_tasks_2();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         assert_eq!(get_task_line_count(&app), 2);
 
@@ -176,7 +176,7 @@ mod test {
     fn remove_refreshes_task_buffer() {
         let tasks = make_tasks_2();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         assert_eq!(get_task_line_count(&app), 2);
 
@@ -194,7 +194,7 @@ mod test {
     fn remove_clamps_cursor_when_past_end() {
         let tasks = make_tasks_2();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         // Set cursor to last line (index 1)
         let window = app.current_window_mut().expect("test requires current tab");
@@ -263,7 +263,7 @@ mod test {
         // Cursor should follow id=5 to its new index (2).
         let mut tasks = make_tasks_2();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         // Place cursor on task id=5 (index 1 in sorted [1, 5])
         let window = app.current_window_mut().expect("test requires current tab");
@@ -294,7 +294,7 @@ mod test {
         // Cursor should follow id=10 to its new index (1).
         let mut tasks = make_tasks_3();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         // Place cursor on task id=10 (index 2 in sorted [1, 5, 10])
         let window = app.current_window_mut().expect("test requires current tab");

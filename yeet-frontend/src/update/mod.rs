@@ -5,6 +5,7 @@ use yeet_buffer::{
     model::{BufferLine, Mode},
 };
 use yeet_keymap::message::{KeySequence, KeymapMessage, PrintContent};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -22,6 +23,7 @@ mod cursor;
 mod enumeration;
 mod focus;
 pub mod history;
+pub mod hook;
 pub mod junkyard;
 mod mark;
 mod mode;
@@ -74,7 +76,13 @@ pub fn model(terminal: &TerminalWrapper, model: &mut Model, envelope: Envelope) 
         .messages
         .into_iter()
         .flat_map(|message| {
-            update_with_message(&mut model.app, &mut model.state, &model.settings, message)
+            update_with_message(
+                &mut model.app,
+                &mut model.state,
+                &model.settings,
+                model.lua.as_ref(),
+                message,
+            )
         })
         .collect();
 
@@ -105,6 +113,7 @@ fn update_with_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
+    lua: Option<&LuaConfiguration>,
     message: Message,
 ) -> Vec<Action> {
     match message {
@@ -137,7 +146,7 @@ fn update_with_message(
             paths,
             &settings.theme,
         ),
-        Message::Keymap(msg) => update_with_keymap_message(app, state, settings, &msg),
+        Message::Keymap(msg) => update_with_keymap_message(app, state, settings, lua, &msg),
         Message::QuickFixChanged => {
             command::qfix::window::refresh_quickfix_buffer(
                 &mut app.tabs,
@@ -225,6 +234,7 @@ pub fn update_with_keymap_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
+    lua: Option<&LuaConfiguration>,
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
@@ -243,7 +253,7 @@ pub fn update_with_keymap_message(
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
         KeymapMessage::ExecuteCommandString(command) => {
-            command::execute(app, state, &settings.theme, command)
+            command::execute(app, state, &settings.theme, lua, command)
         }
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             state.remaining_keysequence.replace(key_sequence.clone());
@@ -275,7 +285,7 @@ pub fn update_with_keymap_message(
             }
         },
         KeymapMessage::OpenSelected => {
-            match open::selected(settings, &state.modes.current, app, &mut state.qfix) {
+            match open::selected(settings, &state.modes.current, app, lua, &mut state.qfix) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("OpenSelected failed: {}", err);
