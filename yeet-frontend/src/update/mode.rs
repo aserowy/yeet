@@ -315,7 +315,7 @@ mod test {
 
         let tasks = Tasks::default();
         let mut app = crate::model::App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let mut state = crate::model::State::default();
         state.modes.current = Mode::Navigation;
@@ -352,7 +352,7 @@ mod test {
         use crate::update::command::help;
 
         let mut app = crate::model::App::default();
-        help::open(&mut app, None);
+        help::open(&mut app, None, None);
 
         let mut state = crate::model::State::default();
         state.modes.current = Mode::Navigation;
@@ -391,7 +391,7 @@ mod test {
 
         let tasks = Tasks::default();
         let mut app = crate::model::App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let mut state = crate::model::State::default();
         state.modes.current = Mode::Navigation;

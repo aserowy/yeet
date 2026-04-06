@@ -101,12 +101,12 @@ Each line in the help buffer SHALL produce exactly one `ratatui::Line` when rend
 - **WHEN** a syntax-highlighted string ends with a trailing newline
 - **THEN** it SHALL produce exactly one `BufferLine`, not an additional empty line
 
-### Requirement: Help pages are bundled markdown files
-The system SHALL embed help pages as markdown files at compile time. Help pages SHALL be available without any external file dependencies at runtime. The help system SHALL include pages for: index, commands, keybindings, modes, and configuration.
+### Requirement: Embedded help pages are bundled at compile time
+The system SHALL embed help pages as markdown files at compile time. Help pages SHALL be available without any external file dependencies at runtime. The help system SHALL include pages for: index, commands, keybindings, modes, configuration, theme, and hooks.
 
 #### Scenario: Help content available in release binary
 - **WHEN** the application is built as a release binary
-- **THEN** all help pages (index, commands, keybindings, modes, configuration) are embedded in the binary and accessible via the `:help` command
+- **THEN** all help pages (index, commands, keybindings, modes, configuration, theme, hooks) are embedded in the binary and accessible via the `:help` command
 
 #### Scenario: New modes page is accessible
 - **WHEN** the user executes `:help modes`
@@ -114,7 +114,15 @@ The system SHALL embed help pages as markdown files at compile time. Help pages 
 
 #### Scenario: New configuration page is accessible
 - **WHEN** the user executes `:help configuration`
-- **THEN** the configuration help page is displayed covering Lua config, theme tokens, and syntect theme selection
+- **THEN** the configuration help page is displayed as an index covering config file location, error handling, and links to theme and hooks pages
+
+#### Scenario: Theme page is accessible
+- **WHEN** the user executes `:help theme`
+- **THEN** the theme help page is displayed covering the `y.theme` table, syntax theme selection, and all color token references
+
+#### Scenario: Hooks page is accessible
+- **WHEN** the user executes `:help hooks`
+- **THEN** the hooks help page is displayed covering the `y.hook` table and all registered hook callbacks
 
 ### Requirement: Help pages follow a consistent entry structure
 Help pages SHALL use a structured markdown format with three levels: page title (`#`), section (`##`), and entry (`### \`identifier\``). Each entry SHALL use a level-3 heading with the entry identifier wrapped in backticks. Each entry description SHALL be at minimum two sentences long, providing both what the feature does and relevant context or constraints.

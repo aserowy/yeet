@@ -18,7 +18,15 @@ Detailed documentation of yeet's four modes: Navigation, Normal, Insert, and Com
 
 ### `configuration`
 
-Guide to customizing yeet via the Lua configuration file. Covers config file location, theme color tokens, syntax highlighting theme selection, and error handling. See `:help configuration`.
+Guide to customizing yeet via the Lua configuration file. Covers config file location and error handling. See `:help configuration`.
+
+### `theme`
+
+Theme color tokens and syntax highlighting theme selection. Covers the `y.theme` table and all available color tokens for tabbar, statusline, buffer, borders, and signs. See `:help theme`.
+
+### `hooks`
+
+Lifecycle hooks for customizing yeet behavior via Lua callbacks. Covers the `y.hook` table and available hooks like `on_window_create`. See `:help hooks`.
 
 ### `help`
 

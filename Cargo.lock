@@ -3877,6 +3877,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "yeet-frontend",
+ "yeet-lua",
 ]
 
 [[package]]
@@ -3900,7 +3901,6 @@ dependencies = [
  "futures",
  "image",
  "infer",
- "mlua",
  "notify",
  "pathdiff",
  "ratatui",
@@ -3913,6 +3913,7 @@ dependencies = [
  "tracing",
  "yeet-buffer",
  "yeet-keymap",
+ "yeet-lua",
 ]
 
 [[package]]
@@ -3923,6 +3924,17 @@ dependencies = [
  "dirs",
  "regex",
  "thiserror 2.0.18",
+ "tracing",
+ "yeet-buffer",
+]
+
+[[package]]
+name = "yeet-lua"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "mlua",
+ "tempfile",
  "tracing",
  "yeet-buffer",
 ]

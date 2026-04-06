@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 yeet-frontend = { path = "../yeet-frontend" }
+yeet-lua = { path = "../yeet-lua" }
 
 clap.workspace = true
 dirs.workspace = true

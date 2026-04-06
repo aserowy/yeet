@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 yeet-buffer = { path = "../yeet-buffer" }
 yeet-keymap = { path = "../yeet-keymap" }
+yeet-lua = { path = "../yeet-lua" }
 
 arboard.workspace = true
 crossterm.workspace = true
@@ -21,7 +22,6 @@ flate2.workspace = true
 futures.workspace = true
 image.workspace = true
 infer.workspace = true
-mlua.workspace = true
 notify.workspace = true
 pathdiff.workspace = true
 ratatui.workspace = true
