@@ -15,6 +15,7 @@ use crate::{
 mod line;
 mod prefix;
 pub(crate) mod style;
+pub(crate) mod wrap;
 
 pub fn view(
     viewport: &ViewPort,
@@ -54,13 +55,34 @@ pub fn view(
 }
 
 fn get_rendered_lines(viewport: &ViewPort, buffer: &TextBuffer) -> Vec<BufferLine> {
-    buffer
-        .lines
-        .iter()
-        .skip(viewport.vertical_index)
-        .take(usize::from(viewport.height))
-        .map(|line| line.to_owned())
-        .collect()
+    if !viewport.wrap {
+        return buffer
+            .lines
+            .iter()
+            .skip(viewport.vertical_index)
+            .take(usize::from(viewport.height))
+            .map(|line| line.to_owned())
+            .collect();
+    }
+
+    let height = usize::from(viewport.height);
+    let mut result = Vec::new();
+    let mut visual_rows = 0;
+
+    for line in buffer.lines.iter().skip(viewport.vertical_index) {
+        let line_visual_height =
+            wrap::visual_line_count(&line.content, viewport.get_content_width(line));
+        if visual_rows + line_visual_height > height && !result.is_empty() {
+            break;
+        }
+        result.push(line.to_owned());
+        visual_rows += line_visual_height;
+        if visual_rows >= height {
+            break;
+        }
+    }
+
+    result
 }
 
 fn get_styled_lines<'a>(
@@ -76,6 +98,70 @@ fn get_styled_lines<'a>(
         lines
     };
 
+    if !vp.wrap {
+        return get_styled_lines_nowrap(vp, mode, cursor, lines, theme);
+    }
+
+    let mut result = Vec::new();
+    let mut visual_row = 0;
+
+    for (i, bl) in lines.into_iter().enumerate() {
+        let corrected_index = i + vp.vertical_index;
+        let content_width = vp.get_content_width(&bl);
+        let segments = wrap::wrap_line(&bl.content, content_width);
+
+        for segment in &segments {
+            if visual_row >= usize::from(vp.height) {
+                break;
+            }
+
+            let mut prefix = if segment.is_first {
+                Ansi::new("")
+                    .join(&prefix::get_signs(vp, &bl, theme))
+                    .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
+                    .join(&prefix::get_custom_prefix(&bl))
+                    .join(&prefix::get_border(vp))
+            } else {
+                let prefix_width = vp.get_offset_width(&bl) + vp.get_border_width();
+                Ansi::new(&" ".repeat(prefix_width))
+            };
+
+            let mut segment_bl = BufferLine {
+                content: segment.content.clone(),
+                search_char_position: None,
+                signs: Vec::new(),
+                prefix: None,
+            };
+
+            let content = prefix.join(&line::add_line_styles_wrap(
+                vp,
+                mode,
+                cursor,
+                &i,
+                &mut segment_bl,
+                theme,
+                content_width,
+                segment.char_offset,
+            ));
+
+            if let Ok(text) = content.to_string().into_text() {
+                result.push(text.lines);
+            }
+
+            visual_row += 1;
+        }
+    }
+
+    result.into_iter().flatten().collect()
+}
+
+fn get_styled_lines_nowrap<'a>(
+    vp: &ViewPort,
+    mode: &Mode,
+    cursor: &Cursor,
+    lines: Vec<BufferLine>,
+    theme: &BufferTheme,
+) -> Vec<Line<'a>> {
     let mut result = Vec::new();
     for (i, mut bl) in lines.into_iter().enumerate() {
         let corrected_index = i + vp.vertical_index;
@@ -264,6 +350,39 @@ mod test {
     }
 
     #[test]
+    fn trailing_newline_in_ansi_produces_extra_line() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("\x1b[38;2;255;100;50m# Commands\n\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(
+            styled.len(),
+            2,
+            "a BufferLine with embedded newline produces two rendered lines via ansi_to_tui"
+        );
+        assert!(
+            styled[0].width() < usize::from(vp.width),
+            "first rendered line is shorter than viewport because padding was split across lines"
+        );
+    }
+
+    #[test]
+    fn no_trailing_newline_cursor_line_fills_viewport() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("\x1b[38;2;255;100;50m# Commands\x1b[0m")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(styled.len(), 1);
+        assert_eq!(
+            styled[0].width(),
+            usize::from(vp.width),
+            "cursor line without trailing newline should fill viewport width"
+        );
+    }
+
+    #[test]
     fn cursor_line_bg_preserved_through_ansi_reset() {
         use ratatui::style::Color;
 
@@ -323,5 +442,103 @@ mod test {
             usize::from(vp.width),
             "cursor line width in Normal mode should equal viewport width"
         );
+    }
+
+    fn wrap_viewport(width: u16, height: u16) -> ViewPort {
+        ViewPort {
+            width,
+            height,
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            show_border: false,
+            hide_cursor: false,
+            hide_cursor_line: false,
+            wrap: true,
+            cursor: Cursor {
+                vertical_index: 0,
+                horizontal_index: CursorPosition::Absolute {
+                    current: 0,
+                    expanded: 0,
+                },
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn wrap_produces_multiple_lines() {
+        let vp = wrap_viewport(10, 10);
+        let lines = vec![BufferLine::from("hello world foo bar")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(
+            styled.len() > 1,
+            "a wrapped long line should produce multiple visual lines, got {}",
+            styled.len()
+        );
+    }
+
+    #[test]
+    fn wrap_short_line_single_output() {
+        let vp = wrap_viewport(80, 10);
+        let lines = vec![BufferLine::from("hello")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(styled.len(), 1);
+    }
+
+    #[test]
+    fn wrap_cursor_line_bg_spans_all_segments() {
+        use ratatui::style::Color;
+
+        let vp = wrap_viewport(10, 10);
+        let lines = vec![BufferLine::from("hello world foo bar")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(styled.len() > 1);
+        let expected_bg = Color::Rgb(128, 128, 128);
+        for (row, line) in styled.iter().enumerate() {
+            for span in &line.spans {
+                assert_eq!(
+                    span.style.bg.unwrap_or(expected_bg),
+                    expected_bg,
+                    "row {} span {:?} should have cursor_line_bg",
+                    row,
+                    span.content,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn wrap_nowrap_viewport_unchanged() {
+        let mut vp = tasks_viewport(80, 10);
+        vp.wrap = false;
+        let lines = vec![BufferLine::from("hello world foo bar")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert_eq!(styled.len(), 1);
+    }
+
+    #[test]
+    fn wrap_each_segment_fills_viewport_width() {
+        let vp = wrap_viewport(10, 10);
+        let lines = vec![BufferLine::from("hello world foo bar")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        for (row, line) in styled.iter().enumerate() {
+            assert_eq!(
+                line.width(),
+                usize::from(vp.width),
+                "row {} should fill viewport width",
+                row,
+            );
+        }
     }
 }

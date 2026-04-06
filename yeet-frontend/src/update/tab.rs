@@ -92,7 +92,7 @@ pub fn tabnew_target_path(app: &App) -> Result<PathBuf, AppError> {
             )
             .ok()
             .flatten(),
-            Window::QuickFix(_) | Window::Tasks(_) => None,
+            Window::QuickFix(_) | Window::Tasks(_) | Window::Help(_) => None,
             Window::Horizontal { .. } | Window::Vertical { .. } => {
                 app::get_focused_directory_buffer_ids(window).and_then(|(_, current_id, _)| {
                     app::get_buffer_path(app, current_id).ok().flatten()

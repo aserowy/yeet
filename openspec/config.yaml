@@ -4,11 +4,14 @@ context: |
   RULES:
   1. Always ask questions with the questions tool.
   1. Always ask questions when you are unsure about something. Never assume anything.
-  1. Always write tests which for each spec to ensure your code works as expected.
+  1. Always write tests for each spec to ensure your code works as expected.
+  1. Always run `markdownlint` for README.md and all markdown files inside ./docs to ensure your markdown files are well-formatted and follow best practices after adding or updating them.
+  1. Always fix any warnings or errors that `markdownlint` reports.
   1. Always run `cargo test` to ensure your tests pass.
   1. Always run `cargo clippy` and `cargo fmt` to ensure your code is clean and well-formatted.
   1. Always fix any warnings or errors that `cargo clippy` or `cargo fmt` report.
   1. Never write comments in your code. If you need to explain something, refactor the code into a function with a descriptive name instead.
+  1. Always add/change documentation in any relevant markdown file in the ./docs directory for each user facing functionality you add or change.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

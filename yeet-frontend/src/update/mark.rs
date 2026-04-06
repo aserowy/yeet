@@ -26,6 +26,7 @@ pub fn add(
         | (_, Buffer::PathReference(_))
         | (_, Buffer::Tasks(_))
         | (_, Buffer::QuickFix(_))
+        | (_, Buffer::Help(_))
         | (_, Buffer::Empty) => return Ok(Vec::new()),
     };
 

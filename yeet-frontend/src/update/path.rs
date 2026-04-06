@@ -391,7 +391,7 @@ fn cleanup_removed_buffers_in_window(
                 );
             }
         }
-        Window::Tasks(_) | Window::QuickFix(_) => {}
+        Window::Tasks(_) | Window::QuickFix(_) | Window::Help(_) => {}
     }
 
     actions
@@ -537,7 +537,7 @@ fn update_viewports_for_buffers_in_window(
                     .unwrap_or_default(),
             );
         }
-        Window::Tasks(viewport) | Window::QuickFix(viewport) => {
+        Window::Tasks(viewport) | Window::QuickFix(viewport) | Window::Help(viewport) => {
             update_viewport_for_buffer(viewport, contents, mode, buffer_ids, selection_by_viewport);
         }
     };
@@ -581,7 +581,7 @@ fn collect_viewport_selections_for_buffers_in_window(
             collect_viewport_selection(current, contents, buffer_ids, selections);
             collect_viewport_selection(preview, contents, buffer_ids, selections);
         }
-        Window::Tasks(viewport) | Window::QuickFix(viewport) => {
+        Window::Tasks(viewport) | Window::QuickFix(viewport) | Window::Help(viewport) => {
             collect_viewport_selection(viewport, contents, buffer_ids, selections);
         }
     }
@@ -651,6 +651,9 @@ fn update_viewport_for_buffer(
         }
         Buffer::QuickFix(qfix) => {
             update_directory_viewport_selection(viewport, mode, &qfix.buffer, selection);
+        }
+        Buffer::Help(help) => {
+            update_directory_viewport_selection(viewport, mode, &help.buffer, selection);
         }
         Buffer::Image(_) | Buffer::PathReference(_) | Buffer::Empty => {}
     }

@@ -165,6 +165,16 @@ pub fn relocate(
             );
             Ok(Vec::new())
         }
+        Buffer::Help(help_buf) => {
+            let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());
+            yeet_buffer::update(
+                Some(viewport),
+                &state.modes.current,
+                &mut help_buf.buffer,
+                slice::from_ref(&msg),
+            );
+            Ok(Vec::new())
+        }
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
             Ok(Vec::new())
         }

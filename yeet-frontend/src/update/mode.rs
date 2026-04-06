@@ -35,7 +35,7 @@ pub fn change(
         let vp = app.current_window()?.focused_viewport();
         if matches!(
             app.contents.buffers.get(&vp.buffer_id),
-            Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_))
+            Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_)) | Some(Buffer::Help(_))
         ) {
             return Ok(Vec::new());
         }
@@ -335,6 +335,41 @@ mod test {
         assert_eq!(state.modes.current, Mode::Navigation);
 
         // Navigation → Insert should also be blocked
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Insert,
+            &theme,
+        )
+        .expect("mode change must succeed");
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+    }
+
+    #[test]
+    fn mode_change_blocked_on_help_buffer() {
+        use crate::update::command::help;
+
+        let mut app = crate::model::App::default();
+        help::open(&mut app, None);
+
+        let mut state = crate::model::State::default();
+        state.modes.current = Mode::Navigation;
+
+        let theme = Theme::default();
+
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Navigation,
+            &Mode::Normal,
+            &theme,
+        )
+        .expect("mode change must succeed");
+        assert!(actions.is_empty());
+        assert_eq!(state.modes.current, Mode::Navigation);
+
         let actions = mode::change(
             &mut app,
             &mut state,

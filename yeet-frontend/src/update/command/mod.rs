@@ -13,6 +13,7 @@ use crate::{
 };
 
 mod file;
+pub mod help;
 mod print;
 pub mod qfix;
 mod split;
@@ -143,6 +144,12 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
 
             add_change_mode(mode_before, mode, actions)
         }
+        ("help", "") => add_change_mode(mode_before, Mode::Navigation, help::open(app, None)),
+        ("help", topic) => add_change_mode(
+            mode_before,
+            Mode::Navigation,
+            help::open(app, Some(topic.trim())),
+        ),
         ("invertcl", "") => {
             let actions = match qfix::commands::invert_in_current(app, &mut state.qfix, theme) {
                 Ok(actions) => actions,
