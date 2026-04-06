@@ -37,6 +37,12 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
     let y_table = lua.create_table()?;
     let theme_table = lua.create_table()?;
     let hook_table = lua.create_table()?;
+
+    let hook_mt = create_hook_metatable(lua)?;
+    let on_window_create = lua.create_table()?;
+    on_window_create.set_metatable(Some(hook_mt));
+    hook_table.set("on_window_create", on_window_create)?;
+
     y_table.set("theme", theme_table)?;
     y_table.set("hook", hook_table)?;
     lua.globals().set("y", y_table)?;
@@ -47,6 +53,35 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
         .exec()?;
 
     Ok(())
+}
+
+fn create_hook_metatable(lua: &Lua) -> LuaResult<LuaTable> {
+    let methods = lua.create_table()?;
+    methods.set(
+        "add",
+        lua.create_function(|_, (this, func): (LuaTable, LuaValue)| {
+            match func {
+                LuaValue::Function(_) => {
+                    let len = this.raw_len();
+                    this.raw_set(len + 1, func)?;
+                }
+                LuaValue::Nil => {
+                    tracing::warn!("y.hook:add() called with nil, ignoring");
+                }
+                _ => {
+                    tracing::warn!(
+                        "y.hook:add() called with {}, expected function, ignoring",
+                        func.type_name()
+                    );
+                }
+            }
+            Ok(())
+        })?,
+    )?;
+
+    let mt = lua.create_table()?;
+    mt.set("__index", methods)?;
+    Ok(mt)
 }
 
 fn resolve_config_path() -> Option<PathBuf> {
@@ -92,16 +127,50 @@ mod tests {
         let lua = create_lua_from_script("");
         let y: LuaTable = lua.globals().get("y").unwrap();
         let hook: LuaTable = y.get("hook").unwrap();
-        assert_eq!(hook.len().unwrap(), 0);
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 0);
     }
 
     #[test]
-    fn user_can_assign_function_to_hook() {
-        let lua = create_lua_from_script("y.hook.on_window_create = function(ctx) return ctx end");
+    fn user_can_add_function_to_hook() {
+        let lua =
+            create_lua_from_script("y.hook.on_window_create:add(function(ctx) return ctx end)");
         let y: LuaTable = lua.globals().get("y").unwrap();
         let hook: LuaTable = y.get("hook").unwrap();
-        let func: LuaValue = hook.get("on_window_create").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 1);
+        let func: LuaValue = owc.raw_get(1).unwrap();
         assert!(matches!(func, LuaValue::Function(_)));
+    }
+
+    #[test]
+    fn user_can_add_multiple_functions_to_hook() {
+        let lua = create_lua_from_script(
+            r#"
+            y.hook.on_window_create:add(function(ctx) end)
+            y.hook.on_window_create:add(function(ctx) end)
+            y.hook.on_window_create:add(function(ctx) end)
+            "#,
+        );
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let hook: LuaTable = y.get("hook").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 3);
+    }
+
+    #[test]
+    fn add_non_function_is_ignored() {
+        let lua = create_lua_from_script(
+            r#"
+            y.hook.on_window_create:add("not a function")
+            y.hook.on_window_create:add(42)
+            y.hook.on_window_create:add(nil)
+            "#,
+        );
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let hook: LuaTable = y.get("hook").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 0);
     }
 
     #[test]

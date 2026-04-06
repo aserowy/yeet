@@ -24,20 +24,44 @@ fn try_invoke_on_window_create(
 ) -> LuaResult<()> {
     let y: LuaTable = lua.globals().get("y")?;
     let hook: LuaTable = y.get("hook")?;
-    let func_value: LuaValue = hook.get("on_window_create")?;
+    let hook_table: LuaTable = hook.get("on_window_create")?;
 
-    let func = match func_value {
-        LuaValue::Nil => return Ok(()),
-        LuaValue::Function(f) => f,
-        _ => {
-            tracing::warn!(
-                "y.hook.on_window_create is not a function, got {:?}",
-                func_value.type_name()
-            );
-            return Ok(());
+    let len = hook_table.raw_len();
+    if len == 0 {
+        return Ok(());
+    }
+
+    let ctx = build_context(lua, window_type, path, viewports)?;
+
+    for i in 1..=len {
+        let func: LuaValue = hook_table.raw_get(i)?;
+        match func {
+            LuaValue::Function(f) => {
+                if let Err(err) = f.call::<()>(ctx.clone()) {
+                    tracing::error!("error in y.hook.on_window_create callback {}: {:?}", i, err);
+                }
+            }
+            _ => {
+                tracing::warn!(
+                    "y.hook.on_window_create[{}] is not a function, got {:?}",
+                    i,
+                    func.type_name()
+                );
+            }
         }
-    };
+    }
 
+    read_back_context(&ctx, window_type, viewports);
+
+    Ok(())
+}
+
+fn build_context(
+    lua: &Lua,
+    window_type: &str,
+    path: Option<&Path>,
+    viewports: &mut [&mut ViewPort],
+) -> LuaResult<LuaTable> {
     let ctx = lua.create_table()?;
     ctx.set("type", window_type)?;
 
@@ -60,8 +84,10 @@ fn try_invoke_on_window_create(
         }
     }
 
-    func.call::<()>(ctx.clone())?;
+    Ok(ctx)
+}
 
+fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut ViewPort]) {
     match window_type {
         "directory" => {
             if viewports.len() == 3 {
@@ -84,8 +110,6 @@ fn try_invoke_on_window_create(
             }
         }
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -102,6 +126,18 @@ mod tests {
             y = {{}}
             y.theme = {{}}
             y.hook = {{}}
+
+            local hook_mt = {{
+                __index = {{
+                    add = function(self, fn_)
+                        if type(fn_) == "function" then
+                            table.insert(self, fn_)
+                        end
+                    end
+                }}
+            }}
+            y.hook.on_window_create = setmetatable({{}}, hook_mt)
+
             {}
             "#,
             script
@@ -115,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn hook_nil_is_noop() {
+    fn empty_hook_list_is_noop() {
         let lua = create_lua_with_hook("");
         let mut vp = ViewPort::default();
         invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
@@ -123,16 +159,116 @@ mod tests {
     }
 
     #[test]
-    fn hook_modifies_directory_viewport() {
+    fn single_callback_modifies_viewport() {
         let lua = create_lua_with_hook(
             r#"
-            y.hook.on_window_create = function(ctx)
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "help" then
+                    ctx.viewport.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+        assert!(vp.wrap);
+    }
+
+    #[test]
+    fn multiple_callbacks_invoked_in_order() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                ctx.viewport.line_number = "absolute"
+            end)
+            y.hook.on_window_create:add(function(ctx)
+                ctx.viewport.wrap = true
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+        assert_eq!(vp.line_number, LineNumber::Absolute);
+        assert!(vp.wrap);
+    }
+
+    #[test]
+    fn mutations_visible_across_callbacks() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                ctx.viewport.line_number = "absolute"
+            end)
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.viewport.line_number == "absolute" then
+                    ctx.viewport.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+        assert_eq!(vp.line_number, LineNumber::Absolute);
+        assert!(vp.wrap);
+    }
+
+    #[test]
+    fn first_callback_error_does_not_block_second() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                error("boom")
+            end)
+            y.hook.on_window_create:add(function(ctx)
+                ctx.viewport.wrap = true
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+        assert!(vp.wrap);
+    }
+
+    #[test]
+    fn all_callbacks_error_preserves_defaults() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                error("error 1")
+            end)
+            y.hook.on_window_create:add(function(ctx)
+                error("error 2")
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort {
+            line_number: LineNumber::Relative,
+            ..Default::default()
+        };
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+        assert_eq!(vp.line_number, LineNumber::Relative);
+        assert!(!vp.wrap);
+    }
+
+    #[test]
+    fn directory_hook_with_multiple_callbacks() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
                 if ctx.type == "directory" then
                     ctx.current.line_number = "absolute"
-                    ctx.current.wrap = true
+                end
+            end)
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
                     ctx.parent.show_border = false
                 end
-            end
+            end)
             "#,
         );
 
@@ -142,9 +278,6 @@ mod tests {
         };
         let mut current = ViewPort {
             line_number: LineNumber::Relative,
-            line_number_width: 3,
-            show_border: true,
-            sign_column_width: 2,
             ..Default::default()
         };
         let mut preview = ViewPort::default();
@@ -157,79 +290,23 @@ mod tests {
         );
 
         assert_eq!(current.line_number, LineNumber::Absolute);
-        assert!(current.wrap);
         assert!(!parent.show_border);
     }
 
     #[test]
-    fn hook_modifies_single_viewport_window() {
+    fn hook_receives_path() {
         let lua = create_lua_with_hook(
             r#"
-            y.hook.on_window_create = function(ctx)
-                if ctx.type == "help" then
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.path == "/test/path" then
                     ctx.viewport.wrap = true
-                    ctx.viewport.line_number = "absolute"
                 end
-            end
+            end)
             "#,
         );
 
         let mut vp = ViewPort::default();
-        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
-
-        assert!(vp.wrap);
-        assert_eq!(vp.line_number, LineNumber::Absolute);
-    }
-
-    #[test]
-    fn hook_error_preserves_defaults() {
-        let lua = create_lua_with_hook(
-            r#"
-            y.hook.on_window_create = function(ctx)
-                error("something went wrong")
-            end
-            "#,
-        );
-
-        let mut vp = ViewPort {
-            wrap: false,
-            line_number: LineNumber::Relative,
-            ..Default::default()
-        };
-        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
-
-        assert!(!vp.wrap);
-        assert_eq!(vp.line_number, LineNumber::Relative);
-    }
-
-    #[test]
-    fn hook_non_function_is_skipped() {
-        let lua = create_lua_with_hook("y.hook.on_window_create = 'not a function'");
-
-        let mut vp = ViewPort::default();
-        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
-        assert_eq!(vp.line_number, LineNumber::None);
-    }
-
-    #[test]
-    fn hook_with_invalid_values_preserves_defaults() {
-        let lua = create_lua_with_hook(
-            r#"
-            y.hook.on_window_create = function(ctx)
-                ctx.viewport.line_number = 42
-                ctx.viewport.wrap = "not_bool"
-            end
-            "#,
-        );
-
-        let mut vp = ViewPort {
-            line_number: LineNumber::Relative,
-            wrap: true,
-            ..Default::default()
-        };
-        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
-
-        assert_eq!(vp.line_number, LineNumber::Relative);
+        invoke_on_window_create(&lua, "help", Some(Path::new("/test/path")), &mut [&mut vp]);
         assert!(vp.wrap);
     }
 
@@ -238,7 +315,7 @@ mod tests {
         for window_type in &["directory", "help", "quickfix", "tasks"] {
             let lua = create_lua_with_hook(&format!(
                 r#"
-                y.hook.on_window_create = function(ctx)
+                y.hook.on_window_create:add(function(ctx)
                     if ctx.type == "{}" then
                         if ctx.viewport then
                             ctx.viewport.wrap = true
@@ -247,7 +324,7 @@ mod tests {
                             ctx.current.wrap = true
                         end
                     end
-                end
+                end)
                 "#,
                 window_type
             ));
@@ -272,19 +349,24 @@ mod tests {
     }
 
     #[test]
-    fn hook_receives_path() {
+    fn hook_with_invalid_values_preserves_defaults() {
         let lua = create_lua_with_hook(
             r#"
-            y.hook.on_window_create = function(ctx)
-                if ctx.path == "/test/path" then
-                    ctx.viewport.wrap = true
-                end
-            end
+            y.hook.on_window_create:add(function(ctx)
+                ctx.viewport.line_number = 42
+                ctx.viewport.wrap = "not_bool"
+            end)
             "#,
         );
 
-        let mut vp = ViewPort::default();
-        invoke_on_window_create(&lua, "help", Some(Path::new("/test/path")), &mut [&mut vp]);
+        let mut vp = ViewPort {
+            line_number: LineNumber::Relative,
+            wrap: true,
+            ..Default::default()
+        };
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+
+        assert_eq!(vp.line_number, LineNumber::Relative);
         assert!(vp.wrap);
     }
 }

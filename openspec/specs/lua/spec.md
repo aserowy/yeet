@@ -1,73 +1,46 @@
-### Requirement: Hook namespace on y table
+### Requirement: Lua runtime initialization
+The system SHALL embed a Lua 5.4 runtime using the mlua crate at application startup, before any UI rendering occurs.
 
-The system SHALL expose a `y.hook` table in the Lua environment. This table serves as the namespace for all callback functions that yeet invokes at lifecycle points.
+#### Scenario: Successful initialization without config file
+- **WHEN** yeet starts and no `init.lua` exists at the config path
+- **THEN** the Lua runtime is initialized but no user script is executed, and yeet starts with default settings
 
-#### Scenario: y.hook table exists before init.lua executes
+#### Scenario: Successful initialization with config file
+- **WHEN** yeet starts and `init.lua` exists at `$XDG_CONFIG_HOME/yeet/init.lua`
+- **THEN** the Lua runtime loads and executes the file before UI rendering begins
 
-- **WHEN** the Lua runtime initializes and before `init.lua` is executed
-- **THEN** `y.hook` SHALL be an empty table accessible in the Lua environment
+### Requirement: Config file location follows XDG
+The system SHALL look for `init.lua` at `$XDG_CONFIG_HOME/yeet/init.lua`. If `$XDG_CONFIG_HOME` is not set, the system SHALL fall back to `~/.config/yeet/init.lua`.
 
-#### Scenario: User assigns a function to y.hook
+#### Scenario: XDG_CONFIG_HOME is set
+- **WHEN** `$XDG_CONFIG_HOME` is set to `/custom/config`
+- **THEN** the system loads `/custom/config/yeet/init.lua`
 
+#### Scenario: XDG_CONFIG_HOME is not set
+- **WHEN** `$XDG_CONFIG_HOME` is not set and the user's home directory is `/home/user`
+- **THEN** the system loads `/home/user/.config/yeet/init.lua`
+
+### Requirement: Global y table is exposed to Lua
+The system SHALL expose a global table named `y` to the Lua environment. This table serves as the namespace for all yeet configuration APIs. The `y` table SHALL contain a `theme` subtable for static theme configuration and a `hook` subtable for callback functions.
+
+#### Scenario: y table is accessible in init.lua
+- **WHEN** `init.lua` contains `y.theme.StatusLineFg = '#ffffff'`
+- **THEN** the assignment executes without error and the value is accessible from the Rust side
+
+#### Scenario: y.hook subtable is accessible in init.lua
 - **WHEN** `init.lua` contains `y.hook.on_window_create = function(ctx) end`
-- **THEN** the assignment executes without error and the function is retained in the Lua runtime
+- **THEN** the assignment executes without error and the function is retained in the Lua runtime for later invocation
 
-### Requirement: Hook invocation checks for function presence
+### Requirement: Lua errors are reported gracefully
+The system SHALL NOT crash if `init.lua` contains syntax errors or runtime errors. The system SHALL log the error and continue startup with default settings.
 
-The system SHALL check whether a hook function exists on `y.hook` before invoking it. If the hook is nil or not a function, the system SHALL skip invocation silently without error.
+#### Scenario: Syntax error in init.lua
+- **WHEN** `init.lua` contains invalid Lua syntax
+- **THEN** yeet logs an error message indicating the file and error, and starts with default theme colors
 
-#### Scenario: Hook is nil
-
-- **WHEN** `y.hook.on_window_create` is nil and a window is created
-- **THEN** the system SHALL skip the hook invocation and use default viewport settings
-
-#### Scenario: Hook is not a function
-
-- **WHEN** `y.hook.on_window_create` is set to a non-function value (e.g., a string or number)
-- **THEN** the system SHALL skip the hook invocation, log a warning, and use default viewport settings
-
-#### Scenario: Hook is a valid function
-
-- **WHEN** `y.hook.on_window_create` is a function
-- **THEN** the system SHALL invoke the function with the appropriate context table
-
-### Requirement: Hook errors are handled gracefully
-
-The system SHALL NOT crash if a hook function raises a Lua error. The system SHALL log the error and continue with default values as if the hook was not defined.
-
-#### Scenario: Hook raises a runtime error
-
-- **WHEN** `y.hook.on_window_create` raises a runtime error (e.g., indexing a nil value)
-- **THEN** the system SHALL log the error with a stack trace and apply default viewport settings to the created window
-
-#### Scenario: Hook causes an infinite loop or excessive computation
-
-- **WHEN** a hook function does not return in a reasonable time
-- **THEN** the system SHALL continue to wait (synchronous execution) — timeout handling is deferred to a future change
-
-### Requirement: Hook context table read-back with validation
-
-The system SHALL read back viewport settings from the context table after a hook function returns. Unknown keys SHALL be ignored. Invalid values (wrong type or unrecognized enum string) SHALL be ignored with a warning logged, preserving the default value for that field.
-
-#### Scenario: Hook sets a valid viewport field
-
-- **WHEN** the hook sets `ctx.current.wrap = true` on a directory window context
-- **THEN** the system SHALL apply `wrap = true` to the current viewport
-
-#### Scenario: Hook sets an invalid type for a viewport field
-
-- **WHEN** the hook sets `ctx.current.line_number = 42` (integer instead of string)
-- **THEN** the system SHALL log a warning and keep the default `line_number` value for that viewport
-
-#### Scenario: Hook sets an unrecognized enum value
-
-- **WHEN** the hook sets `ctx.current.line_number = "fancy"`
-- **THEN** the system SHALL log a warning and keep the default `line_number` value for that viewport
-
-#### Scenario: Hook adds an unknown key to the context
-
-- **WHEN** the hook sets `ctx.current.unknown_field = true`
-- **THEN** the system SHALL ignore the unknown key without error or warning
+#### Scenario: Runtime error in init.lua
+- **WHEN** `init.lua` raises a runtime error (e.g., calling a nil value)
+- **THEN** yeet logs the error with a stack trace and starts with default theme colors
 
 ### Requirement: yeet-lua crate encapsulates all Lua logic
 
@@ -96,6 +69,96 @@ The system SHALL keep the Lua runtime instance alive for the entire application 
 
 - **WHEN** the Lua runtime fails to initialize (e.g., out of memory)
 - **THEN** the system SHALL store no Lua instance, log the error, and operate with default settings and no hook invocations
+
+### Requirement: Hook namespace on y table
+
+The system SHALL expose a `y.hook` table in the Lua environment. Each hook name (`on_window_create`) SHALL be a Lua table with an `:add()` method for registering callback functions. The table SHALL store registered callbacks in order.
+
+#### Scenario: y.hook table exists before init.lua executes
+
+- **WHEN** the Lua runtime initializes and before `init.lua` is executed
+- **THEN** `y.hook` SHALL be a table with `on_window_create` as a hook object supporting `:add()`
+
+#### Scenario: User registers a callback via :add()
+
+- **WHEN** `init.lua` contains `y.hook.on_window_create:add(function(ctx) end)`
+- **THEN** the callback is appended to the hook's internal list and retained in the Lua runtime
+
+#### Scenario: User registers multiple callbacks
+
+- **WHEN** `init.lua` calls `y.hook.on_window_create:add(fn1)` and then `y.hook.on_window_create:add(fn2)`
+- **THEN** both callbacks SHALL be stored in registration order
+
+### Requirement: Hook invocation checks for function presence
+
+The system SHALL iterate all registered callbacks for a hook when invoking it. If no callbacks are registered, the system SHALL skip invocation silently. Each registered entry SHALL be validated as a function before calling.
+
+#### Scenario: No callbacks registered
+
+- **WHEN** `y.hook.on_window_create` has no registered callbacks and a window is created
+- **THEN** the system SHALL skip invocation and use default viewport settings
+
+#### Scenario: Multiple callbacks registered
+
+- **WHEN** `y.hook.on_window_create` has two registered callbacks and a window is created
+- **THEN** the system SHALL invoke both callbacks in registration order
+
+#### Scenario: Callbacks share context table
+
+- **WHEN** multiple callbacks are registered and the first callback sets `ctx.current.wrap = true`
+- **THEN** the second callback SHALL see `ctx.current.wrap == true` in the same context table
+
+### Requirement: Hook errors are handled gracefully
+
+The system SHALL NOT crash if a hook callback raises a Lua error. The system SHALL log the error and continue invoking the remaining callbacks.
+
+#### Scenario: First callback errors, second callback still runs
+
+- **WHEN** two callbacks are registered and the first raises a runtime error
+- **THEN** the system SHALL log the error from the first callback and still invoke the second callback
+
+#### Scenario: All callbacks error
+
+- **WHEN** all registered callbacks raise errors
+- **THEN** the system SHALL log each error and apply default viewport settings
+
+### Requirement: Hook context table read-back with validation
+
+The system SHALL read back viewport settings from the context table after all registered callbacks have been invoked. Unknown keys SHALL be ignored. Invalid values SHALL be ignored with a warning logged, preserving the default value for that field.
+
+#### Scenario: Hook sets a valid viewport field
+
+- **WHEN** the hook sets `ctx.current.wrap = true` on a directory window context
+- **THEN** the system SHALL apply `wrap = true` to the current viewport
+
+#### Scenario: Hook sets an invalid type for a viewport field
+
+- **WHEN** the hook sets `ctx.current.line_number = 42` (integer instead of string)
+- **THEN** the system SHALL log a warning and keep the default `line_number` value for that viewport
+
+#### Scenario: Hook sets an unrecognized enum value
+
+- **WHEN** the hook sets `ctx.current.line_number = "fancy"`
+- **THEN** the system SHALL log a warning and keep the default `line_number` value for that viewport
+
+#### Scenario: Hook adds an unknown key to the context
+
+- **WHEN** the hook sets `ctx.current.unknown_field = true`
+- **THEN** the system SHALL ignore the unknown key without error or warning
+
+### Requirement: :add() rejects non-function arguments
+
+The `:add()` method SHALL only accept function arguments. If called with a non-function value, the system SHALL log a warning and not add the value to the callback list.
+
+#### Scenario: :add() called with a string
+
+- **WHEN** `y.hook.on_window_create:add("not a function")` is called
+- **THEN** the system SHALL log a warning and the callback list SHALL remain unchanged
+
+#### Scenario: :add() called with nil
+
+- **WHEN** `y.hook.on_window_create:add(nil)` is called
+- **THEN** the system SHALL log a warning and the callback list SHALL remain unchanged
 
 ### Requirement: on_window_create hook fires for Directory windows
 
