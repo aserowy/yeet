@@ -9,9 +9,13 @@ use crate::{
     update::app,
 };
 
-pub fn create_tab(app: &mut App, target_path: &Path) -> Vec<Action> {
+pub fn create_tab(app: &mut App, lua: Option<&yeet_lua::Lua>, target_path: &Path) -> Vec<Action> {
     let empty_buffer = app::get_empty_buffer(&mut app.contents);
-    let window = Window::create(empty_buffer, empty_buffer, empty_buffer);
+    let mut window = Window::create(empty_buffer, empty_buffer, empty_buffer);
+
+    if let Some(lua) = lua {
+        super::hook::on_window_create(lua, &mut window, Some(target_path));
+    }
 
     let new_id = next_tab_id(app);
     app.tabs.insert(new_id, window);

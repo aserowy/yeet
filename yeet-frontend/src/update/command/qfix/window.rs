@@ -8,7 +8,7 @@ use crate::{
     update::app,
 };
 
-pub fn open(app: &mut App, qfix: &QuickFix) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, qfix: &QuickFix) -> Vec<Action> {
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(window) => window,
         Err(_) => return Vec::new(),
@@ -26,11 +26,20 @@ pub fn open(app: &mut App, qfix: &QuickFix) -> Vec<Action> {
         }),
     );
 
-    let qfix_viewport = ViewPort {
+    let mut qfix_viewport = ViewPort {
         buffer_id,
         show_border: false,
         ..Default::default()
     };
+
+    if let Some(lua) = lua {
+        let mut qfix_window = Window::QuickFix(qfix_viewport);
+        crate::update::hook::on_window_create(lua, &mut qfix_window, None);
+        match qfix_window {
+            Window::QuickFix(vp) => qfix_viewport = vp,
+            _ => return Vec::new(),
+        };
+    }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
@@ -269,7 +278,7 @@ mod test {
         let mut app = App::default();
         let qfix = QuickFix::default();
 
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
@@ -294,7 +303,7 @@ mod test {
         let mut app = App::default();
         let qfix = make_qfix_with_entries(vec![PathBuf::from("/tmp/a"), PathBuf::from("/tmp/b")]);
 
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {
@@ -320,7 +329,7 @@ mod test {
         let mut app = App::default();
         let qfix = QuickFix::default();
 
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {
@@ -342,13 +351,13 @@ mod test {
         let mut app = App::default();
         let qfix = QuickFix::default();
 
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
 
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         let window = app.current_window().expect("test requires current tab");
         match window {
@@ -393,7 +402,7 @@ mod test {
             PathBuf::from("/c"),
         ]);
         qfix.current_index = 2;
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         remove_entry(&mut app, &mut qfix, 0);
 
@@ -406,7 +415,7 @@ mod test {
         let mut app = App::default();
         let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a"), PathBuf::from("/b")]);
         qfix.current_index = 1;
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         remove_entry(&mut app, &mut qfix, 1);
 
@@ -423,7 +432,7 @@ mod test {
             PathBuf::from("/c"),
         ]);
         qfix.current_index = 0;
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         remove_entry(&mut app, &mut qfix, 2);
 
@@ -436,7 +445,7 @@ mod test {
         let mut app = App::default();
         let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a")]);
         qfix.current_index = 0;
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         remove_entry(&mut app, &mut qfix, 0);
 
@@ -449,7 +458,7 @@ mod test {
         let mut app = App::default();
         let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a"), PathBuf::from("/b")]);
         qfix.current_index = 0;
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         remove_entry(&mut app, &mut qfix, 5);
 
@@ -536,7 +545,7 @@ mod test {
     fn refresh_updates_bold_on_index_change() {
         let mut app = App::default();
         let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a"), PathBuf::from("/b")]);
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         qfix.current_index = 1;
         let (window, contents) = app
@@ -566,7 +575,7 @@ mod test {
     fn refresh_after_clear_shows_empty() {
         let mut app = App::default();
         let mut qfix = make_qfix_with_entries(vec![PathBuf::from("/a")]);
-        open(&mut app, &qfix);
+        open(&mut app, None, &qfix);
 
         qfix.entries.clear();
         qfix.current_index = 0;

@@ -15,7 +15,7 @@ pub fn delete(tasks: &mut Tasks, id: u16) -> Vec<Action> {
     Vec::new()
 }
 
-pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, tasks: &Tasks) -> Vec<Action> {
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(window) => window,
         Err(_) => return Vec::new(),
@@ -33,11 +33,20 @@ pub fn open(app: &mut App, tasks: &Tasks) -> Vec<Action> {
         }),
     );
 
-    let task_viewport = ViewPort {
+    let mut task_viewport = ViewPort {
         buffer_id,
         show_border: false,
         ..Default::default()
     };
+
+    if let Some(lua) = lua {
+        let mut task_window = Window::Tasks(task_viewport);
+        crate::update::hook::on_window_create(lua, &mut task_window, None);
+        match task_window {
+            Window::Tasks(vp) => task_viewport = vp,
+            _ => return Vec::new(),
+        };
+    }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
@@ -175,7 +184,7 @@ mod test {
         let mut app = App::default();
         let tasks = Tasks::default();
 
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
@@ -200,7 +209,7 @@ mod test {
         let mut app = App::default();
         let tasks = make_tasks_with_entries();
 
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         let task_vp = match window {
@@ -227,7 +236,7 @@ mod test {
         let mut app = App::default();
         let tasks = Tasks::default();
 
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         let task_vp = match window {
@@ -249,7 +258,7 @@ mod test {
         let mut app = App::default();
         let tasks = Tasks::default();
 
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(
             window,
@@ -264,7 +273,7 @@ mod test {
             *focus = SplitFocus::First;
         }
 
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         match window {
@@ -287,7 +296,7 @@ mod test {
         let tasks = Tasks::default();
 
         let buffers_before = app.contents.buffers.len();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         assert_eq!(app.contents.buffers.len(), buffers_before + 1);
 
@@ -334,7 +343,7 @@ mod test {
         };
 
         let tasks = Tasks::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         match window {
@@ -369,7 +378,7 @@ mod test {
         };
 
         let tasks = Tasks::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         match window {
@@ -411,7 +420,7 @@ mod test {
         };
 
         let tasks = Tasks::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         let window = app.current_window().expect("test requires current tab");
         match window {
@@ -438,7 +447,7 @@ mod test {
     fn refresh_tasks_buffer_applies_cancelled_styling() {
         let tasks = make_tasks_with_entries();
         let mut app = App::default();
-        open(&mut app, &tasks);
+        open(&mut app, None, &tasks);
 
         // Cancel the first task (id=1)
         tasks.running.get("rg-1").unwrap().token.cancel();

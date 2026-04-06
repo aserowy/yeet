@@ -85,7 +85,7 @@ mod test {
         use crate::update::command::task::open;
 
         let mut app = App::default();
-        open(&mut app, tasks);
+        open(&mut app, None, tasks);
         app
     }
 

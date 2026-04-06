@@ -22,6 +22,7 @@ pub mod register;
 #[derive(Default)]
 pub struct Model {
     pub app: App,
+    pub lua: Option<yeet_lua::Lua>,
     pub settings: Settings,
     pub state: State,
 }

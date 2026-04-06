@@ -20,7 +20,13 @@ mod split;
 pub mod task;
 
 #[tracing::instrument(skip_all)]
-pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Vec<Action> {
+pub fn execute(
+    app: &mut App,
+    state: &mut State,
+    theme: &Theme,
+    lua: Option<&yeet_lua::Lua>,
+    cmd: &str,
+) -> Vec<Action> {
     let cmd_with_args = match cmd.split_once(' ') {
         Some(it) => it,
         None => (cmd, ""),
@@ -63,7 +69,7 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         ("copen", "") => add_change_mode(
             mode_before,
             Mode::Navigation,
-            qfix::window::open(app, &state.qfix),
+            qfix::window::open(app, lua, &state.qfix),
         ),
         ("cN", "") => add_change_mode(mode_before, mode, qfix::commands::previous(&mut state.qfix)),
         ("cp", target) => {
@@ -144,11 +150,11 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
 
             add_change_mode(mode_before, mode, actions)
         }
-        ("help", "") => add_change_mode(mode_before, Mode::Navigation, help::open(app, None)),
+        ("help", "") => add_change_mode(mode_before, Mode::Navigation, help::open(app, lua, None)),
         ("help", topic) => add_change_mode(
             mode_before,
             Mode::Navigation,
-            help::open(app, Some(topic.trim())),
+            help::open(app, lua, Some(topic.trim())),
         ),
         ("invertcl", "") => {
             let actions = match qfix::commands::invert_in_current(app, &mut state.qfix, theme) {
@@ -238,7 +244,7 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             };
             let actions = match expand_result {
                 Ok(target_path) if target_path.exists() => {
-                    split::horizontal(app, target_path.as_path())
+                    split::horizontal(app, lua, target_path.as_path())
                 }
                 Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
                     "Split failed. Path {:?} does not exist.",
@@ -251,7 +257,7 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         ("tl", "") => print::tasks(&state.tasks),
         ("tabnew", "") => {
             let actions = match tab::tabnew_target_path(app) {
-                Ok(path) => tab::create_tab(app, path.as_path()),
+                Ok(path) => tab::create_tab(app, lua, path.as_path()),
                 Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
@@ -340,9 +346,11 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             add_change_mode(mode_before, Mode::Navigation, Vec::new())
         }
         ("tabs", "") => print::tabs(app),
-        ("topen", "") => {
-            add_change_mode(mode_before, Mode::Navigation, task::open(app, &state.tasks))
-        }
+        ("topen", "") => add_change_mode(
+            mode_before,
+            Mode::Navigation,
+            task::open(app, lua, &state.tasks),
+        ),
         ("vsplit", args) => {
             let preview_path = get_current_path(app);
             let expand_result = match preview_path {
@@ -351,7 +359,7 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
             };
             let actions = match expand_result {
                 Ok(target_path) if target_path.exists() => {
-                    split::vertical(app, target_path.as_path())
+                    split::vertical(app, lua, target_path.as_path())
                 }
                 Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
                     "Vsplit failed. Path {:?} does not exist.",
@@ -751,7 +759,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Directory(_, _, _)));
@@ -767,7 +775,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Directory(_, _, _)));
@@ -793,7 +801,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Tasks(_)));
@@ -809,7 +817,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         assert!(contains_quit_action(
             &actions,
@@ -828,7 +836,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         assert!(contains_error_message(&actions));
         // Window should remain unchanged
@@ -857,7 +865,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         assert!(contains_error_message(&actions));
         // Window should remain a Horizontal split
@@ -871,7 +879,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q!");
+        let actions = execute(&mut app, &mut state, &theme, None, "q!");
 
         assert!(!contains_error_message(&actions));
         // Should have collapsed the split
@@ -885,7 +893,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q!");
+        let actions = execute(&mut app, &mut state, &theme, None, "q!");
 
         assert!(contains_quit_action(&actions, &QuitMode::Force));
     }
@@ -896,7 +904,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "qa");
+        let actions = execute(&mut app, &mut state, &theme, None, "qa");
 
         assert!(contains_quit_action(
             &actions,
@@ -910,7 +918,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "qa");
+        let actions = execute(&mut app, &mut state, &theme, None, "qa");
 
         assert!(contains_error_message(&actions));
         assert!(!contains_quit_action(
@@ -925,7 +933,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "qa!");
+        let actions = execute(&mut app, &mut state, &theme, None, "qa!");
 
         assert!(contains_quit_action(&actions, &QuitMode::Force));
     }
@@ -936,7 +944,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "qa!");
+        let actions = execute(&mut app, &mut state, &theme, None, "qa!");
 
         assert!(contains_quit_action(&actions, &QuitMode::Force));
     }
@@ -954,7 +962,7 @@ mod test {
             _ => panic!("expected Horizontal"),
         };
 
-        execute(&mut app, &mut state, &theme, "q");
+        execute(&mut app, &mut state, &theme, None, "q");
 
         // All directory buffer ids should still exist
         for id in &dir_buffer_ids {
@@ -1040,7 +1048,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "tabnew");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabnew");
 
         assert_eq!(app.tabs.len(), 2);
         assert!(app.tabs.contains_key(&2));
@@ -1059,7 +1067,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "tabc");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabc");
 
         assert!(contains_quit_action(
             &actions,
@@ -1072,14 +1080,14 @@ mod test {
         let mut app = App::default();
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
-        execute(&mut app, &mut state, &theme, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
         assert_eq!(app.current_tab_id, 3);
 
-        let _ = execute(&mut app, &mut state, &theme, "tabn");
+        let _ = execute(&mut app, &mut state, &theme, None, "tabn");
         assert_eq!(app.current_tab_id, 1);
 
-        let _ = execute(&mut app, &mut state, &theme, "tabp");
+        let _ = execute(&mut app, &mut state, &theme, None, "tabp");
         assert_eq!(app.current_tab_id, 3);
     }
 
@@ -1091,7 +1099,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "tabnew");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabnew");
 
         if dirs::home_dir().is_some() {
             assert!(actions.iter().any(|action| match action {
@@ -1113,11 +1121,11 @@ mod test {
         let mut app = App::default();
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
-        execute(&mut app, &mut state, &theme, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
         assert_eq!(app.current_tab_id, 3);
 
-        let actions = execute(&mut app, &mut state, &theme, "tabs");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabs");
         let lines = extract_print_lines(&actions).expect("tabs must emit print output");
 
         assert_eq!(lines[0], ":tabs");
@@ -1132,7 +1140,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "tabs");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabs");
         let lines = extract_print_lines(&actions).expect("tabs must emit print output");
 
         assert_eq!(lines[0], ":tabs");
@@ -1145,11 +1153,11 @@ mod test {
         insert_dirty_directory_buffer(&mut app.contents, 1);
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
-        execute(&mut app, &mut state, &theme, "tabp");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabp");
         assert_eq!(app.current_tab_id, 1);
 
-        let actions = execute(&mut app, &mut state, &theme, "tabc");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabc");
 
         assert!(contains_error_message(&actions));
         assert_eq!(app.tabs.len(), 2);
@@ -1161,11 +1169,11 @@ mod test {
         let mut app = App::default();
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
         assert_eq!(app.current_tab_id, 2);
         insert_dirty_directory_buffer(&mut app.contents, 1);
 
-        let actions = execute(&mut app, &mut state, &theme, "tabo");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabo");
 
         assert!(contains_error_message(&actions));
         assert_eq!(app.tabs.len(), 2);
@@ -1178,11 +1186,11 @@ mod test {
         insert_dirty_directory_buffer(&mut app.contents, 1);
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
-        execute(&mut app, &mut state, &theme, "tabp");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabp");
         assert_eq!(app.current_tab_id, 1);
 
-        let actions = execute(&mut app, &mut state, &theme, "tabc!");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabc!");
 
         assert!(!contains_error_message(&actions));
         assert_eq!(app.tabs.len(), 1);
@@ -1196,7 +1204,7 @@ mod test {
         insert_dirty_directory_buffer(&mut app.contents, 1);
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
-        execute(&mut app, &mut state, &theme, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
         let current_buffer_id = app
             .current_window()
             .expect("test requires current tab")
@@ -1206,7 +1214,7 @@ mod test {
             .expect("current tab must have a buffer");
         insert_dirty_directory_buffer(&mut app.contents, current_buffer_id);
 
-        let actions = execute(&mut app, &mut state, &theme, "tabo!");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabo!");
 
         assert!(!contains_error_message(&actions));
         assert_eq!(app.tabs.len(), 1);
@@ -1232,7 +1240,7 @@ mod test {
         let window = app.current_window_mut().expect("test requires current tab");
         *window = make_directory_window(buffer_id);
 
-        execute(&mut app, &mut state, &theme, "tabnew");
+        execute(&mut app, &mut state, &theme, None, "tabnew");
         let window = app.current_window_mut().expect("test requires current tab");
         *window = make_directory_window(buffer_id);
 
@@ -1240,7 +1248,7 @@ mod test {
             add_line_to_directory_buffer(dir, buffer_id, "added");
         }
 
-        let actions = execute(&mut app, &mut state, &theme, "tabc!");
+        let actions = execute(&mut app, &mut state, &theme, None, "tabc!");
 
         assert!(!contains_error_message(&actions));
         assert_eq!(app.tabs.len(), 1);
@@ -1261,7 +1269,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "q");
+        let actions = execute(&mut app, &mut state, &theme, None, "q");
 
         assert!(!contains_error_message(&actions));
         let window = app.current_window().expect("test requires current tab");
@@ -1296,7 +1304,7 @@ mod test {
             panic!("buffer 50 should be a Directory");
         }
 
-        let _actions = execute(&mut app, &mut state, &theme, "q!");
+        let _actions = execute(&mut app, &mut state, &theme, None, "q!");
 
         // After :q!, the dropped pane's buffer undo should be reset
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
@@ -1325,7 +1333,7 @@ mod test {
             assert!(dir.buffer.has_unsaved_changes());
         }
 
-        let _actions = execute(&mut app, &mut state, &theme, "q!");
+        let _actions = execute(&mut app, &mut state, &theme, None, "q!");
 
         // Buffer 50 is in the KEPT pane (First/Directory) — its changes should be preserved
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
@@ -1353,7 +1361,7 @@ mod test {
         state.modes.current = Mode::Command(CommandMode::Command);
         state.modes.previous = Some(Mode::Normal);
 
-        let actions = execute(&mut app, &mut state, &theme, "wq");
+        let actions = execute(&mut app, &mut state, &theme, None, "wq");
 
         let window = app.current_window().expect("test requires current tab");
         assert!(
@@ -1382,7 +1390,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split nonexistent_mark");
+        let actions = execute(&mut app, &mut state, &theme, None, "split nonexistent_mark");
 
         assert!(
             contains_change_mode(
@@ -1400,7 +1408,13 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "vsplit nonexistent_mark");
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            None,
+            "vsplit nonexistent_mark",
+        );
 
         assert!(
             contains_change_mode(
@@ -1420,7 +1434,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split foo");
+        let actions = execute(&mut app, &mut state, &theme, None, "split foo");
 
         assert!(
             contains_command_error(&actions, "Relative paths require a directory context"),
@@ -1444,7 +1458,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "vsplit foo");
+        let actions = execute(&mut app, &mut state, &theme, None, "vsplit foo");
 
         assert!(
             contains_command_error(&actions, "Relative paths require a directory context"),
@@ -1484,7 +1498,13 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split nonexistent_dir_12345");
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            None,
+            "split nonexistent_dir_12345",
+        );
 
         assert!(
             contains_command_error(&actions, "does not exist"),
@@ -1504,7 +1524,13 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "vsplit nonexistent_dir_12345");
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            None,
+            "vsplit nonexistent_dir_12345",
+        );
 
         assert!(
             contains_command_error(&actions, "does not exist"),
@@ -1542,7 +1568,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split");
+        let actions = execute(&mut app, &mut state, &theme, None, "split");
 
         if dirs::home_dir().is_some() {
             assert!(
@@ -1568,7 +1594,7 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "vsplit");
+        let actions = execute(&mut app, &mut state, &theme, None, "vsplit");
 
         if dirs::home_dir().is_some() {
             assert!(
@@ -1599,6 +1625,7 @@ mod test {
             &mut app,
             &mut state,
             &theme,
+            None,
             &format!("split {}", target.display()),
         );
 
@@ -1621,7 +1648,7 @@ mod test {
         state.marks.entries.insert('a', target);
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split 'a");
+        let actions = execute(&mut app, &mut state, &theme, None, "split 'a");
 
         assert!(
             contains_navigate_action(&actions),
@@ -1640,7 +1667,13 @@ mod test {
         let mut state = make_state_with_command_mode();
         let theme = Theme::default();
 
-        let actions = execute(&mut app, &mut state, &theme, "split some/relative/path");
+        let actions = execute(
+            &mut app,
+            &mut state,
+            &theme,
+            None,
+            "split some/relative/path",
+        );
 
         assert!(
             contains_command_error(&actions, "Relative paths require a directory context"),
@@ -1663,6 +1696,7 @@ mod test {
             &mut app,
             &mut state,
             &theme,
+            None,
             "split /nonexistent/path/12345",
         );
 

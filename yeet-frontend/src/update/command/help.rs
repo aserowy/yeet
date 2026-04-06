@@ -13,8 +13,10 @@ use crate::{
 const INDEX_CONTENT: &str = include_str!("../../../../docs/help/index.md");
 const COMMANDS_CONTENT: &str = include_str!("../../../../docs/help/commands.md");
 const CONFIGURATION_CONTENT: &str = include_str!("../../../../docs/help/configuration.md");
+const HOOKS_CONTENT: &str = include_str!("../../../../docs/help/hooks.md");
 const KEYBINDINGS_CONTENT: &str = include_str!("../../../../docs/help/keybindings.md");
 const MODES_CONTENT: &str = include_str!("../../../../docs/help/modes.md");
+const THEME_CONTENT: &str = include_str!("../../../../docs/help/theme.md");
 
 struct HelpPage {
     name: &'static str,
@@ -35,12 +37,20 @@ const HELP_PAGES: &[HelpPage] = &[
         content: CONFIGURATION_CONTENT,
     },
     HelpPage {
+        name: "hooks",
+        content: HOOKS_CONTENT,
+    },
+    HelpPage {
         name: "keybindings",
         content: KEYBINDINGS_CONTENT,
     },
     HelpPage {
         name: "modes",
         content: MODES_CONTENT,
+    },
+    HelpPage {
+        name: "theme",
+        content: THEME_CONTENT,
     },
 ];
 
@@ -92,7 +102,7 @@ fn resolve_topic(topic: &str) -> Option<TopicMatch> {
     None
 }
 
-pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
+pub fn open(app: &mut App, lua: Option<&yeet_lua::Lua>, topic: Option<&str>) -> Vec<Action> {
     let topic_match = match topic {
         Some(t) => match resolve_topic(t) {
             Some(m) => m,
@@ -124,12 +134,21 @@ pub fn open(app: &mut App, topic: Option<&str>) -> Vec<Action> {
         }),
     );
 
-    let help_viewport = ViewPort {
+    let mut help_viewport = ViewPort {
         buffer_id,
         show_border: false,
         wrap: true,
         ..Default::default()
     };
+
+    if let Some(lua) = lua {
+        let mut help_window = Window::Help(help_viewport);
+        super::super::hook::on_window_create(lua, &mut help_window, None);
+        match help_window {
+            Window::Help(vp) => help_viewport = vp,
+            _ => return Vec::new(),
+        };
+    }
 
     let old_window = mem::take(window);
     *window = Window::Horizontal {
@@ -237,7 +256,7 @@ mod test {
     #[test]
     fn open_bare_help_creates_horizontal_split() {
         let mut app = App::default();
-        let actions = open(&mut app, None);
+        let actions = open(&mut app, None, None);
         assert_eq!(actions.len(), 1);
         assert!(matches!(
             actions[0],
@@ -264,7 +283,7 @@ mod test {
     #[test]
     fn open_bare_help_starts_at_line_zero() {
         let mut app = App::default();
-        open(&mut app, None);
+        open(&mut app, None, None);
 
         let window = app.current_window().expect("should have current tab");
         let vp = window.focused_viewport();
@@ -275,7 +294,7 @@ mod test {
     #[test]
     fn open_help_returns_highlight_task_with_buffer_id() {
         let mut app = App::default();
-        let actions = open(&mut app, None);
+        let actions = open(&mut app, None, None);
         assert_eq!(actions.len(), 1);
 
         let window = app.current_window().expect("should have current tab");
@@ -293,7 +312,7 @@ mod test {
     #[test]
     fn open_help_buffer_contains_raw_content() {
         let mut app = App::default();
-        open(&mut app, None);
+        open(&mut app, None, None);
 
         let window = app.current_window().expect("should have current tab");
         let vp = window.focused_viewport();
@@ -311,7 +330,7 @@ mod test {
     #[test]
     fn open_help_with_known_topic_creates_split() {
         let mut app = App::default();
-        let actions = open(&mut app, Some("commands"));
+        let actions = open(&mut app, None, Some("commands"));
         assert_eq!(actions.len(), 1);
         assert!(matches!(
             actions[0],
@@ -330,7 +349,7 @@ mod test {
     #[test]
     fn open_help_with_unknown_topic_returns_error() {
         let mut app = App::default();
-        let actions = open(&mut app, Some("nonexistent_topic_xyz"));
+        let actions = open(&mut app, None, Some("nonexistent_topic_xyz"));
         assert!(!actions.is_empty());
         assert!(!matches!(actions[0], Action::Task(_)));
     }
@@ -338,7 +357,7 @@ mod test {
     #[test]
     fn open_help_with_topic_scrolls_to_entry() {
         let mut app = App::default();
-        open(&mut app, Some("split"));
+        open(&mut app, None, Some("split"));
 
         let window = app.current_window().expect("should have current tab");
         let vp = window.focused_viewport();
@@ -348,7 +367,7 @@ mod test {
     #[test]
     fn open_help_with_topic_positions_viewport_at_cursor() {
         let mut app = App::default();
-        open(&mut app, Some("File Operations"));
+        open(&mut app, None, Some("File Operations"));
 
         let window = app.current_window().expect("should have current tab");
         let vp = window.focused_viewport();
@@ -382,7 +401,7 @@ mod test {
     #[test]
     fn close_help_restores_directory() {
         let mut app = App::default();
-        open(&mut app, None);
+        open(&mut app, None, None);
 
         let window = app.current_window().expect("should have current tab");
         assert!(matches!(window, Window::Horizontal { .. }));

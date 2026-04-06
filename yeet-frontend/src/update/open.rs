@@ -16,6 +16,7 @@ pub fn selected(
     settings: &Settings,
     mode: &Mode,
     app: &mut App,
+    lua: Option<&yeet_lua::Lua>,
     qfix: &mut QuickFix,
 ) -> Result<Vec<Action>, AppError> {
     if mode != &Mode::Navigation {
@@ -37,7 +38,12 @@ pub fn selected(
                     qfix_window::focus_nearest_directory(window);
                 } else {
                     let empty_buffer = app::get_empty_buffer(&mut app.contents);
-                    let new_directory = Window::create(empty_buffer, empty_buffer, empty_buffer);
+                    let mut new_directory =
+                        Window::create(empty_buffer, empty_buffer, empty_buffer);
+
+                    if let Some(lua) = lua {
+                        super::hook::on_window_create(lua, &mut new_directory, Some(&path));
+                    }
 
                     let window = app.current_window_mut()?;
                     let focused_leaf = window.focused_window_mut();
@@ -105,7 +111,7 @@ mod test {
             entries,
             ..Default::default()
         };
-        qfix_window::open(&mut app, &qfix);
+        qfix_window::open(&mut app, None, &qfix);
 
         let window = app.current_window_mut().expect("current tab");
         match window {
@@ -126,7 +132,7 @@ mod test {
             entries,
             ..Default::default()
         };
-        qfix_window::open(&mut app, &qfix);
+        qfix_window::open(&mut app, None, &qfix);
         (app, qfix)
     }
 
@@ -135,8 +141,8 @@ mod test {
         let (mut app, mut qfix) = make_app_with_standalone_qfix(vec![PathBuf::from("/tmp/a")]);
         let settings = Settings::default();
 
-        let actions =
-            selected(&settings, &Mode::Navigation, &mut app, &mut qfix).expect("should not error");
+        let actions = selected(&settings, &Mode::Navigation, &mut app, None, &mut qfix)
+            .expect("should not error");
 
         assert!(!actions.is_empty(), "should emit navigation action");
 
@@ -176,7 +182,8 @@ mod test {
             vp.cursor.vertical_index = 1;
         }
 
-        selected(&settings, &Mode::Navigation, &mut app, &mut qfix).expect("should not error");
+        selected(&settings, &Mode::Navigation, &mut app, None, &mut qfix)
+            .expect("should not error");
 
         assert_eq!(qfix.current_index, 1);
     }
@@ -186,8 +193,8 @@ mod test {
         let (mut app, mut qfix) = make_app_with_split_qfix(vec![PathBuf::from("/tmp/a")]);
         let settings = Settings::default();
 
-        let actions =
-            selected(&settings, &Mode::Navigation, &mut app, &mut qfix).expect("should not error");
+        let actions = selected(&settings, &Mode::Navigation, &mut app, None, &mut qfix)
+            .expect("should not error");
 
         assert!(!actions.is_empty(), "should emit navigation action");
 
@@ -209,8 +216,8 @@ mod test {
         let (mut app, mut qfix) = make_app_with_standalone_qfix(vec![]);
         let settings = Settings::default();
 
-        let actions =
-            selected(&settings, &Mode::Navigation, &mut app, &mut qfix).expect("should not error");
+        let actions = selected(&settings, &Mode::Navigation, &mut app, None, &mut qfix)
+            .expect("should not error");
 
         assert!(actions.is_empty(), "empty qfix should be a no-op");
     }

@@ -58,6 +58,7 @@ mod test {
 
         Model {
             app,
+            lua: None,
             settings: Settings::default(),
             state: Default::default(),
         }
