@@ -1,7 +1,21 @@
 ## Requirements
 
-### Requirement: ViewPort has a configurable wrap option
-The ViewPort SHALL have a `wrap: bool` field that defaults to `false`. When `wrap` is `true`, lines longer than the viewport content width SHALL be soft-wrapped into multiple visual lines.
+### Requirement: Line wrapping
+
+Buffers SHALL support a word wrapping mode that breaks long lines at word boundaries to fit within the viewport width.
+
+When word wrapping is enabled on a viewport, the view layer SHALL:
+
+- Break lines at space characters when possible, falling back to character boundaries
+- Preserve ANSI escape sequences across wrapped segments
+- Display line numbers and signs only on the first visual line of a wrapped logical line
+- Indent continuation lines to align with the content column of the first line
+- Adjust cursor positioning to account for wrapped segments
+- Adjust vertical scrolling to account for visual line heights
+
+When word wrapping is disabled, horizontal scrolling SHALL be used for lines exceeding viewport width.
+
+Word wrapping MAY be toggled at runtime via the `:set wrap` and `:set nowrap` commands.
 
 #### Scenario: Wrap is disabled by default
 - **WHEN** a ViewPort is created with default settings
@@ -10,6 +24,17 @@ The ViewPort SHALL have a `wrap: bool` field that defaults to `false`. When `wra
 #### Scenario: Wrap is enabled
 - **WHEN** `wrap` is set to `true` on a ViewPort
 - **THEN** lines longer than the content width SHALL be broken into multiple visual lines
+
+#### Scenario: Wrap toggled at runtime via set command
+
+- **WHEN** a viewport has wrap disabled and the user executes `:set wrap`
+- **THEN** the viewport SHALL re-render with word wrapping enabled
+- **THEN** horizontal_index SHALL be reset to 0
+
+#### Scenario: Nowrap toggled at runtime via set command
+
+- **WHEN** a viewport has wrap enabled and the user executes `:set nowrap`
+- **THEN** the viewport SHALL re-render without word wrapping
 
 ### Requirement: Lines wrap at word boundaries
 When wrap is enabled, lines SHALL be broken at the last space character that fits within the viewport content width. If a single word is longer than the content width, the line SHALL be broken at exactly the content width (character-count fallback).

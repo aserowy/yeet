@@ -16,6 +16,7 @@ mod file;
 pub mod help;
 mod print;
 pub mod qfix;
+mod settings;
 mod split;
 pub mod task;
 
@@ -210,6 +211,7 @@ pub fn execute(app: &mut App, state: &mut State, theme: &Theme, cmd: &str) -> Ve
         }
         ("qa!", "") => vec![action::emit_keymap(KeymapMessage::Quit(QuitMode::Force))],
         ("reg", "") => print::register(&state.register),
+        ("set", args) => settings::execute(app, args, mode_before, mode),
         ("rg", params) => {
             let current_path = get_current_path(app);
             let actions = match current_path {

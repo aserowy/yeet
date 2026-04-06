@@ -178,6 +178,14 @@ Display the contents of all registers in the command line area. This shows both 
 
 Display the contents of the junk yard in the command line area. The junk yard holds yanked files and the last nine trashed entries, which can be restored with `p`.
 
+### `set wrap`
+
+Enable word wrapping on the current window. Long lines are broken at word boundaries to fit within the viewport width. For directory windows, wrapping is applied to all three panes (parent, current, preview). For split windows, only the focused pane is affected.
+
+### `set nowrap`
+
+Disable word wrapping on the current window. Lines that exceed the viewport width are shown with horizontal scrolling instead. For directory windows, wrapping is disabled on all three panes. For split windows, only the focused pane is affected.
+
 ### `z`
 
 Navigate to a directory using zoxide fuzzy matching. Usage: `:z <query>`. Yeet passes the query to zoxide and jumps to the resolved directory, the same way `z` works in your shell.
