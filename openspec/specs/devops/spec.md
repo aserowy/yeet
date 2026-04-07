@@ -87,3 +87,18 @@ The version tag created by this workflow SHALL match the pattern expected by the
 - **WHEN** the version tag `v2026.4.6` is pushed
 - **THEN** the existing `release.yml` workflow SHALL trigger (matches pattern `v[0-9]+.[0-9]+.[0-9]+`)
 - **AND** the existing `flakehub-publish-tagged.yml` workflow SHALL trigger (matches pattern `v?[0-9]+.[0-9]+.[0-9]+*`)
+
+### Requirement: Workspace-internal crates use workspace dependency inheritance
+
+All inter-package dependencies within the workspace SHALL be declared in `[workspace.dependencies]` in the root `Cargo.toml` with both `path` and `version.workspace = true`. Member crates SHALL reference them using `workspace = true`.
+
+#### Scenario: Internal crate dependency declaration
+
+- **WHEN** `yeet-frontend` depends on `yeet-buffer`
+- **THEN** the root `Cargo.toml` SHALL have `yeet-buffer = { path = "yeet-buffer", version.workspace = true }` in `[workspace.dependencies]`
+- **AND** `yeet-frontend/Cargo.toml` SHALL have `yeet-buffer.workspace = true` in `[dependencies]`
+
+#### Scenario: Version consistency across workspace
+
+- **WHEN** the workspace version is updated
+- **THEN** all inter-package version references SHALL automatically reflect the new version through workspace inheritance
