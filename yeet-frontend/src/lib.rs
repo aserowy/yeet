@@ -30,7 +30,12 @@ pub mod theme;
 mod update;
 mod view;
 
-pub async fn run(settings: Settings, lua: Option<LuaConfiguration>) -> Result<(), AppError> {
+pub async fn run(
+    settings: Settings,
+    lua: Option<LuaConfiguration>,
+    plugin_states: Vec<yeet_plugin::PluginState>,
+    plugin_concurrency: usize,
+) -> Result<(), AppError> {
     let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
     let mut emitter = Emitter::start(
@@ -49,6 +54,8 @@ pub async fn run(settings: Settings, lua: Option<LuaConfiguration>) -> Result<()
 
     let mut model = Model {
         lua,
+        plugin_states,
+        plugin_concurrency,
         settings,
         ..Default::default()
     };

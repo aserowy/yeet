@@ -59,6 +59,8 @@ mod test {
         Model {
             app,
             lua: None,
+            plugin_states: Vec::new(),
+            plugin_concurrency: 4,
             settings: Settings::default(),
             state: Default::default(),
         }

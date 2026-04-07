@@ -1,5 +1,5 @@
 [package]
-name = "yeet-lua"
+name = "yeet-plugin"
 
 authors.workspace = true
 edition.workspace = true
@@ -10,11 +10,14 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-yeet-buffer.workspace = true
-yeet-plugin.workspace = true
-
 dirs.workspace = true
-mlua.workspace = true
+gix.workspace = true
+semver.workspace = true
+serde.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

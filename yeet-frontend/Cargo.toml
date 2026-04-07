@@ -13,6 +13,7 @@ workspace = true
 yeet-buffer.workspace = true
 yeet-keymap.workspace = true
 yeet-lua.workspace = true
+yeet-plugin.workspace = true
 
 arboard.workspace = true
 crossterm.workspace = true

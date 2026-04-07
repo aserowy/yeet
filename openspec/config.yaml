@@ -9,6 +9,7 @@ rules:
     - Always ask questions when you are unsure about something. Never assume anything.
   design:
     - Always add/change documentation in any relevant markdown file in ./docs directory for each user facing functionality you add or change.
+    - If the documentation focuses on requirements in yeet, add them under ./docs/help/ and register them accordingly.
   specs:
     - Always reference existing patterns before inventing new ones
   tasks:

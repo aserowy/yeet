@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "yeet", "yeet-buffer", "yeet-frontend", "yeet-keymap", "yeet-lua",
+    "yeet", "yeet-buffer", "yeet-frontend", "yeet-keymap", "yeet-lua", "yeet-plugin",
 ]
 
 [workspace.package]
@@ -17,6 +17,7 @@ yeet-buffer = { path = "yeet-buffer", version = "2026.4.0" }
 yeet-frontend = { path = "yeet-frontend", version = "2026.4.0" }
 yeet-keymap = { path = "yeet-keymap", version = "2026.4.0" }
 yeet-lua = { path = "yeet-lua", version = "2026.4.0" }
+yeet-plugin = { path = "yeet-plugin", version = "2026.4.0" }
 
 ansi-to-tui = "8.0.1"
 arboard = { version = "3.6.1", default-features = false, features = ["windows-sys", "wayland-data-control"] }
@@ -24,6 +25,7 @@ clap = "4.6.0"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 csv = "1.4.0"
 dirs = "6.0.0"
+gix = { version = "0.72.0", default-features = false, features = ["blocking-network-client", "blocking-http-transport-reqwest-rust-tls", "worktree-mutation", "revision"] }
 flate2 = "1.1.9"
 futures = "0.3.32"
 image = "0.25.10"
@@ -32,11 +34,15 @@ mlua = { version = "0.11", features = ["lua54", "vendored"] }
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 pathdiff = "0.2.2"
 ratatui = "0.30.0"
+semver = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 ratatui-image = { version = "10.0.6", features = ["crossterm", "serde"] }
 regex = "1.12.3"
+sha2 = "0.10"
 syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"]}
 tar = "0.4.45"
 thiserror = "2.0.18"
+toml = "0.8"
 tokio = { version = "1.50.0", features = ["full"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"

@@ -253,7 +253,7 @@ pub fn update_with_keymap_message(
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
         KeymapMessage::ExecuteCommandString(command) => {
-            command::execute(app, state, &settings.theme, lua, command)
+            command::execute(app, state, &settings.theme, lua, &[], 4, command)
         }
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             state.remaining_keysequence.replace(key_sequence.clone());

@@ -211,6 +211,43 @@ fn tab_title_from_window_full_path(
     }
 }
 
+pub fn plugin_list(states: &[yeet_plugin::PluginState]) -> Vec<Action> {
+    if states.is_empty() {
+        let content = vec![
+            PrintContent::Default(":pluginlist".to_string()),
+            PrintContent::Default("No plugins registered".to_string()),
+        ];
+        return vec![action::emit_keymap(KeymapMessage::Print(content))];
+    }
+
+    let mut contents = vec![
+        PrintContent::Default(":pluginlist".to_string()),
+        PrintContent::Default("Status  URL".to_string()),
+    ];
+
+    for state in states {
+        let status = match &state.status {
+            yeet_plugin::PluginStatus::Loaded => "loaded ",
+            yeet_plugin::PluginStatus::Error => "error  ",
+            yeet_plugin::PluginStatus::Missing => "missing",
+        };
+
+        let line = match &state.error_message {
+            Some(msg) => format!("{} {} ({})", status, state.url, msg),
+            None => format!("{} {}", status, state.url),
+        };
+
+        let content = match &state.status {
+            yeet_plugin::PluginStatus::Loaded => PrintContent::Default(line),
+            _ => PrintContent::Information(line),
+        };
+
+        contents.push(content);
+    }
+
+    vec![action::emit_keymap(KeymapMessage::Print(contents))]
+}
+
 fn print_content(prefix: &char, content: &str) -> String {
     format!("\"{:<3} {}", prefix, content)
 }

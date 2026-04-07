@@ -18,6 +18,7 @@ const CONFIGURATION_CONTENT: &str = include_str!("../../../../docs/help/configur
 const HOOKS_CONTENT: &str = include_str!("../../../../docs/help/hooks.md");
 const KEYBINDINGS_CONTENT: &str = include_str!("../../../../docs/help/keybindings.md");
 const MODES_CONTENT: &str = include_str!("../../../../docs/help/modes.md");
+const PLUGINS_CONTENT: &str = include_str!("../../../../docs/help/plugins.md");
 const THEME_CONTENT: &str = include_str!("../../../../docs/help/theme.md");
 
 struct HelpPage {
@@ -49,6 +50,10 @@ const HELP_PAGES: &[HelpPage] = &[
     HelpPage {
         name: "modes",
         content: MODES_CONTENT,
+    },
+    HelpPage {
+        name: "plugins",
+        content: PLUGINS_CONTENT,
     },
     HelpPage {
         name: "theme",

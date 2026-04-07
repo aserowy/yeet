@@ -24,6 +24,7 @@ Yeet currently has no mechanism for users to extend functionality beyond what sh
 
 - `lua`: The `y` global table gains a new `y.plugin` sub-table with plugin management functions
 - `commands`: New plugin-related commands added to the command dispatch
+- `help`: New `plugins` help page added to the help system, accessible via `:help plugins`
 
 ## Impact
 
