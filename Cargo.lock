@@ -4030,7 +4030,7 @@ dependencies = [
 
 [[package]]
 name = "yeet"
-version = "2026.3.0"
+version = "2026.4.0"
 dependencies = [
  "clap",
  "dirs",
@@ -4048,7 +4048,7 @@ dependencies = [
 
 [[package]]
 name = "yeet-buffer"
-version = "2026.3.0"
+version = "2026.4.0"
 dependencies = [
  "ansi-to-tui",
  "ratatui",
@@ -4057,7 +4057,7 @@ dependencies = [
 
 [[package]]
 name = "yeet-frontend"
-version = "2026.3.0"
+version = "2026.4.0"
 dependencies = [
  "arboard",
  "crossterm",
@@ -4084,7 +4084,7 @@ dependencies = [
 
 [[package]]
 name = "yeet-keymap"
-version = "2026.3.0"
+version = "2026.4.0"
 dependencies = [
  "crossterm",
  "dirs",
@@ -4096,7 +4096,7 @@ dependencies = [
 
 [[package]]
 name = "yeet-lua"
-version = "2026.3.0"
+version = "2026.4.0"
 dependencies = [
  "dirs",
  "mlua",

@@ -1573,7 +1573,7 @@ mod test {
 
         let actions = execute(&mut app, &mut state, &theme, None, "split");
 
-        if dirs::home_dir().is_some() {
+        if dirs::home_dir().filter(|p| p.exists()).is_some() {
             assert!(
                 contains_navigate_action(&actions),
                 "split from tasks with no args should navigate to home; actions: {actions:?}",
@@ -1584,10 +1584,11 @@ mod test {
                 "split should have created a horizontal split",
             );
         } else {
-            assert!(contains_command_error(
-                &actions,
-                "Home directory could not be resolved"
-            ));
+            assert!(
+                contains_command_error(&actions, "Home directory could not be resolved")
+                    || contains_command_error(&actions, "does not exist"),
+                "split from tasks with no home should produce an error; actions: {actions:?}",
+            );
         }
     }
 
@@ -1599,7 +1600,7 @@ mod test {
 
         let actions = execute(&mut app, &mut state, &theme, None, "vsplit");
 
-        if dirs::home_dir().is_some() {
+        if dirs::home_dir().filter(|p| p.exists()).is_some() {
             assert!(
                 contains_navigate_action(&actions),
                 "vsplit from tasks with no args should navigate to home; actions: {actions:?}",
@@ -1610,10 +1611,11 @@ mod test {
                 "vsplit should have created a vertical split",
             );
         } else {
-            assert!(contains_command_error(
-                &actions,
-                "Home directory could not be resolved"
-            ));
+            assert!(
+                contains_command_error(&actions, "Home directory could not be resolved")
+                    || contains_command_error(&actions, "does not exist"),
+                "vsplit from tasks with no home should produce an error; actions: {actions:?}",
+            );
         }
     }
 

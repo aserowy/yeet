@@ -42,7 +42,7 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
 
     let hook_mt = create_hook_metatable(lua)?;
     let on_window_create = lua.create_table()?;
-    on_window_create.set_metatable(Some(hook_mt));
+    let _ = on_window_create.set_metatable(Some(hook_mt));
     hook_table.set("on_window_create", on_window_create)?;
 
     y_table.set("theme", theme_table)?;
@@ -100,7 +100,7 @@ fn protect_y_table(lua: &Lua, y_table: LuaTable) -> LuaResult<()> {
         })?,
     )?;
 
-    globals.set_metatable(Some(g_meta));
+    let _ = globals.set_metatable(Some(g_meta));
     Ok(())
 }
 
