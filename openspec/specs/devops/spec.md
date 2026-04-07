@@ -22,36 +22,22 @@ The release pipeline SHALL trigger when a tag named exactly `release` is pushed 
 
 ### Requirement: Version tag follows calendar versioning
 
-The workflow SHALL compute a version tag in the format `vYYYY.M.D` where `YYYY` is the four-digit year, `M` is the month without leading zeros, and `D` is the day without leading zeros.
+The workflow SHALL compute a version tag in the format `vYYYY.M.PATCH` where `YYYY` is the four-digit year, `M` is the month without leading zeros, and `PATCH` is a sequential number starting at 0 for each year-month combination.
 
-#### Scenario: Version tag for a release on April 6, 2026
+#### Scenario: First release in a new month
 
-- **WHEN** the workflow runs on 2026-04-06
-- **THEN** the computed version tag SHALL be `v2026.4.6`
+- **WHEN** the workflow runs in April 2026 and no tags matching `v2026.4.*` exist
+- **THEN** the computed version tag SHALL be `v2026.4.0`
 
-#### Scenario: Version tag for a release on January 1, 2027
+#### Scenario: Subsequent release in the same month
 
-- **WHEN** the workflow runs on 2027-01-01
-- **THEN** the computed version tag SHALL be `v2027.1.1`
+- **WHEN** the workflow runs in April 2026 and tags `v2026.4.0` and `v2026.4.1` exist
+- **THEN** the computed version tag SHALL be `v2026.4.2`
 
-### Requirement: Tag collision increments day component
+#### Scenario: First release in January 2027
 
-When the computed version tag already exists, the workflow SHALL increment the day component by one and check again, repeating until an unused tag is found.
-
-#### Scenario: Tag already exists for today
-
-- **WHEN** the workflow runs on 2026-04-06 and tag `v2026.4.6` already exists
-- **THEN** the workflow SHALL use `v2026.4.7` as the version tag
-
-#### Scenario: Multiple tags exist for consecutive days
-
-- **WHEN** the workflow runs on 2026-4-6 and both `v2026.4.6` and `v2026.4.7` already exist
-- **THEN** the workflow SHALL use `v2026.4.8` as the version tag
-
-#### Scenario: Increment beyond real calendar days
-
-- **WHEN** the workflow runs on 2026-4-30 and tag `v2026.4.30` already exists
-- **THEN** the workflow SHALL use `v2026.4.31` even though April has only 30 days
+- **WHEN** the workflow runs in January 2027 and no tags matching `v2027.1.*` exist
+- **THEN** the computed version tag SHALL be `v2027.1.0`
 
 ### Requirement: Workspace version in Cargo.toml is updated
 
@@ -59,8 +45,8 @@ The workflow SHALL update the `version` field under `[workspace.package]` in the
 
 #### Scenario: Version updated in Cargo.toml
 
-- **WHEN** the computed version tag is `v2026.4.6`
-- **THEN** the `version` field in `Cargo.toml` under `[workspace.package]` SHALL be set to `"2026.4.6"`
+- **WHEN** the computed version tag is `v2026.4.2`
+- **THEN** the `version` field in `Cargo.toml` under `[workspace.package]` SHALL be set to `"2026.4.2"`
 
 ### Requirement: Version commit is created on main
 

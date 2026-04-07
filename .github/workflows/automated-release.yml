@@ -49,11 +49,15 @@ jobs:
 
       - name: update version in Cargo.toml
         run: |
-          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.version }}"/' Cargo.toml
+          sed -i 's/version = "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"/version = "${{ steps.version.outputs.version }}"/g' Cargo.toml
+
+      - name: update Cargo.lock
+        run: |
+          cargo update --workspace
 
       - name: commit and tag
         run: |
-          git add Cargo.toml
+          git add Cargo.toml Cargo.lock
           git commit -m "release ${{ steps.version.outputs.tag }}"
           git tag "${{ steps.version.outputs.tag }}"
 
