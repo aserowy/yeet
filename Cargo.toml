@@ -10,9 +10,14 @@ authors = ["Alexander Serowy"]
 description = "yet another... tui file manager with a touch of neovim like buffers and modal editing"
 edition = "2021"
 repository = "https://github.com/aserowy/yeet"
-version = "2026.4.0"
+version = "2026.3.0"
 
 [workspace.dependencies]
+yeet-buffer = { path = "yeet-buffer", version = "2026.3.0" }
+yeet-frontend = { path = "yeet-frontend", version = "2026.3.0" }
+yeet-keymap = { path = "yeet-keymap", version = "2026.3.0" }
+yeet-lua = { path = "yeet-lua", version = "2026.3.0" }
+
 ansi-to-tui = "8.0.1"
 arboard = { version = "3.6.1", default-features = false, features = ["windows-sys", "wayland-data-control"] }
 clap = "4.6.0"
