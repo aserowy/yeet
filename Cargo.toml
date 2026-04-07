@@ -10,7 +10,7 @@ authors = ["Alexander Serowy"]
 description = "yet another... tui file manager with a touch of neovim like buffers and modal editing"
 edition = "2021"
 repository = "https://github.com/aserowy/yeet"
-version = "0.1.0"
+version = "2026.4.0"
 
 [workspace.dependencies]
 ansi-to-tui = "8.0.1"
