@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Open copen window with :copen command
 The `:copen` command SHALL create a horizontal split at the currently focused window, placing the copen buffer as the second child with focus set to the copen window. The copen buffer SHALL display all quickfix entries in the same format as `:cl` (index, path, removed status).
