@@ -238,8 +238,9 @@ pub fn plugin_list(states: &[yeet_plugin::PluginState]) -> Vec<Action> {
         };
 
         let content = match &state.status {
-            yeet_plugin::PluginStatus::Loaded => PrintContent::Default(line),
-            _ => PrintContent::Information(line),
+            yeet_plugin::PluginStatus::Loaded => PrintContent::Success(line),
+            yeet_plugin::PluginStatus::Missing => PrintContent::Warning(line),
+            yeet_plugin::PluginStatus::Error => PrintContent::Error(line),
         };
 
         contents.push(content);

@@ -11,7 +11,6 @@ use yeet_buffer::model::{
     Cursor, Mode, TextBuffer,
 };
 use yeet_lua::LuaConfiguration;
-use yeet_plugin::PluginState;
 
 use self::{history::History, junkyard::JunkYard, mark::Marks, qfix::QuickFix, register::Register};
 
@@ -25,8 +24,6 @@ pub mod register;
 pub struct Model {
     pub app: App,
     pub lua: Option<LuaConfiguration>,
-    pub plugin_states: Vec<PluginState>,
-    pub plugin_concurrency: usize,
     pub settings: Settings,
     pub state: State,
 }
@@ -333,6 +330,7 @@ pub struct State {
     pub junk: JunkYard,
     pub marks: Marks,
     pub modes: ModeState,
+    pub plugin_states: Vec<yeet_plugin::PluginState>,
     pub qfix: QuickFix,
     pub register: Register,
     pub remaining_keysequence: Option<String>,

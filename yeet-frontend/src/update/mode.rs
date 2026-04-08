@@ -59,7 +59,12 @@ pub fn change(
         }
     });
 
-    set_commandline_content_to_mode(&mut app.commandline, &state.register, &mut state.modes);
+    set_commandline_content_to_mode(
+        &mut app.commandline,
+        &state.register,
+        &mut state.modes,
+        theme,
+    );
 
     let msg = BufferMessage::ChangeMode(from.clone(), to.clone());
     actions.extend(match to {
@@ -239,11 +244,12 @@ fn set_commandline_content_to_mode(
     commandline: &mut CommandLine,
     register: &Register,
     modes: &mut ModeState,
+    theme: &Theme,
 ) {
     if let Some(RegisterScope::Macro(identifier)) = &get_macro_register(register) {
-        print_recording(commandline, modes, *identifier);
+        print_recording(commandline, modes, *identifier, theme);
     } else {
-        print_mode(commandline, modes);
+        print_mode(commandline, modes, theme);
     };
 }
 
@@ -251,15 +257,20 @@ pub fn print_recording(
     commandline: &mut CommandLine,
     modes: &mut ModeState,
     identifier: char,
+    theme: &Theme,
 ) -> Vec<Action> {
     let content = format!("recording @{}", identifier);
-    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
+    commandline::print(commandline, modes, &[PrintContent::Default(content)], theme);
     Vec::new()
 }
 
-pub fn print_mode(commandline: &mut CommandLine, modes: &mut ModeState) -> Vec<Action> {
+pub fn print_mode(
+    commandline: &mut CommandLine,
+    modes: &mut ModeState,
+    theme: &Theme,
+) -> Vec<Action> {
     let content = format!("--{}--", modes.current.to_string().to_uppercase());
-    commandline::print(commandline, modes, &[PrintContent::Default(content)]);
+    commandline::print(commandline, modes, &[PrintContent::Default(content)], theme);
     Vec::new()
 }
 

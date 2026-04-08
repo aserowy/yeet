@@ -139,6 +139,7 @@ fn update_with_message(
             &mut app.commandline,
             &mut state.modes,
             &[PrintContent::Error(error.to_string())],
+            &settings.theme,
         ),
         Message::FdResult(paths) | Message::RgResult(paths) => qfix::add(
             &mut state.qfix,
@@ -253,7 +254,7 @@ pub fn update_with_keymap_message(
             commandline::update_on_execute(app, &mut state.register, &mut state.modes)
         }
         KeymapMessage::ExecuteCommandString(command) => {
-            command::execute(app, state, &settings.theme, lua, &[], 4, command)
+            command::execute(app, state, settings, lua, command)
         }
         KeymapMessage::ExecuteKeySequence(key_sequence) => {
             state.remaining_keysequence.replace(key_sequence.clone());
@@ -302,9 +303,12 @@ pub fn update_with_keymap_message(
                 }
             }
         }
-        KeymapMessage::Print(content) => {
-            commandline::print(&mut app.commandline, &mut state.modes, content)
-        }
+        KeymapMessage::Print(content) => commandline::print(
+            &mut app.commandline,
+            &mut state.modes,
+            content,
+            &settings.theme,
+        ),
         KeymapMessage::ReplayMacro(char) => register::replay_macro(&mut state.register, char),
         KeymapMessage::SetMark(char) => {
             match mark::add(app, &mut state.marks, *char, &settings.theme) {
@@ -315,10 +319,15 @@ pub fn update_with_keymap_message(
                 }
             }
         }
-        KeymapMessage::StartMacro(identifier) => {
-            mode::print_recording(&mut app.commandline, &mut state.modes, *identifier)
+        KeymapMessage::StartMacro(identifier) => mode::print_recording(
+            &mut app.commandline,
+            &mut state.modes,
+            *identifier,
+            &settings.theme,
+        ),
+        KeymapMessage::StopMacro => {
+            mode::print_mode(&mut app.commandline, &mut state.modes, &settings.theme)
         }
-        KeymapMessage::StopMacro => mode::print_mode(&mut app.commandline, &mut state.modes),
         KeymapMessage::ToggleQuickFix => qfix::toggle(app, &mut state.qfix, &settings.theme),
         KeymapMessage::Quit(mode) => vec![Action::Quit(mode.clone(), None)],
         KeymapMessage::YankPathToClipboard => {

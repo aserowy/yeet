@@ -34,7 +34,6 @@ pub async fn run(
     settings: Settings,
     lua: Option<LuaConfiguration>,
     plugin_states: Vec<yeet_plugin::PluginState>,
-    plugin_concurrency: usize,
 ) -> Result<(), AppError> {
     let cancellation = CancellationToken::new();
     let mut terminal = TerminalWrapper::start()?;
@@ -54,11 +53,10 @@ pub async fn run(
 
     let mut model = Model {
         lua,
-        plugin_states,
-        plugin_concurrency,
         settings,
         ..Default::default()
     };
+    model.state.plugin_states = plugin_states;
 
     if let (Some(lua), Ok(window)) = (&model.lua, model.app.current_window_mut()) {
         update::hook::on_window_create(lua, window, None);

@@ -50,10 +50,9 @@ async fn main() {
     );
 
     match yeet_frontend::run(
-        get_settings(&cli, lua_init.theme),
+        get_settings(&cli, lua_init.theme, lua_init.plugin_concurrency),
         lua_init.lua,
         lua_init.plugin_states,
-        lua_init.plugin_concurrency,
     )
     .await
     {
@@ -122,8 +121,13 @@ fn get_logging_path() -> Result<String, Error> {
     Ok(format!("{}{}", cache_dir, "/yeet/logs"))
 }
 
-fn get_settings(args: &ArgMatches, theme: yeet_frontend::theme::Theme) -> Settings {
+fn get_settings(
+    args: &ArgMatches,
+    theme: yeet_frontend::theme::Theme,
+    plugin_concurrency: usize,
+) -> Settings {
     Settings {
+        plugin_concurrency,
         selection_to_file_on_open: args.get_one("selection-to-file-on-open").cloned(),
         selection_to_stdout_on_open: args.get_flag("selection-to-stdout-on-open"),
         startup_path: expand_startup_path(args.get_one("path").cloned()),

@@ -8,6 +8,7 @@ use crate::{
     action::{self, Action},
     event::Message,
     model::{register::Register, App, CommandLine, ModeState},
+    theme::{tokens, Theme},
     update::{
         register::get_register,
         search::{self},
@@ -243,7 +244,13 @@ pub fn print(
     commandline: &mut CommandLine,
     modes: &mut ModeState,
     content: &[PrintContent],
+    theme: &Theme,
 ) -> Vec<Action> {
+    let error_fg = theme.ansi_fg(tokens::ERROR_FG);
+    let warning_fg = theme.ansi_fg(tokens::WARNING_FG);
+    let success_fg = theme.ansi_fg(tokens::SUCCESS_FG);
+    let information_fg = theme.ansi_fg(tokens::INFORMATION_FG);
+
     commandline.buffer.lines = content
         .iter()
         .map(|content| match content {
@@ -252,11 +259,19 @@ pub fn print(
                 ..Default::default()
             },
             PrintContent::Error(cntnt) => BufferLine {
-                content: Ansi::new(&format!("\x1b[31m{}\x1b[39m", cntnt)),
+                content: Ansi::new(&format!("{}{}\x1b[39m", error_fg, cntnt)),
+                ..Default::default()
+            },
+            PrintContent::Warning(cntnt) => BufferLine {
+                content: Ansi::new(&format!("{}{}\x1b[39m", warning_fg, cntnt)),
+                ..Default::default()
+            },
+            PrintContent::Success(cntnt) => BufferLine {
+                content: Ansi::new(&format!("{}{}\x1b[39m", success_fg, cntnt)),
                 ..Default::default()
             },
             PrintContent::Information(cntnt) => BufferLine {
-                content: Ansi::new(&format!("\x1b[92m{}\x1b[39m", cntnt)),
+                content: Ansi::new(&format!("{}{}\x1b[39m", information_fg, cntnt)),
                 ..Default::default()
             },
         })
