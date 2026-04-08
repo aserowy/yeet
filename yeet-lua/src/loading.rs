@@ -17,7 +17,7 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
     let mut loaded: HashSet<String> = HashSet::new();
     let mut failed: HashSet<String> = HashSet::new();
 
-    for (spec, is_dependency) in &ordered {
+    for spec in &ordered {
         if loaded.contains(&spec.url) {
             continue;
         }
@@ -88,7 +88,7 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
             continue;
         }
 
-        match load_single_plugin(lua, &init_path, &plugin_name, *is_dependency) {
+        match load_single_plugin(lua, &init_path, &plugin_name) {
             Ok(()) => {
                 loaded.insert(spec.url.clone());
                 states.push(PluginState {
@@ -128,12 +128,7 @@ fn is_already_loaded(lua: &Lua, plugin_name: &str) -> bool {
     )
 }
 
-fn load_single_plugin(
-    lua: &Lua,
-    init_path: &Path,
-    plugin_name: &str,
-    _is_dependency: bool,
-) -> LuaResult<()> {
+fn load_single_plugin(lua: &Lua, init_path: &Path, plugin_name: &str) -> LuaResult<()> {
     let snapshot = take_snapshot(lua)?;
 
     let plugin_dir = init_path
@@ -240,18 +235,18 @@ struct PluginSnapshot {
     theme: LuaTable,
 }
 
-fn compute_load_order(specs: &[PluginSpec]) -> Vec<(&PluginSpec, bool)> {
+fn compute_load_order(specs: &[PluginSpec]) -> Vec<&PluginSpec> {
     let mut order = Vec::new();
     let mut seen = HashSet::new();
 
     for spec in specs {
         for dep in &spec.dependencies {
             if seen.insert(dep.url.clone()) {
-                order.push((dep, true));
+                order.push(dep);
             }
         }
         if seen.insert(spec.url.clone()) {
-            order.push((spec, false));
+            order.push(spec);
         }
     }
 
