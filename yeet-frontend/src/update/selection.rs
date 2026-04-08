@@ -7,7 +7,7 @@ use crate::model;
 use crate::update::{cursor, preview};
 use crate::{
     action::Action,
-    event::Message,
+    event::{LogSeverity, Message},
     model::{history::History, register::Register, App, Buffer, Contents, DirectoryBuffer, Window},
 };
 
@@ -137,10 +137,14 @@ pub fn copy_to_clipboard(
         if let Some(clipboard) = register.clipboard.as_mut() {
             match clipboard.set_text(path.to_string_lossy()) {
                 Ok(_) => Vec::new(),
-                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    err.to_string(),
+                )])],
             }
         } else {
-            vec![Action::EmitMessages(vec![Message::Error(
+            vec![Action::EmitMessages(vec![Message::Log(
+                LogSeverity::Error,
                 "Clipboard not available".to_string(),
             )])]
         }

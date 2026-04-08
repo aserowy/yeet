@@ -5,7 +5,7 @@ use yeet_keymap::message::KeymapMessage;
 use crate::{
     action::{self, Action},
     error::AppError,
-    event::Message,
+    event::{LogSeverity, Message},
     model::{mark::Marks, App},
     task::Task,
     update::app,
@@ -21,7 +21,10 @@ pub fn copy_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Action>
             ))]
         }
         Err(err) => {
-            vec![Action::EmitMessages(vec![Message::Error(err)])]
+            vec![Action::EmitMessages(vec![Message::Log(
+                LogSeverity::Error,
+                err,
+            )])]
         }
     }
 }
@@ -36,7 +39,10 @@ pub fn rename_path(marks: &Marks, source_path: &Path, target: &str) -> Vec<Actio
             ))]
         }
         Err(err) => {
-            vec![Action::EmitMessages(vec![Message::Error(err)])]
+            vec![Action::EmitMessages(vec![Message::Log(
+                LogSeverity::Error,
+                err,
+            )])]
         }
     }
 }
@@ -203,7 +209,12 @@ mod test {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use crate::{action::Action, event::Message, model::mark::Marks, task::Task};
+    use crate::{
+        action::Action,
+        event::{LogSeverity, Message},
+        model::mark::Marks,
+        task::Task,
+    };
 
     use super::{copy_path, expand_path, rename_path};
 
@@ -345,7 +356,7 @@ mod test {
         assert!(
             matches!(&actions[0], Action::EmitMessages(messages) if matches!(
                 messages.as_slice(),
-                [Message::Error(message)] if message.contains("target directory")
+                [Message::Log(LogSeverity::Error,message)] if message.contains("target directory")
             ))
         );
     }
@@ -363,7 +374,7 @@ mod test {
         assert!(
             matches!(&actions[0], Action::EmitMessages(messages) if matches!(
                 messages.as_slice(),
-                [Message::Error(message)] if message.contains("target directory")
+                [Message::Log(LogSeverity::Error,message)] if message.contains("target directory")
             ))
         );
     }

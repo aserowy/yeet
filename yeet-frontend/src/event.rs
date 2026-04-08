@@ -58,11 +58,18 @@ pub enum MessageSource {
     User,
 }
 
+#[derive(Debug)]
+pub enum LogSeverity {
+    Error,
+    Warning,
+    Information,
+}
+
 pub enum Message {
     Keymap(KeymapMessage),
     EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
     EnumerationFinished(PathBuf, Vec<(ContentKind, String)>, Option<String>),
-    Error(String),
+    Log(LogSeverity, String),
     FdResult(Vec<PathBuf>),
     HelpHighlighted(usize, Vec<String>),
     QuickFixChanged,
@@ -87,7 +94,7 @@ impl std::fmt::Debug for Message {
             Message::EnumerationFinished(path, _, opt) => {
                 write!(f, "EnumerationFinished({:?}, {:?})", path, opt)
             }
-            Message::Error(err) => write!(f, "Error({:?})", err),
+            Message::Log(severity, msg) => write!(f, "Log({:?}, {:?})", severity, msg),
             Message::FdResult(paths) => write!(f, "FdResult({:?})", paths),
             Message::HelpHighlighted(id, _) => write!(f, "HelpHighlighted({})", id),
             Message::QuickFixChanged => write!(f, "QuickFixChanged"),

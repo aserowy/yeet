@@ -9,7 +9,7 @@ use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
-    event::{Envelope, Message},
+    event::{Envelope, LogSeverity, Message},
     model::{App, Buffer, Model, State},
     settings::Settings,
     terminal::TerminalWrapper,
@@ -135,12 +135,19 @@ fn update_with_message(
                 }
             }
         }
-        Message::Error(error) => commandline::print(
-            &mut app.commandline,
-            &mut state.modes,
-            &[PrintContent::Error(error.to_string())],
-            &settings.theme,
-        ),
+        Message::Log(severity, msg) => {
+            let content = match severity {
+                LogSeverity::Error => PrintContent::Error(msg.to_string()),
+                LogSeverity::Warning => PrintContent::Warning(msg.to_string()),
+                LogSeverity::Information => PrintContent::Information(msg.to_string()),
+            };
+            commandline::print(
+                &mut app.commandline,
+                &mut state.modes,
+                &[content],
+                &settings.theme,
+            )
+        }
         Message::FdResult(paths) | Message::RgResult(paths) => qfix::add(
             &mut state.qfix,
             app.contents.buffers.values_mut().collect(),

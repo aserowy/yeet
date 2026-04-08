@@ -6,7 +6,7 @@ use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::{self, Action},
-    event::Message,
+    event::{LogSeverity, Message},
     model::{App, Buffer, Contents, State, Window},
     settings::Settings,
     task::Task,
@@ -97,7 +97,8 @@ pub fn execute(
                 _ => {
                     tracing::warn!("deleting path failed: no path in preview set");
 
-                    vec![Action::EmitMessages(vec![Message::Error(
+                    vec![Action::EmitMessages(vec![Message::Log(
+                        LogSeverity::Error,
                         "No path in preview buffer to delete".to_string(),
                     )])]
                 }
@@ -145,7 +146,8 @@ pub fn execute(
                     path.to_path_buf(),
                     params.to_owned(),
                 ))],
-                None => vec![Action::EmitMessages(vec![Message::Error(
+                None => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
                     "Fd failed. Current path could not be resolved.".to_string(),
                 )])],
             };
@@ -205,7 +207,8 @@ pub fn execute(
             let preview_path = get_preview_path(app);
             let actions = match preview_path {
                 Some(source_path) => file::rename_path(&state.marks, source_path, target),
-                None => vec![Action::EmitMessages(vec![Message::Error(
+                None => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
                     "Mv failed. Preview path could not be resolved.".to_string(),
                 )])],
             };
@@ -261,7 +264,8 @@ pub fn execute(
                     ))]
                 }
                 None => {
-                    vec![Action::EmitMessages(vec![Message::Error(
+                    vec![Action::EmitMessages(vec![Message::Log(
+                        LogSeverity::Error,
                         "Rg failed. Current path could not be resolved.".to_string(),
                     )])]
                 }
@@ -279,11 +283,14 @@ pub fn execute(
                 Ok(target_path) if target_path.exists() => {
                     split::horizontal(app, lua, target_path.as_path())
                 }
-                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
-                    "Split failed. Path {:?} does not exist.",
-                    target_path
-                ))])],
-                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
+                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    format!("Split failed. Path {:?} does not exist.", target_path),
+                )])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    err,
+                )])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
         }
@@ -291,7 +298,10 @@ pub fn execute(
         ("tabnew", "") => {
             let actions = match tab::tabnew_target_path(app) {
                 Ok(path) => tab::create_tab(app, lua, path.as_path()),
-                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err.to_string())])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    err.to_string(),
+                )])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
         }
@@ -394,11 +404,14 @@ pub fn execute(
                 Ok(target_path) if target_path.exists() => {
                     split::vertical(app, lua, target_path.as_path())
                 }
-                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Error(format!(
-                    "Vsplit failed. Path {:?} does not exist.",
-                    target_path
-                ))])],
-                Err(err) => vec![Action::EmitMessages(vec![Message::Error(err)])],
+                Ok(target_path) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    format!("Vsplit failed. Path {:?} does not exist.", target_path),
+                )])],
+                Err(err) => vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    err,
+                )])],
             };
             add_change_mode(mode_before, Mode::Navigation, actions)
         }
@@ -421,7 +434,10 @@ pub fn execute(
             let mut actions = Vec::new();
             if !args.is_empty() {
                 let err = format!("command '{} {}' is not valid", cmd, args);
-                actions.push(Action::EmitMessages(vec![Message::Error(err)]));
+                actions.push(Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    err,
+                )]));
             }
             add_change_mode(mode_before, mode, actions)
         }
@@ -546,7 +562,10 @@ fn print_error(msg: &str, mode_before: Mode, mode: Mode) -> Vec<Action> {
     add_change_mode(
         mode_before,
         mode,
-        vec![Action::EmitMessages(vec![Message::Error(msg.to_string())])],
+        vec![Action::EmitMessages(vec![Message::Log(
+            LogSeverity::Error,
+            msg.to_string(),
+        )])],
     )
 }
 
@@ -570,7 +589,7 @@ mod test {
 
     use crate::{
         action::Action,
-        event::Message,
+        event::{LogSeverity, Message},
         model::{App, Buffer, Contents, DirectoryBuffer, SplitFocus, State, TasksBuffer, Window},
     };
 
@@ -652,7 +671,7 @@ mod test {
         actions.iter().any(|a| {
             if let Action::EmitMessages(msgs) = a {
                 msgs.iter().any(
-                    |m| matches!(m, Message::Error(s) if s.contains("No write since last change")),
+                    |m| matches!(m, Message::Log(LogSeverity::Error,s) if s.contains("No write since last change")),
                 )
             } else {
                 false
@@ -664,7 +683,7 @@ mod test {
         actions.iter().any(|a| {
             if let Action::EmitMessages(msgs) = a {
                 msgs.iter()
-                    .any(|m| matches!(m, Message::Error(s) if s.contains(needle)))
+                    .any(|m| matches!(m, Message::Log(LogSeverity::Error,s) if s.contains(needle)))
             } else {
                 false
             }

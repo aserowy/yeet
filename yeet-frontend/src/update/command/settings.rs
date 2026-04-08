@@ -27,7 +27,7 @@ mod test {
 
     use crate::{
         action::Action,
-        event::Message,
+        event::{LogSeverity, Message},
         model::{App, Window},
     };
 
@@ -45,7 +45,7 @@ mod test {
         actions.iter().any(|a| {
             if let Action::EmitMessages(msgs) = a {
                 msgs.iter()
-                    .any(|m| matches!(m, Message::Error(s) if s.contains(needle)))
+                    .any(|m| matches!(m, Message::Log(LogSeverity::Error,s) if s.contains(needle)))
             } else {
                 false
             }

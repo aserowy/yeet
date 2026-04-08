@@ -28,7 +28,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    event::{ContentKind, Envelope, Message, MessageSource},
+    event::{ContentKind, Envelope, LogSeverity, Message, MessageSource},
     init::{
         junkyard::{self, cache_and_compress, compress, restore},
         mark::{load_marks_from_file, save_marks_to_file},
@@ -533,36 +533,40 @@ async fn run_task(
                         Ok(result) => {
                             let mut messages = Vec::new();
                             if !result.removed.is_empty() {
-                                messages.push(Message::Error(format!(
-                                    "Removed {} unregistered plugins",
-                                    result.removed.len()
-                                )));
+                                messages.push(Message::Log(
+                                    LogSeverity::Warning,
+                                    format!(
+                                        "Removed {} unregistered plugins",
+                                        result.removed.len()
+                                    ),
+                                ));
                             }
                             for err in &result.errors {
-                                messages.push(Message::Error(format!(
-                                    "Plugin sync error ({}): {}",
-                                    err.url, err.error
-                                )));
+                                messages.push(Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin sync error ({}): {}", err.url, err.error),
+                                ));
                             }
-                            messages.push(Message::Error(format!(
-                                "Synced {} plugins",
-                                result.synced.len()
-                            )));
+                            messages.push(Message::Log(
+                                LogSeverity::Information,
+                                format!("Synced {} plugins", result.synced.len()),
+                            ));
                             let _ = sender.send(to_envelope(messages)).await;
                         }
                         Err(err) => {
                             let _ = sender
-                                .send(to_envelope(vec![Message::Error(format!(
-                                    "Plugin sync failed: {}",
-                                    err
-                                ))]))
+                                .send(to_envelope(vec![Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin sync failed: {}", err),
+                                )]))
                                 .await;
                         }
                     }
                 }
                 _ => {
                     let _ = sender
-                        .send(to_envelope(vec![Message::Error(
+                        .send(to_envelope(vec![Message::Log(
+                            LogSeverity::Error,
                             "Could not resolve plugin paths".to_string(),
                         )]))
                         .await;
@@ -579,36 +583,40 @@ async fn run_task(
                         Ok(result) => {
                             let mut messages = Vec::new();
                             if !result.removed.is_empty() {
-                                messages.push(Message::Error(format!(
-                                    "Removed {} unregistered plugins",
-                                    result.removed.len()
-                                )));
+                                messages.push(Message::Log(
+                                    LogSeverity::Warning,
+                                    format!(
+                                        "Removed {} unregistered plugins",
+                                        result.removed.len()
+                                    ),
+                                ));
                             }
                             for err in &result.errors {
-                                messages.push(Message::Error(format!(
-                                    "Plugin update error ({}): {}",
-                                    err.url, err.error
-                                )));
+                                messages.push(Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin update error ({}): {}", err.url, err.error),
+                                ));
                             }
-                            messages.push(Message::Error(format!(
-                                "Updated {} plugins",
-                                result.updated.len()
-                            )));
+                            messages.push(Message::Log(
+                                LogSeverity::Information,
+                                format!("Updated {} plugins", result.updated.len()),
+                            ));
                             let _ = sender.send(to_envelope(messages)).await;
                         }
                         Err(err) => {
                             let _ = sender
-                                .send(to_envelope(vec![Message::Error(format!(
-                                    "Plugin update failed: {}",
-                                    err
-                                ))]))
+                                .send(to_envelope(vec![Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin update failed: {}", err),
+                                )]))
                                 .await;
                         }
                     }
                 }
                 _ => {
                     let _ = sender
-                        .send(to_envelope(vec![Message::Error(
+                        .send(to_envelope(vec![Message::Log(
+                            LogSeverity::Error,
                             "Could not resolve plugin paths".to_string(),
                         )]))
                         .await;
@@ -661,7 +669,9 @@ async fn emit_error(sender: &Sender<Envelope>, error: AppError) {
     tracing::error!("task failed: {:?}", error);
 
     let error = format!("Error: {:?}", error);
-    let _ = sender.send(to_envelope(vec![Message::Error(error)])).await;
+    let _ = sender
+        .send(to_envelope(vec![Message::Log(LogSeverity::Error, error)]))
+        .await;
 }
 
 fn to_envelope(messages: Vec<Message>) -> Envelope {

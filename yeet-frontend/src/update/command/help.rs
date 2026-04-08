@@ -6,7 +6,7 @@ use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
-    event::Message,
+    event::{LogSeverity, Message},
     model::{App, Buffer, HelpBuffer, SplitFocus, Window},
     task::Task,
     update::{app, hook},
@@ -114,10 +114,10 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
         Some(t) => match resolve_topic(t) {
             Some(m) => m,
             None => {
-                return vec![Action::EmitMessages(vec![Message::Error(format!(
-                    "E149: Sorry, no help for {}",
-                    t
-                ))])];
+                return vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    format!("E149: Sorry, no help for {}", t),
+                )])];
             }
         },
         None => TopicMatch {
