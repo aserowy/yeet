@@ -49,6 +49,12 @@ pub mod tokens {
     pub const SIGN_QFIX: &str = "SignQfix";
     pub const SIGN_MARK: &str = "SignMark";
 
+    // Semantic status
+    pub const ERROR_FG: &str = "ErrorFg";
+    pub const WARNING_FG: &str = "WarningFg";
+    pub const SUCCESS_FG: &str = "SuccessFg";
+    pub const INFORMATION_FG: &str = "InformationFg";
+
     // Syntax
     pub const SYNTAX_THEME: &str = "syntax";
 }
@@ -103,6 +109,15 @@ impl Default for Theme {
         // Signs defaults
         colors.insert(tokens::SIGN_QFIX.to_string(), Color::Rgb(255, 85, 255));
         colors.insert(tokens::SIGN_MARK.to_string(), Color::Rgb(85, 255, 255));
+
+        // Semantic status defaults
+        colors.insert(tokens::ERROR_FG.to_string(), Color::Rgb(255, 85, 85));
+        colors.insert(tokens::WARNING_FG.to_string(), Color::Rgb(241, 250, 140));
+        colors.insert(tokens::SUCCESS_FG.to_string(), Color::Rgb(80, 250, 123));
+        colors.insert(
+            tokens::INFORMATION_FG.to_string(),
+            Color::Rgb(139, 233, 253),
+        );
 
         Self {
             colors,

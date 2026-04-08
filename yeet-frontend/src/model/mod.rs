@@ -330,6 +330,7 @@ pub struct State {
     pub junk: JunkYard,
     pub marks: Marks,
     pub modes: ModeState,
+    pub plugin_states: Vec<yeet_plugin::PluginState>,
     pub qfix: QuickFix,
     pub register: Register,
     pub remaining_keysequence: Option<String>,

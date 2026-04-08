@@ -37,10 +37,25 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    let (theme, lua) = lua::init();
-    tracing::info!("theme loaded: syntax_theme={}", theme.syntax_theme);
+    let lua_init = lua::init();
+    tracing::info!("theme loaded: syntax_theme={}", lua_init.theme.syntax_theme);
+    tracing::info!(
+        "plugins loaded: {} total, {} errors",
+        lua_init.plugin_states.len(),
+        lua_init
+            .plugin_states
+            .iter()
+            .filter(|s| s.status != yeet_plugin::PluginStatus::Loaded)
+            .count()
+    );
 
-    match yeet_frontend::run(get_settings(&cli, theme), lua).await {
+    match yeet_frontend::run(
+        get_settings(&cli, lua_init.theme, lua_init.plugin_concurrency),
+        lua_init.lua,
+        lua_init.plugin_states,
+    )
+    .await
+    {
         Ok(()) => {
             tracing::info!("closing application");
         }
@@ -106,8 +121,13 @@ fn get_logging_path() -> Result<String, Error> {
     Ok(format!("{}{}", cache_dir, "/yeet/logs"))
 }
 
-fn get_settings(args: &ArgMatches, theme: yeet_frontend::theme::Theme) -> Settings {
+fn get_settings(
+    args: &ArgMatches,
+    theme: yeet_frontend::theme::Theme,
+    plugin_concurrency: usize,
+) -> Settings {
     Settings {
+        plugin_concurrency,
         selection_to_file_on_open: args.get_one("selection-to-file-on-open").cloned(),
         selection_to_stdout_on_open: args.get_flag("selection-to-stdout-on-open"),
         startup_path: expand_startup_path(args.get_one("path").cloned()),

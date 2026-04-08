@@ -138,6 +138,8 @@ pub enum PrintContent {
     Error(String),
     Default(String),
     Information(String),
+    Success(String),
+    Warning(String),
 }
 
 impl Display for PrintContent {
@@ -145,7 +147,9 @@ impl Display for PrintContent {
         match self {
             PrintContent::Error(content)
             | PrintContent::Default(content)
-            | PrintContent::Information(content) => write!(f, "{content}"),
+            | PrintContent::Information(content)
+            | PrintContent::Success(content)
+            | PrintContent::Warning(content) => write!(f, "{content}"),
         }
     }
 }

@@ -1,17 +1,50 @@
 use mlua::prelude::*;
 use yeet_frontend::theme::{parse_hex_color, Theme};
 use yeet_lua::LuaConfiguration;
+use yeet_plugin::PluginState;
 
-pub fn init() -> (Theme, Option<LuaConfiguration>) {
+pub struct LuaInit {
+    pub theme: Theme,
+    pub lua: Option<LuaConfiguration>,
+    pub plugin_states: Vec<PluginState>,
+    pub plugin_concurrency: usize,
+}
+
+pub fn init() -> LuaInit {
     let mut theme = Theme::default();
 
     let lua = match yeet_lua::init() {
         Some(lua) => lua,
-        None => return (theme, None),
+        None => {
+            return LuaInit {
+                theme,
+                lua: None,
+                plugin_states: Vec::new(),
+                plugin_concurrency: 4,
+            };
+        }
     };
 
     read_theme_values(&lua, &mut theme);
-    (theme, Some(lua))
+
+    let plugin_concurrency = yeet_lua::read_plugin_concurrency(&lua);
+
+    let plugin_states = match yeet_plugin::resolve_plugin_data_path() {
+        Some(data_path) => yeet_lua::load_plugins(&lua, &data_path),
+        None => {
+            tracing::warn!("could not resolve plugin data path, skipping plugin loading");
+            Vec::new()
+        }
+    };
+
+    read_theme_values(&lua, &mut theme);
+
+    LuaInit {
+        theme,
+        lua: Some(lua),
+        plugin_states,
+        plugin_concurrency,
+    }
 }
 
 fn read_theme_values(lua: &LuaConfiguration, theme: &mut Theme) {

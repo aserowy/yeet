@@ -28,7 +28,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    event::{ContentKind, Envelope, Message, MessageSource},
+    event::{ContentKind, Envelope, LogSeverity, Message, MessageSource},
     init::{
         junkyard::{self, cache_and_compress, compress, restore},
         mark::{load_marks_from_file, save_marks_to_file},
@@ -53,6 +53,8 @@ pub enum Task {
     ExecuteZoxide(String),
     HighlightHelp(usize, String),
     LoadPreview(PathBuf, Rect),
+    PluginSync(Vec<yeet_plugin::PluginSpec>, usize),
+    PluginUpdate(Vec<yeet_plugin::PluginSpec>, usize),
     RenamePath(PathBuf, PathBuf),
     RestorePath(FileEntry, PathBuf),
     TrashPath(FileEntry),
@@ -74,6 +76,8 @@ impl Task {
             Task::ExecuteZoxide(params) => write!(f, "ExecuteZoxide({:?})", params),
             Task::HighlightHelp(id, _) => write!(f, "HighlightHelp({})", id),
             Task::LoadPreview(path, rect) => write!(f, "LoadPreview({:?}, {})", path, rect),
+            Task::PluginSync(specs, _) => write!(f, "PluginSync({} plugins)", specs.len()),
+            Task::PluginUpdate(specs, _) => write!(f, "PluginUpdate({} plugins)", specs.len()),
             Task::RenamePath(old, new) => write!(f, "RenamePath({:?}, {:?})", old, new),
             Task::RestorePath(entry, path) => write!(f, "RestorePath({:?}, {:?})", entry, path),
             Task::TrashPath(entry) => write!(f, "TrashPath({:?})", entry),
@@ -109,6 +113,8 @@ impl PartialEq for Task {
             }
             (Task::HighlightHelp(i1, c1), Task::HighlightHelp(i2, c2)) => i1 == i2 && c1 == c2,
             (Task::LoadPreview(p1, r1), Task::LoadPreview(p2, r2)) => p1 == p2 && r1 == r2,
+            (Task::PluginSync(_, _), Task::PluginSync(_, _)) => true,
+            (Task::PluginUpdate(_, _), Task::PluginUpdate(_, _)) => true,
             (Task::RenamePath(o1, n1), Task::RenamePath(o2, n2)) => o1 == o2 && n1 == n2,
             (Task::RestorePath(e1, p1), Task::RestorePath(e2, p2)) => e1 == e2 && p1 == p2,
             (Task::TrashPath(e1), Task::TrashPath(e2)) => e1 == e2,
@@ -517,6 +523,109 @@ async fn run_task(
                 emit_error(sender, error).await;
             }
         }
+        Task::PluginSync(specs, concurrency) => {
+            let lock_path = yeet_plugin::resolve_lock_file_path();
+            let data_path = yeet_plugin::resolve_plugin_data_path();
+
+            match (lock_path, data_path) {
+                (Some(lock_path), Some(data_path)) => {
+                    match yeet_plugin::sync::sync(&specs, &lock_path, &data_path, concurrency).await
+                    {
+                        Ok(result) => {
+                            let mut messages = Vec::new();
+                            if !result.removed.is_empty() {
+                                messages.push(Message::Log(
+                                    LogSeverity::Warning,
+                                    format!(
+                                        "Removed {} unregistered plugins",
+                                        result.removed.len()
+                                    ),
+                                ));
+                            }
+                            for err in &result.errors {
+                                messages.push(Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin sync error ({}): {}", err.url, err.error),
+                                ));
+                            }
+                            messages.push(Message::Log(
+                                LogSeverity::Information,
+                                format!("Synced {} plugins", result.synced.len()),
+                            ));
+                            let _ = sender.send(to_envelope(messages)).await;
+                        }
+                        Err(err) => {
+                            let _ = sender
+                                .send(to_envelope(vec![Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin sync failed: {}", err),
+                                )]))
+                                .await;
+                        }
+                    }
+                }
+                _ => {
+                    let _ = sender
+                        .send(to_envelope(vec![Message::Log(
+                            LogSeverity::Error,
+                            "Could not resolve plugin paths".to_string(),
+                        )]))
+                        .await;
+                }
+            }
+        }
+        Task::PluginUpdate(specs, concurrency) => {
+            let lock_path = yeet_plugin::resolve_lock_file_path();
+            let data_path = yeet_plugin::resolve_plugin_data_path();
+
+            match (lock_path, data_path) {
+                (Some(lock_path), Some(data_path)) => {
+                    match yeet_plugin::update::update(&specs, &lock_path, &data_path, concurrency)
+                        .await
+                    {
+                        Ok(result) => {
+                            let mut messages = Vec::new();
+                            if !result.removed.is_empty() {
+                                messages.push(Message::Log(
+                                    LogSeverity::Warning,
+                                    format!(
+                                        "Removed {} unregistered plugins",
+                                        result.removed.len()
+                                    ),
+                                ));
+                            }
+                            for err in &result.errors {
+                                messages.push(Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin update error ({}): {}", err.url, err.error),
+                                ));
+                            }
+                            messages.push(Message::Log(
+                                LogSeverity::Information,
+                                format!("Updated {} plugins", result.updated.len()),
+                            ));
+                            let _ = sender.send(to_envelope(messages)).await;
+                        }
+                        Err(err) => {
+                            let _ = sender
+                                .send(to_envelope(vec![Message::Log(
+                                    LogSeverity::Error,
+                                    format!("Plugin update failed: {}", err),
+                                )]))
+                                .await;
+                        }
+                    }
+                }
+                _ => {
+                    let _ = sender
+                        .send(to_envelope(vec![Message::Log(
+                            LogSeverity::Error,
+                            "Could not resolve plugin paths".to_string(),
+                        )]))
+                        .await;
+                }
+            }
+        }
     };
 
     Ok(())
@@ -563,7 +672,9 @@ async fn emit_error(sender: &Sender<Envelope>, error: AppError) {
     tracing::error!("task failed: {:?}", error);
 
     let error = format!("Error: {:?}", error);
-    let _ = sender.send(to_envelope(vec![Message::Error(error)])).await;
+    let _ = sender
+        .send(to_envelope(vec![Message::Log(LogSeverity::Error, error)]))
+        .await;
 }
 
 fn to_envelope(messages: Vec<Message>) -> Envelope {

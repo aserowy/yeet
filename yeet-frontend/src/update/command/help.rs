@@ -6,7 +6,7 @@ use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
-    event::Message,
+    event::{LogSeverity, Message},
     model::{App, Buffer, HelpBuffer, SplitFocus, Window},
     task::Task,
     update::{app, hook},
@@ -18,6 +18,7 @@ const CONFIGURATION_CONTENT: &str = include_str!("../../../../docs/help/configur
 const HOOKS_CONTENT: &str = include_str!("../../../../docs/help/hooks.md");
 const KEYBINDINGS_CONTENT: &str = include_str!("../../../../docs/help/keybindings.md");
 const MODES_CONTENT: &str = include_str!("../../../../docs/help/modes.md");
+const PLUGINS_CONTENT: &str = include_str!("../../../../docs/help/plugins.md");
 const THEME_CONTENT: &str = include_str!("../../../../docs/help/theme.md");
 
 struct HelpPage {
@@ -49,6 +50,10 @@ const HELP_PAGES: &[HelpPage] = &[
     HelpPage {
         name: "modes",
         content: MODES_CONTENT,
+    },
+    HelpPage {
+        name: "plugins",
+        content: PLUGINS_CONTENT,
     },
     HelpPage {
         name: "theme",
@@ -109,10 +114,10 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
         Some(t) => match resolve_topic(t) {
             Some(m) => m,
             None => {
-                return vec![Action::EmitMessages(vec![Message::Error(format!(
-                    "E149: Sorry, no help for {}",
-                    t
-                ))])];
+                return vec![Action::EmitMessages(vec![Message::Log(
+                    LogSeverity::Error,
+                    format!("E149: Sorry, no help for {}", t),
+                )])];
             }
         },
         None => TopicMatch {

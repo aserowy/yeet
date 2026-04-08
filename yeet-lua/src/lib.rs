@@ -1,8 +1,12 @@
 mod hook;
+mod loading;
+mod plugin;
 mod viewport;
 
 pub use hook::invoke_on_window_create;
+pub use loading::load_plugins;
 pub use mlua::Lua;
+pub use plugin::{read_plugin_concurrency, read_plugin_specs};
 
 pub type LuaConfiguration = Lua;
 
@@ -45,10 +49,18 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
     let _ = on_window_create.set_metatable(Some(hook_mt));
     hook_table.set("on_window_create", on_window_create)?;
 
+    let plugin_table = plugin::create_plugin_table(lua)?;
+
+    if let Some(data_path) = yeet_plugin::resolve_plugin_data_path() {
+        plugin_table.set("_data_path", data_path.to_string_lossy().to_string())?;
+    }
+
     y_table.set("theme", theme_table)?;
     y_table.set("hook", hook_table)?;
+    y_table.set("plugin", plugin_table)?;
 
     protect_y_table(lua, y_table)?;
+    install_plugin_searcher(lua)?;
 
     let content = std::fs::read_to_string(config_path).map_err(LuaError::external)?;
     lua.load(&content)
@@ -102,6 +114,70 @@ fn protect_y_table(lua: &Lua, y_table: LuaTable) -> LuaResult<()> {
 
     let _ = globals.set_metatable(Some(g_meta));
     Ok(())
+}
+
+fn install_plugin_searcher(lua: &Lua) -> LuaResult<()> {
+    lua.load(
+        r#"
+        local noop_mt = {
+            __index = function(_, _)
+                return function() end
+            end
+        }
+
+        local function url_to_storage(url)
+            url = url:gsub("/$", ""):gsub("%.git$", "")
+            url = url:gsub("^https://", ""):gsub("^http://", ""):gsub("^git://", "")
+            local parts = {}
+            for part in url:gmatch("[^/]+") do
+                parts[#parts + 1] = part
+            end
+            if #parts >= 2 then
+                return parts[#parts - 1] .. "/" .. parts[#parts]
+            end
+        end
+
+        local function plugin_searcher(modname)
+            local plugins = y.plugin._plugins
+            local data_path = y.plugin._data_path
+
+            for i = 1, #plugins do
+                local p = plugins[i]
+                local pname = p.name
+                if not pname then
+                    local url = p.url:gsub("/$", ""):gsub("%.git$", "")
+                    pname = url:match("[^/]+$") or url
+                end
+                if pname == modname then
+                    if data_path then
+                        local storage = url_to_storage(p.url)
+                        if storage then
+                            local init_path = data_path .. "/" .. storage .. "/init.lua"
+                            local f = io.open(init_path, "r")
+                            if f then
+                                f:close()
+                                return function()
+                                    local result = dofile(init_path)
+                                    if result ~= nil then
+                                        package.loaded[modname] = result
+                                    end
+                                    return result or setmetatable({}, noop_mt)
+                                end
+                            end
+                        end
+                    end
+                    return function()
+                        return setmetatable({}, noop_mt)
+                    end
+                end
+            end
+            return nil
+        end
+
+        table.insert(package.searchers, 2, plugin_searcher)
+        "#,
+    )
+    .exec()
 }
 
 fn create_hook_metatable(lua: &Lua) -> LuaResult<LuaTable> {
@@ -298,5 +374,181 @@ mod tests {
         let lua = create_lua_from_script("foo = 42");
         let val: i64 = lua.globals().get("foo").unwrap();
         assert_eq!(val, 42);
+    }
+
+    #[test]
+    fn plugin_table_exists_after_init() {
+        let lua = create_lua_from_script("");
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let plugin: LuaTable = y.get("plugin").unwrap();
+        let plugins: LuaTable = plugin.get("_plugins").unwrap();
+        assert_eq!(plugins.raw_len(), 0);
+    }
+
+    #[test]
+    fn register_plugin_with_all_opts() {
+        let lua = create_lua_from_script(
+            r#"
+            y.plugin.register({
+                url = "https://github.com/user/yeet-nord",
+                branch = "main",
+                version = ">=1.0, <2.0"
+            })
+            "#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].url, "https://github.com/user/yeet-nord");
+        assert_eq!(specs[0].branch.as_deref(), Some("main"));
+        assert_eq!(specs[0].version.as_deref(), Some(">=1.0, <2.0"));
+    }
+
+    #[test]
+    fn register_plugin_url_only() {
+        let lua = create_lua_from_script(
+            r#"y.plugin.register({ url = "https://github.com/user/plugin" })"#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].url, "https://github.com/user/plugin");
+        assert!(specs[0].branch.is_none());
+        assert!(specs[0].version.is_none());
+    }
+
+    #[test]
+    fn register_plugin_with_dependencies() {
+        let lua = create_lua_from_script(
+            r#"
+            y.plugin.register({
+                url = "https://github.com/user/theme",
+                dependencies = {
+                    { url = "https://github.com/user/lib", version = ">=0.5" }
+                }
+            })
+            "#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].dependencies.len(), 1);
+        assert_eq!(specs[0].dependencies[0].url, "https://github.com/user/lib");
+        assert_eq!(specs[0].dependencies[0].version.as_deref(), Some(">=0.5"));
+    }
+
+    #[test]
+    fn register_without_url_is_ignored() {
+        let lua = create_lua_from_script(r#"y.plugin.register({ branch = "main" })"#);
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn register_with_non_table_is_ignored() {
+        let lua = create_lua_from_script(r#"y.plugin.register("https://github.com/user/plugin")"#);
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn concurrency_default() {
+        let lua = create_lua_from_script("");
+        assert_eq!(read_plugin_concurrency(&lua), 4);
+    }
+
+    #[test]
+    fn concurrency_custom() {
+        let lua = create_lua_from_script("y.plugin.concurrency = 2");
+        assert_eq!(read_plugin_concurrency(&lua), 2);
+    }
+
+    #[test]
+    fn concurrency_invalid_uses_default() {
+        let lua = create_lua_from_script(r#"y.plugin.concurrency = "fast""#);
+        assert_eq!(read_plugin_concurrency(&lua), 4);
+    }
+
+    #[test]
+    fn plugin_survives_y_reassignment() {
+        let lua = create_lua_from_script(
+            r##"
+            y = { theme = { TabBarActiveBg = "#ff0000" } }
+            y.plugin.register({ url = "https://github.com/user/plugin" })
+            "##,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let theme: LuaTable = y.get("theme").unwrap();
+        let val: String = theme.get("TabBarActiveBg").unwrap();
+        assert_eq!(val, "#ff0000");
+    }
+
+    #[test]
+    fn multiple_plugins_registered() {
+        let lua = create_lua_from_script(
+            r#"
+            y.plugin.register({ url = "https://github.com/a/one" })
+            y.plugin.register({ url = "https://github.com/b/two" })
+            "#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 2);
+        assert_eq!(specs[0].url, "https://github.com/a/one");
+        assert_eq!(specs[1].url, "https://github.com/b/two");
+    }
+
+    #[test]
+    fn require_unloaded_plugin_returns_noop_proxy() {
+        let lua = create_lua_from_script(
+            r#"
+            y.plugin.register({ url = "https://github.com/user/yeet-theme", name = "my-theme" })
+            require('my-theme').setup()
+            "#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+    }
+
+    #[test]
+    fn require_unknown_module_still_errors() {
+        let lua = Lua::new();
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.plugin.register({{ url = "https://github.com/user/yeet-theme" }})
+            require('totally-unknown-module').setup()
+            "#
+        )
+        .unwrap();
+        let path = tmp.path().to_path_buf();
+        let result = setup_and_execute(&lua, &path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn register_ssh_url_is_rejected() {
+        let lua = create_lua_from_script(
+            r#"y.plugin.register({ url = "git@github.com:user/repo.git" })"#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn register_http_url_is_rejected() {
+        let lua =
+            create_lua_from_script(r#"y.plugin.register({ url = "http://github.com/user/repo" })"#);
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn register_https_url_succeeds() {
+        let lua = create_lua_from_script(
+            r#"y.plugin.register({ url = "https://github.com/user/repo" })"#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
     }
 }

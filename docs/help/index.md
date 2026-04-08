@@ -28,6 +28,10 @@ Theme color tokens and syntax highlighting theme selection. Covers the `y.theme`
 
 Lifecycle hooks for customizing yeet behavior via Lua callbacks. Covers the `y.hook` table and available hooks like `on_window_create`. See `:help hooks`.
 
+### `plugins`
+
+Plugin manager for extending yeet with git-based plugins. Covers `y.plugin.register()`, plugin commands (`:pluginlist`, `:pluginsync`, `:pluginupdate`), the lock file, and plugin authoring. See `:help plugins`.
+
 ### `help`
 
 The help system itself. Use `:help` to open this index page, `:help <topic>` to jump to a specific topic, and `:q` to close the help window.

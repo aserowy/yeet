@@ -21,7 +21,7 @@ The system SHALL look for `init.lua` at `$XDG_CONFIG_HOME/yeet/init.lua`. If `$X
 - **THEN** the system loads `/home/user/.config/yeet/init.lua`
 
 ### Requirement: Global y table is exposed to Lua
-The system SHALL expose a global table named `y` to the Lua environment. This table serves as the namespace for all yeet configuration APIs. The `y` table SHALL contain a `theme` subtable for static theme configuration and a `hook` subtable for callback functions. The `y` table SHALL be protected from overwrite: assigning a table to `y` at the global level SHALL shallow-merge the new table's keys into the existing `y` table instead of replacing it.
+The system SHALL expose a global table named `y` to the Lua environment. This table serves as the namespace for all yeet configuration APIs. The `y` table SHALL contain a `theme` subtable for static theme configuration, a `hook` subtable for callback functions, and a `plugin` subtable for plugin management. The `y` table SHALL be protected from overwrite: assigning a table to `y` at the global level SHALL shallow-merge the new table's keys into the existing `y` table instead of replacing it.
 
 #### Scenario: y table is accessible in init.lua
 - **WHEN** `init.lua` contains `y.theme.StatusLineFg = '#ffffff'`
@@ -31,13 +31,25 @@ The system SHALL expose a global table named `y` to the Lua environment. This ta
 - **WHEN** `init.lua` contains `y.hook.on_window_create:add(function(ctx) end)`
 - **THEN** the assignment executes without error and the function is retained in the Lua runtime for later invocation
 
+#### Scenario: y.plugin subtable is accessible in init.lua
+- **WHEN** `init.lua` contains `y.plugin.register({ url = "https://github.com/user/plugin" })`
+- **THEN** the call executes without error and the plugin is added to the registration list
+
+#### Scenario: y.plugin.concurrency is settable
+- **WHEN** `init.lua` contains `y.plugin.concurrency = 2`
+- **THEN** the value is accessible from the Rust side as an integer
+
 #### Scenario: Wholesale y assignment merges instead of replacing
 - **WHEN** `init.lua` contains `y = { theme = { TabBarActiveBg = "#ff0000" } }`
-- **THEN** `y.theme.TabBarActiveBg` SHALL be `"#ff0000"` and `y.hook` SHALL still exist with its `:add()` method intact
+- **THEN** `y.theme.TabBarActiveBg` SHALL be `"#ff0000"` and `y.hook` and `y.plugin` SHALL still exist with their methods intact
 
 #### Scenario: y.hook survives y table reassignment
 - **WHEN** `init.lua` contains `y = { theme = { ... } }` followed by `y.hook.on_window_create:add(function(ctx) end)`
 - **THEN** the hook registration SHALL succeed without error
+
+#### Scenario: y.plugin survives y table reassignment
+- **WHEN** `init.lua` contains `y = { theme = { ... } }` followed by `y.plugin.register({ url = "..." })`
+- **THEN** the plugin registration SHALL succeed without error
 
 #### Scenario: Non-table assignment to y is ignored
 - **WHEN** `init.lua` contains `y = nil` or `y = "string"`
@@ -307,3 +319,22 @@ The system SHALL invoke `y.hook.on_window_create` after the window is constructe
 
 - **WHEN** a window is created and the hook modifies viewport settings
 - **THEN** the modified settings SHALL be in effect before the window receives its first layout calculation and render
+
+### Requirement: require() returns no-op proxy for unloaded plugins
+
+When `require()` is called for a module name matching a registered plugin that is not yet loaded, the system SHALL return a no-op proxy table instead of raising an error. Any method call on the proxy SHALL silently do nothing. Once the plugin is loaded (on subsequent startup after sync/update), `require()` SHALL return the real module table.
+
+#### Scenario: require() on fresh install
+
+- **WHEN** `init.lua` calls `require('bluloco-theme').setup()` and the plugin is registered but not yet downloaded
+- **THEN** the `require()` call SHALL return a no-op proxy and `setup()` SHALL silently do nothing
+
+#### Scenario: require() after plugin is loaded
+
+- **WHEN** the plugin has been synced/updated, the app restarts, and `require('bluloco-theme')` is called
+- **THEN** `require()` SHALL return the real module table from `package.loaded`
+
+#### Scenario: require() for unknown module still errors
+
+- **WHEN** `require('nonexistent-module')` is called and no plugin with that name is registered
+- **THEN** `require()` SHALL raise the standard Lua error

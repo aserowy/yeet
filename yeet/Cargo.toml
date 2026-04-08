@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 yeet-frontend.workspace = true
 yeet-lua.workspace = true
+yeet-plugin.workspace = true
 
 clap.workspace = true
 dirs.workspace = true
