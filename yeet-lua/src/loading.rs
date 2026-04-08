@@ -116,23 +116,47 @@ fn load_single_plugin(lua: &Lua, init_path: &Path, _is_dependency: bool) -> LuaR
     result
 }
 
+fn shallow_clone_table(lua: &Lua, source: &LuaTable) -> LuaResult<LuaTable> {
+    let clone = lua.create_table()?;
+    for pair in source.pairs::<LuaValue, LuaValue>() {
+        let (k, v) = pair?;
+        clone.set(k, v)?;
+    }
+    Ok(clone)
+}
+
+fn restore_table_from_clone(target: &LuaTable, source: &LuaTable) -> LuaResult<()> {
+    let keys_to_clear: Vec<LuaValue> = target
+        .pairs::<LuaValue, LuaValue>()
+        .filter_map(|r| r.ok())
+        .map(|(k, _)| k)
+        .collect();
+
+    for key in keys_to_clear {
+        target.set(key, LuaValue::Nil)?;
+    }
+
+    for pair in source.pairs::<LuaValue, LuaValue>() {
+        let (k, v) = pair?;
+        target.set(k, v)?;
+    }
+
+    Ok(())
+}
+
 fn take_snapshot(lua: &Lua) -> LuaResult<PluginSnapshot> {
     let y: LuaTable = lua.globals().get("y")?;
 
     let hook: LuaTable = y.get("hook")?;
     let on_window_create: LuaTable = hook.get("on_window_create")?;
-    let hook_count = on_window_create.raw_len();
+    let hook_on_window_create = shallow_clone_table(lua, &on_window_create)?;
 
     let theme: LuaTable = y.get("theme")?;
-    let theme_keys: Vec<String> = theme
-        .pairs::<String, LuaValue>()
-        .filter_map(|r| r.ok())
-        .map(|(k, _)| k)
-        .collect();
+    let theme_clone = shallow_clone_table(lua, &theme)?;
 
     Ok(PluginSnapshot {
-        hook_count,
-        theme_keys,
+        hook_on_window_create,
+        theme: theme_clone,
     })
 }
 
@@ -141,30 +165,17 @@ fn restore_snapshot(lua: &Lua, snapshot: PluginSnapshot) -> LuaResult<()> {
 
     let hook: LuaTable = y.get("hook")?;
     let on_window_create: LuaTable = hook.get("on_window_create")?;
-    let current_len = on_window_create.raw_len();
-    for i in (snapshot.hook_count + 1..=current_len).rev() {
-        on_window_create.raw_set(i, LuaValue::Nil)?;
-    }
+    restore_table_from_clone(&on_window_create, &snapshot.hook_on_window_create)?;
 
     let theme: LuaTable = y.get("theme")?;
-    let current_keys: Vec<String> = theme
-        .pairs::<String, LuaValue>()
-        .filter_map(|r| r.ok())
-        .map(|(k, _)| k)
-        .collect();
-
-    for key in &current_keys {
-        if !snapshot.theme_keys.contains(key) {
-            theme.set(key.as_str(), LuaValue::Nil)?;
-        }
-    }
+    restore_table_from_clone(&theme, &snapshot.theme)?;
 
     Ok(())
 }
 
 struct PluginSnapshot {
-    hook_count: usize,
-    theme_keys: Vec<String>,
+    hook_on_window_create: LuaTable,
+    theme: LuaTable,
 }
 
 fn compute_load_order(specs: &[PluginSpec]) -> Vec<(&PluginSpec, bool)> {
@@ -335,6 +346,89 @@ mod tests {
         let hook: LuaTable = y.get("hook").unwrap();
         let owc: LuaTable = hook.get("on_window_create").unwrap();
         assert_eq!(owc.raw_len(), 0);
+    }
+
+    #[test]
+    fn earlier_plugin_hooks_survive_later_failure() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let good_dir = dir.path().join("test").join("good");
+        std::fs::create_dir_all(&good_dir).unwrap();
+        std::fs::write(
+            good_dir.join("init.lua"),
+            "y.hook.on_window_create:add(function(ctx) end)",
+        )
+        .unwrap();
+
+        let bad_dir = dir.path().join("test").join("bad");
+        std::fs::create_dir_all(&bad_dir).unwrap();
+        std::fs::write(
+            bad_dir.join("init.lua"),
+            r#"
+            y.hook.on_window_create:add(function(ctx) end)
+            error("intentional failure")
+            "#,
+        )
+        .unwrap();
+
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/good" })"#)
+            .exec()
+            .unwrap();
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/bad" })"#)
+            .exec()
+            .unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+        assert_eq!(states[1].status, PluginStatus::Error);
+
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let hook: LuaTable = y.get("hook").unwrap();
+        let owc: LuaTable = hook.get("on_window_create").unwrap();
+        assert_eq!(owc.raw_len(), 1);
+        let func: LuaValue = owc.raw_get(1).unwrap();
+        assert!(matches!(func, LuaValue::Function(_)));
+    }
+
+    #[test]
+    fn earlier_plugin_theme_survives_later_failure() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let good_dir = dir.path().join("test").join("themer");
+        std::fs::create_dir_all(&good_dir).unwrap();
+        std::fs::write(good_dir.join("init.lua"), "y.theme.GoodColor = '#aabbcc'").unwrap();
+
+        let bad_dir = dir.path().join("test").join("overrider");
+        std::fs::create_dir_all(&bad_dir).unwrap();
+        std::fs::write(
+            bad_dir.join("init.lua"),
+            r#"
+            y.theme.GoodColor = '#000000'
+            y.theme.BadColor = '#ffffff'
+            error("intentional failure")
+            "#,
+        )
+        .unwrap();
+
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/themer" })"#)
+            .exec()
+            .unwrap();
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/overrider" })"#)
+            .exec()
+            .unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+        assert_eq!(states[1].status, PluginStatus::Error);
+
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let theme: LuaTable = y.get("theme").unwrap();
+        let good: String = theme.get("GoodColor").unwrap();
+        assert_eq!(good, "#aabbcc");
+        let bad: LuaValue = theme.get("BadColor").unwrap();
+        assert!(matches!(bad, LuaValue::Nil));
     }
 
     #[test]
