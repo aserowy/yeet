@@ -1,4 +1,7 @@
 use std::path::Path;
+use std::sync::Arc;
+
+use tokio::sync::Semaphore;
 
 use crate::git::{self, GitError};
 use crate::lockfile::{LockEntry, LockFile, LockFileError};
@@ -27,43 +30,71 @@ pub struct SyncResult {
     pub removed: Vec<String>,
 }
 
-pub fn sync(
+enum PluginOutcome {
+    Synced(String),
+    Error(PluginSyncError),
+}
+
+pub async fn sync(
     specs: &[PluginSpec],
     lock_file_path: &Path,
     data_path: &Path,
+    concurrency: usize,
 ) -> Result<SyncResult, SyncError> {
     if !lock_file_path.exists() {
         return Err(SyncError::NoLockFile);
     }
 
     let mut lock = LockFile::read_from(lock_file_path)?;
-
     let removed = cleanup_unregistered(specs, &mut lock, data_path);
 
-    let mut synced = Vec::new();
-    let mut errors = Vec::new();
-
     let all_specs = collect_all_specs(specs);
+    let semaphore = Arc::new(Semaphore::new(concurrency));
 
-    for spec in &all_specs {
+    let mut handles = Vec::new();
+    for spec in all_specs {
         let key = lock_key_for_url(&spec.url);
-        let entry = match lock.plugins.get(&key) {
+        let entry = match lock.plugins.get(&key).cloned() {
             Some(entry) => entry,
             None => {
-                errors.push(PluginSyncError {
-                    url: spec.url.clone(),
-                    error: "not in lock file, run :pluginupdate".to_string(),
-                });
+                let url = spec.url.clone();
+                handles.push(tokio::spawn(async move {
+                    PluginOutcome::Error(PluginSyncError {
+                        url,
+                        error: "not in lock file, run :pluginupdate".to_string(),
+                    })
+                }));
                 continue;
             }
         };
 
-        match sync_single_plugin(spec, entry, data_path) {
-            Ok(()) => synced.push(spec.url.clone()),
-            Err(e) => errors.push(PluginSyncError {
-                url: spec.url.clone(),
-                error: e.to_string(),
-            }),
+        let sem = semaphore.clone();
+        let data_path = data_path.to_path_buf();
+        let url = spec.url.clone();
+        handles.push(tokio::spawn(async move {
+            let _permit = sem.acquire().await.expect("semaphore closed");
+            let url_for_result = url.clone();
+            let result =
+                tokio::task::spawn_blocking(move || sync_single_plugin(&spec, &entry, &data_path))
+                    .await
+                    .expect("blocking task panicked");
+
+            match result {
+                Ok(()) => PluginOutcome::Synced(url_for_result),
+                Err(e) => PluginOutcome::Error(PluginSyncError {
+                    url: url_for_result,
+                    error: e.to_string(),
+                }),
+            }
+        }));
+    }
+
+    let mut synced = Vec::new();
+    let mut errors = Vec::new();
+    for handle in handles {
+        match handle.await.expect("task panicked") {
+            PluginOutcome::Synced(url) => synced.push(url),
+            PluginOutcome::Error(e) => errors.push(e),
         }
     }
 

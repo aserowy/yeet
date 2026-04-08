@@ -523,13 +523,14 @@ async fn run_task(
                 emit_error(sender, error).await;
             }
         }
-        Task::PluginSync(specs, _concurrency) => {
+        Task::PluginSync(specs, concurrency) => {
             let lock_path = yeet_plugin::resolve_lock_file_path();
             let data_path = yeet_plugin::resolve_plugin_data_path();
 
             match (lock_path, data_path) {
                 (Some(lock_path), Some(data_path)) => {
-                    match yeet_plugin::sync::sync(&specs, &lock_path, &data_path) {
+                    match yeet_plugin::sync::sync(&specs, &lock_path, &data_path, concurrency).await
+                    {
                         Ok(result) => {
                             let mut messages = Vec::new();
                             if !result.removed.is_empty() {
@@ -573,13 +574,15 @@ async fn run_task(
                 }
             }
         }
-        Task::PluginUpdate(specs, _concurrency) => {
+        Task::PluginUpdate(specs, concurrency) => {
             let lock_path = yeet_plugin::resolve_lock_file_path();
             let data_path = yeet_plugin::resolve_plugin_data_path();
 
             match (lock_path, data_path) {
                 (Some(lock_path), Some(data_path)) => {
-                    match yeet_plugin::update::update(&specs, &lock_path, &data_path) {
+                    match yeet_plugin::update::update(&specs, &lock_path, &data_path, concurrency)
+                        .await
+                    {
                         Ok(result) => {
                             let mut messages = Vec::new();
                             if !result.removed.is_empty() {

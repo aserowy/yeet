@@ -1,4 +1,7 @@
 use std::path::Path;
+use std::sync::Arc;
+
+use tokio::sync::Semaphore;
 
 use crate::git::{self, GitError};
 use crate::lockfile::{LockEntry, LockFile, LockFileError};
@@ -19,27 +22,58 @@ pub struct UpdateResult {
     pub removed: Vec<String>,
 }
 
-pub fn update(
+struct PluginUpdateEntry {
+    key: String,
+    url: String,
+    entry: LockEntry,
+}
+
+enum UpdateOutcome {
+    Updated(PluginUpdateEntry),
+    Error(PluginSyncError),
+}
+
+pub async fn update(
     specs: &[PluginSpec],
     lock_file_path: &Path,
     data_path: &Path,
+    concurrency: usize,
 ) -> Result<UpdateResult, UpdateError> {
     let mut lock = LockFile::read_from(lock_file_path)?;
-
     let removed = cleanup_unregistered(specs, &mut lock, data_path);
+
+    let all_specs = collect_all_specs(specs);
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+
+    let mut handles = Vec::new();
+    for spec in all_specs {
+        let sem = semaphore.clone();
+        let data_path = data_path.to_path_buf();
+        handles.push(tokio::spawn(async move {
+            let _permit = sem.acquire().await.expect("semaphore closed");
+            let result =
+                tokio::task::spawn_blocking(move || update_single_plugin(&spec, &data_path))
+                    .await
+                    .expect("blocking task panicked");
+
+            match result {
+                Ok((key, url, entry)) => {
+                    UpdateOutcome::Updated(PluginUpdateEntry { key, url, entry })
+                }
+                Err((url, error)) => UpdateOutcome::Error(PluginSyncError { url, error }),
+            }
+        }));
+    }
 
     let mut updated = Vec::new();
     let mut errors = Vec::new();
-
-    let all_specs = collect_all_specs(specs);
-
-    for spec in &all_specs {
-        match update_single_plugin(spec, &mut lock, data_path) {
-            Ok(()) => updated.push(spec.url.clone()),
-            Err(e) => errors.push(PluginSyncError {
-                url: spec.url.clone(),
-                error: e.to_string(),
-            }),
+    for handle in handles {
+        match handle.await.expect("task panicked") {
+            UpdateOutcome::Updated(entry) => {
+                lock.plugins.insert(entry.key, entry.entry);
+                updated.push(entry.url);
+            }
+            UpdateOutcome::Error(e) => errors.push(e),
         }
     }
 
@@ -54,33 +88,31 @@ pub fn update(
 
 fn update_single_plugin(
     spec: &PluginSpec,
-    lock: &mut LockFile,
     data_path: &Path,
-) -> Result<(), GitError> {
+) -> Result<(String, String, LockEntry), (String, String)> {
     let storage_path = url_to_storage_path(&spec.url)
-        .ok_or_else(|| GitError::Gix(format!("invalid URL: {}", spec.url)))?;
+        .ok_or_else(|| (spec.url.clone(), format!("invalid URL: {}", spec.url)))?;
     let plugin_path = data_path.join(&storage_path);
 
     let (commit, tag) = if let Some(version_constraint) = &spec.version {
-        resolve_tagged_version(spec, &plugin_path, version_constraint)?
+        resolve_tagged_version(spec, &plugin_path, version_constraint)
+            .map_err(|e| (spec.url.clone(), e.to_string()))?
     } else {
-        resolve_branch_head(spec, &plugin_path)?
+        resolve_branch_head(spec, &plugin_path).map_err(|e| (spec.url.clone(), e.to_string()))?
     };
 
-    let sha256 = git::compute_tree_sha256(&plugin_path)?;
+    let sha256 =
+        git::compute_tree_sha256(&plugin_path).map_err(|e| (spec.url.clone(), e.to_string()))?;
 
     let key = lock_key_for_url(&spec.url);
-    lock.plugins.insert(
-        key,
-        LockEntry {
-            commit,
-            sha256,
-            branch: spec.branch.clone(),
-            tag,
-        },
-    );
+    let entry = LockEntry {
+        commit,
+        sha256,
+        branch: spec.branch.clone(),
+        tag,
+    };
 
-    Ok(())
+    Ok((key, spec.url.clone(), entry))
 }
 
 fn resolve_tagged_version(
