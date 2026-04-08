@@ -56,6 +56,7 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
     y_table.set("plugin", plugin_table)?;
 
     protect_y_table(lua, y_table)?;
+    install_plugin_searcher(lua)?;
 
     let content = std::fs::read_to_string(config_path).map_err(LuaError::external)?;
     lua.load(&content)
@@ -109,6 +110,39 @@ fn protect_y_table(lua: &Lua, y_table: LuaTable) -> LuaResult<()> {
 
     let _ = globals.set_metatable(Some(g_meta));
     Ok(())
+}
+
+fn install_plugin_searcher(lua: &Lua) -> LuaResult<()> {
+    lua.load(
+        r#"
+        local noop_mt = {
+            __index = function(_, _)
+                return function() end
+            end
+        }
+
+        local function plugin_searcher(modname)
+            local plugins = y.plugin._plugins
+            for i = 1, #plugins do
+                local p = plugins[i]
+                local pname = p.name
+                if not pname then
+                    local url = p.url:gsub("/$", ""):gsub("%.git$", "")
+                    pname = url:match("[^/]+$") or url
+                end
+                if pname == modname then
+                    return function()
+                        return setmetatable({}, noop_mt)
+                    end
+                end
+            end
+            return nil
+        end
+
+        table.insert(package.searchers, 2, plugin_searcher)
+        "#,
+    )
+    .exec()
 }
 
 fn create_hook_metatable(lua: &Lua) -> LuaResult<LuaTable> {
@@ -426,5 +460,34 @@ mod tests {
         assert_eq!(specs.len(), 2);
         assert_eq!(specs[0].url, "https://github.com/a/one");
         assert_eq!(specs[1].url, "https://github.com/b/two");
+    }
+
+    #[test]
+    fn require_unloaded_plugin_returns_noop_proxy() {
+        let lua = create_lua_from_script(
+            r#"
+            y.plugin.register({ url = "https://github.com/user/yeet-theme", name = "my-theme" })
+            require('my-theme').setup()
+            "#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+    }
+
+    #[test]
+    fn require_unknown_module_still_errors() {
+        let lua = Lua::new();
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.plugin.register({{ url = "https://github.com/user/yeet-theme" }})
+            require('totally-unknown-module').setup()
+            "#
+        )
+        .unwrap();
+        let path = tmp.path().to_path_buf();
+        let result = setup_and_execute(&lua, &path);
+        assert!(result.is_err());
     }
 }
