@@ -51,6 +51,10 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
 
     let plugin_table = plugin::create_plugin_table(lua)?;
 
+    if let Some(data_path) = yeet_plugin::resolve_plugin_data_path() {
+        plugin_table.set("_data_path", data_path.to_string_lossy().to_string())?;
+    }
+
     y_table.set("theme", theme_table)?;
     y_table.set("hook", hook_table)?;
     y_table.set("plugin", plugin_table)?;
@@ -121,8 +125,22 @@ fn install_plugin_searcher(lua: &Lua) -> LuaResult<()> {
             end
         }
 
+        local function url_to_storage(url)
+            url = url:gsub("/$", ""):gsub("%.git$", "")
+            url = url:gsub("^https://", ""):gsub("^http://", ""):gsub("^git://", "")
+            local parts = {}
+            for part in url:gmatch("[^/]+") do
+                parts[#parts + 1] = part
+            end
+            if #parts >= 2 then
+                return parts[#parts - 1] .. "/" .. parts[#parts]
+            end
+        end
+
         local function plugin_searcher(modname)
             local plugins = y.plugin._plugins
+            local data_path = y.plugin._data_path
+
             for i = 1, #plugins do
                 local p = plugins[i]
                 local pname = p.name
@@ -131,6 +149,23 @@ fn install_plugin_searcher(lua: &Lua) -> LuaResult<()> {
                     pname = url:match("[^/]+$") or url
                 end
                 if pname == modname then
+                    if data_path then
+                        local storage = url_to_storage(p.url)
+                        if storage then
+                            local init_path = data_path .. "/" .. storage .. "/init.lua"
+                            local f = io.open(init_path, "r")
+                            if f then
+                                f:close()
+                                return function()
+                                    local result = dofile(init_path)
+                                    if result ~= nil then
+                                        package.loaded[modname] = result
+                                    end
+                                    return result or setmetatable({}, noop_mt)
+                                end
+                            end
+                        end
+                    end
                     return function()
                         return setmetatable({}, noop_mt)
                     end

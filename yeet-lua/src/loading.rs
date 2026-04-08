@@ -76,6 +76,18 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
             .name
             .clone()
             .unwrap_or_else(|| derive_plugin_name(&spec.url));
+
+        if is_already_loaded(lua, &plugin_name) {
+            loaded.insert(spec.url.clone());
+            states.push(PluginState {
+                url: spec.url.clone(),
+                status: PluginStatus::Loaded,
+                error_message: None,
+                commit: None,
+            });
+            continue;
+        }
+
         match load_single_plugin(lua, &init_path, &plugin_name, *is_dependency) {
             Ok(()) => {
                 loaded.insert(spec.url.clone());
@@ -101,6 +113,19 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
     report_missing_plugins(&states);
 
     states
+}
+
+fn is_already_loaded(lua: &Lua, plugin_name: &str) -> bool {
+    let Ok(package) = lua.globals().get::<LuaTable>("package") else {
+        return false;
+    };
+    let Ok(loaded) = package.get::<LuaTable>("loaded") else {
+        return false;
+    };
+    !matches!(
+        loaded.get::<LuaValue>(plugin_name),
+        Ok(LuaValue::Nil) | Err(_)
+    )
 }
 
 fn load_single_plugin(
@@ -598,5 +623,104 @@ mod tests {
         let theme: LuaTable = y.get("theme").unwrap();
         let val: String = theme.get("SomeColor").unwrap();
         assert_eq!(val, "#112233");
+    }
+
+    #[test]
+    fn require_loads_from_disk_and_setup_persists() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let plugin_dir = dir.path().join("test").join("yeet-my-theme");
+        std::fs::create_dir_all(&plugin_dir).unwrap();
+        std::fs::write(
+            plugin_dir.join("init.lua"),
+            r#"
+            local M = {}
+            function M.setup()
+                y.theme.MyThemeColor = '#aabbcc'
+            end
+            return M
+            "#,
+        )
+        .unwrap();
+
+        let data_path_str = dir.path().to_string_lossy().to_string();
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let plugin: LuaTable = y.get("plugin").unwrap();
+        plugin.set("_data_path", data_path_str).unwrap();
+
+        lua.load(
+            r#"
+            y.plugin.register({ url = "https://github.com/test/yeet-my-theme" })
+            require('yeet-my-theme').setup()
+            "#,
+        )
+        .exec()
+        .unwrap();
+
+        let theme: LuaTable = y.get("theme").unwrap();
+        let val: String = theme.get("MyThemeColor").unwrap();
+        assert_eq!(val, "#aabbcc");
+    }
+
+    #[test]
+    fn require_returns_proxy_when_not_on_disk() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let data_path_str = dir.path().to_string_lossy().to_string();
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let plugin: LuaTable = y.get("plugin").unwrap();
+        plugin.set("_data_path", data_path_str).unwrap();
+
+        lua.load(
+            r#"
+            y.plugin.register({ url = "https://github.com/test/yeet-missing" })
+            require('yeet-missing').setup()
+            "#,
+        )
+        .exec()
+        .unwrap();
+
+        let specs = crate::read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+    }
+
+    #[test]
+    fn plugin_loaded_via_require_not_double_loaded() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let plugin_dir = dir.path().join("test").join("yeet-counter");
+        std::fs::create_dir_all(&plugin_dir).unwrap();
+        std::fs::write(
+            plugin_dir.join("init.lua"),
+            r#"
+            local M = {}
+            M.count = (y.theme.LoadCount or 0) + 1
+            y.theme.LoadCount = tostring(M.count)
+            return M
+            "#,
+        )
+        .unwrap();
+
+        let data_path_str = dir.path().to_string_lossy().to_string();
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let plugin: LuaTable = y.get("plugin").unwrap();
+        plugin.set("_data_path", data_path_str).unwrap();
+
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/yeet-counter" })"#)
+            .exec()
+            .unwrap();
+
+        lua.load(r#"require('yeet-counter')"#).exec().unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states.len(), 1);
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+
+        let theme: LuaTable = y.get("theme").unwrap();
+        let count: String = theme.get("LoadCount").unwrap();
+        assert_eq!(count, "1");
     }
 }
