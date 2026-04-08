@@ -18,7 +18,12 @@ pub fn clone_at_ref(url: &str, target: &Path, reference: &str) -> Result<(), Git
         std::fs::create_dir_all(parent).map_err(GitError::Io)?;
     }
 
-    let mut prepare = gix::prepare_clone(url, target).map_err(gix_err)?;
+    let mut prepare = gix::prepare_clone(url, target)
+        .map_err(gix_err)?
+        .with_in_memory_config_overrides([
+            "credential.helper=",
+            "gitoxide.credentials.terminalPrompt=false",
+        ]);
 
     let (mut checkout, _outcome) = prepare
         .fetch_then_checkout(gix::progress::Discard, &AtomicBool::new(false))
@@ -38,7 +43,12 @@ pub fn clone_branch_head(url: &str, target: &Path, branch: Option<&str>) -> Resu
         std::fs::create_dir_all(parent).map_err(GitError::Io)?;
     }
 
-    let mut prepare = gix::prepare_clone(url, target).map_err(gix_err)?;
+    let mut prepare = gix::prepare_clone(url, target)
+        .map_err(gix_err)?
+        .with_in_memory_config_overrides([
+            "credential.helper=",
+            "gitoxide.credentials.terminalPrompt=false",
+        ]);
 
     if let Some(branch) = branch {
         prepare = prepare.with_ref_name(Some(branch)).map_err(gix_err)?;
@@ -56,7 +66,7 @@ pub fn clone_branch_head(url: &str, target: &Path, branch: Option<&str>) -> Resu
 }
 
 pub fn fetch_and_checkout(repo_path: &Path, commit_id: &str) -> Result<(), GitError> {
-    let repo = gix::open(repo_path).map_err(gix_err)?;
+    let repo = open_no_credentials(repo_path)?;
 
     let remote = repo
         .find_default_remote(gix::remote::Direction::Fetch)
@@ -77,7 +87,7 @@ pub fn fetch_and_checkout(repo_path: &Path, commit_id: &str) -> Result<(), GitEr
 }
 
 pub fn list_remote_tags(repo_path: &Path, url: &str) -> Result<Vec<String>, GitError> {
-    let repo = gix::open(repo_path).map_err(gix_err)?;
+    let repo = open_no_credentials(repo_path)?;
 
     let remote = repo.remote_at(url).map_err(gix_err)?;
 
@@ -109,7 +119,7 @@ pub fn list_remote_tags(repo_path: &Path, url: &str) -> Result<Vec<String>, GitE
 }
 
 pub fn resolve_remote_head(repo_path: &Path, url: &str) -> Result<String, GitError> {
-    let repo = gix::open(repo_path).map_err(gix_err)?;
+    let repo = open_no_credentials(repo_path)?;
 
     let remote = repo.remote_at(url).map_err(gix_err)?;
 
@@ -202,6 +212,14 @@ fn checkout_ref(repo: &gix::Repository, reference: &str) -> Result<(), GitError>
     .map_err(gix_err)?;
 
     Ok(())
+}
+
+pub fn open_no_credentials(path: &Path) -> Result<gix::Repository, GitError> {
+    let opts = gix::open::Options::default().config_overrides([
+        "credential.helper=",
+        "gitoxide.credentials.terminalPrompt=false",
+    ]);
+    gix::open_opts(path, opts).map_err(gix_err)
 }
 
 fn gix_err(e: impl std::fmt::Display) -> GitError {

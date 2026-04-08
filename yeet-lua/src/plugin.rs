@@ -30,6 +30,14 @@ pub fn create_plugin_table(lua: &Lua) -> LuaResult<LuaTable> {
             }
         };
 
+        if !url.starts_with("https://") {
+            tracing::error!(
+                "y.plugin.register() only supports https:// URLs, got: {}",
+                url
+            );
+            return Ok(());
+        }
+
         let name: Option<String> = table.get("name").ok();
         let branch: Option<String> = table.get("branch").ok();
         let version: Option<String> = table.get("version").ok();

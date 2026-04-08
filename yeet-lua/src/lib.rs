@@ -525,4 +525,30 @@ mod tests {
         let result = setup_and_execute(&lua, &path);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn register_ssh_url_is_rejected() {
+        let lua = create_lua_from_script(
+            r#"y.plugin.register({ url = "git@github.com:user/repo.git" })"#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn register_http_url_is_rejected() {
+        let lua =
+            create_lua_from_script(r#"y.plugin.register({ url = "http://github.com/user/repo" })"#);
+        let specs = read_plugin_specs(&lua);
+        assert!(specs.is_empty());
+    }
+
+    #[test]
+    fn register_https_url_succeeds() {
+        let lua = create_lua_from_script(
+            r#"y.plugin.register({ url = "https://github.com/user/repo" })"#,
+        );
+        let specs = read_plugin_specs(&lua);
+        assert_eq!(specs.len(), 1);
+    }
 }

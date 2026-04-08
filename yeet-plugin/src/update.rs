@@ -137,7 +137,7 @@ fn resolve_tagged_version(
 
     git::fetch_and_checkout(plugin_path, tag_name)?;
 
-    let repo = gix::open(plugin_path).map_err(|e| GitError::Gix(e.to_string()))?;
+    let repo = git::open_no_credentials(plugin_path)?;
     let id = repo
         .rev_parse_single(tag_name.as_bytes())
         .map_err(|e| GitError::Gix(e.to_string()))?;
@@ -158,7 +158,7 @@ fn resolve_branch_head(
         git::clone_branch_head(&spec.url, plugin_path, spec.branch.as_deref())?;
     }
 
-    let repo = gix::open(plugin_path).map_err(|e| GitError::Gix(e.to_string()))?;
+    let repo = git::open_no_credentials(plugin_path)?;
     let head = repo
         .head_commit()
         .map_err(|e| GitError::Gix(e.to_string()))?;
