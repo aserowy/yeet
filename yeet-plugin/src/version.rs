@@ -109,10 +109,12 @@ mod tests {
         let specs = vec![
             PluginSpec {
                 url: "https://github.com/a/plugin-a".to_string(),
+                name: None,
                 branch: None,
                 version: None,
                 dependencies: vec![PluginSpec {
                     url: "https://github.com/user/lib".to_string(),
+                    name: None,
                     branch: None,
                     version: Some(">=1.0".to_string()),
                     dependencies: vec![],
@@ -120,10 +122,12 @@ mod tests {
             },
             PluginSpec {
                 url: "https://github.com/b/plugin-b".to_string(),
+                name: None,
                 branch: None,
                 version: None,
                 dependencies: vec![PluginSpec {
                     url: "https://github.com/user/lib".to_string(),
+                    name: None,
                     branch: None,
                     version: Some("<2.0".to_string()),
                     dependencies: vec![],
@@ -142,10 +146,12 @@ mod tests {
         let specs = vec![
             PluginSpec {
                 url: "https://github.com/a/plugin-a".to_string(),
+                name: None,
                 branch: None,
                 version: None,
                 dependencies: vec![PluginSpec {
                     url: "https://github.com/user/lib".to_string(),
+                    name: None,
                     branch: None,
                     version: None,
                     dependencies: vec![],
@@ -153,10 +159,12 @@ mod tests {
             },
             PluginSpec {
                 url: "https://github.com/b/plugin-b".to_string(),
+                name: None,
                 branch: None,
                 version: None,
                 dependencies: vec![PluginSpec {
                     url: "https://github.com/user/lib".to_string(),
+                    name: None,
                     branch: None,
                     version: None,
                     dependencies: vec![],

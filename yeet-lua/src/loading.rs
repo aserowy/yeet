@@ -72,7 +72,11 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
             continue;
         }
 
-        match load_single_plugin(lua, &init_path, *is_dependency) {
+        let plugin_name = spec
+            .name
+            .clone()
+            .unwrap_or_else(|| derive_plugin_name(&spec.url));
+        match load_single_plugin(lua, &init_path, &plugin_name, *is_dependency) {
             Ok(()) => {
                 loaded.insert(spec.url.clone());
                 states.push(PluginState {
@@ -99,21 +103,54 @@ pub fn load_plugins(lua: &Lua, data_path: &Path) -> Vec<PluginState> {
     states
 }
 
-fn load_single_plugin(lua: &Lua, init_path: &Path, _is_dependency: bool) -> LuaResult<()> {
+fn load_single_plugin(
+    lua: &Lua,
+    init_path: &Path,
+    plugin_name: &str,
+    _is_dependency: bool,
+) -> LuaResult<()> {
     let snapshot = take_snapshot(lua)?;
 
+    let plugin_dir = init_path
+        .parent()
+        .ok_or_else(|| LuaError::external("plugin init.lua has no parent directory"))?;
+
+    prepend_package_path(lua, plugin_dir)?;
+
     let content = std::fs::read_to_string(init_path).map_err(LuaError::external)?;
-    let result = lua
+    let result: LuaResult<LuaValue> = lua
         .load(&content)
         .set_name(init_path.to_string_lossy())
-        .exec();
+        .eval();
 
-    if let Err(ref err) = result {
-        tracing::error!("plugin {} failed: {}", init_path.display(), err);
-        restore_snapshot(lua, snapshot)?;
+    match result {
+        Ok(value) => {
+            if let LuaValue::Table(_) = &value {
+                let loaded: LuaTable = lua.globals().get::<LuaTable>("package")?.get("loaded")?;
+                loaded.set(plugin_name, value)?;
+            }
+            Ok(())
+        }
+        Err(err) => {
+            tracing::error!("plugin {} failed: {}", init_path.display(), err);
+            restore_snapshot(lua, snapshot)?;
+            Err(err)
+        }
     }
+}
 
-    result
+fn prepend_package_path(lua: &Lua, plugin_dir: &Path) -> LuaResult<()> {
+    let package: LuaTable = lua.globals().get("package")?;
+    let current_path: String = package.get("path")?;
+    let dir = plugin_dir.to_string_lossy();
+    let new_path = format!("{}/?.lua;{}/?/init.lua;{}", dir, dir, current_path);
+    package.set("path", new_path)?;
+    Ok(())
+}
+
+pub fn derive_plugin_name(url: &str) -> String {
+    let url = url.trim_end_matches('/').trim_end_matches(".git");
+    url.rsplit('/').next().unwrap_or(url).to_string()
 }
 
 fn shallow_clone_table(lua: &Lua, source: &LuaTable) -> LuaResult<LuaTable> {
@@ -451,5 +488,115 @@ mod tests {
             .as_ref()
             .unwrap()
             .contains("no init.lua"));
+    }
+
+    #[test]
+    fn derive_plugin_name_uses_full_segment() {
+        assert_eq!(
+            derive_plugin_name("https://github.com/aserowy/yeet-bluloco-theme"),
+            "yeet-bluloco-theme"
+        );
+    }
+
+    #[test]
+    fn derive_plugin_name_no_prefix() {
+        assert_eq!(
+            derive_plugin_name("https://github.com/user/cool-plugin"),
+            "cool-plugin"
+        );
+    }
+
+    #[test]
+    fn derive_plugin_name_with_git_suffix() {
+        assert_eq!(
+            derive_plugin_name("https://github.com/user/yeet-theme.git"),
+            "yeet-theme"
+        );
+    }
+
+    #[test]
+    fn plugin_module_available_via_require() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let plugin_dir = dir.path().join("test").join("yeet-my-mod");
+        std::fs::create_dir_all(&plugin_dir).unwrap();
+        std::fs::write(
+            plugin_dir.join("init.lua"),
+            r#"
+            local M = {}
+            function M.greet() return "hello" end
+            return M
+            "#,
+        )
+        .unwrap();
+
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/yeet-my-mod" })"#)
+            .exec()
+            .unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+
+        let result: String = lua
+            .load(r#"return require('yeet-my-mod').greet()"#)
+            .eval()
+            .unwrap();
+        assert_eq!(result, "hello");
+    }
+
+    #[test]
+    fn explicit_name_overrides_url_derived_name() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let plugin_dir = dir.path().join("test").join("yeet-my-mod");
+        std::fs::create_dir_all(&plugin_dir).unwrap();
+        std::fs::write(
+            plugin_dir.join("init.lua"),
+            r#"
+            local M = {}
+            function M.greet() return "custom" end
+            return M
+            "#,
+        )
+        .unwrap();
+
+        lua.load(
+            r#"y.plugin.register({ url = "https://github.com/test/yeet-my-mod", name = "my-mod" })"#,
+        )
+        .exec()
+        .unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+
+        let result: String = lua
+            .load(r#"return require('my-mod').greet()"#)
+            .eval()
+            .unwrap();
+        assert_eq!(result, "custom");
+    }
+
+    #[test]
+    fn plugin_returning_nil_still_loads() {
+        let lua = setup_lua();
+        let dir = TempDir::new().unwrap();
+
+        let plugin_dir = dir.path().join("test").join("yeet-no-return");
+        std::fs::create_dir_all(&plugin_dir).unwrap();
+        std::fs::write(plugin_dir.join("init.lua"), "y.theme.SomeColor = '#112233'").unwrap();
+
+        lua.load(r#"y.plugin.register({ url = "https://github.com/test/yeet-no-return" })"#)
+            .exec()
+            .unwrap();
+
+        let states = load_plugins(&lua, dir.path());
+        assert_eq!(states[0].status, PluginStatus::Loaded);
+
+        let y: LuaTable = lua.globals().get("y").unwrap();
+        let theme: LuaTable = y.get("theme").unwrap();
+        let val: String = theme.get("SomeColor").unwrap();
+        assert_eq!(val, "#112233");
     }
 }

@@ -202,6 +202,7 @@ pub fn collect_all_specs(specs: &[PluginSpec]) -> Vec<PluginSpec> {
         if seen.insert(spec.url.clone()) {
             all.push(PluginSpec {
                 url: spec.url.clone(),
+                name: spec.name.clone(),
                 branch: spec.branch.clone(),
                 version: spec.version.clone(),
                 dependencies: Vec::new(),

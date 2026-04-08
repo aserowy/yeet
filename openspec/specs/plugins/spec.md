@@ -5,6 +5,7 @@
 The system SHALL expose a `y.plugin.register(opts)` function in the Lua environment. The `opts` table SHALL accept the following fields:
 
 - `url` (string, required): Git repository URL
+- `name` (string, optional): Override the plugin's `require()` name. Defaults to the last URL path segment (with `.git` suffix stripped).
 - `branch` (string, optional): Branch name, defaults to remote HEAD
 - `version` (string, optional): Semver tag range constraint (e.g., `">=1.0, <2.0"`)
 - `dependencies` (table, optional): Array of dependency tables using the same opts shape (without nested dependencies)
@@ -35,6 +36,16 @@ Each call to `register()` SHALL append the plugin specification to an in-memory 
 
 - **WHEN** `init.lua` contains `y.plugin.register("https://github.com/user/plugin")`
 - **THEN** the system SHALL log an error and not add the entry to the plugin list
+
+#### Scenario: Register with explicit name
+
+- **WHEN** `init.lua` contains `y.plugin.register({ url = "https://github.com/user/yeet-theme", name = "theme" })`
+- **THEN** the plugin SHALL be accessible via `require('theme')`
+
+#### Scenario: Register without name uses URL segment
+
+- **WHEN** `init.lua` contains `y.plugin.register({ url = "https://github.com/user/yeet-theme" })`
+- **THEN** the plugin SHALL be accessible via `require('yeet-theme')`
 
 ### Requirement: Plugin list is readable from Rust
 
@@ -220,6 +231,25 @@ The system SHALL maintain a `PluginState` for each registered plugin in memory f
 
 - **WHEN** plugin A's directory does not exist
 - **THEN** its state SHALL be `missing` with a message indicating the expected path
+
+### Requirement: Plugin loading supports require()
+
+The system SHALL add each plugin's directory to Lua's `package.path` before executing the plugin's `init.lua`. If the plugin's `init.lua` returns a non-nil value, the system SHALL store it in `package.loaded` under the plugin's name. This enables Lua's standard `require()` to find and return plugin modules. The plugin name defaults to the last URL path segment; it can be overridden with the `name` field in `register()`.
+
+#### Scenario: Plugin returns a module table
+
+- **WHEN** a plugin's `init.lua` returns a table with a `setup` function
+- **THEN** the returned table SHALL be stored in `package.loaded` under the plugin's name and be accessible via `require('plugin-name')`
+
+#### Scenario: Plugin returns nil
+
+- **WHEN** a plugin's `init.lua` does not return a value
+- **THEN** `package.loaded` SHALL not be modified for that plugin and the plugin SHALL still be considered loaded
+
+#### Scenario: Plugin name derived from URL
+
+- **WHEN** a plugin is registered with URL `https://github.com/aserowy/yeet-bluloco-theme`
+- **THEN** the derived plugin name for `require()` SHALL be `yeet-bluloco-theme` (last URL segment, no prefix stripping)
 
 ## Operations
 

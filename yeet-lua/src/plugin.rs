@@ -30,6 +30,7 @@ pub fn create_plugin_table(lua: &Lua) -> LuaResult<LuaTable> {
             }
         };
 
+        let name: Option<String> = table.get("name").ok();
         let branch: Option<String> = table.get("branch").ok();
         let version: Option<String> = table.get("version").ok();
 
@@ -42,6 +43,9 @@ pub fn create_plugin_table(lua: &Lua) -> LuaResult<LuaTable> {
 
         let entry = lua.create_table()?;
         entry.set("url", url)?;
+        if let Some(ref n) = name {
+            entry.set("name", n.clone())?;
+        }
         if let Some(ref b) = branch {
             entry.set("branch", b.clone())?;
         }
@@ -103,6 +107,7 @@ fn parse_dependencies(_lua: &Lua, deps: &LuaTable) -> LuaResult<Vec<PluginSpec>>
 
         result.push(PluginSpec {
             url,
+            name: dep_table.get("name").ok(),
             branch: dep_table.get("branch").ok(),
             version: dep_table.get("version").ok(),
             dependencies: Vec::new(),
@@ -132,6 +137,7 @@ pub fn read_plugin_specs(lua: &Lua) -> Vec<PluginSpec> {
             Err(_) => continue,
         };
 
+        let name: Option<String> = entry.get("name").ok();
         let branch: Option<String> = entry.get("branch").ok();
         let version: Option<String> = entry.get("version").ok();
 
@@ -142,6 +148,7 @@ pub fn read_plugin_specs(lua: &Lua) -> Vec<PluginSpec> {
 
         specs.push(PluginSpec {
             url,
+            name,
             branch,
             version,
             dependencies,
@@ -161,6 +168,7 @@ fn read_deps_from_table(deps: &LuaTable) -> Vec<PluginSpec> {
         };
         result.push(PluginSpec {
             url,
+            name: dep.get("name").ok(),
             branch: dep.get("branch").ok(),
             version: dep.get("version").ok(),
             dependencies: Vec::new(),

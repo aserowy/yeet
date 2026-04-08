@@ -1,0 +1,3 @@
+[submodule "plugins/bluloco-theme"]
+	path = plugins/bluloco-theme
+	url = git@github.com:aserowy/yeet-bluloco-theme.git

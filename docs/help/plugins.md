@@ -9,6 +9,7 @@ Yeet supports extending functionality through git-based plugins. Plugins are Lua
 Declare a plugin in your `init.lua`. The function takes a table with the following fields:
 
 - `url` (string, required): Git repository URL
+- `name` (string, optional): Override the `require()` name. Defaults to the last URL path segment.
 - `branch` (string, optional): Branch name, defaults to remote HEAD
 - `version` (string, optional): Semver tag range (e.g. `">=1.0, <2.0"`)
 - `dependencies` (table, optional): Array of dependency plugin specs
@@ -78,7 +79,38 @@ If a plugin's `init.lua` fails, the Lua state is rolled back so no partial side 
 
 A yeet plugin is a git repository with an `init.lua` at its root. The script has access to the full `y` table and can register hooks, set theme colors, and use any Lua APIs available in the yeet runtime.
 
-Example plugin `init.lua`:
+### Module Pattern
+
+Plugins can return a module table from `init.lua`. The returned table is stored in `package.loaded` under the plugin's derived name (last URL segment with `yeet-` prefix stripped). This enables `require()`:
+
+```lua
+-- Plugin: init.lua (in yeet-bluloco-theme)
+local M = {}
+
+function M.setup()
+    y.theme = { BufferBg = "#282c34" }
+end
+
+M.setup()
+
+return M
+```
+
+The plugin name for `require()` defaults to the last URL segment: `https://github.com/user/yeet-bluloco-theme` becomes `yeet-bluloco-theme`. Override it with the `name` field:
+
+```lua
+y.plugin.register({
+    url = "https://github.com/user/yeet-bluloco-theme",
+    name = "bluloco-theme",
+})
+require('bluloco-theme').setup()
+```
+
+Each plugin's directory is added to Lua's `package.path`, so plugins can also use `require()` to load sibling `.lua` files within their own directory.
+
+### Simple Pattern
+
+For plugins that just apply configuration, returning a module is optional:
 
 ```lua
 y.theme.StatusLineFg = '#e0e0e0'
