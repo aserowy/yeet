@@ -25,8 +25,23 @@ The directory window SHALL use shared `@yeet-buffer` icon-column rendering acros
 - **WHEN** a directory window renders its three `@yeet-buffer` instances
 - **THEN** each instance uses the shared `@yeet-buffer` icon-column function/contract for prefix rendering
 
+### Requirement: Core invokes mutation hooks in EnumerationChanged/EnumerationFinished/PathsAdded and renders mutated bufferlines
+During `EnumerationChanged`, `EnumerationFinished`, and `PathsAdded` message handling, the core SHALL invoke per-bufferline mutation hooks that provide the complete bufferline and the given window with all metadata. The plugin directly mutates each bufferline in-place (adds/replaces icon, colors text). The core renders the mutated bufferline state. The core does not contain any icon resolution or color mapping logic itself.
+
+#### Scenario: Plugin mutates bufferline during enumeration
+- **WHEN** a mutation hook is invoked during `EnumerationChanged` or `EnumerationFinished` processing
+- **THEN** the plugin directly sets the icon glyph and text color on the bufferline, and the core renders the mutated state in the icon-column prefix segment
+
+#### Scenario: Plugin mutates bufferline during path addition
+- **WHEN** a mutation hook is invoked during `PathsAdded` processing
+- **THEN** the plugin directly sets the icon glyph and text color on the bufferline, and the core renders the mutated state in the icon-column prefix segment
+
+#### Scenario: No mutation leaves icon column empty
+- **WHEN** no plugin hook is registered or the plugin does not mutate the bufferline
+- **THEN** the icon column renders as empty space (width determined by current icon-column setting) and text uses default styling
+
 ### Requirement: Directory buffer renders a dedicated icon column
-Directory buffers SHALL render an icon column between line numbers and filename text for each first visual line of a directory entry. The icon column SHALL have a fixed width and SHALL be treated as prefix content.
+Directory buffers SHALL render an icon column between line numbers and filename text for each first visual line of a directory entry. The icon column SHALL have a fixed width and SHALL be treated as prefix content. The icon content is determined entirely by the plugin's direct mutation of bufferlines via hooks.
 
 #### Scenario: Icon column appears between line number and filename
 - **WHEN** a directory buffer line is rendered with line numbers enabled
