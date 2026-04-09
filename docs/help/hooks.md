@@ -50,6 +50,7 @@ Each viewport settings subtable contains:
 
 | Field | Type | Values | Default (current pane) |
 | --- | --- | --- | --- |
+| `icon_column_width` | integer | >= 0 | 0 |
 | `line_number` | string | `"none"`, `"absolute"`, `"relative"` | `"relative"` |
 | `line_number_width` | integer | >= 0 | 3 |
 | `sign_column_width` | integer | >= 0 | 2 |
@@ -59,3 +60,54 @@ Each viewport settings subtable contains:
 | `wrap` | boolean | | false |
 
 Invalid values (wrong type or unrecognized strings) are ignored and the default is kept. Unknown fields are silently ignored.
+
+### Icon Column
+
+The `icon_column_width` field controls how many cells are reserved for the icon column in the buffer prefix. It defaults to `0` (no icon column). The `yeet-directory-icons` plugin sets this to `1` via `on_window_create` to enable icon rendering:
+
+```lua
+y.hook.on_window_create:add(function(ctx)
+  if ctx.type == "directory" then
+    ctx.parent.icon_column_width = 1
+    ctx.current.icon_column_width = 1
+    ctx.preview.icon_column_width = 1
+  end
+end)
+```
+
+## `y.hook.on_bufferline_mutate`
+
+Called for each bufferline during directory content updates (`EnumerationChanged`, `EnumerationFinished`, and `PathsAdded` message handling). Plugins use this hook to set icons and text colors on directory entries. The hook fires at the same point where directory content is set, so the plugin processes entries as they arrive.
+
+When `PathsAdded` events are deferred during Insert mode, hook invocation is also deferred. Hooks fire when deferred events are flushed after leaving Insert mode.
+
+Register callbacks with `:add()`:
+
+```lua
+y.hook.on_bufferline_mutate:add(function(ctx)
+  if ctx.is_directory then
+    ctx.icon = ""
+    ctx.icon_style = "\27[94m"
+  else
+    ctx.icon = ""
+    ctx.icon_style = "\27[37m"
+  end
+end)
+```
+
+Each callback receives a context table with:
+
+| Field | Type | Mutable | Description |
+| --- | --- | --- | --- |
+| `filename` | string | no | Display name of the directory entry |
+| `is_directory` | boolean | no | Whether the entry is a directory |
+| `icon` | string or nil | yes | Icon glyph to render in the icon column |
+| `icon_style` | string or nil | yes | ANSI foreground escape sequence for icon and filename text |
+
+After all callbacks run, `icon` and `icon_style` are read back from the context table and applied to the bufferline. Setting `icon_style` applies the color to both the icon glyph and the filename text. Setting either field to `nil` clears it.
+
+If no callback modifies `icon`, the icon column renders as empty space. If no callback modifies `icon_style`, the filename text uses default styling.
+
+### Cursor Behavior
+
+The icon column is non-editable prefix content. The cursor starts at the first filename character, not inside the icon column. Normal and Insert mode operations apply to filename text only.

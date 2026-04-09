@@ -116,11 +116,11 @@ Foreground color for the current (absolute) line number in the gutter. This high
 
 ### `BufferFileFg`
 
-Foreground color for file entries in directory buffers. Regular files are rendered with this color. Default: white.
+Default foreground color for file entries in directory buffers. When the `yeet-directory-icons` plugin is active, this token serves as the fallback color for file entries that do not match any icon class mapping. Default: white.
 
 ### `BufferDirectoryFg`
 
-Foreground color for directory entries in directory buffers. Directories are visually distinguished from files by this color. Default: light blue.
+Default foreground color for directory entries in directory buffers. When the `yeet-directory-icons` plugin is active, this token serves as the fallback color for directory entries that do not match any icon class mapping. Distinct from `BufferFileFg` to allow independent styling of files and directories. Default: light blue.
 
 ## Border Tokens
 
@@ -149,3 +149,22 @@ Foreground color of the quickfix sign in the sign column. Entries in the quickfi
 ### `SignMark`
 
 Foreground color of the mark sign in the sign column. Marked entries are indicated with this color. Default: `#55FFFF` (bright cyan).
+
+## Icon Tokens
+
+Icon color tokens are defined by the `yeet-directory-icons` plugin, not by the core. The plugin maps file extensions and directory names to icon classes, each with a default color. Override any icon class token via `y.theme`:
+
+```lua
+y = {
+  theme = {
+    -- Override the Rust icon color
+    IconRust = "#E57373",
+    -- Override the directory icon color
+    IconDirectory = "#42A5F5",
+  }
+}
+```
+
+Token names depend on the plugin. Refer to the `yeet-directory-icons` plugin documentation for the full list of icon class tokens.
+
+When a file or directory does not match any icon class, the plugin falls back to `BufferFileFg` (for files) or `BufferDirectoryFg` (for directories). Override these tokens to change the fallback colors.

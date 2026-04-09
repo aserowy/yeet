@@ -548,6 +548,146 @@ mod tests {
     }
 
     #[test]
+    fn icon_column_width_defaults_to_zero() {
+        let vp = ViewPort::default();
+        assert_eq!(
+            vp.icon_column_width, 0,
+            "icon_column_width should default to 0"
+        );
+    }
+
+    #[test]
+    fn directory_hook_sets_icon_column_width_to_one() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.icon_column_width = 1
+                    ctx.current.icon_column_width = 1
+                    ctx.preview.icon_column_width = 1
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        assert_eq!(parent.icon_column_width, 0);
+        assert_eq!(current.icon_column_width, 0);
+        assert_eq!(preview.icon_column_width, 0);
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(
+            parent.icon_column_width, 1,
+            "parent icon_column_width should be 1 after hook"
+        );
+        assert_eq!(
+            current.icon_column_width, 1,
+            "current icon_column_width should be 1 after hook"
+        );
+        assert_eq!(
+            preview.icon_column_width, 1,
+            "preview icon_column_width should be 1 after hook"
+        );
+    }
+
+    #[test]
+    fn icon_column_width_unaffected_for_non_directory_window() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.icon_column_width = 1
+                    ctx.current.icon_column_width = 1
+                    ctx.preview.icon_column_width = 1
+                end
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+
+        assert_eq!(
+            vp.icon_column_width, 0,
+            "icon_column_width should remain 0 for non-directory windows"
+        );
+    }
+
+    #[test]
+    fn icon_column_width_preserved_when_no_hooks() {
+        let lua = create_lua_with_hook("");
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(
+            parent.icon_column_width, 0,
+            "icon_column_width should remain 0 with no hooks"
+        );
+        assert_eq!(
+            current.icon_column_width, 0,
+            "icon_column_width should remain 0 with no hooks"
+        );
+        assert_eq!(
+            preview.icon_column_width, 0,
+            "icon_column_width should remain 0 with no hooks"
+        );
+    }
+
+    #[test]
+    fn icon_column_width_via_real_init() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.icon_column_width = 1
+                    ctx.current.icon_column_width = 1
+                    ctx.preview.icon_column_width = 1
+                end
+            end)
+            "#
+        )
+        .unwrap();
+
+        let lua = Lua::new();
+        crate::setup_and_execute(&lua, &tmp.path().to_path_buf()).unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(parent.icon_column_width, 1);
+        assert_eq!(current.icon_column_width, 1);
+        assert_eq!(preview.icon_column_width, 1);
+    }
+
+    #[test]
     fn hook_with_invalid_values_preserves_defaults() {
         let lua = create_lua_with_hook(
             r#"

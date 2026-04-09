@@ -440,4 +440,112 @@ mod tests {
         // The old "BorderFg" token is removed — looking it up returns the fallback
         assert_eq!(theme.color("BorderFg"), Color::Reset);
     }
+
+    // --- Icon/directory theming tests (task 4.4) ---
+
+    #[test]
+    fn directory_token_is_distinct_from_file_token() {
+        let theme = Theme::default();
+        let file_color = theme.color(tokens::BUFFER_FILE_FG);
+        let dir_color = theme.color(tokens::BUFFER_DIRECTORY_FG);
+        assert_ne!(
+            file_color, dir_color,
+            "file and directory tokens should have distinct default colors"
+        );
+    }
+
+    #[test]
+    fn directory_token_default_color() {
+        let theme = Theme::default();
+        assert_eq!(
+            theme.color(tokens::BUFFER_DIRECTORY_FG),
+            Color::LightBlue,
+            "directory default should be LightBlue"
+        );
+    }
+
+    #[test]
+    fn file_token_default_color() {
+        let theme = Theme::default();
+        assert_eq!(
+            theme.color(tokens::BUFFER_FILE_FG),
+            Color::White,
+            "file default should be White"
+        );
+    }
+
+    #[test]
+    fn directory_token_override_via_set_color() {
+        let mut theme = Theme::default();
+        let custom_color = Color::Rgb(255, 128, 0);
+        theme.set_color(tokens::BUFFER_DIRECTORY_FG.to_string(), custom_color);
+
+        assert_eq!(
+            theme.color(tokens::BUFFER_DIRECTORY_FG),
+            custom_color,
+            "directory token should reflect the override"
+        );
+        // File token should remain unchanged
+        assert_eq!(
+            theme.color(tokens::BUFFER_FILE_FG),
+            Color::White,
+            "file token should be unaffected by directory override"
+        );
+    }
+
+    #[test]
+    fn file_token_override_via_set_color() {
+        let mut theme = Theme::default();
+        let custom_color = Color::Rgb(0, 200, 100);
+        theme.set_color(tokens::BUFFER_FILE_FG.to_string(), custom_color);
+
+        assert_eq!(
+            theme.color(tokens::BUFFER_FILE_FG),
+            custom_color,
+            "file token should reflect the override"
+        );
+        assert_eq!(
+            theme.color(tokens::BUFFER_DIRECTORY_FG),
+            Color::LightBlue,
+            "directory token should be unaffected by file override"
+        );
+    }
+
+    #[test]
+    fn unknown_icon_class_token_falls_back_to_reset() {
+        let theme = Theme::default();
+        assert_eq!(
+            theme.color("IconUnknownClass"),
+            Color::Reset,
+            "unmapped icon class token should return Color::Reset"
+        );
+    }
+
+    #[test]
+    fn plugin_defined_token_round_trip() {
+        // Simulates a plugin defining a custom icon class token
+        let mut theme = Theme::default();
+        let rust_orange = Color::Rgb(222, 165, 132);
+        theme.set_color("IconRust".to_string(), rust_orange);
+
+        assert_eq!(
+            theme.color("IconRust"),
+            rust_orange,
+            "plugin-defined token should be retrievable"
+        );
+        assert_eq!(
+            theme.ansi_fg("IconRust"),
+            "\x1b[38;2;222;165;132m",
+            "plugin-defined token should produce correct ANSI"
+        );
+    }
+
+    #[test]
+    fn ansi_fg_for_directory_and_file_defaults() {
+        let theme = Theme::default();
+        // Directory: LightBlue → \x1b[94m
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
+        // File: White → \x1b[37m
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_FILE_FG), "\x1b[37m");
+    }
 }

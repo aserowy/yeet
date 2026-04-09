@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
-    theme::{tokens, Theme},
+    theme::Theme,
     update::{
         app, cursor, selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
@@ -213,7 +213,7 @@ fn set_directory_content(
     let content: Vec<BufferLine> = contents
         .iter()
         .map(|(knd, cntnt)| {
-            let mut line = from_enumeration(cntnt, knd, theme);
+            let mut line = from_enumeration(cntnt);
             if let Some(lua) = lua {
                 let is_dir = matches!(knd, ContentKind::Directory);
                 yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, cntnt, is_dir);
@@ -255,15 +255,9 @@ fn set_directory_content(
     );
 }
 
-pub fn from_enumeration(content: &String, kind: &ContentKind, theme: &Theme) -> BufferLine {
-    let fg_ansi = match kind {
-        ContentKind::Directory => theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
-        _ => theme.ansi_fg(tokens::BUFFER_FILE_FG),
-    };
-    let content = format!("{}{}\x1b[39m", fg_ansi, content);
-
+pub fn from_enumeration(content: &str) -> BufferLine {
     BufferLine {
-        content: Ansi::new(&content),
+        content: Ansi::new(content),
         ..Default::default()
     }
 }

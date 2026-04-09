@@ -25,18 +25,18 @@
 - [x] 3.3 Ensure wrapped continuation lines preserve prefix alignment and do not duplicate icon column content
 - [x] 3.4 Update cursor/edit-column mapping so Normal/Insert edits remain filename-only and icon column is non-editable
 - [x] 3.5 Add buffer-view tests for cursor start position at filename start with icon column present
-- [ ] 3.6 Add tests for width/hook behavior: icon-column width `0` by default and width `1` after plugin `on_window_create` executes
+- [x] 3.6 Add tests for width/hook behavior: icon-column width `0` by default and width `1` after plugin `on_window_create` executes
 
 ## 4. Theme Tokens for Icon Colors
 
-- [ ] 4.0 Remove legacy built-in directory file/folder colorization path to avoid conflicting style sources
-- [ ] 4.1 Add directory icon class tokens and defaults to the theme token registry (token names are plugin-defined; directories get their own distinct token separate from file default)
-- [ ] 4.2 Expose icon tokens through Lua theme assignment (`y.theme.<TokenName>`) with existing hex parsing/fallback behavior
-- [ ] 4.3 Implement core token resolution with a fallback token for unmapped classes
-- [ ] 4.4 Add theming tests for token override, default behavior, directory-specific token, and unknown-class fallback
+- [x] 4.0 Remove legacy built-in directory file/folder colorization path to avoid conflicting style sources
+- [x] 4.1 Add directory icon class tokens and defaults to the theme token registry (token names are plugin-defined; directories get their own distinct token separate from file default)
+- [x] 4.2 Expose icon tokens through Lua theme assignment (`y.theme.<TokenName>`) with existing hex parsing/fallback behavior
+- [x] 4.3 Implement core token resolution with a fallback token for unmapped classes
+- [x] 4.4 Add theming tests for token override, default behavior, directory-specific token, and unknown-class fallback
 
 ## 5. Validation and Documentation
 
-- [ ] 5.1 Add/update user-facing docs under `docs/help/` for directory icons setup, mutation hook contract, token customization, and cursor behavior
-- [ ] 5.2 Run required checks: `markdownlint` (docs markdown), `cargo fmt`, `cargo clippy`, `cargo test`, and `git add -A && nix build .`
-- [ ] 5.3 Address all check failures and finalize implementation readiness for review
+- [x] 5.1 Add/update user-facing docs under `docs/help/` for directory icons setup, mutation hook contract, token customization, and cursor behavior
+- [x] 5.2 Run required checks: `markdownlint` (docs markdown), `cargo fmt`, `cargo clippy`, `cargo test`, and `git add -A && nix build .`
+- [x] 5.3 Address all check failures and finalize implementation readiness for review

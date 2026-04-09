@@ -37,7 +37,7 @@ pub fn add(
     let mut actions = Vec::new();
     for path in paths {
         actions.extend(update_directory_buffers_on_add(
-            history, mode, app, path, theme, lua,
+            history, mode, app, path, lua,
         ));
     }
 
@@ -135,7 +135,6 @@ fn update_directory_buffers_on_add(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-    theme: &Theme,
     lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let (parent, name) = match (path.parent(), path.file_name()) {
@@ -198,7 +197,7 @@ fn update_directory_buffers_on_add(
                 crate::event::ContentKind::File
             };
 
-            let mut bufferline = enumeration::from_enumeration(&name, &kind, theme);
+            let mut bufferline = enumeration::from_enumeration(&name);
             if let Some(lua) = lua {
                 let is_dir = matches!(kind, crate::event::ContentKind::Directory);
                 yeet_lua::invoke_on_bufferline_mutate(lua, &mut bufferline, &name, is_dir);

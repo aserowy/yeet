@@ -81,3 +81,88 @@ pub enum LineNumber {
     None,
     Relative,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_column_width_defaults_to_zero() {
+        let vp = ViewPort::default();
+        assert_eq!(vp.icon_column_width, 0);
+    }
+
+    #[test]
+    fn prefix_width_excludes_icon_column_when_zero() {
+        let vp = ViewPort {
+            sign_column_width: 2,
+            line_number: LineNumber::Absolute,
+            line_number_width: 3,
+            icon_column_width: 0,
+            ..Default::default()
+        };
+        // prefix = sign(2) + line_number(3) + icon(0) = 5
+        assert_eq!(vp.get_prefix_width(), 5);
+    }
+
+    #[test]
+    fn prefix_width_includes_icon_column_when_set() {
+        let vp = ViewPort {
+            sign_column_width: 2,
+            line_number: LineNumber::Absolute,
+            line_number_width: 3,
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        // prefix = sign(2) + line_number(3) + icon(1) = 6
+        assert_eq!(vp.get_prefix_width(), 6);
+    }
+
+    #[test]
+    fn offset_width_includes_icon_column() {
+        let vp = ViewPort {
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let bl = BufferLine::default();
+        // prefix = 0 + 0 + 1 = 1, border = 1 (prefix > 0), custom = 0
+        // offset = 1 + 1 + 0 = 2
+        assert_eq!(vp.get_offset_width(&bl), 2);
+    }
+
+    #[test]
+    fn content_width_reduced_by_icon_column() {
+        let vp = ViewPort {
+            width: 80,
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            icon_column_width: 0,
+            ..Default::default()
+        };
+        let bl = BufferLine::default();
+        let width_without_icon = vp.get_content_width(&bl);
+
+        let vp_with_icon = ViewPort {
+            width: 80,
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let width_with_icon = vp_with_icon.get_content_width(&bl);
+
+        // With icon_column_width=1, prefix becomes non-zero so border(1) appears.
+        // get_content_width subtracts offset (prefix + border) and border again,
+        // so content is reduced by icon(1) + border(1) + border(1) = 3.
+        assert_eq!(
+            width_without_icon - width_with_icon,
+            3,
+            "icon column + border overhead should reduce content width by 3"
+        );
+    }
+}
