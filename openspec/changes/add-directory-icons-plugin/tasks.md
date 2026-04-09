@@ -11,7 +11,7 @@
 
 ## 2. Bufferline Mutation Rendering
 
-- [ ] 2.1 Ensure bufferline model supports icon glyph field and text color field that the plugin can mutate via hooks
+- [x] 2.1 Ensure bufferline model supports icon glyph field and text color field that the plugin can mutate via hooks
 - [ ] 2.2 Implement core rendering logic that reads the mutated icon glyph from the bufferline and renders it in the icon-column prefix segment
 - [ ] 2.3 Implement core rendering logic that reads the mutated text color from the bufferline and applies it to both icon glyph and filename text
 - [ ] 2.4 Add fallback behavior: if plugin does not mutate the bufferline (or hook errors), icon column remains empty and text uses default styling

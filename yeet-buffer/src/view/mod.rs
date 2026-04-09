@@ -131,6 +131,8 @@ fn get_styled_lines<'a>(
                 search_char_position: None,
                 signs: Vec::new(),
                 prefix: None,
+                icon: None,
+                icon_style: None,
             };
 
             let content = prefix.join(&line::add_line_styles_wrap(
