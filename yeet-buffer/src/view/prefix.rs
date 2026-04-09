@@ -113,3 +113,112 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
         signs
     }
 }
+
+#[cfg(test)]
+mod test {
+    use ratatui::style::Color;
+
+    use crate::{
+        model::{viewport::ViewPort, BufferLine},
+        BufferTheme,
+    };
+
+    use super::get_icon_column;
+
+    fn test_theme() -> BufferTheme {
+        BufferTheme {
+            buffer_bg: Color::Reset,
+            cursor_line_bg: Color::Rgb(128, 128, 128),
+            search_bg: Color::Red,
+            line_nr: Color::Rgb(128, 128, 128),
+            cur_line_nr: Color::White,
+            border_fg: Color::Black,
+            border_bg: Color::Reset,
+        }
+    }
+
+    #[test]
+    fn icon_column_width_zero_returns_empty() {
+        let vp = ViewPort {
+            icon_column_width: 0,
+            ..Default::default()
+        };
+        let bl = BufferLine::default();
+        let result = get_icon_column(&vp, &bl, &test_theme());
+        assert_eq!(result.count_chars(), 0, "width 0 should produce no output");
+    }
+
+    #[test]
+    fn icon_column_no_icon_renders_space() {
+        let vp = ViewPort {
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let bl = BufferLine::default();
+        let result = get_icon_column(&vp, &bl, &test_theme());
+        assert_eq!(
+            result.count_chars(),
+            1,
+            "width 1 with no icon should render one space"
+        );
+        assert_eq!(
+            result.to_stripped_string(),
+            " ",
+            "fallback icon should be a space"
+        );
+    }
+
+    #[test]
+    fn icon_column_renders_icon_glyph() {
+        let vp = ViewPort {
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            icon: Some("\u{f0f6}".to_string()),
+            ..Default::default()
+        };
+        let result = get_icon_column(&vp, &bl, &test_theme());
+        assert!(
+            result.to_stripped_string().contains('\u{f0f6}'),
+            "icon glyph should appear in rendered output"
+        );
+    }
+
+    #[test]
+    fn icon_column_applies_icon_style() {
+        let vp = ViewPort {
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            icon: Some("\u{f0f6}".to_string()),
+            icon_style: Some("\x1b[38;2;255;0;0m".to_string()),
+            ..Default::default()
+        };
+        let result = get_icon_column(&vp, &bl, &test_theme());
+        let raw = format!("{}", result);
+        assert!(
+            raw.contains("\x1b[38;2;255;0;0m"),
+            "icon_style ANSI should be present in rendered output"
+        );
+    }
+
+    #[test]
+    fn icon_column_no_style_still_renders_icon() {
+        let vp = ViewPort {
+            icon_column_width: 1,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            icon: Some("\u{f0f6}".to_string()),
+            icon_style: None,
+            ..Default::default()
+        };
+        let result = get_icon_column(&vp, &bl, &test_theme());
+        assert!(
+            result.to_stripped_string().contains('\u{f0f6}'),
+            "icon glyph should render even without icon_style"
+        );
+    }
+}

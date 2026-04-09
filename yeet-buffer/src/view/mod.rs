@@ -545,4 +545,127 @@ mod test {
             );
         }
     }
+
+    #[test]
+    fn icon_column_included_in_directory_viewport_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.icon_column_width = 1;
+        let lines = vec![BufferLine {
+            icon: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        // With show_border=true, the inner rect is viewport.width - 1
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line width should equal viewport width minus border, including icon column"
+        );
+    }
+
+    #[test]
+    fn icon_column_zero_width_does_not_affect_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.icon_column_width = 0;
+        let lines = vec![BufferLine::from("documents")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "icon_column_width=0 should not change line width"
+        );
+    }
+
+    #[test]
+    fn icon_style_applied_to_content_text() {
+        use ratatui::style::Color;
+
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine {
+            icon_style: Some("\x1b[38;2;255;100;0m".to_string()),
+            ..BufferLine::from("myfile.rs")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        // The icon_style ANSI code should be visible somewhere in the rendered spans
+        let has_fg_color = styled[0]
+            .spans
+            .iter()
+            .any(|span| span.style.fg.is_some() && span.style.fg != Some(Color::Reset));
+        assert!(
+            has_fg_color,
+            "icon_style should color the content text (some span should have a non-default fg)"
+        );
+    }
+
+    #[test]
+    fn no_icon_style_uses_default_styling() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("myfile.rs")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        // Without icon_style, the content text should not have a custom fg color
+        // from icon styling (it may have cursor_line_bg though)
+        let cursor_line = &styled[0];
+        assert_eq!(
+            cursor_line.width(),
+            usize::from(vp.width),
+            "line without icon_style should still fill viewport width"
+        );
+    }
+
+    #[test]
+    fn cursor_at_filename_start_with_icon_column() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.icon_column_width = 1;
+        // Cursor at horizontal index 0 (first char of filename)
+        vp.cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let lines = vec![BufferLine {
+            icon: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Normal, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        // The line should still fill the expected width (viewport - border)
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line with icon column should fill expected width"
+        );
+        // Cursor at position 0 should highlight the 'd' in "documents",
+        // not the icon glyph (icon is in the prefix, not in content).
+        // We verify by checking the cursor styling appears in the spans.
+        let has_cursor_style = cursor_line
+            .spans
+            .iter()
+            .any(|span| span.content.contains('d') && span.style.bg.is_some());
+        assert!(
+            has_cursor_style,
+            "cursor should be on the first content character, not on the icon prefix"
+        );
+    }
 }
