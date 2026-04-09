@@ -334,6 +334,7 @@ mod test {
             &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
             &None,
             &theme,
+            None,
         )
         .expect("change must succeed");
 
@@ -419,6 +420,7 @@ mod test {
             &[(crate::event::ContentKind::File, file_name.to_string())],
             &None,
             &theme,
+            None,
         )
         .expect("finish must succeed");
 

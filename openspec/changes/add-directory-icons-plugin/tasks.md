@@ -3,10 +3,10 @@
 - [ ] 1.1 Wire existing startup/plugin loading so user-configured `yeet-directory-icons` is available to directory rendering
 - [ ] 1.2 Add runtime diagnostics for `yeet-directory-icons` configuration/load failures
 - [x] 1.3 Define new per-bufferline mutation hook interface: the hook receives the complete bufferline (mutable) and the given window with all metadata; the plugin directly mutates the bufferline in-place (sets icon, colors text)
-- [ ] 1.4 Implement mutation hook invocation in `EnumerationChanged` message handling (fires for each bufferline as directory content is progressively set)
-- [ ] 1.5 Implement mutation hook invocation in `EnumerationFinished` message handling (fires for each bufferline as final directory content is set)
-- [ ] 1.6 Implement mutation hook invocation in `PathsAdded` message handling (fires for each new bufferline added from filesystem events)
-- [ ] 1.7 Ensure deferred `PathsAdded` events (Insert mode) also defer mutation hook invocation; hooks fire on flush when events are processed after leaving Insert mode
+- [x] 1.4 Implement mutation hook invocation in `EnumerationChanged` message handling (fires for each bufferline as directory content is progressively set)
+- [x] 1.5 Implement mutation hook invocation in `EnumerationFinished` message handling (fires for each bufferline as final directory content is set)
+- [x] 1.6 Implement mutation hook invocation in `PathsAdded` message handling (fires for each new bufferline added from filesystem events)
+- [x] 1.7 Ensure deferred `PathsAdded` events (Insert mode) also defer mutation hook invocation; hooks fire on flush when events are processed after leaving Insert mode
 - [x] 1.8 Register plugin `on_window_create` hook to set shared `@yeet-buffer` icon-column width to `1`
 
 ## 2. Bufferline Mutation Rendering

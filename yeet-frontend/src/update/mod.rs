@@ -263,7 +263,7 @@ pub fn update_with_keymap_message(
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
-        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, msg),
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, lua, msg),
         KeymapMessage::ClearSearchHighlight => {
             search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
@@ -388,11 +388,12 @@ pub fn update_with_buffer_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
+    lua: Option<&LuaConfiguration>,
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
         BufferMessage::ChangeMode(from, to) => {
-            match mode::change(app, state, from, to, &settings.theme) {
+            match mode::change(app, state, from, to, &settings.theme, lua) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("ChangeMode failed: {}", err);

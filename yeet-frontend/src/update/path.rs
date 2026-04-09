@@ -1043,6 +1043,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&newfolder),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1185,6 +1186,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1312,6 +1314,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1628,6 +1631,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
