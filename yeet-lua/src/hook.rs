@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use mlua::prelude::*;
-use yeet_buffer::model::viewport::ViewPort;
+use yeet_buffer::model::{viewport::ViewPort, BufferLine};
 
 use crate::viewport::{table_to_viewport, viewport_to_table};
 
@@ -110,6 +110,90 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
             }
         }
     }
+}
+
+/// Invokes `y.hook.on_bufferline_mutate` callbacks for a single bufferline.
+///
+/// Each registered callback receives a context table with:
+/// - `filename`: the display name of the entry (string)
+/// - `is_directory`: whether the entry is a directory (bool)
+/// - `icon`: the icon glyph (string or nil), mutable
+/// - `icon_style`: the ANSI foreground color string (string or nil), mutable
+///
+/// After all callbacks run, `icon` and `icon_style` are read back from the
+/// context table and applied to the bufferline.
+pub fn invoke_on_bufferline_mutate(
+    lua: &crate::LuaConfiguration,
+    bl: &mut BufferLine,
+    filename: &str,
+    is_directory: bool,
+) {
+    if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, filename, is_directory) {
+        tracing::error!("error in y.hook.on_bufferline_mutate: {:?}", err);
+    }
+}
+
+fn try_invoke_on_bufferline_mutate(
+    lua: &Lua,
+    bl: &mut BufferLine,
+    filename: &str,
+    is_directory: bool,
+) -> LuaResult<()> {
+    let y: LuaTable = lua.globals().get("y")?;
+    let hook: LuaTable = y.get("hook")?;
+    let hook_table: LuaTable = hook.get("on_bufferline_mutate")?;
+
+    let len = hook_table.raw_len();
+    if len == 0 {
+        return Ok(());
+    }
+
+    let ctx = lua.create_table()?;
+    ctx.set("filename", filename)?;
+    ctx.set("is_directory", is_directory)?;
+
+    if let Some(icon) = &bl.icon {
+        ctx.set("icon", icon.as_str())?;
+    }
+    if let Some(icon_style) = &bl.icon_style {
+        ctx.set("icon_style", icon_style.as_str())?;
+    }
+
+    for i in 1..=len {
+        let func: LuaValue = hook_table.raw_get(i)?;
+        match func {
+            LuaValue::Function(f) => {
+                if let Err(err) = f.call::<()>(ctx.clone()) {
+                    tracing::error!(
+                        "error in y.hook.on_bufferline_mutate callback {}: {:?}",
+                        i,
+                        err
+                    );
+                }
+            }
+            _ => {
+                tracing::warn!(
+                    "y.hook.on_bufferline_mutate[{}] is not a function, got {:?}",
+                    i,
+                    func.type_name()
+                );
+            }
+        }
+    }
+
+    // Read back mutated values
+    match ctx.get::<LuaValue>("icon")? {
+        LuaValue::String(s) => bl.icon = Some(s.to_str()?.to_string()),
+        LuaValue::Nil => bl.icon = None,
+        _ => {}
+    }
+    match ctx.get::<LuaValue>("icon_style")? {
+        LuaValue::String(s) => bl.icon_style = Some(s.to_str()?.to_string()),
+        LuaValue::Nil => bl.icon_style = None,
+        _ => {}
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

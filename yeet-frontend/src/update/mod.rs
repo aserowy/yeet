@@ -118,7 +118,15 @@ fn update_with_message(
 ) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            match enumeration::change(state, app, &path, &contents, &selection, &settings.theme) {
+            match enumeration::change(
+                state,
+                app,
+                &path,
+                &contents,
+                &selection,
+                &settings.theme,
+                lua,
+            ) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationChanged failed: {}", err);
@@ -127,7 +135,15 @@ fn update_with_message(
             }
         }
         Message::EnumerationFinished(path, contents, selection) => {
-            match enumeration::finish(state, app, &path, &contents, &selection, &settings.theme) {
+            match enumeration::finish(
+                state,
+                app,
+                &path,
+                &contents,
+                &selection,
+                &settings.theme,
+                lua,
+            ) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationFinished failed: {}", err);
@@ -202,6 +218,7 @@ fn update_with_message(
                     app,
                     &paths,
                     &settings.theme,
+                    lua,
                 ) {
                     Ok(actions) => actions,
                     Err(err) => {

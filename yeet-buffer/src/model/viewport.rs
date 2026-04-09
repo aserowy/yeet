@@ -16,6 +16,9 @@ pub struct ViewPort {
     pub height: u16,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
     pub horizontal_index: usize,
+    /// Width of the icon column prefix segment. Defaults to `0`; set to `1` by
+    /// the directory-icons plugin via `on_window_create` hook.
+    pub icon_column_width: usize,
     pub line_number: LineNumber,
     pub line_number_width: usize,
     pub show_border: bool,
@@ -63,7 +66,7 @@ impl ViewPort {
     }
 
     fn get_prefix_width(&self) -> usize {
-        self.sign_column_width + self.get_line_number_width()
+        self.sign_column_width + self.get_line_number_width() + self.icon_column_width
     }
 
     pub fn set(&mut self, settings: &WindowSettings) {

@@ -5,6 +5,7 @@ use std::{
 };
 
 use yeet_buffer::{message::BufferMessage, model::viewport::ViewPort, model::Mode};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -22,7 +23,7 @@ use crate::{
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
 
-#[tracing::instrument(skip(app, theme))]
+#[tracing::instrument(skip(app, theme, lua))]
 pub fn add(
     history: &mut History,
     marks: &Marks,
@@ -31,11 +32,12 @@ pub fn add(
     app: &mut App,
     paths: &[PathBuf],
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let mut actions = Vec::new();
     for path in paths {
         actions.extend(update_directory_buffers_on_add(
-            history, mode, app, path, theme,
+            history, mode, app, path, theme, lua,
         ));
     }
 
@@ -134,6 +136,7 @@ fn update_directory_buffers_on_add(
     app: &mut App,
     path: &Path,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let (parent, name) = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => (parent, name.to_string_lossy().to_string()),
@@ -195,7 +198,11 @@ fn update_directory_buffers_on_add(
                 crate::event::ContentKind::File
             };
 
-            let bufferline = enumeration::from_enumeration(&name, &kind, theme);
+            let mut bufferline = enumeration::from_enumeration(&name, &kind, theme);
+            if let Some(lua) = lua {
+                let is_dir = matches!(kind, crate::event::ContentKind::Directory);
+                yeet_lua::invoke_on_bufferline_mutate(lua, &mut bufferline, &name, is_dir);
+            }
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {
                     *line = bufferline;

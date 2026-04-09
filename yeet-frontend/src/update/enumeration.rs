@@ -4,6 +4,7 @@ use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{ansi::Ansi, viewport::ViewPort, BufferLine, Mode},
 };
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -17,7 +18,7 @@ use crate::{
     },
 };
 
-#[tracing::instrument(skip(state, app, content, theme))]
+#[tracing::instrument(skip(state, app, content, theme, lua))]
 pub fn change(
     state: &mut State,
     app: &mut App,
@@ -25,6 +26,7 @@ pub fn change(
     content: &[(ContentKind, String)],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
@@ -43,7 +45,9 @@ pub fn change(
             }
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            set_directory_content(state, viewport, buffer, path, content, selection, theme);
+            set_directory_content(
+                state, viewport, buffer, path, content, selection, theme, lua,
+            );
         }
     }
 
@@ -78,7 +82,7 @@ pub fn change(
     Ok(actions)
 }
 
-#[tracing::instrument(skip(state, app, content, theme))]
+#[tracing::instrument(skip(state, app, content, theme, lua))]
 pub fn finish(
     state: &mut State,
     app: &mut App,
@@ -86,6 +90,7 @@ pub fn finish(
     content: &[(ContentKind, String)],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if state.modes.current != Mode::Navigation {
         return Ok(Vec::new());
@@ -122,6 +127,7 @@ pub fn finish(
                 content,
                 selection,
                 theme,
+                lua,
             );
 
             yeet_buffer::update(
@@ -199,6 +205,7 @@ fn set_directory_content(
     contents: &[(ContentKind, String)],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) {
     tracing::trace!("enumeration changed for buffer: {:?}", path);
 
@@ -207,6 +214,10 @@ fn set_directory_content(
         .iter()
         .map(|(knd, cntnt)| {
             let mut line = from_enumeration(cntnt, knd, theme);
+            if let Some(lua) = lua {
+                let is_dir = matches!(knd, ContentKind::Directory);
+                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, cntnt, is_dir);
+            }
             set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt), theme);
             set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt), theme);
 

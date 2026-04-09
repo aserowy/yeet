@@ -119,6 +119,7 @@ fn get_styled_lines<'a>(
                 Ansi::new("")
                     .join(&prefix::get_signs(vp, &bl, theme))
                     .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
+                    .join(&prefix::get_icon_column(vp, &bl, theme))
                     .join(&prefix::get_custom_prefix(&bl))
                     .join(&prefix::get_border(vp))
             } else {
@@ -171,6 +172,7 @@ fn get_styled_lines_nowrap<'a>(
         let content = Ansi::new("")
             .join(&prefix::get_signs(vp, &bl, theme))
             .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
+            .join(&prefix::get_icon_column(vp, &bl, theme))
             .join(&prefix::get_custom_prefix(&bl))
             .join(&prefix::get_border(vp))
             .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl, theme));

@@ -18,7 +18,12 @@ pub fn add_line_styles(
     theme: &BufferTheme,
 ) -> Ansi {
     let content_width = vp.get_content_width(line);
-    let ansi = line.content.skip_chars(vp.horizontal_index);
+    let mut ansi = line.content.skip_chars(vp.horizontal_index);
+
+    // Apply plugin-set icon_style color to filename text
+    if let Some(icon_style) = &line.icon_style {
+        ansi.prepend(icon_style);
+    }
 
     let cursor_line_offset = cursor.vertical_index.checked_sub(vp.vertical_index);
     let is_cursor_line = cursor_line_offset == Some(*index);
@@ -58,7 +63,12 @@ pub fn add_line_styles_wrap(
     content_width: usize,
     char_offset: usize,
 ) -> Ansi {
-    let ansi = line.content.clone();
+    let mut ansi = line.content.clone();
+
+    // Apply plugin-set icon_style color to filename text
+    if let Some(icon_style) = &line.icon_style {
+        ansi.prepend(icon_style);
+    }
 
     let cursor_line_offset = cursor.vertical_index.checked_sub(vp.vertical_index);
     let is_cursor_line = cursor_line_offset == Some(*index);

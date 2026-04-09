@@ -23,6 +23,28 @@ pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
     }
 }
 
+/// Renders the icon column prefix segment for a bufferline.
+///
+/// If the viewport `icon_column_width` is `0`, returns an empty string.
+/// Otherwise, renders the bufferline's `icon` glyph (if set by a plugin
+/// mutation hook) with its `icon_style` ANSI color, or empty space as fallback.
+pub fn get_icon_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
+    let width = vp.icon_column_width;
+    if width == 0 {
+        return Ansi::new("");
+    }
+
+    let reset = style::ansi_reset_with_bg(theme.buffer_bg);
+
+    match &bl.icon {
+        Some(icon) => {
+            let style_prefix = bl.icon_style.as_deref().unwrap_or("");
+            Ansi::new(&format!("{}{}{}", style_prefix, icon, reset))
+        }
+        None => Ansi::new(&" ".repeat(width)),
+    }
+}
+
 pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &BufferTheme) -> Ansi {
     if vp.line_number == LineNumber::None {
         return Ansi::new("");
