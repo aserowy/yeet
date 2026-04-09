@@ -1,5 +1,30 @@
 ## ADDED Requirements
 
+### Requirement: Shared buffer model supports icon column segment
+The `@yeet-buffer` model SHALL define an icon-column prefix segment as part of the common line-prefix structure so all buffer definitions can represent the segment consistently.
+
+### Requirement: Icon-column width defaults by plugin availability
+The shared `@yeet-buffer` icon-column segment SHALL default to width `0`.
+
+#### Scenario: Width defaults to zero
+- **WHEN** a window is created before any directory-icons hook updates width
+- **THEN** `@yeet-buffer` icon-column width remains `0` and no icon cell is reserved
+
+#### Scenario: Plugin hook sets width to one
+- **WHEN** `yeet-directory-icons` runs its `on_window_create` hook
+- **THEN** `@yeet-buffer` icon-column width is set to `1` for icon rendering
+
+#### Scenario: Non-directory buffer can represent icon segment
+- **WHEN** a non-directory buffer line is represented through `@yeet-buffer`
+- **THEN** the line-prefix model includes the icon-column segment in its schema/structure even if that buffer type does not populate an icon value
+
+### Requirement: Directory window uses shared buffer icon rendering
+The directory window SHALL use shared `@yeet-buffer` icon-column rendering across all three of its buffer instances rather than window-specific icon drawing logic.
+
+#### Scenario: Three directory buffers share icon-column path
+- **WHEN** a directory window renders its three `@yeet-buffer` instances
+- **THEN** each instance uses the shared `@yeet-buffer` icon-column function/contract for prefix rendering
+
 ### Requirement: Directory buffer renders a dedicated icon column
 Directory buffers SHALL render an icon column between line numbers and filename text for each first visual line of a directory entry. The icon column SHALL have a fixed width and SHALL be treated as prefix content.
 
