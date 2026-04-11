@@ -197,7 +197,7 @@ fn try_invoke_on_bufferline_mutate(
     }
     match ctx.get::<LuaValue>("content")? {
         LuaValue::String(s) => {
-            bl.content = yeet_buffer::model::ansi::Ansi::new(s.to_str()?);
+            bl.content = yeet_buffer::model::ansi::Ansi::new(&s.to_str()?);
         }
         _ => {}
     }

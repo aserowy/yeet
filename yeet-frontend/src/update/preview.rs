@@ -1,4 +1,5 @@
 use yeet_buffer::model::{ansi::Ansi, BufferLine, TextBuffer};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -7,16 +8,22 @@ use crate::{
     update::app,
 };
 
-pub fn update(app: &mut App, content: Preview) -> Vec<Action> {
+pub fn update(app: &mut App, lua: Option<&LuaConfiguration>, content: Preview) -> Vec<Action> {
     match content {
         Preview::Content(path, content) => {
             tracing::trace!("updating preview buffer: {:?}", path);
 
             let content: Vec<_> = content
                 .iter()
-                .map(|s| BufferLine {
-                    content: Ansi::new(s),
-                    ..Default::default()
+                .map(|s| {
+                    let mut line = BufferLine {
+                        content: Ansi::new(s),
+                        ..Default::default()
+                    };
+                    if let Some(lua) = lua {
+                        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "content", &path);
+                    }
+                    line
                 })
                 .collect();
 

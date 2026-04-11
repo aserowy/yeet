@@ -1,4 +1,5 @@
 use std::mem;
+use std::path::Path;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 use yeet_lua::LuaConfiguration;
@@ -25,7 +26,7 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, tasks: &Tasks) -> Vec
         return Vec::new();
     }
 
-    let lines = build_task_lines(tasks);
+    let lines = build_task_lines(tasks, lua);
     let buffer_id = app::get_next_buffer_id(contents);
     contents.buffers.insert(
         buffer_id,
@@ -82,7 +83,12 @@ fn focus_tasks(window: &mut Window) -> bool {
     }
 }
 
-pub fn refresh_tasks_buffer(window: &mut Window, contents: &mut Contents, tasks: &Tasks) {
+pub fn refresh_tasks_buffer(
+    window: &mut Window,
+    contents: &mut Contents,
+    tasks: &Tasks,
+    lua: Option<&LuaConfiguration>,
+) {
     let vp = match find_tasks_viewport_mut(window) {
         Some(vp) => vp,
         None => return,
@@ -102,7 +108,7 @@ pub fn refresh_tasks_buffer(window: &mut Window, contents: &mut Contents, tasks:
                     .and_then(|s| s.parse().ok())
             });
 
-        tasks_buffer.buffer.lines = build_task_lines(tasks);
+        tasks_buffer.buffer.lines = build_task_lines(tasks, lua);
         let line_count = tasks_buffer.buffer.lines.len();
 
         if let Some(old_id) = old_cursor_task_id {
@@ -131,19 +137,26 @@ fn find_tasks_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> {
     }
 }
 
-fn build_task_lines(tasks: &Tasks) -> Vec<BufferLine> {
+fn build_task_lines(tasks: &Tasks, lua: Option<&LuaConfiguration>) -> Vec<BufferLine> {
     let mut entries: Vec<_> = tasks.running.values().collect();
     entries.sort_by_key(|task| task.id);
-    entries.iter().map(|task| build_task_line(task)).collect()
+    entries
+        .iter()
+        .map(|task| build_task_line(task, lua))
+        .collect()
 }
 
-fn build_task_line(task: &CurrentTask) -> BufferLine {
+fn build_task_line(task: &CurrentTask, lua: Option<&LuaConfiguration>) -> BufferLine {
     let formatted = format!("{:<4} {}", task.id, task.external_id);
-    if task.token.is_cancelled() {
+    let mut line = if task.token.is_cancelled() {
         BufferLine::from(&format!("\x1b[9;90m{}\x1b[0m", formatted))
     } else {
         BufferLine::from(&formatted)
+    };
+    if let Some(lua) = lua {
+        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "tasks", Path::new(""));
     }
+    line
 }
 
 #[cfg(test)]
@@ -451,7 +464,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_tasks_buffer(window, contents, &tasks);
+        super::refresh_tasks_buffer(window, contents, &tasks, None);
 
         let window = app.current_window().expect("test requires current tab");
         let task_vp = match window {
@@ -484,7 +497,6 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_tasks_buffer(window, contents, &tasks);
-        // Should not panic
+        super::refresh_tasks_buffer(window, contents, &tasks, None);
     }
 }

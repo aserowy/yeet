@@ -1,4 +1,5 @@
 use std::mem;
+use std::path::Path;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
@@ -126,7 +127,17 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
         },
     };
 
-    let lines: Vec<BufferLine> = topic_match.content.lines().map(BufferLine::from).collect();
+    let lines: Vec<BufferLine> = topic_match
+        .content
+        .lines()
+        .map(|l| {
+            let mut line = BufferLine::from(l);
+            if let Some(lua) = lua {
+                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "help", Path::new(""));
+            }
+            line
+        })
+        .collect();
 
     let (window, contents) = match app.current_window_and_contents_mut() {
         Ok(wc) => wc,
@@ -174,7 +185,12 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
     ))]
 }
 
-pub fn apply_highlighted(app: &mut App, buffer_id: usize, lines: Vec<String>) {
+pub fn apply_highlighted(
+    app: &mut App,
+    lua: Option<&LuaConfiguration>,
+    buffer_id: usize,
+    lines: Vec<String>,
+) {
     let buffer = match app.contents.buffers.get_mut(&buffer_id) {
         Some(Buffer::Help(help)) => &mut help.buffer,
         _ => return,
@@ -182,7 +198,15 @@ pub fn apply_highlighted(app: &mut App, buffer_id: usize, lines: Vec<String>) {
 
     let highlighted: Vec<BufferLine> = lines
         .iter()
-        .flat_map(|l| l.split_terminator('\n').map(BufferLine::from))
+        .flat_map(|l| {
+            l.split_terminator('\n').map(|s| {
+                let mut line = BufferLine::from(s);
+                if let Some(lua) = lua {
+                    yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "help", Path::new(""));
+                }
+                line
+            })
+        })
         .collect();
 
     buffer.lines = highlighted;

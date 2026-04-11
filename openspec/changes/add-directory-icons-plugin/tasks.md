@@ -2,43 +2,43 @@
 
 - [x] 1.1 Wire existing startup/plugin loading so user-configured `yeet-directory-icons` is available to directory rendering
 - [x] 1.2 Add runtime diagnostics for `yeet-directory-icons` configuration/load failures
-- [ ] 1.3 Expand `on_bufferline_mutate` hook context to provide full bufferline fields (prefix, content, search_char_position, signs, icon) and buffer-type metadata (type string + path where applicable)
-- [ ] 1.4 Remove `is_directory` parameter from `invoke_on_bufferline_mutate` since directory-ness is now encoded in trailing slash
+- [x] 1.3 Expand `on_bufferline_mutate` hook context to provide full bufferline fields (prefix, content, search_char_position, signs, icon) and buffer-type metadata (type string + path where applicable)
+- [x] 1.4 Remove `is_directory` parameter from `invoke_on_bufferline_mutate` since directory-ness is now encoded in trailing slash
 - [ ] 1.5 Add hook invocation to content buffer population (file preview in `preview.rs`)
 - [ ] 1.6 Add hook invocation to help buffer population (`command/help.rs`)
 - [ ] 1.7 Add hook invocation to quickfix buffer population (`command/qfix/window.rs`)
-- [ ] 1.8 Add hook invocation to tasks buffer population (`command/task.rs`)
+- [x] 1.8 Add hook invocation to tasks buffer population (`command/task.rs`)
 - [x] 1.9 Ensure deferred `PathsAdded` events (Insert mode) also defer mutation hook invocation; hooks fire on flush when events are processed after leaving Insert mode
 - [x] 1.10 Register plugin `on_window_create` hook to set shared `@yeet-buffer` icon-column width to `1`
 
 ## 2. Trailing-Slash Convention and ContentKind Removal
 
-- [ ] 2.1 Add trailing slash (`/`) to directory entry names in the enumeration task runner (`task/mod.rs`) when `path.is_dir()` is true
-- [ ] 2.2 Add trailing slash to directory entry names in `PathsAdded` handling (`path.rs`) when `path.is_dir()` is true
-- [ ] 2.3 Remove `ContentKind` enum from `event.rs`
-- [ ] 2.4 Update `EnumerationChanged` and `EnumerationFinished` message types to use `Vec<String>` instead of `Vec<(ContentKind, String)>`
-- [ ] 2.5 Update `set_directory_content()` in `enumeration.rs` to determine directory-ness from trailing slash instead of `ContentKind`
-- [ ] 2.6 Update `update_directory_buffers_on_add()` in `path.rs` to use trailing slash convention instead of `ContentKind`
-- [ ] 2.7 Update sort logic in `update/mod.rs` if needed to handle trailing slashes correctly
-- [ ] 2.8 Update any existing tests that reference `ContentKind`
+- [x] 2.1 Add trailing slash (`/`) to directory entry names in the enumeration task runner (`task/mod.rs`) when `path.is_dir()` is true
+- [x] 2.2 Add trailing slash to directory entry names in `PathsAdded` handling (`path.rs`) when `path.is_dir()` is true
+- [x] 2.3 Remove `ContentKind` enum from `event.rs`
+- [x] 2.4 Update `EnumerationChanged` and `EnumerationFinished` message types to use `Vec<String>` instead of `Vec<(ContentKind, String)>`
+- [x] 2.5 Update `set_directory_content()` in `enumeration.rs` to determine directory-ness from trailing slash instead of `ContentKind`
+- [x] 2.6 Update `update_directory_buffers_on_add()` in `path.rs` to use trailing slash convention instead of `ContentKind`
+- [x] 2.7 Update sort logic in `update/mod.rs` if needed to handle trailing slashes correctly
+- [x] 2.8 Update any existing tests that reference `ContentKind`
 
 ## 3. Remove icon_style and Core Styling
 
-- [ ] 3.1 Remove `icon_style` field from `BufferLine` struct in `yeet-buffer/src/model/mod.rs`
-- [ ] 3.2 Remove `icon_style` prepend logic from `add_line_styles()` in `yeet-buffer/src/view/line.rs`
-- [ ] 3.3 Remove `icon_style` prepend logic from `add_line_styles_wrap()` in `yeet-buffer/src/view/line.rs`
-- [ ] 3.4 Update `get_icon_column()` in `prefix.rs` to render icon glyph as-is from the `icon` field without applying `icon_style`
-- [ ] 3.5 Remove `icon_style` from hook read-back logic in `invoke_on_bufferline_mutate` in `hook.rs`
-- [ ] 3.6 Remove `icon_style` from Lua snapshot/restore in `loading.rs` if present
-- [ ] 3.7 Update all tests that reference `icon_style`
+- [x] 3.1 Remove `icon_style` field from `BufferLine` struct in `yeet-buffer/src/model/mod.rs`
+- [x] 3.2 Remove `icon_style` prepend logic from `add_line_styles()` in `yeet-buffer/src/view/line.rs`
+- [x] 3.3 Remove `icon_style` prepend logic from `add_line_styles_wrap()` in `yeet-buffer/src/view/line.rs`
+- [x] 3.4 Update `get_icon_column()` in `prefix.rs` to render icon glyph as-is from the `icon` field without applying `icon_style`
+- [x] 3.5 Remove `icon_style` from hook read-back logic in `invoke_on_bufferline_mutate` in `hook.rs`
+- [x] 3.6 Remove `icon_style` from Lua snapshot/restore in `loading.rs` if present
+- [x] 3.7 Update all tests that reference `icon_style`
 
 ## 4. Bufferline Mutation Rendering
 
 - [x] 4.1 Ensure bufferline model supports icon glyph field that the plugin can mutate via hooks
 - [x] 4.2 Implement core rendering logic that reads the icon glyph from the bufferline and renders it in the icon-column prefix segment
-- [ ] 4.3 Update icon rendering to work without `icon_style` — icon glyph rendered as-is from the `icon` field (plugin includes ANSI sequences in the icon string)
+- [x] 4.3 Update icon rendering to work without `icon_style` — icon glyph rendered as-is from the `icon` field (plugin includes ANSI sequences in the icon string)
 - [x] 4.4 Add fallback behavior: if plugin does not mutate the bufferline (or hook errors), icon column remains empty and text is unchanged
-- [ ] 4.5 Update tests for mutation rendering without `icon_style`
+- [x] 4.5 Update tests for mutation rendering without `icon_style`
 
 ## 5. Directory Buffer Rendering and Cursor Semantics
 
