@@ -117,7 +117,8 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 /// Each registered callback receives a context table with:
 /// - `buffer`: read-only metadata object containing:
 ///   - `type`: the buffer type string (e.g., "directory", "content", "help", "quickfix", "tasks")
-///   - `path`: the associated path (string) — parent dir for directory buffers, file path for content buffers, empty for others
+///   - `path`: the associated path (string) — only set for buffer types with an associated path
+///     (directory, content); absent/nil for help, quickfix, tasks
 /// - `prefix`: the bufferline prefix (string or nil), mutable
 /// - `content`: the bufferline content as string, mutable
 /// - `icon`: the icon glyph (string or nil), mutable
@@ -129,7 +130,7 @@ pub fn invoke_on_bufferline_mutate(
     lua: &crate::LuaConfiguration,
     bl: &mut BufferLine,
     buffer_type: &str,
-    path: &Path,
+    path: Option<&Path>,
 ) {
     if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, buffer_type, path) {
         tracing::error!("error in y.hook.on_bufferline_mutate: {:?}", err);
@@ -140,7 +141,7 @@ fn try_invoke_on_bufferline_mutate(
     lua: &Lua,
     bl: &mut BufferLine,
     buffer_type: &str,
-    path: &Path,
+    path: Option<&Path>,
 ) -> LuaResult<()> {
     let y: LuaTable = lua.globals().get("y")?;
     let hook: LuaTable = y.get("hook")?;
@@ -156,7 +157,9 @@ fn try_invoke_on_bufferline_mutate(
     // Build read-only buffer metadata object
     let buffer_meta = lua.create_table()?;
     buffer_meta.set("type", buffer_type)?;
-    buffer_meta.set("path", path.to_string_lossy().to_string())?;
+    if let Some(p) = path {
+        buffer_meta.set("path", p.to_string_lossy().to_string())?;
+    }
     ctx.set("buffer", buffer_meta)?;
 
     // Expose full bufferline fields (mutable)

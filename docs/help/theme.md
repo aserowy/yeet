@@ -152,28 +152,56 @@ Foreground color of the mark sign in the sign column. Marked entries are indicat
 
 ## Icon Tokens
 
-Icon and text colors in directory buffers are controlled by the `yeet-directory-icons` plugin, not by the core. The plugin has built-in color defaults for each file extension and directory name. Without the plugin, directory entries are plain unstyled text.
+Icon and text colors in directory buffers are controlled by the `yeet-directory-icons` plugin, not by the core. The plugin registers `DirectoryIconsColor*` theme tokens for every file extension, filename, and directory name in its rule set. Without the plugin, directory entries are plain unstyled text.
+
+### DirectoryIconsColor Tokens
+
+The plugin defines a `DirectoryIconsColor*` token for each color category. During `setup()`, the plugin sets default values for all tokens — but only if the token is not already set by a theme plugin. During bufferline mutation, colors are resolved by reading these tokens from `y.theme`.
+
+Token names follow the pattern `DirectoryIconsColor<Identifier>`:
+
+| Token | Description | Default |
+| --- | --- | --- |
+| `DirectoryIconsColorDefaultFile` | Fallback color for unrecognized files | `#6d8086` |
+| `DirectoryIconsColorDefaultDirectory` | Fallback color for unrecognized directories | `#8caaee` |
+| `DirectoryIconsColorRs` | Rust source files (`.rs`) | `#dea584` |
+| `DirectoryIconsColorLua` | Lua source files (`.lua`) | `#51a0cf` |
+| `DirectoryIconsColorJs` | JavaScript files (`.js`, `.mjs`, `.cjs`) | `#cbcb41` |
+| `DirectoryIconsColorTs` | TypeScript files (`.ts`) | `#519aba` |
+| `DirectoryIconsColorPy` | Python files (`.py`) | `#ffbc03` |
+| `DirectoryIconsColorGo` | Go source files (`.go`) | `#519aba` |
+| `DirectoryIconsColorNix` | Nix files (`.nix`) | `#7ebae4` |
+| `DirectoryIconsColorCargoToml` | `Cargo.toml`, `Cargo.lock` | `#dea584` |
+| `DirectoryIconsColorDockerfile` | Dockerfiles and compose files | `#384d54` |
+| `DirectoryIconsColorGitignore` | Git config files (`.gitignore`, `.gitmodules`, `.gitattributes`) | `#f14c28` |
+| `DirectoryIconsColorDirGit` | `.git` directory | `#f14c28` |
+| `DirectoryIconsColorDirGeneric` | Common directories (`src`, `lib`, `test`, `docs`, etc.) | `#6d8086` |
+
+This is a representative subset. The full list of tokens is defined in the `yeet-directory-icons` plugin source. Every token can be overridden via `y.theme`.
 
 ### Theme Plugin Priority
 
-When a theme plugin (e.g., `yeet-bluloco-theme`) sets `BufferFileFg` or `BufferDirectoryFg` before the icons plugin processes entries, the icons plugin respects the theme-provided values and uses them as the effective colors. The icons plugin only uses its own built-in defaults when the theme has not set these tokens.
+When a theme plugin (e.g., `yeet-bluloco-theme`) sets `DirectoryIconsColor*` tokens before the icons plugin runs `setup()`, the icons plugin respects the theme-provided values and does not overwrite them. The icons plugin only uses its own built-in defaults when the theme has not set these tokens.
 
-Load order determines priority: theme plugins loaded before `yeet-directory-icons` take precedence for these tokens.
+Load order determines priority: theme plugins loaded before `yeet-directory-icons` take precedence for all `DirectoryIconsColor*` tokens.
 
 ### Fallback Colors
 
 When a file or directory does not match any specific icon rule in the plugin, the plugin falls back to:
 
-- **`BufferFileFg`** for unrecognized files
-- **`BufferDirectoryFg`** for unrecognized directories
+- **`DirectoryIconsColorDefaultFile`** for unrecognized files
+- **`DirectoryIconsColorDefaultDirectory`** for unrecognized directories
 
 Override these tokens to change the fallback colors:
 
 ```lua
-y = {
-  theme = {
-    BufferFileFg = "#abb2bf",
-    BufferDirectoryFg = "#3691ff",
-  }
-}
+y.theme.DirectoryIconsColorDefaultFile = "#abb2bf"
+y.theme.DirectoryIconsColorDefaultDirectory = "#3691ff"
+```
+
+Override individual file type colors:
+
+```lua
+y.theme.DirectoryIconsColorRs = "#ff6480"
+y.theme.DirectoryIconsColorPy = "#f9c859"
 ```

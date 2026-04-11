@@ -198,7 +198,12 @@ fn update_directory_buffers_on_add(
 
             let mut bufferline = enumeration::from_enumeration(&name_with_slash);
             if let Some(lua) = lua {
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut bufferline, "directory", path);
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut bufferline,
+                    "directory",
+                    Some(path),
+                );
             }
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {

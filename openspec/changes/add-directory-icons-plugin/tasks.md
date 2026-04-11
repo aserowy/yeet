@@ -80,28 +80,28 @@
 
 ## 9. Optional Path in on_bufferline_mutate
 
-- [ ] 9.1 Change `invoke_on_bufferline_mutate` signature to accept `Option<&Path>` instead of `&Path`. Only set `ctx.buffer.path` when `Some`; omit (nil) when `None`.
-- [ ] 9.2 Update callers that have no meaningful path (help.rs, task.rs, qfix/window.rs) to pass `None` instead of `Path::new("")`
-- [ ] 9.3 Update callers that have a real path (path.rs, enumeration.rs, preview.rs) to pass `Some(&path)` / `Some(path)`
-- [ ] 9.4 Update `docs/help/hooks.md` to document that `ctx.buffer.path` is nil (absent) for buffer types without a path (help, quickfix, tasks)
-- [ ] 9.5 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`
+- [x] 9.1 Change `invoke_on_bufferline_mutate` signature to accept `Option<&Path>` instead of `&Path`. Only set `ctx.buffer.path` when `Some`; omit (nil) when `None`.
+- [x] 9.2 Update callers that have no meaningful path (help.rs, task.rs, qfix/window.rs) to pass `None` instead of `Path::new("")`
+- [x] 9.3 Update callers that have a real path (path.rs, enumeration.rs, preview.rs) to pass `Some(&path)` / `Some(path)`
+- [x] 9.4 Update `docs/help/hooks.md` to document that `ctx.buffer.path` is nil (absent) for buffer types without a path (help, quickfix, tasks)
+- [x] 9.5 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
 ## 10. DirectoryIconsColor Theme Tokens in Plugin
 
-- [ ] 10.1 Refactor `directory-icons/init.lua` to define a `DirectoryIconsColor*` theme token for every unique color in ext_map, name_map, dir_map, and defaults. Each mapping entry references a token name instead of a raw hex color.
-- [ ] 10.2 In `M.setup()`, register all `DirectoryIconsColor*` token defaults — set each token on `y.theme` only if the token is not already present (theme plugins loaded first take priority).
-- [ ] 10.3 During bufferline mutation, resolve colors by reading `y.theme[token_name]` instead of using the hardcoded hex value from the mapping table.
-- [ ] 10.4 Remove the `resolve_color("BufferDirectoryFg", color)` / `resolve_color("BufferFileFg", color)` pattern; replace with per-mapping `DirectoryIconsColor*` token lookups.
+- [x] 10.1 Refactor `directory-icons/init.lua` to define a `DirectoryIconsColor*` theme token for every unique color in ext_map, name_map, dir_map, and defaults. Each mapping entry references a token name instead of a raw hex color.
+- [x] 10.2 In `M.setup()`, register all `DirectoryIconsColor*` token defaults — set each token on `y.theme` only if the token is not already present (theme plugins loaded first take priority).
+- [x] 10.3 During bufferline mutation, resolve colors by reading `y.theme[token_name]` instead of using the hardcoded hex value from the mapping table.
+- [x] 10.4 Remove the `resolve_color("BufferDirectoryFg", color)` / `resolve_color("BufferFileFg", color)` pattern; replace with per-mapping `DirectoryIconsColor*` token lookups.
 
 ## 11. DirectoryIconsColor Overrides in yeet-bluloco-theme
 
-- [ ] 11.1 Add `DirectoryIconsColor*` token overrides to `plugins/bluloco-theme/init.lua` — set all tokens the directory-icons plugin defines, using the bluloco palette colors.
+- [x] 11.1 Add `DirectoryIconsColor*` token overrides to `plugins/bluloco-theme/init.lua` — set all tokens the directory-icons plugin defines, using the bluloco palette colors.
 
 ## 12. Documentation Updates
 
-- [ ] 12.1 Update `docs/help/theme.md` to document `DirectoryIconsColor*` tokens, their naming convention, and how theme plugins can override them.
+- [x] 12.1 Update `docs/help/theme.md` to document `DirectoryIconsColor*` tokens, their naming convention, and how theme plugins can override them.
 
 ## 13. Final Validation
 
-- [ ] 13.1 Run full check suite: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
+- [x] 13.1 Run full check suite: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
 - [ ] 13.2 Commit and push submodule changes (plugins/directory-icons, plugins/bluloco-theme)

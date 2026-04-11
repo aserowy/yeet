@@ -219,7 +219,7 @@ fn set_directory_content(
                     lua,
                     &mut line,
                     "directory",
-                    &path.join(bare_name),
+                    Some(&path.join(bare_name)),
                 );
             }
             let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);

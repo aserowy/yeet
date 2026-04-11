@@ -118,9 +118,9 @@ The `buffer` metadata object contains:
 | Field | Type | Description |
 | --- | --- | --- |
 | `buffer.type` | string | Buffer type: `"directory"`, `"content"`, `"help"`, `"quickfix"`, or `"tasks"` |
-| `buffer.path` | string | Associated path: parent directory for directory buffers, file path for content buffers, empty string for help/quickfix/tasks |
+| `buffer.path` | string or nil | Associated path: parent directory for directory buffers, file path for content buffers. Absent (nil) for help, quickfix, and tasks buffers. |
 
-The `buffer` object is read-only — changes to `buffer.type` or `buffer.path` are not read back by the core. New metadata fields may be added to `buffer` in future versions without breaking existing plugins.
+The `buffer` object is read-only — changes to `buffer.type` or `buffer.path` are not read back by the core. The `buffer.path` field is only present for buffer types that have an associated path (directory and content); it is nil for help, quickfix, and tasks buffers. New metadata fields may be added to `buffer` in future versions without breaking existing plugins.
 
 After all callbacks run, `icon`, `prefix`, and `content` are read back from the context table and applied to the bufferline. The `buffer` metadata object is not read back.
 

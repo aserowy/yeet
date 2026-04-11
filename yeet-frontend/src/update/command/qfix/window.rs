@@ -1,4 +1,4 @@
-use std::{collections::HashMap, mem, path::Path};
+use std::{collections::HashMap, mem};
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 use yeet_lua::LuaConfiguration;
@@ -121,7 +121,7 @@ pub fn build_qfix_lines(qfix: &QuickFix, lua: Option<&LuaConfiguration>) -> Vec<
                 BufferLine::from(&formatted)
             };
             if let Some(lua) = lua {
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "quickfix", Path::new(""));
+                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "quickfix", None);
             }
             line
         })

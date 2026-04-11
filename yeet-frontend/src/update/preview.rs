@@ -21,7 +21,12 @@ pub fn update(app: &mut App, lua: Option<&LuaConfiguration>, content: Preview) -
                         ..Default::default()
                     };
                     if let Some(lua) = lua {
-                        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "content", &path);
+                        yeet_lua::invoke_on_bufferline_mutate(
+                            lua,
+                            &mut line,
+                            "content",
+                            Some(&path),
+                        );
                     }
                     line
                 })

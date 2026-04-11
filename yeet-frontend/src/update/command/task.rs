@@ -1,5 +1,4 @@
 use std::mem;
-use std::path::Path;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 use yeet_lua::LuaConfiguration;
@@ -154,7 +153,7 @@ fn build_task_line(task: &CurrentTask, lua: Option<&LuaConfiguration>) -> Buffer
         BufferLine::from(&formatted)
     };
     if let Some(lua) = lua {
-        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "tasks", Path::new(""));
+        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "tasks", None);
     }
     line
 }
