@@ -27,7 +27,7 @@ At startup, existing plugin loading SHALL make `yeet-directory-icons` available 
 - **THEN** the system reports a plugin loading diagnostic and continues with icon-column width `0`
 
 ### Requirement: Mutation hook fires for all buffer types with buffer metadata object
-The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) containing `type` (e.g., `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`) and optionally `path` (parent dir for directory, file path for content; absent/nil for help, quickfix, tasks). The plugin decides which buffer types to process by checking `ctx.buffer.type`.
+The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) containing `type` (e.g., `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`) and optionally `path` (parent dir for directory, file path for content; absent/nil for help, quickfix, tasks). The plugin decides which buffer types to process by checking `ctx.buffer.type`. The `buffer_type` parameter in the Rust API SHALL use a `BufferType` enum instead of `&str`.
 
 #### Scenario: Hook fires for directory buffer entries
 - **WHEN** the core handles `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded` and processes a bufferline
@@ -66,3 +66,25 @@ The system SHALL NOT require changes to plugin-manager commands/workflows (insta
 #### Scenario: Feature uses normal plugin configuration path
 - **WHEN** a user installs/configures `yeet-directory-icons` through their normal setup
 - **THEN** directory icon integration works without introducing new plugin-manager behavior
+
+### Requirement: Plugins can provide help pages
+Plugins SHALL be able to provide help documentation by placing markdown files in a `docs/help/` directory within their plugin directory. The `:help` command SHALL discover these files at runtime and include them as searchable help pages.
+
+#### Scenario: Plugin help page is discoverable
+- **WHEN** a plugin has a `docs/help/directory-icons.md` file
+- **THEN** `:help directory-icons` shows the plugin's help content
+
+#### Scenario: Core help takes priority
+- **WHEN** a topic matches both a core help page and a plugin help page
+- **THEN** the core help page is shown
+
+#### Scenario: Plugin not loaded means no help
+- **WHEN** a plugin is not loaded/configured
+- **THEN** its help pages are not available in `:help`
+
+### Requirement: Plugin-specific documentation lives in plugin repos
+Plugin-specific documentation (token references, usage guides, configuration) SHALL be maintained in each plugin's own `docs/help/` directory, not in core `docs/help/` files. Core documentation SHALL only document core concepts and SHALL NOT reference optional plugin-specific tokens or behavior.
+
+#### Scenario: Plugin token docs in plugin repo
+- **WHEN** a user wants to learn about `DirectoryIconsColor*` tokens
+- **THEN** they find the documentation in the `yeet-directory-icons` plugin's help page, not in core `docs/help/theme.md`

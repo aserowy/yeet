@@ -26,7 +26,22 @@ The directory window SHALL use shared `@yeet-buffer` icon-column rendering acros
 - **THEN** each instance uses the shared `@yeet-buffer` icon-column function/contract for prefix rendering
 
 ### Requirement: Hook fires for all buffer types with buffer metadata object
-The `on_bufferline_mutate` hook SHALL fire for all buffer types — not just directory buffers. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) on the hook context table. The `buffer` object SHALL contain a `type` field (string matching `Buffer` enum variant names: `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`). The `buffer` object SHALL contain a `path` field only for buffer types with an associated path (parent path for directory buffers, file path for content buffers). For buffer types without an associated path (help, quickfix, tasks), the `path` field SHALL be absent (nil). Using a dedicated metadata object ensures the API is extensible — new metadata fields can be added without changing the mutable field surface or breaking existing plugins.
+The `on_bufferline_mutate` hook SHALL fire for all buffer types — not just directory buffers. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) on the hook context table. The `buffer` object SHALL contain a `type` field (string matching `BufferType` enum variant names: `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`). The `buffer` object SHALL contain a `path` field only for buffer types with an associated path (parent path for directory buffers, file path for content buffers). For buffer types without an associated path (help, quickfix, tasks), the `path` field SHALL be absent (nil). Using a dedicated metadata object ensures the API is extensible — new metadata fields can be added without changing the mutable field surface or breaking existing plugins.
+
+### Requirement: BufferType enum for type-safe invocations
+The `invoke_on_bufferline_mutate` function SHALL accept a `BufferType` enum instead of a `&str` for the buffer type parameter. The `BufferType` enum SHALL have variants `Directory`, `Content`, `Help`, `Quickfix`, `Tasks`. Each variant SHALL map to its lowercase string representation (e.g., `BufferType::Directory` → `"directory"`) for injection into the Lua hook context.
+
+#### Scenario: Caller passes enum variant
+- **WHEN** a caller invokes `invoke_on_bufferline_mutate` for a directory buffer
+- **THEN** it passes `BufferType::Directory` (not the string `"directory"`)
+
+#### Scenario: Enum maps to string in Lua
+- **WHEN** the hook fires with `BufferType::Content`
+- **THEN** `ctx.buffer.type` in Lua is set to `"content"`
+
+#### Scenario: Invalid buffer type is a compile error
+- **WHEN** a caller attempts to pass a misspelled buffer type
+- **THEN** it fails to compile because the enum has no matching variant
 
 #### Scenario: Hook fires for directory buffer entries
 - **WHEN** directory content is set or updated via `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded`

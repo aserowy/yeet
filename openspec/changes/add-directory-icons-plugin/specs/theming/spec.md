@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Directory icon color tokens follow DirectoryIconsColor naming convention
-The plugin SHALL register theme tokens using the `DirectoryIconsColor*` naming convention (e.g., `DirectoryIconsColorRs`, `DirectoryIconsColorTxt`, `DirectoryIconsColorMakefile`, `DirectoryIconsColorDotEnv`, `DirectoryIconsColorGoMod`, `DirectoryIconsColorDefaultDirectory`, `DirectoryIconsColorDefaultFile`). These tokens SHALL be assignable from `init.lua` via `y.theme.<TokenName>` and participate in the same hex parsing and fallback behavior as existing tokens. Token names are plugin-defined — the core does not standardize icon-color class names.
+The plugin SHALL register theme tokens using the `DirectoryIconsColor*` naming convention (e.g., `DirectoryIconsColorRs`, `DirectoryIconsColorTxt`, `DirectoryIconsColorMakefile`, `DirectoryIconsColorDotEnv`, `DirectoryIconsColorGoMod`, `DirectoryIconsColorDefaultDirectory`, `DirectoryIconsColorDefaultFile`). These tokens SHALL be assignable from `init.lua` via `y.theme.<TokenName>` and participate in the same hex parsing and fallback behavior as existing tokens. Token names are plugin-defined — the core does not standardize icon-color class names. Documentation of these tokens SHALL live in the plugin's own `docs/help/` directory, not in core documentation.
 
 ### Requirement: Default filename text color follows icon base color
 When no override is configured, directory entry filename text SHALL use the same base color as the resolved icon's original default color. This color is applied by the plugin directly mutating the bufferline content Ansi string during mutation hooks.

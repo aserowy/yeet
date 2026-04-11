@@ -4,7 +4,7 @@
 The `yeet-directory-icons` plugin SHALL contain all logic for determining which icon glyph to display and how to color both the icon glyph and the filename text. The core SHALL NOT contain any icon resolution tables, extension mappings, or color rules; it only invokes hooks and the plugin directly mutates bufferlines.
 
 ### Requirement: Plugin checks buffer type before acting
-The plugin SHALL check the buffer type via the `ctx.buffer.type` field (from the read-only `buffer` metadata object) provided in each `on_bufferline_mutate` hook invocation and only mutate bufferlines for file/directory-related buffer types (e.g., `"directory"` type). The plugin SHALL skip non-file buffer types (e.g., `"help"`, `"quickfix"`, `"tasks"`).
+The plugin SHALL check the buffer type via the `ctx.buffer.type` field (from the read-only `buffer` metadata object, populated from the `BufferType` enum's string representation) provided in each `on_bufferline_mutate` hook invocation and only mutate bufferlines for file/directory-related buffer types (e.g., `"directory"` type). The plugin SHALL skip non-file buffer types (e.g., `"help"`, `"quickfix"`, `"tasks"`).
 
 #### Scenario: Plugin processes directory buffer entries
 - **WHEN** the hook fires with `ctx.buffer.type` equal to `"directory"`
@@ -133,3 +133,10 @@ If the plugin's hook handler fails for any reason, the core SHALL preserve the b
 #### Scenario: Plugin hook failure degrades gracefully
 - **WHEN** a hook call to the plugin raises an error
 - **THEN** the bufferline retains its pre-hook state with no icon and original content
+
+### Requirement: Plugin provides its own help documentation
+The `yeet-directory-icons` plugin SHALL include a `docs/help/directory-icons.md` file in its plugin directory that documents all `DirectoryIconsColor*` tokens, their naming convention, default values, usage examples, and configuration guidance. This documentation SHALL be discoverable via `:help directory-icons` when the plugin is loaded.
+
+#### Scenario: Plugin help page accessible via :help
+- **WHEN** `yeet-directory-icons` is loaded and the user runs `:help directory-icons`
+- **THEN** the plugin's help page is displayed with full token reference and usage examples
