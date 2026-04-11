@@ -1,5 +1,4 @@
 use std::mem;
-use std::path::PathBuf;
 
 use yeet_buffer::model::{viewport::ViewPort, BufferLine, TextBuffer};
 
@@ -220,7 +219,10 @@ fn discover_plugin_help_pages(lua: &LuaConfiguration) -> Vec<PluginHelpPage> {
     pages
 }
 
-fn discover_plugin_help_pages_from_paths(plugin_dirs: &[PathBuf]) -> Vec<PluginHelpPage> {
+#[cfg(test)]
+fn discover_plugin_help_pages_from_paths(
+    plugin_dirs: &[std::path::PathBuf],
+) -> Vec<PluginHelpPage> {
     let mut pages = Vec::new();
 
     for plugin_dir in plugin_dirs {
@@ -259,9 +261,7 @@ fn discover_plugin_help_pages_from_paths(plugin_dirs: &[PathBuf]) -> Vec<PluginH
 }
 
 pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) -> Vec<Action> {
-    let plugin_pages = lua
-        .map(|l| discover_plugin_help_pages(l))
-        .unwrap_or_default();
+    let plugin_pages = lua.map(discover_plugin_help_pages).unwrap_or_default();
 
     let topic_match = match topic {
         Some(t) => match resolve_topic(t, &plugin_pages) {
@@ -622,9 +622,9 @@ mod test {
     fn plugin_help_page_heading_search() {
         let pages = vec![PluginHelpPage {
             name: "my-plugin".to_string(),
-            content: "# My Plugin\n\n## Configuration\n\nSome config.".to_string(),
+            content: "# My Plugin\n\n## Token Reference\n\nSome tokens.".to_string(),
         }];
-        let result = resolve_topic("Configuration", &pages);
+        let result = resolve_topic("Token Reference", &pages);
         assert!(result.is_some());
         let m = result.unwrap();
         assert!(m.line_offset() > 0);

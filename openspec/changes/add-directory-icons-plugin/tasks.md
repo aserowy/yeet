@@ -115,20 +115,20 @@
 
 ## 15. Plugin Help Documentation
 
-- [ ] 15.1 Create `docs/help/directory-icons.md` in the `yeet-directory-icons` plugin (submodule) with full `DirectoryIconsColor*` token reference, usage examples, and configuration guide.
-- [ ] 15.2 Create `docs/help/bluloco-theme.md` in the `yeet-bluloco-theme` plugin (submodule) with theme override documentation and palette reference.
-- [ ] 15.3 Remove plugin-specific content from core `docs/help/theme.md` — remove the "Icon Tokens" section (DirectoryIconsColor token table, theme plugin priority, fallback colors) and plugin-specific references from `BufferFileFg`/`BufferDirectoryFg` descriptions.
-- [ ] 15.4 Remove plugin-specific content from core `docs/help/hooks.md` — remove plugin-specific examples and references from the `on_bufferline_mutate` section (icon column plugin example, yeet-directory-icons references).
+- [x] 15.1 Create `docs/help/directory-icons.md` in the `yeet-directory-icons` plugin (submodule) with full `DirectoryIconsColor*` token reference, usage examples, and configuration guide.
+- [x] 15.2 Create `docs/help/bluloco-theme.md` in the `yeet-bluloco-theme` plugin (submodule) with theme override documentation and palette reference.
+- [x] 15.3 Remove plugin-specific content from core `docs/help/theme.md` — remove the "Icon Tokens" section (DirectoryIconsColor token table, theme plugin priority, fallback colors) and plugin-specific references from `BufferFileFg`/`BufferDirectoryFg` descriptions.
+- [x] 15.4 Remove plugin-specific content from core `docs/help/hooks.md` — remove plugin-specific examples and references from the `on_bufferline_mutate` section (icon column plugin example, yeet-directory-icons references).
 
 ## 16. Extend :help to Discover Plugin Help Pages
 
-- [ ] 16.1 Determine how to discover loaded plugin directories at runtime (e.g., from plugin configuration/paths stored in the Lua state or from the plugin loading infrastructure).
-- [ ] 16.2 Extend the help system in `help.rs` to scan each loaded plugin's `docs/help/` directory for `*.md` files at runtime and register them as additional help pages.
-- [ ] 16.3 Ensure core help pages are searched first (take priority) when resolving topics — plugin pages are only matched when no core page matches.
-- [ ] 16.4 Update `docs/help/plugins.md` or `docs/help/index.md` to document that plugins can provide help pages via `docs/help/` in their plugin directory.
-- [ ] 16.5 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
+- [x] 16.1 Determine how to discover loaded plugin directories at runtime (e.g., from plugin configuration/paths stored in the Lua state or from the plugin loading infrastructure).
+- [x] 16.2 Extend the help system in `help.rs` to scan each loaded plugin's `docs/help/` directory for `*.md` files at runtime and register them as additional help pages.
+- [x] 16.3 Ensure core help pages are searched first (take priority) when resolving topics — plugin pages are only matched when no core page matches.
+- [x] 16.4 Update `docs/help/plugins.md` or `docs/help/index.md` to document that plugins can provide help pages via `docs/help/` in their plugin directory.
+- [x] 16.5 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
 
 ## 17. Final Validation (Post-Refinement)
 
-- [ ] 17.1 Run full check suite: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
-- [ ] 17.2 Commit and push all changes including submodule changes
+- [x] 17.1 Run full check suite: `cargo fmt`, `cargo clippy`, `cargo test`, `git add -A && nix build .`
+- [x] 17.2 Commit and push all changes including submodule changes

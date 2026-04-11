@@ -121,3 +121,25 @@ y.hook.on_window_create:add(function(ctx)
     end
 end)
 ```
+
+### Help Pages
+
+Plugins can provide help pages that are discoverable through the `:help` command. Place Markdown files in a `docs/help/` directory at the root of the plugin repository:
+
+```
+my-plugin/
+├── init.lua
+└── docs/
+    └── help/
+        ├── my-plugin.md
+        └── my-plugin-config.md
+```
+
+When a user runs `:help <topic>`, yeet searches plugin help pages after core help pages. Topics are matched against:
+
+1. The filename (without `.md` extension)
+2. Headings within each help page (case-insensitive prefix match)
+
+Core help pages always take priority — if a core page matches the topic, plugin pages are not searched.
+
+Help pages use standard Markdown. The first `# Heading` in the file is used as the page title displayed in the help buffer.
