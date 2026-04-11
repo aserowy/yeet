@@ -108,10 +108,10 @@
 
 ## 14. BufferType Enum
 
-- [ ] 14.1 Introduce a `BufferType` enum in `yeet-lua/src/hook.rs` (or a shared module) with variants `Directory`, `Content`, `Help`, `Quickfix`, `Tasks`. Implement `as_str()` method mapping each variant to its lowercase string representation.
-- [ ] 14.2 Change `invoke_on_bufferline_mutate` signature to accept `BufferType` instead of `&str`. Use `buffer_type.as_str()` when setting `ctx.buffer.type` in the Lua context.
-- [ ] 14.3 Update all callers of `invoke_on_bufferline_mutate` to pass `BufferType::Directory`, `BufferType::Content`, `BufferType::Help`, `BufferType::Quickfix`, or `BufferType::Tasks` instead of string literals.
-- [ ] 14.4 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`
+- [x] 14.1 Introduce a `BufferType` enum in `yeet-lua/src/hook.rs` (or a shared module) with variants `Directory`, `Content`, `Help`, `Quickfix`, `Tasks`. Implement `as_str()` method mapping each variant to its lowercase string representation.
+- [x] 14.2 Change `invoke_on_bufferline_mutate` signature to accept `BufferType` instead of `&str`. Use `buffer_type.as_str()` when setting `ctx.buffer.type` in the Lua context.
+- [x] 14.3 Update all callers of `invoke_on_bufferline_mutate` to pass `BufferType::Directory`, `BufferType::Content`, `BufferType::Help`, `BufferType::Quickfix`, or `BufferType::Tasks` instead of string literals.
+- [x] 14.4 Run checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
 ## 15. Plugin Help Documentation
 

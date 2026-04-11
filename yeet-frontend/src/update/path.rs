@@ -201,7 +201,7 @@ fn update_directory_buffers_on_add(
                 yeet_lua::invoke_on_bufferline_mutate(
                     lua,
                     &mut bufferline,
-                    "directory",
+                    yeet_lua::BufferType::Directory,
                     Some(path),
                 );
             }

@@ -24,7 +24,7 @@ pub fn update(app: &mut App, lua: Option<&LuaConfiguration>, content: Preview) -
                         yeet_lua::invoke_on_bufferline_mutate(
                             lua,
                             &mut line,
-                            "content",
+                            yeet_lua::BufferType::Content,
                             Some(&path),
                         );
                     }

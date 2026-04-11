@@ -121,7 +121,12 @@ pub fn build_qfix_lines(qfix: &QuickFix, lua: Option<&LuaConfiguration>) -> Vec<
                 BufferLine::from(&formatted)
             };
             if let Some(lua) = lua {
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "quickfix", None);
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut line,
+                    yeet_lua::BufferType::Quickfix,
+                    None,
+                );
             }
             line
         })

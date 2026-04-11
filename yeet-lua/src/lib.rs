@@ -5,6 +5,7 @@ mod viewport;
 
 pub use hook::invoke_on_bufferline_mutate;
 pub use hook::invoke_on_window_create;
+pub use hook::BufferType;
 pub use loading::load_plugins;
 pub use mlua::Lua;
 pub use plugin::{read_plugin_concurrency, read_plugin_specs};

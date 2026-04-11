@@ -5,6 +5,32 @@ use yeet_buffer::model::{viewport::ViewPort, BufferLine};
 
 use crate::viewport::{table_to_viewport, viewport_to_table};
 
+/// Represents the type of buffer being mutated.
+///
+/// Used by `invoke_on_bufferline_mutate` callers to specify the buffer type
+/// in a type-safe way. Each variant maps to its lowercase string representation
+/// for injection into the Lua hook context (`ctx.buffer.type`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferType {
+    Directory,
+    Content,
+    Help,
+    Quickfix,
+    Tasks,
+}
+
+impl BufferType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            BufferType::Directory => "directory",
+            BufferType::Content => "content",
+            BufferType::Help => "help",
+            BufferType::Quickfix => "quickfix",
+            BufferType::Tasks => "tasks",
+        }
+    }
+}
+
 pub fn invoke_on_window_create(
     lua: &crate::LuaConfiguration,
     window_type: &str,
@@ -116,7 +142,8 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 ///
 /// Each registered callback receives a context table with:
 /// - `buffer`: read-only metadata object containing:
-///   - `type`: the buffer type string (e.g., "directory", "content", "help", "quickfix", "tasks")
+///   - `type`: the buffer type string derived from `BufferType` enum
+///     (e.g., "directory", "content", "help", "quickfix", "tasks")
 ///   - `path`: the associated path (string) — only set for buffer types with an associated path
 ///     (directory, content); absent/nil for help, quickfix, tasks
 /// - `prefix`: the bufferline prefix (string or nil), mutable
@@ -129,7 +156,7 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 pub fn invoke_on_bufferline_mutate(
     lua: &crate::LuaConfiguration,
     bl: &mut BufferLine,
-    buffer_type: &str,
+    buffer_type: BufferType,
     path: Option<&Path>,
 ) {
     if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, buffer_type, path) {
@@ -140,7 +167,7 @@ pub fn invoke_on_bufferline_mutate(
 fn try_invoke_on_bufferline_mutate(
     lua: &Lua,
     bl: &mut BufferLine,
-    buffer_type: &str,
+    buffer_type: BufferType,
     path: Option<&Path>,
 ) -> LuaResult<()> {
     let y: LuaTable = lua.globals().get("y")?;
@@ -156,7 +183,7 @@ fn try_invoke_on_bufferline_mutate(
 
     // Build read-only buffer metadata object
     let buffer_meta = lua.create_table()?;
-    buffer_meta.set("type", buffer_type)?;
+    buffer_meta.set("type", buffer_type.as_str())?;
     if let Some(p) = path {
         buffer_meta.set("path", p.to_string_lossy().to_string())?;
     }

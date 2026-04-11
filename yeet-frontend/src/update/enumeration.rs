@@ -218,7 +218,7 @@ fn set_directory_content(
                 yeet_lua::invoke_on_bufferline_mutate(
                     lua,
                     &mut line,
-                    "directory",
+                    yeet_lua::BufferType::Directory,
                     Some(&path.join(bare_name)),
                 );
             }

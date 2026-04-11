@@ -132,7 +132,12 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, topic: Option<&str>) 
         .map(|l| {
             let mut line = BufferLine::from(l);
             if let Some(lua) = lua {
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "help", None);
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut line,
+                    yeet_lua::BufferType::Help,
+                    None,
+                );
             }
             line
         })
@@ -201,7 +206,12 @@ pub fn apply_highlighted(
             l.split_terminator('\n').map(|s| {
                 let mut line = BufferLine::from(s);
                 if let Some(lua) = lua {
-                    yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "help", None);
+                    yeet_lua::invoke_on_bufferline_mutate(
+                        lua,
+                        &mut line,
+                        yeet_lua::BufferType::Help,
+                        None,
+                    );
                 }
                 line
             })

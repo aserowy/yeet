@@ -153,7 +153,7 @@ fn build_task_line(task: &CurrentTask, lua: Option<&LuaConfiguration>) -> Buffer
         BufferLine::from(&formatted)
     };
     if let Some(lua) = lua {
-        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, "tasks", None);
+        yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, yeet_lua::BufferType::Tasks, None);
     }
     line
 }
