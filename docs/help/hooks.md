@@ -63,7 +63,7 @@ Invalid values (wrong type or unrecognized strings) are ignored and the default 
 
 ### Icon Column
 
-The `icon_column_width` field controls how many cells are reserved for the icon column in the buffer prefix. It defaults to `0` (no icon column). The `yeet-directory-icons` plugin sets this to `1` via `on_window_create` to enable icon rendering:
+The `icon_column_width` field controls how many cells are reserved for the icon column in the buffer prefix. It defaults to `0` (no icon column). Plugins can set this via `on_window_create` to enable icon rendering:
 
 ```lua
 y.hook.on_window_create:add(function(ctx)

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use mlua::prelude::*;
 use yeet_plugin::PluginSpec;
 
@@ -208,5 +210,16 @@ pub fn read_plugin_concurrency(lua: &Lua) -> usize {
             4
         }
         Err(_) => 4,
+    }
+}
+
+pub fn read_plugin_data_path(lua: &Lua) -> Option<PathBuf> {
+    let y = lua.globals().get::<LuaTable>("y").ok()?;
+    let plugin = y.get::<LuaTable>("plugin").ok()?;
+    let data_path: String = plugin.get("_data_path").ok()?;
+    if data_path.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(data_path))
     }
 }
