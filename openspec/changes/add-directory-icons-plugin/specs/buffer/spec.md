@@ -25,20 +25,95 @@ The directory window SHALL use shared `@yeet-buffer` icon-column rendering acros
 - **WHEN** a directory window renders its three `@yeet-buffer` instances
 - **THEN** each instance uses the shared `@yeet-buffer` icon-column function/contract for prefix rendering
 
-### Requirement: Core invokes mutation hooks in EnumerationChanged/EnumerationFinished/PathsAdded and renders mutated bufferlines
-During `EnumerationChanged`, `EnumerationFinished`, and `PathsAdded` message handling, the core SHALL invoke per-bufferline mutation hooks that provide the complete bufferline and the given window with all metadata. The plugin directly mutates each bufferline in-place (adds/replaces icon, colors text). The core renders the mutated bufferline state. The core does not contain any icon resolution or color mapping logic itself.
+### Requirement: Hook fires for all buffer types with buffer-type metadata
+The `on_bufferline_mutate` hook SHALL fire for all buffer types — not just directory buffers. Each hook invocation SHALL provide the buffer type as metadata so the plugin can determine which buffer it is processing. Buffer-type metadata SHALL use the `Buffer` enum variant names (e.g., `directory`, `content`, `help`, `quickfix`, `tasks`). Directory buffers include the parent path; content buffers include the file path.
 
-#### Scenario: Plugin mutates bufferline during enumeration
-- **WHEN** a mutation hook is invoked during `EnumerationChanged` or `EnumerationFinished` processing
-- **THEN** the plugin directly sets the icon glyph and text color on the bufferline, and the core renders the mutated state in the icon-column prefix segment
+#### Scenario: Hook fires for directory buffer entries
+- **WHEN** directory content is set or updated via `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded`
+- **THEN** the hook fires for each bufferline with buffer type `directory` and the parent directory path
 
-#### Scenario: Plugin mutates bufferline during path addition
-- **WHEN** a mutation hook is invoked during `PathsAdded` processing
-- **THEN** the plugin directly sets the icon glyph and text color on the bufferline, and the core renders the mutated state in the icon-column prefix segment
+#### Scenario: Hook fires for content buffer entries
+- **WHEN** a content buffer (file preview) is populated
+- **THEN** the hook fires for each bufferline with buffer type `content` and the file path
 
-#### Scenario: No mutation leaves icon column empty
-- **WHEN** no plugin hook is registered or the plugin does not mutate the bufferline
-- **THEN** the icon column renders as empty space (width determined by current icon-column setting) and text uses default styling
+#### Scenario: Hook fires for help buffer entries
+- **WHEN** a help buffer is populated
+- **THEN** the hook fires for each bufferline with buffer type `help`
+
+#### Scenario: Hook fires for quickfix buffer entries
+- **WHEN** a quickfix buffer is populated
+- **THEN** the hook fires for each bufferline with buffer type `quickfix`
+
+#### Scenario: Hook fires for tasks buffer entries
+- **WHEN** a tasks buffer is populated
+- **THEN** the hook fires for each bufferline with buffer type `tasks`
+
+### Requirement: Full bufferline is mutable in hook context
+Inside the `on_bufferline_mutate` hook, the entire bufferline (excluding line numbers) SHALL be mutable. The mutable fields are: `prefix`, `content` (Ansi string), `search_char_position`, `signs`, and `icon`.
+
+#### Scenario: Plugin mutates icon field
+- **WHEN** the hook is invoked for a directory entry
+- **THEN** the plugin can set the `icon` field to a glyph string
+
+#### Scenario: Plugin mutates content with ANSI styling
+- **WHEN** the hook is invoked for a directory entry
+- **THEN** the plugin can prepend ANSI escape sequences to the `content` field to color the text
+
+#### Scenario: Plugin mutates prefix
+- **WHEN** the hook is invoked for any buffer entry
+- **THEN** the plugin can set or modify the `prefix` field
+
+#### Scenario: Plugin mutates signs
+- **WHEN** the hook is invoked for any buffer entry
+- **THEN** the plugin can add, remove, or modify entries in the `signs` field
+
+### Requirement: icon_style field removed from BufferLine
+The `icon_style` field SHALL be removed from `BufferLine`. The core SHALL NOT apply any icon-related foreground styling to content. All content styling is the plugin's responsibility via direct mutation of the `content` Ansi string.
+
+#### Scenario: No core-applied icon styling
+- **WHEN** a bufferline is rendered after hook execution
+- **THEN** the core renders the `content` Ansi string as-is without prepending any icon-related styling
+
+#### Scenario: Plugin styles content directly
+- **WHEN** the plugin wants to color filename text
+- **THEN** it prepends ANSI escape sequences to the `content` field in the hook context
+
+### Requirement: Directory names end with trailing slash
+Directory entry names in bufferline content SHALL always end with a trailing slash (`/`) so that users and plugins can differentiate directories from files by name alone.
+
+#### Scenario: Enumerated directory entry has trailing slash
+- **WHEN** a directory entry is added to a directory buffer via enumeration
+- **THEN** its bufferline content ends with `/`
+
+#### Scenario: File entry has no trailing slash
+- **WHEN** a file entry is added to a directory buffer via enumeration
+- **THEN** its bufferline content does not end with `/`
+
+#### Scenario: Plugin uses trailing slash for identification
+- **WHEN** the hook is invoked for a directory buffer entry
+- **THEN** the plugin can determine directory-ness by checking if the content string ends with `/`
+
+### Requirement: ContentKind enum removed
+After adopting the trailing-slash naming convention, the `ContentKind` enum SHALL be removed. Directory-ness is encoded in the entry name itself (trailing slash), eliminating the need for a separate type flag.
+
+#### Scenario: No ContentKind in enumeration messages
+- **WHEN** enumeration messages are produced by the task runner
+- **THEN** entries are strings (with trailing slash for directories) without a separate `ContentKind` discriminant
+
+#### Scenario: No is_directory parameter in hook
+- **WHEN** the `on_bufferline_mutate` hook is invoked
+- **THEN** there is no `is_directory` field in the context; directory-ness is determined from the content string
+
+### Requirement: Core renders mutated bufferlines without icon styling
+The core rendering pipeline SHALL render the `icon` glyph in the icon-column prefix segment and the `content` Ansi string as-is. The core SHALL NOT apply any foreground color to the icon glyph or content text based on icon-related state.
+
+#### Scenario: Icon rendered without core-applied color
+- **WHEN** a bufferline has an `icon` set and no `icon_style` exists
+- **THEN** the icon glyph is rendered in the icon column using default terminal foreground
+
+#### Scenario: Content rendered as-is
+- **WHEN** a bufferline's `content` contains plugin-prepended ANSI sequences
+- **THEN** the core renders the content without modification
 
 ### Requirement: Directory buffer renders a dedicated icon column
 Directory buffers SHALL render an icon column between line numbers and filename text for each first visual line of a directory entry. The icon column SHALL have a fixed width and SHALL be treated as prefix content. The icon content is determined entirely by the plugin's direct mutation of bufferlines via hooks.
@@ -72,3 +147,10 @@ When a directory entry is focused, the cursor SHALL start at the first filename 
 #### Scenario: Cursor starts at filename start
 - **WHEN** a directory buffer is opened and an entry is focused
 - **THEN** the cursor column maps to the first character of the filename text
+
+### Requirement: No fallback for icon column rendering
+When no plugin is installed, the icon column remains at width `0` and no icon-related styling is applied. Content renders as plain unstyled text.
+
+#### Scenario: No plugin means no icons and no styling
+- **WHEN** `yeet-directory-icons` is not installed
+- **THEN** directory entries render as plain filenames with no icons and no foreground color styling
