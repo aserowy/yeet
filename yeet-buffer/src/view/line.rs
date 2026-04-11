@@ -20,11 +20,6 @@ pub fn add_line_styles(
     let content_width = vp.get_content_width(line);
     let mut ansi = line.content.skip_chars(vp.horizontal_index);
 
-    // Apply plugin-set icon_style color to filename text
-    if let Some(icon_style) = &line.icon_style {
-        ansi.prepend(icon_style);
-    }
-
     let cursor_line_offset = cursor.vertical_index.checked_sub(vp.vertical_index);
     let is_cursor_line = cursor_line_offset == Some(*index);
     let use_cursor_line_bg = is_cursor_line && !vp.hide_cursor_line;
@@ -64,11 +59,6 @@ pub fn add_line_styles_wrap(
     char_offset: usize,
 ) -> Ansi {
     let mut ansi = line.content.clone();
-
-    // Apply plugin-set icon_style color to filename text
-    if let Some(icon_style) = &line.icon_style {
-        ansi.prepend(icon_style);
-    }
 
     let cursor_line_offset = cursor.vertical_index.checked_sub(vp.vertical_index);
     let is_cursor_line = cursor_line_offset == Some(*index);

@@ -133,7 +133,6 @@ fn get_styled_lines<'a>(
                 signs: Vec::new(),
                 prefix: None,
                 icon: None,
-                icon_style: None,
             };
 
             let content = prefix.join(&line::add_line_styles_wrap(
@@ -587,44 +586,43 @@ mod test {
     }
 
     #[test]
-    fn icon_style_applied_to_content_text() {
+    fn plugin_ansi_in_content_applied_to_text() {
         use ratatui::style::Color;
 
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine {
-            icon_style: Some("\x1b[38;2;255;100;0m".to_string()),
-            ..BufferLine::from("myfile.rs")
+            content: crate::model::ansi::Ansi::new("\x1b[38;2;255;100;0mmyfile.rs"),
+            ..Default::default()
         }];
 
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
-        // The icon_style ANSI code should be visible somewhere in the rendered spans
+        // The plugin-prepended ANSI code should be visible in the rendered spans
         let has_fg_color = styled[0]
             .spans
             .iter()
             .any(|span| span.style.fg.is_some() && span.style.fg != Some(Color::Reset));
         assert!(
             has_fg_color,
-            "icon_style should color the content text (some span should have a non-default fg)"
+            "plugin ANSI in content should color the text (some span should have a non-default fg)"
         );
     }
 
     #[test]
-    fn no_icon_style_uses_default_styling() {
+    fn plain_content_uses_default_styling() {
         let vp = tasks_viewport(80, 10);
         let lines = vec![BufferLine::from("myfile.rs")];
 
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
-        // Without icon_style, the content text should not have a custom fg color
-        // from icon styling (it may have cursor_line_bg though)
+        // Without any ANSI in content, the text should not have a custom fg color
         let cursor_line = &styled[0];
         assert_eq!(
             cursor_line.width(),
             usize::from(vp.width),
-            "line without icon_style should still fill viewport width"
+            "line without ANSI content should still fill viewport width"
         );
     }
 

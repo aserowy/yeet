@@ -115,20 +115,21 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 /// Invokes `y.hook.on_bufferline_mutate` callbacks for a single bufferline.
 ///
 /// Each registered callback receives a context table with:
-/// - `filename`: the display name of the entry (string)
-/// - `is_directory`: whether the entry is a directory (bool)
+/// - `buffer_type`: the buffer type string (e.g., "directory", "content", "help", "quickfix", "tasks")
+/// - `path`: the associated path (string or nil) — parent dir for directory buffers, file path for content buffers
+/// - `prefix`: the bufferline prefix (string or nil), mutable
+/// - `content`: the bufferline content as string, mutable
 /// - `icon`: the icon glyph (string or nil), mutable
-/// - `icon_style`: the ANSI foreground color string (string or nil), mutable
 ///
-/// After all callbacks run, `icon` and `icon_style` are read back from the
+/// After all callbacks run, mutable fields are read back from the
 /// context table and applied to the bufferline.
 pub fn invoke_on_bufferline_mutate(
     lua: &crate::LuaConfiguration,
     bl: &mut BufferLine,
-    filename: &str,
-    is_directory: bool,
+    buffer_type: &str,
+    path: &Path,
 ) {
-    if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, filename, is_directory) {
+    if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, buffer_type, path) {
         tracing::error!("error in y.hook.on_bufferline_mutate: {:?}", err);
     }
 }
@@ -136,8 +137,8 @@ pub fn invoke_on_bufferline_mutate(
 fn try_invoke_on_bufferline_mutate(
     lua: &Lua,
     bl: &mut BufferLine,
-    filename: &str,
-    is_directory: bool,
+    buffer_type: &str,
+    path: &Path,
 ) -> LuaResult<()> {
     let y: LuaTable = lua.globals().get("y")?;
     let hook: LuaTable = y.get("hook")?;
@@ -149,14 +150,16 @@ fn try_invoke_on_bufferline_mutate(
     }
 
     let ctx = lua.create_table()?;
-    ctx.set("filename", filename)?;
-    ctx.set("is_directory", is_directory)?;
+    ctx.set("buffer_type", buffer_type)?;
+    ctx.set("path", path.to_string_lossy().to_string())?;
 
+    // Expose full bufferline fields (mutable)
+    if let Some(prefix) = &bl.prefix {
+        ctx.set("prefix", prefix.as_str())?;
+    }
+    ctx.set("content", bl.content.to_string())?;
     if let Some(icon) = &bl.icon {
         ctx.set("icon", icon.as_str())?;
-    }
-    if let Some(icon_style) = &bl.icon_style {
-        ctx.set("icon_style", icon_style.as_str())?;
     }
 
     for i in 1..=len {
@@ -187,9 +190,15 @@ fn try_invoke_on_bufferline_mutate(
         LuaValue::Nil => bl.icon = None,
         _ => {}
     }
-    match ctx.get::<LuaValue>("icon_style")? {
-        LuaValue::String(s) => bl.icon_style = Some(s.to_str()?.to_string()),
-        LuaValue::Nil => bl.icon_style = None,
+    match ctx.get::<LuaValue>("prefix")? {
+        LuaValue::String(s) => bl.prefix = Some(s.to_str()?.to_string()),
+        LuaValue::Nil => bl.prefix = None,
+        _ => {}
+    }
+    match ctx.get::<LuaValue>("content")? {
+        LuaValue::String(s) => {
+            bl.content = yeet_buffer::model::ansi::Ansi::new(s.to_str()?);
+        }
         _ => {}
     }
 

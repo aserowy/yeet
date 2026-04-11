@@ -67,8 +67,8 @@ pub enum LogSeverity {
 
 pub enum Message {
     Keymap(KeymapMessage),
-    EnumerationChanged(PathBuf, Vec<(ContentKind, String)>, Option<String>),
-    EnumerationFinished(PathBuf, Vec<(ContentKind, String)>, Option<String>),
+    EnumerationChanged(PathBuf, Vec<String>, Option<String>),
+    EnumerationFinished(PathBuf, Vec<String>, Option<String>),
     Log(LogSeverity, String),
     FdResult(Vec<PathBuf>),
     HelpHighlighted(usize, Vec<String>),
@@ -138,13 +138,6 @@ impl PartialEq for Preview {
             _ => false,
         }
     }
-}
-
-// TODO: replace with ansi string
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ContentKind {
-    Directory,
-    File,
 }
 
 pub struct Emitter {

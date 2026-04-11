@@ -167,12 +167,13 @@ fn update_directory_buffers_on_add(
             }
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            if dir
-                .buffer
-                .lines
-                .iter()
-                .any(|line| line.content.to_stripped_string() == name)
-            {
+
+            // Check if entry already exists (with or without trailing slash)
+            let name_slash = format!("{name}/");
+            if dir.buffer.lines.iter().any(|line| {
+                let s = line.content.to_stripped_string();
+                s == name || s == name_slash
+            }) {
                 yeet_buffer::update(
                     viewport,
                     mode,
@@ -186,21 +187,18 @@ fn update_directory_buffers_on_add(
             }
 
             let added_existing_directory = dir.buffer.lines.iter().position(|line| {
-                line.content
-                    .to_stripped_string()
-                    .starts_with(&format!("{name}/"))
+                let s = line.content.to_stripped_string();
+                s == name_slash || s.starts_with(&format!("{name}/"))
             });
 
-            let kind = if path.is_dir() {
-                crate::event::ContentKind::Directory
-            } else {
-                crate::event::ContentKind::File
-            };
+            let mut name_with_slash = name.clone();
+            if path.is_dir() && !name_with_slash.ends_with('/') {
+                name_with_slash.push('/');
+            }
 
-            let mut bufferline = enumeration::from_enumeration(&name);
+            let mut bufferline = enumeration::from_enumeration(&name_with_slash);
             if let Some(lua) = lua {
-                let is_dir = matches!(kind, crate::event::ContentKind::Directory);
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut bufferline, &name, is_dir);
+                yeet_lua::invoke_on_bufferline_mutate(lua, &mut bufferline, "directory", path);
             }
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {

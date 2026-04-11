@@ -147,8 +147,6 @@ pub struct BufferLine {
     pub signs: Vec<Sign>,
     /// Icon glyph set by plugin mutation hooks. Rendered in the icon-column prefix segment.
     pub icon: Option<String>,
-    /// ANSI foreground color string for icon glyph and filename text, set by plugin mutation hooks.
-    pub icon_style: Option<String>,
 }
 
 impl BufferLine {

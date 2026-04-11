@@ -28,7 +28,7 @@ use yeet_keymap::{
 
 use crate::{
     error::AppError,
-    event::{ContentKind, Envelope, LogSeverity, Message, MessageSource},
+    event::{Envelope, LogSeverity, Message, MessageSource},
     init::{
         junkyard::{self, cache_and_compress, compress, restore},
         mark::{load_marks_from_file, save_marks_to_file},
@@ -327,13 +327,12 @@ async fn run_task(
                         Some(selection) => {
                             let path = path.join(selection);
                             if path.exists() {
-                                let kind = if path.is_dir() {
-                                    ContentKind::Directory
-                                } else {
-                                    ContentKind::File
-                                };
+                                let mut name = selection.clone();
+                                if path.is_dir() && !name.ends_with('/') {
+                                    name.push('/');
+                                }
 
-                                cache.push((kind, selection.clone()));
+                                cache.push(name);
 
                                 (true, path)
                             } else {
@@ -349,19 +348,17 @@ async fn run_task(
                             break;
                         }
 
-                        let kind = if entry.path().is_dir() {
-                            ContentKind::Directory
-                        } else {
-                            ContentKind::File
-                        };
-
-                        let content = match entry.path().file_name() {
+                        let mut content = match entry.path().file_name() {
                             Some(content) => content.to_str().unwrap_or("").to_string(),
                             None => "".to_string(),
                         };
 
+                        if entry.path().is_dir() && !content.ends_with('/') {
+                            content.push('/');
+                        }
+
                         if !is_selection || entry.path() != selection_path {
-                            cache.push((kind, content));
+                            cache.push(content);
                         }
 
                         if cache.len() >= cache_size {

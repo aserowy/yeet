@@ -9,7 +9,6 @@ use yeet_lua::LuaConfiguration;
 use crate::{
     action::Action,
     error::AppError,
-    event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
     theme::Theme,
     update::{
@@ -23,7 +22,7 @@ pub fn change(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    content: &[(ContentKind, String)],
+    content: &[String],
     selection: &Option<String>,
     theme: &Theme,
     lua: Option<&LuaConfiguration>,
@@ -87,7 +86,7 @@ pub fn finish(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    content: &[(ContentKind, String)],
+    content: &[String],
     selection: &Option<String>,
     theme: &Theme,
     lua: Option<&LuaConfiguration>,
@@ -202,7 +201,7 @@ fn set_directory_content(
     mut viewport: Option<&mut ViewPort>,
     buffer: &mut DirectoryBuffer,
     path: &PathBuf,
-    contents: &[(ContentKind, String)],
+    contents: &[String],
     selection: &Option<String>,
     theme: &Theme,
     lua: Option<&LuaConfiguration>,
@@ -212,14 +211,20 @@ fn set_directory_content(
     let is_first_changed_event = buffer.buffer.lines.is_empty();
     let content: Vec<BufferLine> = contents
         .iter()
-        .map(|(knd, cntnt)| {
+        .map(|cntnt| {
             let mut line = from_enumeration(cntnt);
             if let Some(lua) = lua {
-                let is_dir = matches!(knd, ContentKind::Directory);
-                yeet_lua::invoke_on_bufferline_mutate(lua, &mut line, cntnt, is_dir);
+                let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut line,
+                    "directory",
+                    &path.join(bare_name),
+                );
             }
-            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt), theme);
-            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt), theme);
+            let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
+            set_sign_if_marked(&state.marks, &mut line, &path.join(bare_name), theme);
+            set_sign_if_qfix(&state.qfix, &mut line, &path.join(bare_name), theme);
 
             line
         })
@@ -325,7 +330,7 @@ mod test {
             &mut state,
             &mut app,
             &current_path,
-            &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
+            &["Cargo.toml".to_string()],
             &None,
             &theme,
             None,
@@ -411,7 +416,7 @@ mod test {
             &mut state,
             &mut app,
             &base,
-            &[(crate::event::ContentKind::File, file_name.to_string())],
+            &[file_name.to_string()],
             &None,
             &theme,
             None,

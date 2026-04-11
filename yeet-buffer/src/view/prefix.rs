@@ -27,7 +27,7 @@ pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
 ///
 /// If the viewport `icon_column_width` is `0`, returns an empty string.
 /// Otherwise, renders the bufferline's `icon` glyph (if set by a plugin
-/// mutation hook) with its `icon_style` ANSI color, or empty space as fallback.
+/// mutation hook) as-is, or empty space as fallback.
 pub fn get_icon_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
     let width = vp.icon_column_width;
     if width == 0 {
@@ -37,10 +37,7 @@ pub fn get_icon_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> A
     let reset = style::ansi_reset_with_bg(theme.buffer_bg);
 
     match &bl.icon {
-        Some(icon) => {
-            let style_prefix = bl.icon_style.as_deref().unwrap_or("");
-            Ansi::new(&format!("{}{}{}", style_prefix, icon, reset))
-        }
+        Some(icon) => Ansi::new(&format!("{}{}", icon, reset)),
         None => Ansi::new(&" ".repeat(width)),
     }
 }
@@ -186,39 +183,37 @@ mod test {
     }
 
     #[test]
-    fn icon_column_applies_icon_style() {
+    fn icon_column_applies_color_from_icon_string() {
         let vp = ViewPort {
             icon_column_width: 1,
             ..Default::default()
         };
         let bl = BufferLine {
-            icon: Some("\u{f0f6}".to_string()),
-            icon_style: Some("\x1b[38;2;255;0;0m".to_string()),
+            icon: Some("\x1b[38;2;255;0;0m\u{f0f6}\x1b[0m".to_string()),
             ..Default::default()
         };
         let result = get_icon_column(&vp, &bl, &test_theme());
         let raw = format!("{}", result);
         assert!(
             raw.contains("\x1b[38;2;255;0;0m"),
-            "icon_style ANSI should be present in rendered output"
+            "ANSI color in icon string should be present in rendered output"
         );
     }
 
     #[test]
-    fn icon_column_no_style_still_renders_icon() {
+    fn icon_column_no_color_still_renders_icon() {
         let vp = ViewPort {
             icon_column_width: 1,
             ..Default::default()
         };
         let bl = BufferLine {
             icon: Some("\u{f0f6}".to_string()),
-            icon_style: None,
             ..Default::default()
         };
         let result = get_icon_column(&vp, &bl, &test_theme());
         assert!(
             result.to_stripped_string().contains('\u{f0f6}'),
-            "icon glyph should render even without icon_style"
+            "icon glyph should render even without ANSI color"
         );
     }
 }
