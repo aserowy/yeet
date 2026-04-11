@@ -2,7 +2,7 @@
 
 Directory buffers currently present line numbers/signs and filename text, but there is no icon affordance for fast file-type recognition. The requested change introduces a hook-driven icon system where the core provides mutation hooks — integrated into all buffer population code paths — with full bufferline fields and buffer-type metadata, and an external plugin (`yeet-directory-icons`) owns all icon identification and text color logic. The plugin is loaded through the existing user plugin configuration path.
 
-This touches multiple surfaces at once: plugin sourcing/loading, expanded hook infrastructure across all buffer types, buffer prefix rendering, cursor/edit-column semantics, trailing-slash naming convention for directories, removal of `ContentKind`, removal of `icon_style`, and theme token interaction between plugins.
+This touches multiple surfaces at once: plugin sourcing/loading, expanded hook infrastructure across all buffer types, buffer prefix rendering, cursor/edit-column semantics, trailing-slash naming convention for directories, removal of `ContentKind`, removal of `icon_style`, theme token interaction between plugins, and the design principle that all public-facing hook APIs use object-based metadata for extensibility.
 
 ## Goals / Non-Goals
 
@@ -13,8 +13,9 @@ This touches multiple surfaces at once: plugin sourcing/loading, expanded hook i
 - Implement shared `@yeet-buffer` icon-column rendering so the directory window (three `@yeet-buffer` instances) uses the same rendering path.
 - Ensure the icon column is UI prefix content only and is not part of underlying editable buffer text.
 - Use icon-column length default `0`; when `yeet-directory-icons` is loaded/executed it sets length to `1` via `on_window_create` hook.
-- Expand `on_bufferline_mutate` to fire for all buffer types with full bufferline fields (prefix, content, search_char_position, signs, icon) and buffer-type metadata (buffer type name + path where applicable).
-- The plugin checks the buffer type in each hook invocation and decides whether to act (e.g., only process `directory` type buffers).
+- Expand `on_bufferline_mutate` to fire for all buffer types with full bufferline fields (prefix, content, search_char_position, signs, icon) and a read-only `buffer` metadata object (`ctx.buffer`) containing `type` (string) and `path` (string).
+- The plugin checks the buffer type via `ctx.buffer.type` in each hook invocation and decides whether to act (e.g., only process `directory` type buffers).
+- All public-facing hook APIs SHALL use object-based metadata patterns (e.g., `ctx.buffer`) to ensure extensibility — new metadata fields can be added without breaking existing plugin code or changing the mutable field surface.
 - Remove the `icon_style` field from `BufferLine`. The plugin handles all content styling by mutating the `content` Ansi string directly. The core does not apply any icon-related styling.
 - All icon identification logic (glyph resolution by extension, filename, directory name) lives entirely in the plugin.
 - All text color/styling logic lives entirely in the plugin, applied by mutating the content Ansi string.
@@ -38,10 +39,10 @@ This touches multiple surfaces at once: plugin sourcing/loading, expanded hook i
    - Rationale: Matches expected user workflow and avoids introducing unrelated plugin-manager scope.
    - Alternative considered: Vendoring as repository submodule. Rejected because user will install/configure plugin normally.
 
-2. Hook fires for all buffer types with buffer-type metadata
-   - Decision: The `on_bufferline_mutate` hook fires for every buffer type (directory, content, help, quickfix, tasks) when bufferlines are created or updated. Each invocation includes the buffer type as a string (matching `Buffer` enum variant names) and path metadata where applicable (parent path for directory buffers, file path for content buffers). The plugin checks the buffer type and decides whether to act.
-   - Rationale: A universal hook allows any plugin to customize any buffer type. The buffer-type metadata lets plugins filter efficiently. This is more extensible than wiring hooks only into directory code paths.
-   - Alternative considered: Hooks only for directory buffers. Rejected because it limits future plugin capabilities and creates an artificial boundary.
+2. Hook fires for all buffer types with buffer metadata object
+   - Decision: The `on_bufferline_mutate` hook fires for every buffer type (directory, content, help, quickfix, tasks) when bufferlines are created or updated. Each invocation provides a read-only `buffer` metadata object (`ctx.buffer`) containing `type` (string matching `Buffer` enum variant names) and optionally `path` (parent path for directory buffers, file path for content buffers; absent/nil for help, quickfix, tasks). The plugin checks `ctx.buffer.type` and decides whether to act.
+   - Rationale: A universal hook allows any plugin to customize any buffer type. The `buffer` metadata object lets plugins filter efficiently. Using an object (rather than flat fields) ensures extensibility — future metadata (e.g., buffer ID, line index) can be added as new fields on `ctx.buffer` without breaking existing plugins. Making `path` optional (nil when no path exists) keeps the metadata truthful — buffer types without paths don't expose an empty string that could be misinterpreted.
+   - Alternative considered: Flat `buffer_type` and `path` fields on the context table. Rejected because flat fields make it harder to add new metadata without potentially conflicting with mutable field names; an object namespace cleanly separates read-only metadata from mutable bufferline fields.
 
 3. Full bufferline mutation in hook context
    - Decision: The hook context exposes all bufferline fields for mutation: `prefix`, `content` (Ansi string), `search_char_position`, `signs`, and `icon`. Line numbers are excluded (they are viewport metadata, not bufferline data). The plugin directly mutates these fields in-place.
@@ -76,12 +77,13 @@ This touches multiple surfaces at once: plugin sourcing/loading, expanded hook i
    - Decision: Maintain logical cursor column origin at filename start; icon column is render-only and excluded from underlying buffer text.
    - Rationale: Prevents accidental edits to decorative metadata and preserves modal editing expectations.
 
-10. Plugin-owned class mapping for icon + text styling
-    - Decision: The plugin maintains one easy-to-extend class mapping list that drives both icon and filename text styling. The plugin applies styling by mutating the content Ansi string directly — no separate `icon_style` field is involved.
-    - Rationale: Plugin-owned mappings keep all domain knowledge in the plugin. Direct Ansi mutation gives the plugin complete control over styling.
+11. DirectoryIconsColor theme tokens for all color mappings
+    - Decision: The plugin registers a `DirectoryIconsColor*` theme token for every unique color in its rule set during `setup()`. Each mapping entry (extension, filename, directory name) references a token name. During bufferline mutation, the plugin resolves colors by reading these tokens from `y.theme`. Default values are set during `setup()` only if the token is not already present. Token names follow the pattern `DirectoryIconsColor<Identifier>` (e.g., `DirectoryIconsColorRs`, `DirectoryIconsColorMakefile`, `DirectoryIconsColorDefaultDirectory`).
+    - Rationale: Registering all colors as theme tokens makes every icon/text color user-overrideable via `y.theme`. Theme plugins (e.g., `yeet-bluloco-theme`) can override any or all tokens. The "set only if absent" pattern during `setup()` ensures theme plugins loaded before the icons plugin take priority.
+    - Alternative considered: Using hardcoded hex values during mutation and only exposing `BufferFileFg`/`BufferDirectoryFg` as fallbacks. Rejected because it limits per-extension color customization.
 
-11. Nerd Font color defaults with overrideable tokens
-    - Decision: The plugin seeds defaults from original Nerd Font icon colors. Plugin-defined tokens are used for icon/text color classes. Directories receive their own distinct icon token. Theme plugins can override these tokens; the directory-icons plugin checks for existing theme values and does not overwrite them.
+12. Nerd Font color defaults with overrideable DirectoryIconsColor tokens
+    - Decision: The plugin seeds defaults from original Nerd Font icon colors into `DirectoryIconsColor*` tokens. Directories receive their own distinct token (`DirectoryIconsColorDefaultDirectory`). Theme plugins can override these tokens; the directory-icons plugin checks for existing theme values and does not overwrite them. The `yeet-bluloco-theme` plugin provides override values for all `DirectoryIconsColor*` tokens.
     - Rationale: Provides recognizable out-of-the-box visuals while preserving full customization. Theme plugin priority ensures consistent theming across all plugins.
 
 12. Remove legacy directory-entry colorization without fallback
@@ -110,11 +112,13 @@ This touches multiple surfaces at once: plugin sourcing/loading, expanded hook i
 2. Remove `ContentKind` enum and update all message types and consumers to use plain strings with trailing-slash convention.
 3. Remove `is_directory` parameter from `invoke_on_bufferline_mutate` hook interface.
 4. Remove `icon_style` field from `BufferLine` and all related core styling logic (prepend in `line.rs`, style in `prefix.rs`).
-5. Expand `on_bufferline_mutate` hook context to provide full bufferline fields (prefix, content, search_char_position, signs, icon) and buffer-type metadata.
+5. Restructure `on_bufferline_mutate` hook context to use a read-only `buffer` metadata object (`ctx.buffer` with `type` and optional `path` fields) instead of flat `buffer_type`/`path` fields. The `path` field is only set for buffer types with an associated path (directory, content); it is absent/nil for help, quickfix, tasks.
+6. Make `path` optional in `invoke_on_bufferline_mutate` — pass `Option<&Path>` instead of `&Path`. Only set `ctx.buffer.path` when a path is provided.
 6. Add hook invocation to all buffer population code paths (content buffer, help buffer, quickfix buffer, tasks buffer) in addition to existing directory buffer paths.
 7. Remove legacy built-in directory colorization path (already done; verify no fallback remains).
 8. Ensure icon column rendering in `prefix.rs` works without `icon_style` — render icon glyph as-is from the `icon` field.
-9. Update `yeet-directory-icons` plugin to: check buffer type, use trailing-slash for directory detection, style content by mutating Ansi string, include ANSI color in icon string, respect existing theme token values.
+9. Update `yeet-directory-icons` plugin to: check `ctx.buffer.type` for buffer type, use trailing-slash for directory detection, register `DirectoryIconsColor*` theme tokens during `setup()` (set only if absent), resolve colors from theme tokens during mutation, include ANSI color in icon string.
+10. Update `yeet-bluloco-theme` plugin to set all `DirectoryIconsColor*` tokens as overrides.
 10. Update cursor mapping logic for non-editable icon column semantics (already done; verify still correct).
 11. Update documentation for hook contract changes, trailing-slash convention, and theme interaction.
 12. Run full check suite: `cargo fmt`, `cargo clippy`, `cargo test`, `markdownlint`, `nix build`.

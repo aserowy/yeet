@@ -25,28 +25,36 @@ The directory window SHALL use shared `@yeet-buffer` icon-column rendering acros
 - **WHEN** a directory window renders its three `@yeet-buffer` instances
 - **THEN** each instance uses the shared `@yeet-buffer` icon-column function/contract for prefix rendering
 
-### Requirement: Hook fires for all buffer types with buffer-type metadata
-The `on_bufferline_mutate` hook SHALL fire for all buffer types — not just directory buffers. Each hook invocation SHALL provide the buffer type as metadata so the plugin can determine which buffer it is processing. Buffer-type metadata SHALL use the `Buffer` enum variant names (e.g., `directory`, `content`, `help`, `quickfix`, `tasks`). Directory buffers include the parent path; content buffers include the file path.
+### Requirement: Hook fires for all buffer types with buffer metadata object
+The `on_bufferline_mutate` hook SHALL fire for all buffer types — not just directory buffers. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) on the hook context table. The `buffer` object SHALL contain a `type` field (string matching `Buffer` enum variant names: `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`). The `buffer` object SHALL contain a `path` field only for buffer types with an associated path (parent path for directory buffers, file path for content buffers). For buffer types without an associated path (help, quickfix, tasks), the `path` field SHALL be absent (nil). Using a dedicated metadata object ensures the API is extensible — new metadata fields can be added without changing the mutable field surface or breaking existing plugins.
 
 #### Scenario: Hook fires for directory buffer entries
 - **WHEN** directory content is set or updated via `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded`
-- **THEN** the hook fires for each bufferline with buffer type `directory` and the parent directory path
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"directory"` and `ctx.buffer.path` set to the parent directory path
 
 #### Scenario: Hook fires for content buffer entries
 - **WHEN** a content buffer (file preview) is populated
-- **THEN** the hook fires for each bufferline with buffer type `content` and the file path
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"content"` and `ctx.buffer.path` set to the file path
 
 #### Scenario: Hook fires for help buffer entries
 - **WHEN** a help buffer is populated
-- **THEN** the hook fires for each bufferline with buffer type `help`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"help"` and `ctx.buffer.path` absent (nil)
 
 #### Scenario: Hook fires for quickfix buffer entries
 - **WHEN** a quickfix buffer is populated
-- **THEN** the hook fires for each bufferline with buffer type `quickfix`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"quickfix"` and `ctx.buffer.path` absent (nil)
 
 #### Scenario: Hook fires for tasks buffer entries
 - **WHEN** a tasks buffer is populated
-- **THEN** the hook fires for each bufferline with buffer type `tasks`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"tasks"` and `ctx.buffer.path` absent (nil)
+
+#### Scenario: Buffer metadata object is read-only
+- **WHEN** a plugin modifies `ctx.buffer.type` or `ctx.buffer.path` in a hook callback
+- **THEN** the changes are NOT read back into the core; the `buffer` object is informational only
+
+#### Scenario: Buffer metadata object is extensible
+- **WHEN** a future core version adds additional metadata (e.g., buffer ID)
+- **THEN** it can be added as a new field on `ctx.buffer` without changing the existing `type`/`path` contract or breaking existing plugins
 
 ### Requirement: Full bufferline is mutable in hook context
 Inside the `on_bufferline_mutate` hook, the entire bufferline (excluding line numbers) SHALL be mutable. The mutable fields are: `prefix`, `content` (Ansi string), `search_char_position`, `signs`, and `icon`.

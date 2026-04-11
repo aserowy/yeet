@@ -26,32 +26,32 @@ At startup, existing plugin loading SHALL make `yeet-directory-icons` available 
 - **WHEN** `yeet-directory-icons` is configured but fails to load
 - **THEN** the system reports a plugin loading diagnostic and continues with icon-column width `0`
 
-### Requirement: Mutation hook fires for all buffer types with buffer-type metadata
-The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide the buffer type (e.g., `directory`, `content`, `help`, `quickfix`, `tasks`) as metadata alongside the full bufferline context. The plugin decides which buffer types to process.
+### Requirement: Mutation hook fires for all buffer types with buffer metadata object
+The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) containing `type` (e.g., `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`) and optionally `path` (parent dir for directory, file path for content; absent/nil for help, quickfix, tasks). The plugin decides which buffer types to process by checking `ctx.buffer.type`.
 
 #### Scenario: Hook fires for directory buffer entries
 - **WHEN** the core handles `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded` and processes a bufferline
-- **THEN** the hook fires with buffer type `directory` and the parent directory path
+- **THEN** the hook fires with `ctx.buffer.type` set to `"directory"` and `ctx.buffer.path` set to the parent directory path
 
 #### Scenario: Hook fires for content buffer entries
 - **WHEN** the core populates a content buffer (file preview)
-- **THEN** the hook fires for each bufferline with buffer type `content` and the file path
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"content"` and `ctx.buffer.path` set to the file path
 
 #### Scenario: Hook fires for help buffer entries
 - **WHEN** the core populates a help buffer
-- **THEN** the hook fires for each bufferline with buffer type `help`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"help"` and `ctx.buffer.path` absent (nil)
 
 #### Scenario: Hook fires for quickfix buffer entries
 - **WHEN** the core populates a quickfix buffer
-- **THEN** the hook fires for each bufferline with buffer type `quickfix`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"quickfix"` and `ctx.buffer.path` absent (nil)
 
 #### Scenario: Hook fires for tasks buffer entries
 - **WHEN** the core populates a tasks buffer
-- **THEN** the hook fires for each bufferline with buffer type `tasks`
+- **THEN** the hook fires for each bufferline with `ctx.buffer.type` set to `"tasks"` and `ctx.buffer.path` absent (nil)
 
 #### Scenario: Plugin directly mutates bufferline via hook context
-- **WHEN** the plugin receives a hook call with bufferline and buffer-type metadata
-- **THEN** the plugin can mutate `prefix`, `content`, `search_char_position`, `signs`, and `icon` fields in-place
+- **WHEN** the plugin receives a hook call with bufferline and `ctx.buffer` metadata object
+- **THEN** the plugin can mutate `prefix`, `content`, `search_char_position`, `signs`, and `icon` fields in-place on the context table; the `buffer` metadata object is read-only
 
 ### Requirement: Deferred PathsAdded hooks fire on flush
 When `PathsAdded` events are deferred during Insert mode, the per-bufferline mutation hooks SHALL also be deferred. Hooks fire when deferred events are flushed (after leaving Insert mode).

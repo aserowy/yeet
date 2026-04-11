@@ -4,22 +4,22 @@
 The `yeet-directory-icons` plugin SHALL contain all logic for determining which icon glyph to display and how to color both the icon glyph and the filename text. The core SHALL NOT contain any icon resolution tables, extension mappings, or color rules; it only invokes hooks and the plugin directly mutates bufferlines.
 
 ### Requirement: Plugin checks buffer type before acting
-The plugin SHALL check the buffer type metadata provided in each `on_bufferline_mutate` hook invocation and only mutate bufferlines for file/directory-related buffer types (e.g., `directory` type). The plugin SHALL skip non-file buffer types (e.g., `help`, `quickfix`, `tasks`).
+The plugin SHALL check the buffer type via the `ctx.buffer.type` field (from the read-only `buffer` metadata object) provided in each `on_bufferline_mutate` hook invocation and only mutate bufferlines for file/directory-related buffer types (e.g., `"directory"` type). The plugin SHALL skip non-file buffer types (e.g., `"help"`, `"quickfix"`, `"tasks"`).
 
 #### Scenario: Plugin processes directory buffer entries
-- **WHEN** the hook fires with buffer type `directory`
+- **WHEN** the hook fires with `ctx.buffer.type` equal to `"directory"`
 - **THEN** the plugin resolves the icon and colors for the entry and mutates the bufferline
 
 #### Scenario: Plugin skips help buffer entries
-- **WHEN** the hook fires with buffer type `help`
+- **WHEN** the hook fires with `ctx.buffer.type` equal to `"help"`
 - **THEN** the plugin does not mutate the bufferline
 
 #### Scenario: Plugin skips quickfix buffer entries
-- **WHEN** the hook fires with buffer type `quickfix`
+- **WHEN** the hook fires with `ctx.buffer.type` equal to `"quickfix"`
 - **THEN** the plugin does not mutate the bufferline
 
 #### Scenario: Plugin skips tasks buffer entries
-- **WHEN** the hook fires with buffer type `tasks`
+- **WHEN** the hook fires with `ctx.buffer.type` equal to `"tasks"`
 - **THEN** the plugin does not mutate the bufferline
 
 ### Requirement: Plugin uses trailing slash to detect directories
@@ -45,11 +45,11 @@ The plugin SHALL apply foreground color to filename text by prepending ANSI esca
 - **THEN** the icon string includes the ANSI foreground color prefix and a reset suffix so the icon renders in color
 
 ### Requirement: Plugin directly mutates bufferlines via hooks
-The plugin SHALL implement hook handlers that are invoked for each bufferline across all buffer types. Each hook call receives the complete bufferline fields and buffer-type metadata. The plugin directly mutates the bufferline fields in-place. There is no request/response pattern.
+The plugin SHALL implement hook handlers that are invoked for each bufferline across all buffer types. Each hook call receives the complete bufferline fields and a read-only `buffer` metadata object (`ctx.buffer`) with `type` and optionally `path` fields. The plugin directly mutates the bufferline fields in-place. There is no request/response pattern.
 
 #### Scenario: Plugin receives full bufferline context
 - **WHEN** the core invokes the hook for a bufferline
-- **THEN** the hook provides mutable access to `prefix`, `content`, `search_char_position`, `signs`, and `icon`, plus read-only buffer-type metadata
+- **THEN** the hook provides mutable access to `prefix`, `content`, `search_char_position`, `signs`, and `icon`, plus a read-only `ctx.buffer` metadata object with `type` and optionally `path` fields
 
 #### Scenario: Plugin sets icon glyph for a recognized file
 - **WHEN** the plugin's hook handler receives a bufferline for a file with extension `.rs` in a directory buffer
@@ -93,23 +93,39 @@ The directory-icons plugin SHALL use a single, easy-to-extend mapping configurat
 - **WHEN** a file entry has a filename/extension with a corresponding Nerd Font icon in the default set
 - **THEN** the plugin's icon/class/color mutation uses the preseeded default mapping for that file entry
 
-### Requirement: Plugin-defined token names
-The plugin SHALL define its own token names for icon/text color classes. The core does not standardize icon-color token class names. Directories SHALL use a distinct icon token separate from the file default token.
+### Requirement: Plugin registers DirectoryIconsColor theme tokens
+The plugin SHALL register a `DirectoryIconsColor*` theme token for every unique color in its rule set. Token names SHALL follow the pattern `DirectoryIconsColor<Identifier>` where `<Identifier>` is derived from the extension, filename, or directory name (e.g., `DirectoryIconsColorRs`, `DirectoryIconsColorTxt`, `DirectoryIconsColorMakefile`, `DirectoryIconsColorDotEnv`, `DirectoryIconsColorGoMod`, `DirectoryIconsColorDefaultDirectory`, `DirectoryIconsColorDefaultFile`). During `setup()`, the plugin SHALL set each token's default value in `y.theme` ONLY if the token is not already set. During bufferline mutation, the plugin SHALL resolve colors by reading these tokens from `y.theme`, not from hardcoded hex values. This makes every icon/text color user-overrideable.
+
+#### Scenario: Plugin sets token defaults during setup
+- **WHEN** `yeet-directory-icons` runs `setup()` and a `DirectoryIconsColor*` token is not yet set in `y.theme`
+- **THEN** the plugin sets the token to the built-in Nerd Font default hex color
+
+#### Scenario: Plugin does not overwrite existing token
+- **WHEN** `yeet-directory-icons` runs `setup()` and a `DirectoryIconsColor*` token is already set in `y.theme` by a theme plugin
+- **THEN** the plugin leaves the existing value unchanged
+
+#### Scenario: Plugin uses token value during mutation
+- **WHEN** the plugin mutates a bufferline for a `*.rs` file
+- **THEN** it reads the color from `y.theme.DirectoryIconsColorRs` and uses that color for ANSI styling
+
+#### Scenario: All extension/filename/directory color tokens are registered
+- **WHEN** `setup()` completes
+- **THEN** every unique color mapping in `ext_map`, `name_map`, and `dir_map` has a corresponding `DirectoryIconsColor*` token in `y.theme`
 
 #### Scenario: Directory entries use a separate token from file entries
 - **WHEN** the plugin mutates a directory entry's bufferline
-- **THEN** the applied color token is a directory-specific token, distinct from the default file icon token
+- **THEN** the applied color token is a directory-specific token (e.g., `DirectoryIconsColorDefaultDirectory`), distinct from the default file icon token (`DirectoryIconsColorDefaultFile`)
 
 ### Requirement: Plugin respects existing theme token values
-When a theme plugin (e.g., `yeet-bluloco-theme`) sets theme tokens before `yeet-directory-icons` runs, the directory-icons plugin SHALL check for existing theme values and NOT overwrite them. The plugin only sets default values for tokens that have not been set by a theme plugin.
+When a theme plugin (e.g., `yeet-bluloco-theme`) sets `DirectoryIconsColor*` theme tokens before `yeet-directory-icons` runs `setup()`, the directory-icons plugin SHALL check for existing theme values and NOT overwrite them. The plugin only sets default values for tokens that have not been set by a theme plugin.
 
 #### Scenario: Theme plugin sets token first
-- **WHEN** `yeet-bluloco-theme` sets `BufferDirectoryFg` to a custom color before `yeet-directory-icons` processes entries
-- **THEN** `yeet-directory-icons` uses the theme-provided color and does not overwrite it with its own default
+- **WHEN** `yeet-bluloco-theme` sets `DirectoryIconsColorDefaultDirectory` to a custom color before `yeet-directory-icons.setup()` runs
+- **THEN** `yeet-directory-icons` uses the theme-provided color and does not overwrite it
 
 #### Scenario: No theme override uses plugin default
-- **WHEN** no theme plugin has set a color for a given icon token
-- **THEN** `yeet-directory-icons` uses its own built-in Nerd Font default color
+- **WHEN** no theme plugin has set a color for `DirectoryIconsColorRs`
+- **THEN** `yeet-directory-icons` sets `DirectoryIconsColorRs` to its built-in Nerd Font default color during `setup()`
 
 ### Requirement: Plugin fallback safety
 If the plugin's hook handler fails for any reason, the core SHALL preserve the bufferline in its pre-hook state (empty icon column, default text content) so buffer rendering continues without error.

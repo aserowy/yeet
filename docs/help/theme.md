@@ -152,19 +152,28 @@ Foreground color of the mark sign in the sign column. Marked entries are indicat
 
 ## Icon Tokens
 
-Icon color tokens are defined by the `yeet-directory-icons` plugin, not by the core. The plugin maps file extensions and directory names to icon classes, each with a default color. Override any icon class token via `y.theme`:
+Icon and text colors in directory buffers are controlled by the `yeet-directory-icons` plugin, not by the core. The plugin has built-in color defaults for each file extension and directory name. Without the plugin, directory entries are plain unstyled text.
+
+### Theme Plugin Priority
+
+When a theme plugin (e.g., `yeet-bluloco-theme`) sets `BufferFileFg` or `BufferDirectoryFg` before the icons plugin processes entries, the icons plugin respects the theme-provided values and uses them as the effective colors. The icons plugin only uses its own built-in defaults when the theme has not set these tokens.
+
+Load order determines priority: theme plugins loaded before `yeet-directory-icons` take precedence for these tokens.
+
+### Fallback Colors
+
+When a file or directory does not match any specific icon rule in the plugin, the plugin falls back to:
+
+- **`BufferFileFg`** for unrecognized files
+- **`BufferDirectoryFg`** for unrecognized directories
+
+Override these tokens to change the fallback colors:
 
 ```lua
 y = {
   theme = {
-    -- Override the Rust icon color
-    IconRust = "#E57373",
-    -- Override the directory icon color
-    IconDirectory = "#42A5F5",
+    BufferFileFg = "#abb2bf",
+    BufferDirectoryFg = "#3691ff",
   }
 }
 ```
-
-Token names depend on the plugin. Refer to the `yeet-directory-icons` plugin documentation for the full list of icon class tokens.
-
-When a file or directory does not match any icon class, the plugin falls back to `BufferFileFg` (for files) or `BufferDirectoryFg` (for directories). Override these tokens to change the fallback colors.

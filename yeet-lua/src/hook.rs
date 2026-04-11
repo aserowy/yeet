@@ -115,14 +115,16 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 /// Invokes `y.hook.on_bufferline_mutate` callbacks for a single bufferline.
 ///
 /// Each registered callback receives a context table with:
-/// - `buffer_type`: the buffer type string (e.g., "directory", "content", "help", "quickfix", "tasks")
-/// - `path`: the associated path (string or nil) — parent dir for directory buffers, file path for content buffers
+/// - `buffer`: read-only metadata object containing:
+///   - `type`: the buffer type string (e.g., "directory", "content", "help", "quickfix", "tasks")
+///   - `path`: the associated path (string) — parent dir for directory buffers, file path for content buffers, empty for others
 /// - `prefix`: the bufferline prefix (string or nil), mutable
 /// - `content`: the bufferline content as string, mutable
 /// - `icon`: the icon glyph (string or nil), mutable
 ///
 /// After all callbacks run, mutable fields are read back from the
-/// context table and applied to the bufferline.
+/// context table and applied to the bufferline. The `buffer` metadata
+/// object is not read back.
 pub fn invoke_on_bufferline_mutate(
     lua: &crate::LuaConfiguration,
     bl: &mut BufferLine,
@@ -150,8 +152,12 @@ fn try_invoke_on_bufferline_mutate(
     }
 
     let ctx = lua.create_table()?;
-    ctx.set("buffer_type", buffer_type)?;
-    ctx.set("path", path.to_string_lossy().to_string())?;
+
+    // Build read-only buffer metadata object
+    let buffer_meta = lua.create_table()?;
+    buffer_meta.set("type", buffer_type)?;
+    buffer_meta.set("path", path.to_string_lossy().to_string())?;
+    ctx.set("buffer", buffer_meta)?;
 
     // Expose full bufferline fields (mutable)
     if let Some(prefix) = &bl.prefix {
@@ -195,11 +201,8 @@ fn try_invoke_on_bufferline_mutate(
         LuaValue::Nil => bl.prefix = None,
         _ => {}
     }
-    match ctx.get::<LuaValue>("content")? {
-        LuaValue::String(s) => {
-            bl.content = yeet_buffer::model::ansi::Ansi::new(&s.to_str()?);
-        }
-        _ => {}
+    if let LuaValue::String(s) = ctx.get::<LuaValue>("content")? {
+        bl.content = yeet_buffer::model::ansi::Ansi::new(&s.to_str()?);
     }
 
     Ok(())

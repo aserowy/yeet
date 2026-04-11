@@ -3,10 +3,11 @@
 - [x] 1.1 Wire existing startup/plugin loading so user-configured `yeet-directory-icons` is available to directory rendering
 - [x] 1.2 Add runtime diagnostics for `yeet-directory-icons` configuration/load failures
 - [x] 1.3 Expand `on_bufferline_mutate` hook context to provide full bufferline fields (prefix, content, search_char_position, signs, icon) and buffer-type metadata (type string + path where applicable)
+- [x] 1.3a Restructure `on_bufferline_mutate` hook context to use a read-only `buffer` metadata object (`ctx.buffer` with `type` and `path` fields) instead of flat `buffer_type`/`path` fields for extensibility
 - [x] 1.4 Remove `is_directory` parameter from `invoke_on_bufferline_mutate` since directory-ness is now encoded in trailing slash
-- [ ] 1.5 Add hook invocation to content buffer population (file preview in `preview.rs`)
-- [ ] 1.6 Add hook invocation to help buffer population (`command/help.rs`)
-- [ ] 1.7 Add hook invocation to quickfix buffer population (`command/qfix/window.rs`)
+- [x] 1.5 Add hook invocation to content buffer population (file preview in `preview.rs`)
+- [x] 1.6 Add hook invocation to help buffer population (`command/help.rs`)
+- [x] 1.7 Add hook invocation to quickfix buffer population (`command/qfix/window.rs`)
 - [x] 1.8 Add hook invocation to tasks buffer population (`command/task.rs`)
 - [x] 1.9 Ensure deferred `PathsAdded` events (Insert mode) also defer mutation hook invocation; hooks fire on flush when events are processed after leaving Insert mode
 - [x] 1.10 Register plugin `on_window_create` hook to set shared `@yeet-buffer` icon-column width to `1`
@@ -60,16 +61,19 @@
 
 ## 7. Plugin Update (yeet-directory-icons)
 
-- [ ] 7.1 Update plugin to check buffer type metadata and only process `directory` type buffers
-- [ ] 7.2 Update plugin to detect directories by trailing slash instead of `is_directory` context field
-- [ ] 7.3 Update plugin to style content by prepending ANSI escape sequences to the `content` field instead of setting `icon_style`
-- [ ] 7.4 Update plugin to include ANSI color in the `icon` string value (color prefix + glyph + reset suffix)
-- [ ] 7.5 Update plugin to check for existing theme token values before setting defaults (theme plugin priority)
-- [ ] 7.6 Strip trailing slash from filename before icon resolution (so `.git/` maps to `.git` in dir_map)
+- [x] 7.1 Update plugin to check buffer type metadata and only process `directory` type buffers
+- [x] 7.1a Update plugin to use `ctx.buffer.type` (metadata object) instead of `ctx.buffer_type` (flat field) for buffer type checking
+- [x] 7.2 Update plugin to detect directories by trailing slash instead of `is_directory` context field
+- [x] 7.3 Update plugin to style content by prepending ANSI escape sequences to the `content` field instead of setting `icon_style`
+- [x] 7.4 Update plugin to include ANSI color in the `icon` string value (color prefix + glyph + reset suffix)
+- [x] 7.5 Update plugin to check for existing theme token values before setting defaults (theme plugin priority)
+- [x] 7.6 Strip trailing slash from filename before icon resolution (so `.git/` maps to `.git` in dir_map)
 
 ## 8. Validation and Documentation
 
-- [ ] 8.1 Update `docs/help/hooks.md` for expanded hook context (full bufferline fields, buffer-type metadata, no `is_directory`)
-- [ ] 8.2 Update `docs/help/theme.md` for theme plugin interaction and token priority
-- [ ] 8.3 Run required checks: `markdownlint` (docs markdown), `cargo fmt`, `cargo clippy`, `cargo test`, and `git add -A && nix build .`
-- [ ] 8.4 Address all check failures and finalize implementation readiness for review
+- [x] 8.1 Update `docs/help/hooks.md` for expanded hook context (full bufferline fields, buffer-type metadata, no `is_directory`)
+- [x] 8.1a Update `docs/help/hooks.md` to document the `buffer` metadata object pattern (`ctx.buffer.type`, `ctx.buffer.path`) instead of flat fields
+- [x] 8.2 Update `docs/help/theme.md` for theme plugin interaction and token priority
+- [x] 8.3 Run required checks: `markdownlint` (docs markdown), `cargo fmt`, `cargo clippy`, `cargo test`, and `git add -A && nix build .`
+- [x] 8.3a Re-run required checks after metadata object refactoring: `cargo fmt`, `cargo clippy`, `cargo test`, and `git add -A && nix build .`
+- [x] 8.4 Address all check failures and finalize implementation readiness for review

@@ -70,7 +70,9 @@ Descibe the changes being commited in the commit message. Check which `openspec`
 
 Execute the command provided by the user. The command is defined as `/opsx-\<command\>`, where `\<command\>` is the user-provided command from step A. For example, if the user provides the command `ff`, you would execute `/opsx-ff`.
 
-If your are executing command `/opsx-apply`, implement changes till all tasks are completed. DO NOT STOP and  DO NOT ask anything till all tasks are completed. After all tasks are completed, move to the next step.
+If you are executing command `/opsx-ff` and after all artifacts are created/updated, call `/opsx-apply` in the next loop without asking the user for the command. Thus, all changes from the `ff` command will be applied immediately without asking the user for confirmation.
+
+If you are executing command `/opsx-apply`, implement changes till all tasks are completed. DO NOT STOP and  DO NOT ask anything till all tasks are completed. After all tasks are completed, move to the next step.
 
 ### E\[Ask open questions\]
 
