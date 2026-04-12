@@ -118,7 +118,9 @@ mod tests {
                     branch: None,
                     version: Some(">=1.0".to_string()),
                     dependencies: vec![],
+                    help_pages: vec![],
                 }],
+                help_pages: vec![],
             },
             PluginSpec {
                 url: "https://github.com/b/plugin-b".to_string(),
@@ -131,7 +133,9 @@ mod tests {
                     branch: None,
                     version: Some("<2.0".to_string()),
                     dependencies: vec![],
+                    help_pages: vec![],
                 }],
+                help_pages: vec![],
             },
         ];
 
@@ -155,7 +159,9 @@ mod tests {
                     branch: None,
                     version: None,
                     dependencies: vec![],
+                    help_pages: vec![],
                 }],
+                help_pages: vec![],
             },
             PluginSpec {
                 url: "https://github.com/b/plugin-b".to_string(),
@@ -168,7 +174,9 @@ mod tests {
                     branch: None,
                     version: None,
                     dependencies: vec![],
+                    help_pages: vec![],
                 }],
+                help_pages: vec![],
             },
         ];
 

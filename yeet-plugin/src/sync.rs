@@ -206,6 +206,7 @@ pub fn collect_all_specs(specs: &[PluginSpec]) -> Vec<PluginSpec> {
                 branch: spec.branch.clone(),
                 version: spec.version.clone(),
                 dependencies: Vec::new(),
+                help_pages: Vec::new(),
             });
         }
     }

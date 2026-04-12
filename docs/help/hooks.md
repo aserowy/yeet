@@ -50,7 +50,7 @@ Each viewport settings subtable contains:
 
 | Field | Type | Values | Default (current pane) |
 | --- | --- | --- | --- |
-| `icon_column_width` | integer | >= 0 | 0 |
+| `prefix_column_width` | integer | >= 0 | 0 |
 | `line_number` | string | `"none"`, `"absolute"`, `"relative"` | `"relative"` |
 | `line_number_width` | integer | >= 0 | 3 |
 | `sign_column_width` | integer | >= 0 | 2 |
@@ -60,20 +60,6 @@ Each viewport settings subtable contains:
 | `wrap` | boolean | | false |
 
 Invalid values (wrong type or unrecognized strings) are ignored and the default is kept. Unknown fields are silently ignored.
-
-### Icon Column
-
-The `icon_column_width` field controls how many cells are reserved for the icon column in the buffer prefix. It defaults to `0` (no icon column). Plugins can set this via `on_window_create` to enable icon rendering:
-
-```lua
-y.hook.on_window_create:add(function(ctx)
-  if ctx.type == "directory" then
-    ctx.parent.icon_column_width = 1
-    ctx.current.icon_column_width = 1
-    ctx.preview.icon_column_width = 1
-  end
-end)
-```
 
 ## `y.hook.on_bufferline_mutate`
 
@@ -94,9 +80,9 @@ y.hook.on_bufferline_mutate:add(function(ctx)
   local is_directory = content:sub(-1) == "/"
 
   if is_directory then
-    ctx.icon = "\27[94m\27[0m"
+    ctx.prefix = "\27[94m\27[0m"
   else
-    ctx.icon = "\27[37m\27[0m"
+    ctx.prefix = "\27[37m\27[0m"
   end
 
   -- Prepend ANSI color to content
@@ -109,9 +95,8 @@ Each callback receives a context table with mutable bufferline fields and a read
 | Field | Type | Mutable | Description |
 | --- | --- | --- | --- |
 | `buffer` | table | no | Read-only metadata object with `type` and `path` fields (see below) |
-| `prefix` | string or nil | yes | Line prefix text |
+| `prefix` | string or nil | yes | Line prefix text (rendered right-aligned within `prefix_column_width`) |
 | `content` | string | yes | Full line content as a string (may contain ANSI escape sequences) |
-| `icon` | string or nil | yes | Icon glyph to render in the icon column (may include ANSI sequences for color) |
 
 The `buffer` metadata object contains:
 
@@ -122,14 +107,13 @@ The `buffer` metadata object contains:
 
 The `buffer` object is read-only — changes to `buffer.type` or `buffer.path` are not read back by the core. The `buffer.path` field is only present for buffer types that have an associated path (directory and content); it is nil for help, quickfix, and tasks buffers. New metadata fields may be added to `buffer` in future versions without breaking existing plugins.
 
-After all callbacks run, `icon`, `prefix`, and `content` are read back from the context table and applied to the bufferline. The `buffer` metadata object is not read back.
+After all callbacks run, `prefix` and `content` are read back from the context table and applied to the bufferline. The `buffer` metadata object is not read back.
 
-- **`icon`**: Set to a string to display an icon glyph in the icon column. Include ANSI escape sequences in the string to color the icon (e.g., `"\27[38;2;222;165;132m\27[0m"`). Setting to `nil` clears the icon.
+- **`prefix`**: Set to a string to display a prefix glyph in the prefix column. The prefix is rendered right-aligned within `prefix_column_width`. Include ANSI escape sequences in the string to color the prefix (e.g., `"\27[38;2;222;165;132m\27[0m"`). Setting to `nil` clears the prefix.
 - **`content`**: Prepend ANSI escape sequences to color the filename/line text. The content string is parsed as an Ansi string, so inline ANSI sequences are preserved.
-- **`prefix`**: Set to override the line prefix.
 - **`buffer`**: Read-only metadata object. Modifications are ignored by the core.
 
-If no callback modifies `icon`, the icon column renders as empty space. If no callback modifies `content`, the text uses default (unstyled) rendering.
+If no callback modifies `prefix`, the prefix column renders as empty space. If no callback modifies `content`, the text uses default (unstyled) rendering.
 
 ### Buffer Type Filtering
 
@@ -143,17 +127,3 @@ y.hook.on_bufferline_mutate:add(function(ctx)
   -- Process directory entries...
 end)
 ```
-
-### Trailing Slash Convention
-
-In directory buffers, directory entries end with a trailing slash (`/`). Plugins detect directories by checking if `ctx.content` ends with `/`. Strip the trailing slash before performing filename-based icon resolution:
-
-```lua
-local content = ctx.content or ""
-local is_directory = content:sub(-1) == "/"
-local filename = is_directory and content:sub(1, -2) or content
-```
-
-### Cursor Behavior
-
-The icon column is non-editable prefix content. The cursor starts at the first filename character, not inside the icon column. Normal and Insert mode operations apply to filename text only.

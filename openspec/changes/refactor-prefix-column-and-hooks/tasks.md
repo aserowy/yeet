@@ -32,18 +32,18 @@
 
 ## 6. Update directory-icons plugin
 
-- [ ] 6.1 Update `on_window_create` hook in `plugins/directory-icons/init.lua` to set `prefix_column_width = 2` instead of `icon_column_width = 1`
-- [ ] 6.2 Update `on_bufferline_mutate` hook in `plugins/directory-icons/init.lua` to write icon glyphs to `ctx.prefix` instead of `ctx.icon`
-- [ ] 6.3 Update the plugin's `docs/help/directory-icons.md` to reflect prefix-based rendering and `prefix_column_width` instead of `icon_column_width`
+- [x] 6.1 Update `on_window_create` hook in `plugins/directory-icons/init.lua` to set `prefix_column_width = 2` instead of `icon_column_width = 1`
+- [x] 6.2 Update `on_bufferline_mutate` hook in `plugins/directory-icons/init.lua` to write icon glyphs to `ctx.prefix` instead of `ctx.icon`
+- [x] 6.3 Update the plugin's `docs/help/directory-icons.md` to reflect prefix-based rendering and `prefix_column_width` instead of `icon_column_width`
 
 ## 7. Update core help documentation
 
-- [ ] 7.1 Remove plugin-specific content from `docs/help/hooks.md`: remove "Trailing Slash Convention" section, "Icon Column" section, and any references to icon-specific plugin behavior
-- [ ] 7.2 Update `docs/help/hooks.md` to document `prefix_column_width` instead of `icon_column_width` in the viewport settings table, and remove `icon` from the on_bufferline_mutate context fields table
-- [ ] 7.3 Run `markdownlint` on all updated markdown files in `docs/` and fix any warnings or errors
+- [x] 7.1 Remove plugin-specific content from `docs/help/hooks.md`: remove "Trailing Slash Convention" section, "Icon Column" section, and any references to icon-specific plugin behavior
+- [x] 7.2 Update `docs/help/hooks.md` to document `prefix_column_width` instead of `icon_column_width` in the viewport settings table, and remove `icon` from the on_bufferline_mutate context fields table
+- [x] 7.3 Run `markdownlint` on all updated markdown files in `docs/` and fix any warnings or errors
 
 ## 8. Verify and build
 
-- [ ] 8.1 Run `cargo fmt` and `cargo clippy` to ensure code is clean
-- [ ] 8.2 Run `cargo test` to ensure all tests pass
-- [ ] 8.3 Run `git add -A && nix build .` to ensure the full build succeeds
+- [x] 8.1 Run `cargo fmt` and `cargo clippy` to ensure code is clean
+- [x] 8.2 Run `cargo test` to ensure all tests pass
+- [x] 8.3 Run `git add -A && nix build .` to ensure the full build succeeds
