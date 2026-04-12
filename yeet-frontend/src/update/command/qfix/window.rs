@@ -18,7 +18,7 @@ pub fn open(app: &mut App, lua: Option<&LuaConfiguration>, qfix: &QuickFix) -> V
         return Vec::new();
     }
 
-    let lines = build_qfix_lines(qfix);
+    let lines = build_qfix_lines(qfix, lua);
     let buffer_id = app::get_next_buffer_id(contents);
     contents.buffers.insert(
         buffer_id,
@@ -107,7 +107,7 @@ pub fn focus_nearest_directory(window: &mut Window) -> bool {
     }
 }
 
-pub fn build_qfix_lines(qfix: &QuickFix) -> Vec<BufferLine> {
+pub fn build_qfix_lines(qfix: &QuickFix, lua: Option<&LuaConfiguration>) -> Vec<BufferLine> {
     let max_width = (qfix.entries.len() + 1).to_string().len();
     qfix.entries
         .iter()
@@ -115,11 +115,20 @@ pub fn build_qfix_lines(qfix: &QuickFix) -> Vec<BufferLine> {
         .map(|(i, path)| {
             let status = if path.exists() { "" } else { " (removed)" };
             let formatted = format!("{:>max_width$} {}{}", i + 1, path.display(), status);
-            if i == qfix.current_index {
+            let mut line = if i == qfix.current_index {
                 BufferLine::from(&format!("\x1b[1m{}\x1b[0m", formatted))
             } else {
                 BufferLine::from(&formatted)
+            };
+            if let Some(lua) = lua {
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut line,
+                    yeet_lua::BufferType::Quickfix,
+                    None,
+                );
             }
+            line
         })
         .collect()
 }
@@ -128,9 +137,10 @@ pub fn refresh_quickfix_buffer(
     tabs: &mut HashMap<usize, Window>,
     contents: &mut Contents,
     qfix: &QuickFix,
+    lua: Option<&LuaConfiguration>,
 ) {
     for window in tabs.values_mut() {
-        refresh_quickfix_buffer_in_window(window, contents, qfix);
+        refresh_quickfix_buffer_in_window(window, contents, qfix, lua);
     }
 }
 
@@ -138,6 +148,7 @@ fn refresh_quickfix_buffer_in_window(
     window: &mut Window,
     contents: &mut Contents,
     qfix: &QuickFix,
+    lua: Option<&LuaConfiguration>,
 ) {
     let vp = match find_quickfix_viewport_mut(window) {
         Some(vp) => vp,
@@ -146,7 +157,7 @@ fn refresh_quickfix_buffer_in_window(
 
     let buffer_id = vp.buffer_id;
     if let Some(Buffer::QuickFix(qfix_buffer)) = contents.buffers.get_mut(&buffer_id) {
-        qfix_buffer.buffer.lines = build_qfix_lines(qfix);
+        qfix_buffer.buffer.lines = build_qfix_lines(qfix, lua);
         let line_count = qfix_buffer.buffer.lines.len();
 
         if vp.cursor.vertical_index >= line_count {
@@ -165,7 +176,12 @@ pub fn find_quickfix_viewport_mut(window: &mut Window) -> Option<&mut ViewPort> 
     }
 }
 
-pub fn remove_entry(app: &mut App, qfix: &mut QuickFix, cursor_index: usize) -> Vec<Action> {
+pub fn remove_entry(
+    app: &mut App,
+    lua: Option<&LuaConfiguration>,
+    qfix: &mut QuickFix,
+    cursor_index: usize,
+) -> Vec<Action> {
     if qfix.entries.is_empty() {
         return Vec::new();
     }
@@ -195,7 +211,7 @@ pub fn remove_entry(app: &mut App, qfix: &mut QuickFix, cursor_index: usize) -> 
         QFIX_SIGN_ID,
     );
 
-    refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, qfix);
+    refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, qfix, lua);
 
     Vec::new()
 }
@@ -382,7 +398,7 @@ mod test {
             ..Default::default()
         };
 
-        let lines = build_qfix_lines(&qfix);
+        let lines = build_qfix_lines(&qfix, None);
         assert_eq!(lines.len(), 3);
         assert!(!lines[0].content.to_string().contains("\x1b[1m"));
         assert!(lines[1].content.to_string().contains("\x1b[1m"));
@@ -400,7 +416,7 @@ mod test {
         qfix.current_index = 2;
         open(&mut app, None, &qfix);
 
-        remove_entry(&mut app, &mut qfix, 0);
+        remove_entry(&mut app, None, &mut qfix, 0);
 
         assert_eq!(qfix.current_index, 1);
         assert_eq!(qfix.entries.len(), 2);
@@ -413,7 +429,7 @@ mod test {
         qfix.current_index = 1;
         open(&mut app, None, &qfix);
 
-        remove_entry(&mut app, &mut qfix, 1);
+        remove_entry(&mut app, None, &mut qfix, 1);
 
         assert_eq!(qfix.current_index, 0);
         assert_eq!(qfix.entries.len(), 1);
@@ -430,7 +446,7 @@ mod test {
         qfix.current_index = 0;
         open(&mut app, None, &qfix);
 
-        remove_entry(&mut app, &mut qfix, 2);
+        remove_entry(&mut app, None, &mut qfix, 2);
 
         assert_eq!(qfix.current_index, 0);
         assert_eq!(qfix.entries.len(), 2);
@@ -443,7 +459,7 @@ mod test {
         qfix.current_index = 0;
         open(&mut app, None, &qfix);
 
-        remove_entry(&mut app, &mut qfix, 0);
+        remove_entry(&mut app, None, &mut qfix, 0);
 
         assert_eq!(qfix.current_index, 0);
         assert!(qfix.entries.is_empty());
@@ -456,7 +472,7 @@ mod test {
         qfix.current_index = 0;
         open(&mut app, None, &qfix);
 
-        remove_entry(&mut app, &mut qfix, 5);
+        remove_entry(&mut app, None, &mut qfix, 5);
 
         assert_eq!(qfix.entries.len(), 1);
         assert_eq!(qfix.entries[0], PathBuf::from("/a"));
@@ -534,7 +550,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix, None);
     }
 
     #[test]
@@ -547,7 +563,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix, None);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {
@@ -579,7 +595,7 @@ mod test {
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");
-        super::refresh_quickfix_buffer_in_window(window, contents, &qfix);
+        super::refresh_quickfix_buffer_in_window(window, contents, &qfix, None);
 
         let window = app.current_window().expect("test requires current tab");
         let qfix_vp = match window {

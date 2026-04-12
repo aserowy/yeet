@@ -118,7 +118,15 @@ fn update_with_message(
 ) -> Vec<Action> {
     match message {
         Message::EnumerationChanged(path, contents, selection) => {
-            match enumeration::change(state, app, &path, &contents, &selection, &settings.theme) {
+            match enumeration::change(
+                state,
+                app,
+                &path,
+                &contents,
+                &selection,
+                &settings.theme,
+                lua,
+            ) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationChanged failed: {}", err);
@@ -127,7 +135,15 @@ fn update_with_message(
             }
         }
         Message::EnumerationFinished(path, contents, selection) => {
-            match enumeration::finish(state, app, &path, &contents, &selection, &settings.theme) {
+            match enumeration::finish(
+                state,
+                app,
+                &path,
+                &contents,
+                &selection,
+                &settings.theme,
+                lua,
+            ) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("EnumerationFinished failed: {}", err);
@@ -160,6 +176,7 @@ fn update_with_message(
                 &mut app.tabs,
                 &mut app.contents,
                 &state.qfix,
+                lua,
             );
             Vec::new()
         }
@@ -202,6 +219,7 @@ fn update_with_message(
                     app,
                     &paths,
                     &settings.theme,
+                    lua,
                 ) {
                     Ok(actions) => actions,
                     Err(err) => {
@@ -217,20 +235,20 @@ fn update_with_message(
             }
         }
         Message::HelpHighlighted(buffer_id, lines) => {
-            command::help::apply_highlighted(app, buffer_id, lines);
+            command::help::apply_highlighted(app, lua, buffer_id, lines);
             Vec::new()
         }
-        Message::PreviewLoaded(content) => preview::update(app, content),
+        Message::PreviewLoaded(content) => preview::update(app, lua, content),
         Message::Rerender => Vec::new(),
         Message::Resize(x, y) => vec![Action::Resize(x, y)],
         Message::TaskStarted(id, cancellation) => match app.current_window_and_contents_mut() {
             Ok((window, contents)) => {
-                task::add(&mut state.tasks, window, contents, id, cancellation)
+                task::add(&mut state.tasks, window, contents, id, cancellation, lua)
             }
             Err(_) => Vec::new(),
         },
         Message::TaskEnded(id) => match app.current_window_and_contents_mut() {
-            Ok((window, contents)) => task::remove(&mut state.tasks, window, contents, id),
+            Ok((window, contents)) => task::remove(&mut state.tasks, window, contents, id, lua),
             Err(_) => Vec::new(),
         },
         Message::ZoxideResult(path) => navigate::path(app, &mut state.history, path.as_ref()),
@@ -246,7 +264,7 @@ pub fn update_with_keymap_message(
     msg: &KeymapMessage,
 ) -> Vec<Action> {
     match msg {
-        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, msg),
+        KeymapMessage::Buffer(msg) => update_with_buffer_message(app, state, settings, lua, msg),
         KeymapMessage::ClearSearchHighlight => {
             search::clear(app.contents.buffers.values_mut().collect());
             Vec::new()
@@ -371,11 +389,12 @@ pub fn update_with_buffer_message(
     app: &mut App,
     state: &mut State,
     settings: &Settings,
+    lua: Option<&LuaConfiguration>,
     msg: &BufferMessage,
 ) -> Vec<Action> {
     match msg {
         BufferMessage::ChangeMode(from, to) => {
-            match mode::change(app, state, from, to, &settings.theme) {
+            match mode::change(app, state, from, to, &settings.theme, lua) {
                 Ok(actions) => actions,
                 Err(err) => {
                     tracing::error!("ChangeMode failed: {}", err);
@@ -385,13 +404,15 @@ pub fn update_with_buffer_message(
         }
         BufferMessage::Modification(repeat, modification) => match &mut state.modes.current {
             Mode::Command(_) => commandline::modify(app, &mut state.modes, repeat, modification),
-            Mode::Insert | Mode::Normal => match modify::buffer(app, state, repeat, modification) {
-                Ok(actions) => actions,
-                Err(err) => {
-                    tracing::error!("Modification failed: {}", err);
-                    Vec::new()
+            Mode::Insert | Mode::Normal => {
+                match modify::buffer(app, state, lua, repeat, modification) {
+                    Ok(actions) => actions,
+                    Err(err) => {
+                        tracing::error!("Modification failed: {}", err);
+                        Vec::new()
+                    }
                 }
-            },
+            }
             Mode::Navigation => {
                 let vp = match app.current_window() {
                     Ok(window) => window.focused_viewport(),
@@ -401,7 +422,7 @@ pub fn update_with_buffer_message(
                     app.contents.buffers.get(&vp.buffer_id),
                     Some(Buffer::Tasks(_)) | Some(Buffer::QuickFix(_))
                 ) {
-                    match modify::buffer(app, state, repeat, modification) {
+                    match modify::buffer(app, state, lua, repeat, modification) {
                         Ok(actions) => actions,
                         Err(err) => {
                             tracing::error!("Modification failed: {}", err);

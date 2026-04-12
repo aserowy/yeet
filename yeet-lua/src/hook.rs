@@ -1,9 +1,35 @@
 use std::path::Path;
 
 use mlua::prelude::*;
-use yeet_buffer::model::viewport::ViewPort;
+use yeet_buffer::model::{viewport::ViewPort, BufferLine};
 
 use crate::viewport::{table_to_viewport, viewport_to_table};
+
+/// Represents the type of buffer being mutated.
+///
+/// Used by `invoke_on_bufferline_mutate` callers to specify the buffer type
+/// in a type-safe way. Each variant maps to its lowercase string representation
+/// for injection into the Lua hook context (`ctx.buffer.type`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferType {
+    Directory,
+    Content,
+    Help,
+    Quickfix,
+    Tasks,
+}
+
+impl BufferType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            BufferType::Directory => "directory",
+            BufferType::Content => "content",
+            BufferType::Help => "help",
+            BufferType::Quickfix => "quickfix",
+            BufferType::Tasks => "tasks",
+        }
+    }
+}
 
 pub fn invoke_on_window_create(
     lua: &crate::LuaConfiguration,
@@ -110,6 +136,97 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
             }
         }
     }
+}
+
+/// Invokes `y.hook.on_bufferline_mutate` callbacks for a single bufferline.
+///
+/// Each registered callback receives a context table with:
+/// - `buffer`: read-only metadata object containing:
+///   - `type`: the buffer type string derived from `BufferType` enum
+///     (e.g., "directory", "content", "help", "quickfix", "tasks")
+///   - `path`: the associated path (string) — only set for buffer types with an associated path
+///     (directory, content); absent/nil for help, quickfix, tasks
+/// - `prefix`: the bufferline prefix (string or nil), mutable
+/// - `content`: the bufferline content as string, mutable
+///
+/// After all callbacks run, mutable fields are read back from the
+/// context table and applied to the bufferline. The `buffer` metadata
+/// object is not read back.
+pub fn invoke_on_bufferline_mutate(
+    lua: &crate::LuaConfiguration,
+    bl: &mut BufferLine,
+    buffer_type: BufferType,
+    path: Option<&Path>,
+) {
+    if let Err(err) = try_invoke_on_bufferline_mutate(lua, bl, buffer_type, path) {
+        tracing::error!("error in y.hook.on_bufferline_mutate: {:?}", err);
+    }
+}
+
+fn try_invoke_on_bufferline_mutate(
+    lua: &Lua,
+    bl: &mut BufferLine,
+    buffer_type: BufferType,
+    path: Option<&Path>,
+) -> LuaResult<()> {
+    let y: LuaTable = lua.globals().get("y")?;
+    let hook: LuaTable = y.get("hook")?;
+    let hook_table: LuaTable = hook.get("on_bufferline_mutate")?;
+
+    let len = hook_table.raw_len();
+    if len == 0 {
+        return Ok(());
+    }
+
+    let ctx = lua.create_table()?;
+
+    // Build read-only buffer metadata object
+    let buffer_meta = lua.create_table()?;
+    buffer_meta.set("type", buffer_type.as_str())?;
+    if let Some(p) = path {
+        buffer_meta.set("path", p.to_string_lossy().to_string())?;
+    }
+    ctx.set("buffer", buffer_meta)?;
+
+    // Expose full bufferline fields (mutable)
+    if let Some(prefix) = &bl.prefix {
+        ctx.set("prefix", prefix.as_str())?;
+    }
+    ctx.set("content", bl.content.to_string())?;
+
+    for i in 1..=len {
+        let func: LuaValue = hook_table.raw_get(i)?;
+        match func {
+            LuaValue::Function(f) => {
+                if let Err(err) = f.call::<()>(ctx.clone()) {
+                    tracing::error!(
+                        "error in y.hook.on_bufferline_mutate callback {}: {:?}",
+                        i,
+                        err
+                    );
+                }
+            }
+            _ => {
+                tracing::warn!(
+                    "y.hook.on_bufferline_mutate[{}] is not a function, got {:?}",
+                    i,
+                    func.type_name()
+                );
+            }
+        }
+    }
+
+    // Read back mutated values
+    match ctx.get::<LuaValue>("prefix")? {
+        LuaValue::String(s) => bl.prefix = Some(s.to_str()?.to_string()),
+        LuaValue::Nil => bl.prefix = None,
+        _ => {}
+    }
+    if let LuaValue::String(s) = ctx.get::<LuaValue>("content")? {
+        bl.content = yeet_buffer::model::ansi::Ansi::new(&s.to_str()?);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -461,6 +578,146 @@ mod tests {
                 assert!(vp.wrap, "wrap should be true for {}", window_type);
             }
         }
+    }
+
+    #[test]
+    fn prefix_column_width_defaults_to_zero() {
+        let vp = ViewPort::default();
+        assert_eq!(
+            vp.prefix_column_width, 0,
+            "prefix_column_width should default to 0"
+        );
+    }
+
+    #[test]
+    fn directory_hook_sets_prefix_column_width() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        assert_eq!(parent.prefix_column_width, 0);
+        assert_eq!(current.prefix_column_width, 0);
+        assert_eq!(preview.prefix_column_width, 0);
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(
+            parent.prefix_column_width, 2,
+            "parent prefix_column_width should be 2 after hook"
+        );
+        assert_eq!(
+            current.prefix_column_width, 2,
+            "current prefix_column_width should be 2 after hook"
+        );
+        assert_eq!(
+            preview.prefix_column_width, 2,
+            "preview prefix_column_width should be 2 after hook"
+        );
+    }
+
+    #[test]
+    fn prefix_column_width_unaffected_for_non_directory_window() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
+                end
+            end)
+            "#,
+        );
+
+        let mut vp = ViewPort::default();
+        invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
+
+        assert_eq!(
+            vp.prefix_column_width, 0,
+            "prefix_column_width should remain 0 for non-directory windows"
+        );
+    }
+
+    #[test]
+    fn prefix_column_width_preserved_when_no_hooks() {
+        let lua = create_lua_with_hook("");
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(
+            parent.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
+        );
+        assert_eq!(
+            current.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
+        );
+        assert_eq!(
+            preview.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
+        );
+    }
+
+    #[test]
+    fn prefix_column_width_via_real_init() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.hook.on_window_create:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
+                end
+            end)
+            "#
+        )
+        .unwrap();
+
+        let lua = Lua::new();
+        crate::setup_and_execute(&lua, &tmp.path().to_path_buf()).unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_create(
+            &lua,
+            "directory",
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+        );
+
+        assert_eq!(parent.prefix_column_width, 2);
+        assert_eq!(current.prefix_column_width, 2);
+        assert_eq!(preview.prefix_column_width, 2);
     }
 
     #[test]

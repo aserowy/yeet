@@ -169,7 +169,12 @@ pub fn execute(
                         Vec::new()
                     }
                 };
-            qfix::window::refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, &state.qfix);
+            qfix::window::refresh_quickfix_buffer(
+                &mut app.tabs,
+                &mut app.contents,
+                &state.qfix,
+                lua,
+            );
             add_change_mode(mode_before, mode, actions)
         }
         ("junk", "") => print::junkyard(&state.junk),

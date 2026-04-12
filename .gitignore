@@ -1,4 +1,4 @@
-.opencode/
+# .opencode/
 .claude/
 
 # Created by https://www.toptal.com/developers/gitignore/api/rust,direnv

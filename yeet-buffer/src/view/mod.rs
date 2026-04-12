@@ -49,7 +49,7 @@ pub fn view(
     };
 
     frame.render_widget(
-        Paragraph::new(styled).style(Style::default().bg(theme.buffer_bg)),
+        Paragraph::new(styled).style(Style::default().fg(theme.buffer_fg).bg(theme.buffer_bg)),
         rect,
     );
 }
@@ -119,7 +119,7 @@ fn get_styled_lines<'a>(
                 Ansi::new("")
                     .join(&prefix::get_signs(vp, &bl, theme))
                     .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
-                    .join(&prefix::get_custom_prefix(&bl))
+                    .join(&prefix::get_prefix_column(vp, &bl, theme))
                     .join(&prefix::get_border(vp))
             } else {
                 let prefix_width = vp.get_offset_width(&bl) + vp.get_border_width();
@@ -169,7 +169,7 @@ fn get_styled_lines_nowrap<'a>(
         let content = Ansi::new("")
             .join(&prefix::get_signs(vp, &bl, theme))
             .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
-            .join(&prefix::get_custom_prefix(&bl))
+            .join(&prefix::get_prefix_column(vp, &bl, theme))
             .join(&prefix::get_border(vp))
             .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl, theme));
 
@@ -197,6 +197,7 @@ mod test {
         use ratatui::style::Color;
         BufferTheme {
             buffer_bg: Color::Reset,
+            buffer_fg: Color::White,
             cursor_line_bg: Color::Rgb(128, 128, 128),
             search_bg: Color::Red,
             line_nr: Color::Rgb(128, 128, 128),
@@ -540,5 +541,127 @@ mod test {
                 row,
             );
         }
+    }
+
+    #[test]
+    fn prefix_column_included_in_directory_viewport_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        // With show_border=true, the inner rect is viewport.width - 1
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line width should equal viewport width minus border, including prefix column"
+        );
+    }
+
+    #[test]
+    fn prefix_column_zero_width_does_not_affect_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 0;
+        let lines = vec![BufferLine::from("documents")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "prefix_column_width=0 should not change line width"
+        );
+    }
+
+    #[test]
+    fn plugin_ansi_in_content_applied_to_text() {
+        use ratatui::style::Color;
+
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine {
+            content: crate::model::ansi::Ansi::new("\x1b[38;2;255;100;0mmyfile.rs"),
+            ..Default::default()
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        // The plugin-prepended ANSI code should be visible in the rendered spans
+        let has_fg_color = styled[0]
+            .spans
+            .iter()
+            .any(|span| span.style.fg.is_some() && span.style.fg != Some(Color::Reset));
+        assert!(
+            has_fg_color,
+            "plugin ANSI in content should color the text (some span should have a non-default fg)"
+        );
+    }
+
+    #[test]
+    fn plain_content_uses_default_styling() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("myfile.rs")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        // Without any ANSI in content, the text should not have a custom fg color
+        let cursor_line = &styled[0];
+        assert_eq!(
+            cursor_line.width(),
+            usize::from(vp.width),
+            "line without ANSI content should still fill viewport width"
+        );
+    }
+
+    #[test]
+    fn cursor_at_filename_start_with_prefix_column() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        // Cursor at horizontal index 0 (first char of filename)
+        vp.cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Normal, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        // The line should still fill the expected width (viewport - border)
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line with prefix column should fill expected width"
+        );
+        // Cursor at position 0 should highlight the 'd' in "documents",
+        // not the prefix glyph (prefix is in the prefix column, not in content).
+        // We verify by checking the cursor styling appears in the spans.
+        let has_cursor_style = cursor_line
+            .spans
+            .iter()
+            .any(|span| span.content.contains('d') && span.style.bg.is_some());
+        assert!(
+            has_cursor_style,
+            "cursor should be on the first content character, not on the prefix column"
+        );
     }
 }

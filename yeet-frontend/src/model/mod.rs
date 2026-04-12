@@ -385,6 +385,7 @@ impl Default for CommandLine {
             viewport: yeet_buffer::model::viewport::ViewPort {
                 hide_cursor: true,
                 hide_cursor_line: true,
+                prefix_column_width: 1,
                 ..Default::default()
             },
         }

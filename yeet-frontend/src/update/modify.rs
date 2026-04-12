@@ -1,4 +1,5 @@
 use yeet_buffer::message::{BufferMessage, TextModification};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -12,6 +13,7 @@ use super::{command::qfix::window, command::task, selection};
 pub fn buffer(
     app: &mut App,
     state: &mut State,
+    lua: Option<&LuaConfiguration>,
     repeat: &usize,
     modification: &TextModification,
 ) -> Result<Vec<Action>, AppError> {
@@ -27,7 +29,7 @@ pub fn buffer(
             cancel_task_at_index(&mut state.tasks, cursor_index);
 
             let (window, contents) = app.current_window_and_contents_mut()?;
-            task::refresh_tasks_buffer(window, contents, &state.tasks);
+            task::refresh_tasks_buffer(window, contents, &state.tasks, lua);
 
             Vec::new()
         }
@@ -50,7 +52,7 @@ pub fn buffer(
             }
 
             let cursor_index = vp.cursor.vertical_index;
-            window::remove_entry(app, &mut state.qfix, cursor_index)
+            window::remove_entry(app, lua, &mut state.qfix, cursor_index)
         }
         Buffer::Help(_) => Vec::new(),
         Buffer::Image(_) | Buffer::Content(_) | Buffer::PathReference(_) | Buffer::Empty => {
@@ -133,7 +135,13 @@ mod test {
         let vp = window.focused_viewport_mut();
         vp.cursor.vertical_index = 1;
 
-        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(
+            &mut app,
+            &mut state,
+            None,
+            &1,
+            &TextModification::DeleteLine,
+        );
 
         // Task at index 1 (id=5, "fd-2") should be cancelled
         assert!(token_fd.is_cancelled());
@@ -173,8 +181,14 @@ mod test {
         // mode::change blocks Navigation→Normal on Tasks, so mode stays Navigation.
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        let actions = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine)
-            .expect("buffer modification must succeed");
+        let actions = buffer(
+            &mut app,
+            &mut state,
+            None,
+            &1,
+            &TextModification::DeleteLine,
+        )
+        .expect("buffer modification must succeed");
 
         // Mode should remain Navigation — no mode change occurred.
         assert_eq!(state.modes.current, yeet_buffer::model::Mode::Navigation);
@@ -194,7 +208,13 @@ mod test {
 
         // Cancel task at index 0 (id=1)
         vp_set_cursor(&mut app, 0);
-        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(
+            &mut app,
+            &mut state,
+            None,
+            &1,
+            &TextModification::DeleteLine,
+        );
 
         // The buffer should be refreshed — cancelled line has ANSI codes
         let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
@@ -214,7 +234,13 @@ mod test {
         let mut state = State::default();
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        let _ = buffer(&mut app, &mut state, &1, &TextModification::DeleteLine);
+        let _ = buffer(
+            &mut app,
+            &mut state,
+            None,
+            &1,
+            &TextModification::DeleteLine,
+        );
         // No panic — test passes if we reach here
     }
 
@@ -232,6 +258,7 @@ mod test {
         buffer(
             &mut app,
             &mut state,
+            None,
             &1,
             &TextModification::Insert("x".to_string()),
         )
