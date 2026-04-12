@@ -18,9 +18,6 @@ pub fn get_border(vp: &ViewPort) -> Ansi {
 pub fn get_prefix_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
     let width = vp.prefix_column_width;
     if width == 0 {
-        if let Some(prefix) = &bl.prefix {
-            return Ansi::new(prefix);
-        }
         return Ansi::new("");
     }
 
@@ -128,6 +125,7 @@ mod test {
     fn test_theme() -> BufferTheme {
         BufferTheme {
             buffer_bg: Color::Reset,
+            buffer_fg: Color::White,
             cursor_line_bg: Color::Rgb(128, 128, 128),
             search_bg: Color::Red,
             line_nr: Color::Rgb(128, 128, 128),
@@ -226,7 +224,7 @@ mod test {
     }
 
     #[test]
-    fn prefix_column_zero_width_with_prefix_returns_prefix() {
+    fn prefix_column_zero_width_with_prefix_returns_empty() {
         let vp = ViewPort {
             prefix_column_width: 0,
             ..Default::default()
@@ -237,9 +235,9 @@ mod test {
         };
         let result = get_prefix_column(&vp, &bl, &test_theme());
         assert_eq!(
-            result.to_stripped_string(),
-            "X",
-            "zero width with prefix should return prefix as-is"
+            result.count_chars(),
+            0,
+            "zero width with prefix should suppress rendering and return empty"
         );
     }
 }

@@ -47,3 +47,24 @@
 - [x] 8.1 Run `cargo fmt` and `cargo clippy` to ensure code is clean
 - [x] 8.2 Run `cargo test` to ensure all tests pass
 - [x] 8.3 Run `git add -A && nix build .` to ensure the full build succeeds
+
+## 9. Consolidate BUFFER_FILE_FG and BUFFER_DIRECTORY_FG into BUFFER_FG
+
+- [x] 9.1 Replace `BUFFER_FILE_FG` and `BUFFER_DIRECTORY_FG` token constants with a single `BUFFER_FG` in `yeet-frontend/src/theme.rs`, set default to `Color::White`
+- [x] 9.2 Add `buffer_fg` field to `BufferTheme` struct in `yeet-buffer/src/lib.rs` and populate it from the `BUFFER_FG` token in `to_buffer_theme_with_border()`
+- [x] 9.3 Wire `buffer_fg` into the buffer rendering pipeline (`yeet-buffer/src/view/line.rs` and `yeet-buffer/src/view/style.rs`) so unstyled content text uses `buffer_fg` as its foreground color
+- [x] 9.4 Update `plugins/bluloco-theme/init.lua` to set `BufferFg` instead of `BufferFileFg`/`BufferDirectoryFg`
+- [x] 9.5 Update `docs/help/theme.md` to document `BufferFg` and remove `BufferFileFg`/`BufferDirectoryFg`
+- [x] 9.6 Update all tests referencing `BUFFER_FILE_FG` or `BUFFER_DIRECTORY_FG` to use `BUFFER_FG`
+
+## 10. Suppress prefix rendering when prefix_column_width is zero
+
+- [x] 10.1 Update `get_prefix_column()` in `yeet-buffer/src/view/prefix.rs` to return empty string when `prefix_column_width` is 0, regardless of whether `bl.prefix` has content
+- [x] 10.2 Update `get_custom_prefix_width()` in `yeet-buffer/src/model/viewport.rs` to return 0 when `prefix_column_width` is 0, regardless of prefix content
+- [x] 10.3 Update tests in `prefix.rs` and `viewport.rs` to reflect the new behavior (width 0 + prefix content → no rendering, no width contribution)
+
+## 11. Final verification
+
+- [x] 11.1 Run `cargo fmt`, `cargo clippy`, `cargo test`
+- [x] 11.2 Run `markdownlint` on updated docs
+- [x] 11.3 Run `git add -A && nix build .`

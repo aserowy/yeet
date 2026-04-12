@@ -114,13 +114,9 @@ Foreground color for relative line numbers in the gutter. These numbers indicate
 
 Foreground color for the current (absolute) line number in the gutter. This highlights which line the cursor is on. Default: white.
 
-### `BufferFileFg`
+### `BufferFg`
 
-Default foreground color for file entries in directory buffers. Default: white.
-
-### `BufferDirectoryFg`
-
-Default foreground color for directory entries in directory buffers. Distinct from `BufferFileFg` to allow independent styling of files and directories. Default: light blue.
+Default foreground color for buffer text content. Applied as the base text color for all buffer types when no ANSI styling is present. Plugins can override this per-line via `on_bufferline_mutate` hooks. Default: white.
 
 ## Border Tokens
 

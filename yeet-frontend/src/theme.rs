@@ -30,8 +30,7 @@ pub mod tokens {
     pub const LINE_NR: &str = "LineNr";
     pub const CUR_LINE_NR: &str = "CurLineNr";
     pub const BUFFER_BG: &str = "BufferBg";
-    pub const BUFFER_FILE_FG: &str = "BufferFileFg";
-    pub const BUFFER_DIRECTORY_FG: &str = "BufferDirectoryFg";
+    pub const BUFFER_FG: &str = "BufferFg";
 
     // Directory window borders
     pub const DIRECTORY_BORDER_FG: &str = "DirectoryBorderFg";
@@ -97,8 +96,7 @@ impl Default for Theme {
         colors.insert(tokens::SEARCH_BG.to_string(), Color::Red);
         colors.insert(tokens::LINE_NR.to_string(), Color::Rgb(128, 128, 128));
         colors.insert(tokens::CUR_LINE_NR.to_string(), Color::White);
-        colors.insert(tokens::BUFFER_FILE_FG.to_string(), Color::White);
-        colors.insert(tokens::BUFFER_DIRECTORY_FG.to_string(), Color::LightBlue);
+        colors.insert(tokens::BUFFER_FG.to_string(), Color::White);
         colors.insert(tokens::STATUSLINE_PERMISSIONS_FG.to_string(), Color::Gray);
         colors.insert(tokens::STATUSLINE_BORDER_BG.to_string(), Color::Black);
         colors.insert(tokens::DIRECTORY_BORDER_FG.to_string(), Color::Black);
@@ -227,6 +225,7 @@ impl Theme {
     ) -> yeet_buffer::BufferTheme {
         yeet_buffer::BufferTheme {
             buffer_bg: self.color(tokens::BUFFER_BG),
+            buffer_fg: self.color(tokens::BUFFER_FG),
             cursor_line_bg: self.color(tokens::CURSOR_LINE_BG),
             search_bg: self.color(tokens::SEARCH_BG),
             line_nr: self.color(tokens::LINE_NR),
@@ -355,12 +354,8 @@ mod tests {
     fn new_token_defaults_match_current_hardcoded_appearance() {
         let theme = Theme::default();
 
-        // BufferFileFg default is White
-        assert_eq!(theme.color(tokens::BUFFER_FILE_FG), Color::White);
-
-        // BufferDirectoryFg default is LightBlue (matches hardcoded \x1b[94m])
-        assert_eq!(theme.color(tokens::BUFFER_DIRECTORY_FG), Color::LightBlue);
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
+        // BufferFg default is White
+        assert_eq!(theme.color(tokens::BUFFER_FG), Color::White);
 
         // StatusLinePermissionsFg default is Gray
         assert_eq!(theme.color(tokens::STATUSLINE_PERMISSIONS_FG), Color::Gray);
@@ -378,25 +373,16 @@ mod tests {
     }
 
     #[test]
-    fn buffer_entry_foreground_color_application() {
+    fn buffer_fg_color_application() {
         let theme = Theme::default();
 
-        // File foreground ANSI code should be White (\x1b[37m])
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_FILE_FG), "\x1b[37m");
-
-        // Directory foreground ANSI code should be LightBlue (\x1b[94m])
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
+        // BufferFg ANSI code should be White (\x1b[37m])
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_FG), "\x1b[37m");
 
         // Custom override should produce correct ANSI
         let mut custom = Theme::default();
-        custom.set_color(
-            tokens::BUFFER_DIRECTORY_FG.to_string(),
-            Color::Rgb(0, 255, 0),
-        );
-        assert_eq!(
-            custom.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
-            "\x1b[38;2;0;255;0m"
-        );
+        custom.set_color(tokens::BUFFER_FG.to_string(), Color::Rgb(0, 255, 0));
+        assert_eq!(custom.ansi_fg(tokens::BUFFER_FG), "\x1b[38;2;0;255;0m");
     }
 
     #[test]
@@ -441,73 +427,28 @@ mod tests {
         assert_eq!(theme.color("BorderFg"), Color::Reset);
     }
 
-    // --- Icon/directory theming tests (task 4.4) ---
+    // --- Buffer foreground theming tests ---
 
     #[test]
-    fn directory_token_is_distinct_from_file_token() {
-        let theme = Theme::default();
-        let file_color = theme.color(tokens::BUFFER_FILE_FG);
-        let dir_color = theme.color(tokens::BUFFER_DIRECTORY_FG);
-        assert_ne!(
-            file_color, dir_color,
-            "file and directory tokens should have distinct default colors"
-        );
-    }
-
-    #[test]
-    fn directory_token_default_color() {
+    fn buffer_fg_default_color() {
         let theme = Theme::default();
         assert_eq!(
-            theme.color(tokens::BUFFER_DIRECTORY_FG),
-            Color::LightBlue,
-            "directory default should be LightBlue"
-        );
-    }
-
-    #[test]
-    fn file_token_default_color() {
-        let theme = Theme::default();
-        assert_eq!(
-            theme.color(tokens::BUFFER_FILE_FG),
+            theme.color(tokens::BUFFER_FG),
             Color::White,
-            "file default should be White"
+            "BufferFg default should be White"
         );
     }
 
     #[test]
-    fn directory_token_override_via_set_color() {
+    fn buffer_fg_override_via_set_color() {
         let mut theme = Theme::default();
         let custom_color = Color::Rgb(255, 128, 0);
-        theme.set_color(tokens::BUFFER_DIRECTORY_FG.to_string(), custom_color);
+        theme.set_color(tokens::BUFFER_FG.to_string(), custom_color);
 
         assert_eq!(
-            theme.color(tokens::BUFFER_DIRECTORY_FG),
+            theme.color(tokens::BUFFER_FG),
             custom_color,
-            "directory token should reflect the override"
-        );
-        // File token should remain unchanged
-        assert_eq!(
-            theme.color(tokens::BUFFER_FILE_FG),
-            Color::White,
-            "file token should be unaffected by directory override"
-        );
-    }
-
-    #[test]
-    fn file_token_override_via_set_color() {
-        let mut theme = Theme::default();
-        let custom_color = Color::Rgb(0, 200, 100);
-        theme.set_color(tokens::BUFFER_FILE_FG.to_string(), custom_color);
-
-        assert_eq!(
-            theme.color(tokens::BUFFER_FILE_FG),
-            custom_color,
-            "file token should reflect the override"
-        );
-        assert_eq!(
-            theme.color(tokens::BUFFER_DIRECTORY_FG),
-            Color::LightBlue,
-            "directory token should be unaffected by file override"
+            "BufferFg token should reflect the override"
         );
     }
 
@@ -541,11 +482,9 @@ mod tests {
     }
 
     #[test]
-    fn ansi_fg_for_directory_and_file_defaults() {
+    fn ansi_fg_for_buffer_fg_default() {
         let theme = Theme::default();
-        // Directory: LightBlue → \x1b[94m
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
-        // File: White → \x1b[37m
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_FILE_FG), "\x1b[37m");
+        // BufferFg: White → \x1b[37m
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_FG), "\x1b[37m");
     }
 }

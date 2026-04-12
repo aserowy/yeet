@@ -55,14 +55,8 @@ impl ViewPort {
         self.get_prefix_width() + self.get_border_width() + self.get_custom_prefix_width(line)
     }
 
-    fn get_custom_prefix_width(&self, line: &BufferLine) -> usize {
-        if self.prefix_column_width > 0 {
-            self.prefix_column_width
-        } else if let Some(prefix) = &line.prefix {
-            prefix.chars().count()
-        } else {
-            0
-        }
+    fn get_custom_prefix_width(&self, _line: &BufferLine) -> usize {
+        self.prefix_column_width
     }
 
     fn get_prefix_width(&self) -> usize {
@@ -185,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn custom_prefix_width_falls_back_to_prefix_len() {
+    fn custom_prefix_width_zero_ignores_prefix_content() {
         let vp = ViewPort {
             prefix_column_width: 0,
             ..Default::default()
@@ -196,8 +190,8 @@ mod tests {
         };
         assert_eq!(
             vp.get_custom_prefix_width(&bl),
-            3,
-            "should fall back to actual prefix char count"
+            0,
+            "should return 0 when prefix_column_width is 0, regardless of prefix content"
         );
     }
 }

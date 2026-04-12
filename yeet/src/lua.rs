@@ -148,17 +148,12 @@ mod tests {
     }
 
     #[test]
-    fn lua_overrides_directory_fg_token() {
+    fn lua_overrides_buffer_fg_token() {
         use ratatui::style::Color;
-        let theme = load_theme_from_script("y.theme.BufferDirectoryFg = '#00ff00'");
+        let theme = load_theme_from_script("y.theme.BufferFg = '#00ff00'");
         assert_eq!(
-            theme.color(yeet_frontend::theme::tokens::BUFFER_DIRECTORY_FG),
+            theme.color(yeet_frontend::theme::tokens::BUFFER_FG),
             Color::Rgb(0, 255, 0)
-        );
-        // File token should remain default
-        assert_eq!(
-            theme.color(yeet_frontend::theme::tokens::BUFFER_FILE_FG),
-            Color::White
         );
     }
 

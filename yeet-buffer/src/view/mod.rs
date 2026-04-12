@@ -49,7 +49,7 @@ pub fn view(
     };
 
     frame.render_widget(
-        Paragraph::new(styled).style(Style::default().bg(theme.buffer_bg)),
+        Paragraph::new(styled).style(Style::default().fg(theme.buffer_fg).bg(theme.buffer_bg)),
         rect,
     );
 }
@@ -197,6 +197,7 @@ mod test {
         use ratatui::style::Color;
         BufferTheme {
             buffer_bg: Color::Reset,
+            buffer_fg: Color::White,
             cursor_line_bg: Color::Rgb(128, 128, 128),
             search_bg: Color::Red,
             line_nr: Color::Rgb(128, 128, 128),
