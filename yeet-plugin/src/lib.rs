@@ -13,6 +13,6 @@ pub use git::{
 };
 pub use lockfile::{LockEntry, LockFile};
 pub use path::{resolve_lock_file_path, resolve_plugin_data_path, url_to_storage_path};
-pub use spec::PluginSpec;
+pub use spec::{discover_help_pages, PluginHelpPage, PluginSpec};
 pub use state::{PluginState, PluginStatus};
 pub use version::{deduplicate_dependencies, filter_tags_by_range, parse_version_range};

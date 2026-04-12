@@ -1,34 +1,34 @@
 ## 1. Replace icon column with prefix column in yeet-buffer
 
-- [ ] 1.1 Rename `icon_column_width` to `prefix_column_width` in `ViewPort` struct (`yeet-buffer/src/model/viewport.rs`), update `get_prefix_width()` to use the new field, and update all tests in the file
-- [ ] 1.2 Remove the `icon` field from `BufferLine` struct (`yeet-buffer/src/model/mod.rs`)
-- [ ] 1.3 Replace `get_icon_column()` in `yeet-buffer/src/view/prefix.rs` with `get_prefix_column()` that renders the `prefix` field right-aligned within `prefix_column_width`, falling back to spaces when prefix is None
-- [ ] 1.4 Update both wrap and no-wrap rendering paths in `yeet-buffer/src/view/mod.rs` to call `get_prefix_column()` instead of `get_icon_column()` and `get_custom_prefix()` separately
-- [ ] 1.5 Update `get_offset_width()` in viewport.rs to account for `prefix_column_width` instead of separate icon column and custom prefix width calculations
-- [ ] 1.6 Update all existing tests in `yeet-buffer/src/view/prefix.rs` and `yeet-buffer/src/view/mod.rs` to use `prefix_column_width` and `prefix` instead of `icon_column_width` and `icon`
+- [x] 1.1 Rename `icon_column_width` to `prefix_column_width` in `ViewPort` struct (`yeet-buffer/src/model/viewport.rs`), update `get_prefix_width()` to use the new field, and update all tests in the file
+- [x] 1.2 Remove the `icon` field from `BufferLine` struct (`yeet-buffer/src/model/mod.rs`)
+- [x] 1.3 Replace `get_icon_column()` in `yeet-buffer/src/view/prefix.rs` with `get_prefix_column()` that renders the `prefix` field right-aligned within `prefix_column_width`, falling back to spaces when prefix is None
+- [x] 1.4 Update both wrap and no-wrap rendering paths in `yeet-buffer/src/view/mod.rs` to call `get_prefix_column()` instead of `get_icon_column()` and `get_custom_prefix()` separately
+- [x] 1.5 Update `get_offset_width()` in viewport.rs to account for `prefix_column_width` instead of separate icon column and custom prefix width calculations
+- [x] 1.6 Update all existing tests in `yeet-buffer/src/view/prefix.rs` and `yeet-buffer/src/view/mod.rs` to use `prefix_column_width` and `prefix` instead of `icon_column_width` and `icon`
 
 ## 2. Update Lua bridge for prefix column
 
-- [ ] 2.1 Rename `icon_column_width` to `prefix_column_width` in `yeet-lua/src/viewport.rs` Lua field read/write
-- [ ] 2.2 Remove `icon` field handling from `on_bufferline_mutate` hook context in `yeet-lua/src/hook.rs` (remove icon write-to-context and read-back)
-- [ ] 2.3 Update all Lua hook tests in `yeet-lua/src/hook.rs` that reference `icon` or `icon_column_width`
+- [x] 2.1 Rename `icon_column_width` to `prefix_column_width` in `yeet-lua/src/viewport.rs` Lua field read/write
+- [x] 2.2 Remove `icon` field handling from `on_bufferline_mutate` hook context in `yeet-lua/src/hook.rs` (remove icon write-to-context and read-back)
+- [x] 2.3 Update all Lua hook tests in `yeet-lua/src/hook.rs` that reference `icon` or `icon_column_width`
 
 ## 3. Fix hook firing order in frontend
 
-- [ ] 3.1 In `yeet-frontend/src/update/enumeration.rs`, move `invoke_on_bufferline_mutate` calls to fire AFTER `set_sign_if_marked` and `set_sign_if_qfix` in all code paths (`set_directory_content` and any other functions)
-- [ ] 3.2 Audit all other locations where `on_bufferline_mutate` fires (content buffers, help, quickfix, tasks) and ensure hooks fire after all sign operations
+- [x] 3.1 In `yeet-frontend/src/update/enumeration.rs`, move `invoke_on_bufferline_mutate` calls to fire AFTER `set_sign_if_marked` and `set_sign_if_qfix` in all code paths (`set_directory_content` and any other functions)
+- [x] 3.2 Audit all other locations where `on_bufferline_mutate` fires (content buffers, help, quickfix, tasks) and ensure hooks fire after all sign operations
 
 ## 4. Set per-buffer prefix column width defaults
 
-- [ ] 4.1 Ensure `prefix_column_width` defaults to `0` on `ViewPort` (via `Default` derive) for all buffer types
-- [ ] 4.2 Set `prefix_column_width` to `1` on the commandline buffer viewport initialization (`yeet-frontend/src/update/commandline.rs` or wherever commandline viewport is created)
+- [x] 4.1 Ensure `prefix_column_width` defaults to `0` on `ViewPort` (via `Default` derive) for all buffer types
+- [x] 4.2 Set `prefix_column_width` to `1` on the commandline buffer viewport initialization (`yeet-frontend/src/update/commandline.rs` or wherever commandline viewport is created)
 
 ## 5. Move plugin help page discovery to yeet-plugin
 
-- [ ] 5.1 Add `help_pages` field (Vec of help page data) to `PluginSpec` in `yeet-plugin/src/spec.rs`
-- [ ] 5.2 Implement help page discovery function in `yeet-plugin` that scans a plugin's `docs/help/*.md` directory and returns resolved help page paths with content
-- [ ] 5.3 Integrate help page discovery into plugin spec initialization so `help_pages` is populated when specs are read from Lua
-- [ ] 5.4 Refactor `discover_plugin_help_pages()` in `yeet-frontend/src/update/command/help.rs` to read help pages from `PluginSpec.help_pages` instead of scanning the filesystem
+- [x] 5.1 Add `help_pages` field (Vec of help page data) to `PluginSpec` in `yeet-plugin/src/spec.rs`
+- [x] 5.2 Implement help page discovery function in `yeet-plugin` that scans a plugin's `docs/help/*.md` directory and returns resolved help page paths with content
+- [x] 5.3 Integrate help page discovery into plugin spec initialization so `help_pages` is populated when specs are read from Lua
+- [x] 5.4 Refactor `discover_plugin_help_pages()` in `yeet-frontend/src/update/command/help.rs` to read help pages from `PluginSpec.help_pages` instead of scanning the filesystem
 
 ## 6. Update directory-icons plugin
 

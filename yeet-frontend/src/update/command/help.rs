@@ -170,53 +170,16 @@ fn resolve_topic(topic: &str, plugin_pages: &[PluginHelpPage]) -> Option<TopicMa
 }
 
 fn discover_plugin_help_pages(lua: &LuaConfiguration) -> Vec<PluginHelpPage> {
-    let mut pages = Vec::new();
-
-    let data_path = match yeet_lua::read_plugin_data_path(lua) {
-        Some(p) => p,
-        None => return pages,
-    };
-
     let specs = yeet_lua::read_plugin_specs(lua);
-    for spec in &specs {
-        let storage_path = match yeet_plugin::url_to_storage_path(&spec.url) {
-            Some(p) => p,
-            None => continue,
-        };
-
-        let plugin_dir = data_path.join(storage_path);
-        let help_dir = plugin_dir.join("docs").join("help");
-
-        if !help_dir.is_dir() {
-            continue;
-        }
-
-        let entries = match std::fs::read_dir(&help_dir) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("md") {
-                continue;
-            }
-
-            let name = match path.file_stem().and_then(|s| s.to_str()) {
-                Some(n) => n.to_string(),
-                None => continue,
-            };
-
-            let content = match std::fs::read_to_string(&path) {
-                Ok(c) => c,
-                Err(_) => continue,
-            };
-
-            pages.push(PluginHelpPage { name, content });
-        }
-    }
-
-    pages
+    specs
+        .into_iter()
+        .flat_map(|spec| {
+            spec.help_pages.into_iter().map(|hp| PluginHelpPage {
+                name: hp.name,
+                content: hp.content,
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]

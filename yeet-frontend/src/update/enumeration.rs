@@ -213,8 +213,10 @@ fn set_directory_content(
         .iter()
         .map(|cntnt| {
             let mut line = from_enumeration(cntnt);
+            let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
+            set_sign_if_marked(&state.marks, &mut line, &path.join(bare_name), theme);
+            set_sign_if_qfix(&state.qfix, &mut line, &path.join(bare_name), theme);
             if let Some(lua) = lua {
-                let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
                 yeet_lua::invoke_on_bufferline_mutate(
                     lua,
                     &mut line,
@@ -222,9 +224,6 @@ fn set_directory_content(
                     Some(&path.join(bare_name)),
                 );
             }
-            let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
-            set_sign_if_marked(&state.marks, &mut line, &path.join(bare_name), theme);
-            set_sign_if_qfix(&state.qfix, &mut line, &path.join(bare_name), theme);
 
             line
         })

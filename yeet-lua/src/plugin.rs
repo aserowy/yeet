@@ -121,6 +121,7 @@ fn parse_dependencies(_lua: &Lua, deps: &LuaTable) -> LuaResult<Vec<PluginSpec>>
             branch: dep_table.get("branch").ok(),
             version: dep_table.get("version").ok(),
             dependencies: Vec::new(),
+            help_pages: Vec::new(),
         });
     }
 
@@ -137,6 +138,8 @@ pub fn read_plugin_specs(lua: &Lua) -> Vec<PluginSpec> {
     let Ok(plugins) = plugin.get::<LuaTable>("_plugins") else {
         return Vec::new();
     };
+
+    let data_path = read_data_path_from_table(&plugin);
 
     let mut specs = Vec::new();
     for pair in plugins.pairs::<i64, LuaTable>().flatten() {
@@ -156,12 +159,19 @@ pub fn read_plugin_specs(lua: &Lua) -> Vec<PluginSpec> {
             Err(_) => Vec::new(),
         };
 
+        let help_pages = data_path
+            .as_ref()
+            .and_then(|dp| yeet_plugin::url_to_storage_path(&url).map(|sp| dp.join(sp)))
+            .map(|plugin_dir| yeet_plugin::discover_help_pages(&plugin_dir))
+            .unwrap_or_default();
+
         specs.push(PluginSpec {
             url,
             name,
             branch,
             version,
             dependencies,
+            help_pages,
         });
     }
 
@@ -182,6 +192,7 @@ fn read_deps_from_table(deps: &LuaTable) -> Vec<PluginSpec> {
             branch: dep.get("branch").ok(),
             version: dep.get("version").ok(),
             dependencies: Vec::new(),
+            help_pages: Vec::new(),
         });
     }
     result
@@ -216,6 +227,10 @@ pub fn read_plugin_concurrency(lua: &Lua) -> usize {
 pub fn read_plugin_data_path(lua: &Lua) -> Option<PathBuf> {
     let y = lua.globals().get::<LuaTable>("y").ok()?;
     let plugin = y.get::<LuaTable>("plugin").ok()?;
+    read_data_path_from_table(&plugin)
+}
+
+fn read_data_path_from_table(plugin: &LuaTable) -> Option<PathBuf> {
     let data_path: String = plugin.get("_data_path").ok()?;
     if data_path.is_empty() {
         None
