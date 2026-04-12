@@ -532,7 +532,7 @@ At startup, existing plugin loading SHALL make `yeet-directory-icons` available 
 - **THEN** the system reports a plugin loading diagnostic and continues with icon-column width `0`
 
 ### Requirement: Mutation hook fires for all buffer types with buffer metadata object
-The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) containing `type` (e.g., `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`) and optionally `path` (parent dir for directory, file path for content; absent/nil for help, quickfix, tasks). The plugin decides which buffer types to process by checking `ctx.buffer.type`. The `buffer_type` parameter in the Rust API SHALL use a `BufferType` enum instead of `&str`.
+The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when bufferlines are created or updated. Each hook invocation SHALL provide buffer metadata as a read-only `buffer` object (`ctx.buffer`) containing `type` (e.g., `"directory"`, `"content"`, `"help"`, `"quickfix"`, `"tasks"`) and optionally `path` (parent dir for directory, file path for content; absent/nil for help, quickfix, tasks). The plugin decides which buffer types to process by checking `ctx.buffer.type`. The `buffer_type` parameter in the Rust API SHALL use a `BufferType` enum instead of `&str`. The mutable fields in the hook context are: `prefix`, `content`, `search_char_position`, and `signs`. The `icon` field is no longer part of the hook context.
 
 #### Scenario: Hook fires for directory buffer entries
 - **WHEN** the core handles `EnumerationChanged`, `EnumerationFinished`, or `PathsAdded` and processes a bufferline
@@ -556,7 +556,7 @@ The core SHALL invoke the `on_bufferline_mutate` hook for all buffer types when 
 
 #### Scenario: Plugin directly mutates bufferline via hook context
 - **WHEN** the plugin receives a hook call with bufferline and `ctx.buffer` metadata object
-- **THEN** the plugin can mutate `prefix`, `content`, `search_char_position`, `signs`, and `icon` fields in-place on the context table; the `buffer` metadata object is read-only
+- **THEN** the plugin can mutate `prefix`, `content`, `search_char_position`, and `signs` fields in-place on the context table; the `buffer` metadata object is read-only
 
 ### Requirement: Deferred PathsAdded hooks fire on flush
 When `PathsAdded` events are deferred during Insert mode, the per-bufferline mutation hooks SHALL also be deferred. Hooks fire when deferred events are flushed (after leaving Insert mode).
@@ -572,8 +572,34 @@ The system SHALL NOT require changes to plugin-manager commands/workflows (insta
 - **WHEN** a user installs/configures `yeet-directory-icons` through their normal setup
 - **THEN** directory icon integration works without introducing new plugin-manager behavior
 
+### Requirement: Plugin spec includes help page paths
+The `PluginSpec` struct SHALL include a `help_pages` field containing a list of resolved help page file paths. Each entry SHALL represent a markdown file found in the plugin's `docs/help/` directory.
+
+#### Scenario: Plugin with help pages
+- **WHEN** a plugin has files `docs/help/directory-icons.md` and `docs/help/advanced.md`
+- **THEN** the `PluginSpec.help_pages` field SHALL contain paths to both files
+
+#### Scenario: Plugin without help pages
+- **WHEN** a plugin has no `docs/help/` directory or the directory is empty
+- **THEN** the `PluginSpec.help_pages` field SHALL be an empty list
+
+#### Scenario: Plugin directory does not exist
+- **WHEN** a plugin is registered but its directory does not exist on disk
+- **THEN** the `PluginSpec.help_pages` field SHALL be an empty list
+
+### Requirement: Help page discovery happens at spec initialization
+Plugin help pages SHALL be discovered during spec initialization in `yeet-plugin` (Rust side), not at runtime in the frontend. The discovery SHALL scan each plugin's resolved storage directory for `docs/help/*.md` files and populate the `help_pages` field on the spec.
+
+#### Scenario: Help pages resolved during initialization
+- **WHEN** `yeet-plugin` initializes plugin specs from the registered plugin list
+- **THEN** each spec's `help_pages` field is populated by scanning the plugin's `docs/help/` directory
+
+#### Scenario: Frontend reads help pages from spec
+- **WHEN** the frontend needs to discover plugin help pages for `:help` resolution
+- **THEN** it reads the `help_pages` field from `PluginSpec` instead of scanning the filesystem
+
 ### Requirement: Plugins can provide help pages
-Plugins SHALL be able to provide help documentation by placing markdown files in a `docs/help/` directory within their plugin directory. The `:help` command SHALL discover these files at runtime and include them as searchable help pages.
+Plugins SHALL be able to provide help documentation by placing markdown files in a `docs/help/` directory within their plugin directory. The `:help` command SHALL discover these files via the `help_pages` field on `PluginSpec` (populated at spec initialization) and include them as searchable help pages.
 
 #### Scenario: Plugin help page is discoverable
 - **WHEN** a plugin has a `docs/help/directory-icons.md` file

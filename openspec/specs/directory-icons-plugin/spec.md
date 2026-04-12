@@ -4,9 +4,6 @@ The `yeet-directory-icons` plugin provides icon glyphs and color styling for dir
 
 ## Requirements
 
-### Requirement: Plugin owns all icon identification and text color logic
-The `yeet-directory-icons` plugin SHALL contain all logic for determining which icon glyph to display and how to color both the icon glyph and the filename text. The core SHALL NOT contain any icon resolution tables, extension mappings, or color rules; it only invokes hooks and the plugin directly mutates bufferlines.
-
 ### Requirement: Plugin checks buffer type before acting
 The plugin SHALL check the buffer type via the `ctx.buffer.type` field (from the read-only `buffer` metadata object, populated from the `BufferType` enum's string representation) provided in each `on_bufferline_mutate` hook invocation and only mutate bufferlines for file/directory-related buffer types (e.g., `"directory"` type). The plugin SHALL skip non-file buffer types (e.g., `"help"`, `"quickfix"`, `"tasks"`).
 
@@ -38,38 +35,38 @@ The plugin SHALL determine whether an entry is a directory by checking if the co
 - **THEN** the plugin treats the entry as a file and uses file icon resolution
 
 ### Requirement: Plugin styles content by mutating the Ansi string
-The plugin SHALL apply foreground color to filename text by prepending ANSI escape sequences to the `content` field in the hook context. The plugin SHALL also style the icon glyph by including the ANSI color in the `icon` field value. There is no separate `icon_style` field.
+The plugin SHALL apply foreground color to filename text by prepending ANSI escape sequences to the `content` field in the hook context. The plugin SHALL style the icon glyph by including the ANSI color in the `prefix` field value. There is no separate `icon` or `icon_style` field.
 
 #### Scenario: Plugin prepends ANSI color to content
 - **WHEN** the plugin resolves a color for a file entry
 - **THEN** it prepends the ANSI foreground escape sequence to the `content` string
 
-#### Scenario: Plugin includes color in icon string
-- **WHEN** the plugin sets an icon glyph
-- **THEN** the icon string includes the ANSI foreground color prefix and a reset suffix so the icon renders in color
+#### Scenario: Plugin includes color in prefix string
+- **WHEN** the plugin sets an icon glyph via prefix
+- **THEN** the prefix string includes the ANSI foreground color prefix and a reset suffix so the icon renders in color
 
 ### Requirement: Plugin directly mutates bufferlines via hooks
-The plugin SHALL implement hook handlers that are invoked for each bufferline across all buffer types. Each hook call receives the complete bufferline fields and a read-only `buffer` metadata object (`ctx.buffer`) with `type` and optionally `path` fields. The plugin directly mutates the bufferline fields in-place. There is no request/response pattern.
+The plugin SHALL implement hook handlers that are invoked for each bufferline across all buffer types. Each hook call receives the complete bufferline fields and a read-only `buffer` metadata object (`ctx.buffer`) with `type` and optionally `path` fields. The plugin directly mutates the bufferline fields in-place. There is no request/response pattern. The plugin SHALL set icons via the `prefix` field instead of the removed `icon` field.
 
 #### Scenario: Plugin receives full bufferline context
 - **WHEN** the core invokes the hook for a bufferline
-- **THEN** the hook provides mutable access to `prefix`, `content`, `search_char_position`, `signs`, and `icon`, plus a read-only `ctx.buffer` metadata object with `type` and optionally `path` fields
+- **THEN** the hook provides mutable access to `prefix`, `content`, `search_char_position`, and `signs`, plus a read-only `ctx.buffer` metadata object with `type` and optionally `path` fields
 
-#### Scenario: Plugin sets icon glyph for a recognized file
+#### Scenario: Plugin sets icon glyph via prefix for a recognized file
 - **WHEN** the plugin's hook handler receives a bufferline for a file with extension `.rs` in a directory buffer
-- **THEN** the plugin sets the rust icon glyph in `icon` and prepends rust color ANSI sequence to `content`
+- **THEN** the plugin sets the rust icon glyph with ANSI color in the `prefix` field and prepends rust color ANSI sequence to `content`
 
-#### Scenario: Plugin sets fallback icon for unrecognized file
+#### Scenario: Plugin sets fallback icon via prefix for unrecognized file
 - **WHEN** the plugin's hook handler receives a bufferline for a file named `README.unknownext`
-- **THEN** the plugin sets the default file icon glyph and prepends default color to content
+- **THEN** the plugin sets the default file icon glyph in the `prefix` field and prepends default color to content
 
-#### Scenario: Plugin sets directory-specific icon
+#### Scenario: Plugin sets directory-specific icon via prefix
 - **WHEN** the plugin's hook handler receives a bufferline for a directory entry named `.git/`
-- **THEN** the plugin sets the git directory icon glyph and applies directory color (using a directory-specific token distinct from the file default)
+- **THEN** the plugin sets the git directory icon glyph in the `prefix` field and applies directory color
 
-#### Scenario: Plugin replaces existing icon on re-processing
-- **WHEN** a bufferline already has an icon set and the hook is invoked again (e.g., during `EnumerationFinished` after `EnumerationChanged`)
-- **THEN** the plugin replaces the existing icon with the newly resolved icon
+#### Scenario: Plugin replaces existing prefix on re-processing
+- **WHEN** a bufferline already has a prefix set and the hook is invoked again (e.g., during `EnumerationFinished` after `EnumerationChanged`)
+- **THEN** the plugin replaces the existing prefix with the newly resolved icon
 
 ### Requirement: Rule mapping applies to all matching entries
 Icon/class/color resolution SHALL be rule-based by extension, exact filename, or directory name, and each rule SHALL apply uniformly to every matching entry. All rule logic lives in the plugin.
@@ -144,3 +141,18 @@ The `yeet-directory-icons` plugin SHALL include a `docs/help/directory-icons.md`
 #### Scenario: Plugin help page accessible via :help
 - **WHEN** `yeet-directory-icons` is loaded and the user runs `:help directory-icons`
 - **THEN** the plugin's help page is displayed with full token reference and usage examples
+
+### Requirement: Plugin sets prefix column width to 2
+The `yeet-directory-icons` plugin SHALL set `prefix_column_width` to `2` via the `on_window_create` hook for all directory buffer panes (parent, current, preview). Nerd Font icons typically occupy two terminal cells, so the prefix column must be wide enough to display them.
+
+#### Scenario: Plugin sets prefix width on window create
+- **WHEN** `yeet-directory-icons` runs its `on_window_create` hook for a directory window
+- **THEN** `prefix_column_width` is set to `2` on all three panes (parent, current, preview)
+
+#### Scenario: Non-directory windows are not affected
+- **WHEN** `yeet-directory-icons` runs its `on_window_create` hook for a help, quickfix, or tasks window
+- **THEN** `prefix_column_width` is not modified by the plugin
+
+#### Scenario: Plugin unavailable keeps zero prefix width
+- **WHEN** `yeet-directory-icons` is not installed or not configured
+- **THEN** `prefix_column_width` remains at the default `0` and no prefix space is reserved
