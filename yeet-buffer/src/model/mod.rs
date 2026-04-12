@@ -145,8 +145,6 @@ pub struct BufferLine {
     pub content: Ansi,
     pub search_char_position: Option<Vec<(usize, usize)>>,
     pub signs: Vec<Sign>,
-    /// Icon glyph set by plugin mutation hooks. Rendered in the icon-column prefix segment.
-    pub icon: Option<String>,
 }
 
 impl BufferLine {

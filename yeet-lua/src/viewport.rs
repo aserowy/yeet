@@ -3,7 +3,7 @@ use yeet_buffer::model::viewport::{LineNumber, ViewPort};
 
 pub fn viewport_to_table(lua: &Lua, vp: &ViewPort) -> LuaResult<LuaTable> {
     let table = lua.create_table()?;
-    table.set("icon_column_width", vp.icon_column_width)?;
+    table.set("prefix_column_width", vp.prefix_column_width)?;
     table.set("line_number", line_number_to_str(&vp.line_number))?;
     table.set("line_number_width", vp.line_number_width)?;
     table.set("sign_column_width", vp.sign_column_width)?;
@@ -26,7 +26,7 @@ pub fn table_to_viewport(table: &LuaTable, vp: &mut ViewPort) {
         }
     }
 
-    read_usize_field(table, "icon_column_width", &mut vp.icon_column_width);
+    read_usize_field(table, "prefix_column_width", &mut vp.prefix_column_width);
     read_usize_field(table, "line_number_width", &mut vp.line_number_width);
     read_usize_field(table, "sign_column_width", &mut vp.sign_column_width);
     read_bool_field(table, "show_border", &mut vp.show_border);
@@ -100,7 +100,7 @@ mod tests {
         let mut result = ViewPort::default();
         table_to_viewport(&table, &mut result);
 
-        assert_eq!(result.icon_column_width, vp.icon_column_width);
+        assert_eq!(result.prefix_column_width, vp.prefix_column_width);
         assert_eq!(result.line_number, vp.line_number);
         assert_eq!(result.line_number_width, vp.line_number_width);
         assert_eq!(result.sign_column_width, vp.sign_column_width);
@@ -114,7 +114,7 @@ mod tests {
     fn round_trip_viewport_custom_values() {
         let lua = make_lua();
         let vp = ViewPort {
-            icon_column_width: 1,
+            prefix_column_width: 1,
             line_number: LineNumber::Absolute,
             line_number_width: 5,
             sign_column_width: 3,
@@ -128,7 +128,7 @@ mod tests {
         let mut result = ViewPort::default();
         table_to_viewport(&table, &mut result);
 
-        assert_eq!(result.icon_column_width, 1);
+        assert_eq!(result.prefix_column_width, 1);
         assert_eq!(result.line_number, LineNumber::Absolute);
         assert_eq!(result.line_number_width, 5);
         assert_eq!(result.sign_column_width, 3);

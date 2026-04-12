@@ -15,29 +15,32 @@ pub fn get_border(vp: &ViewPort) -> Ansi {
     Ansi::new(&" ".repeat(vp.get_border_width()))
 }
 
-pub fn get_custom_prefix(line: &BufferLine) -> Ansi {
-    if let Some(prefix) = &line.prefix {
-        Ansi::new(prefix)
-    } else {
-        Ansi::new("")
-    }
-}
-
-/// Renders the icon column prefix segment for a bufferline.
-///
-/// If the viewport `icon_column_width` is `0`, returns an empty string.
-/// Otherwise, renders the bufferline's `icon` glyph (if set by a plugin
-/// mutation hook) as-is, or empty space as fallback.
-pub fn get_icon_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
-    let width = vp.icon_column_width;
+pub fn get_prefix_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
+    let width = vp.prefix_column_width;
     if width == 0 {
+        if let Some(prefix) = &bl.prefix {
+            return Ansi::new(prefix);
+        }
         return Ansi::new("");
     }
 
     let reset = style::ansi_reset_with_bg(theme.buffer_bg);
 
-    match &bl.icon {
-        Some(icon) => Ansi::new(&format!("{}{}", icon, reset)),
+    match &bl.prefix {
+        Some(prefix) => {
+            let ansi = Ansi::new(prefix);
+            let char_count = ansi.count_chars();
+            if char_count < width {
+                Ansi::new(&format!(
+                    "{}{}{}",
+                    " ".repeat(width - char_count),
+                    prefix,
+                    reset
+                ))
+            } else {
+                Ansi::new(&format!("{}{}", prefix, reset))
+            }
+        }
         None => Ansi::new(&" ".repeat(width)),
     }
 }
@@ -120,7 +123,7 @@ mod test {
         BufferTheme,
     };
 
-    use super::get_icon_column;
+    use super::get_prefix_column;
 
     fn test_theme() -> BufferTheme {
         BufferTheme {
@@ -135,85 +138,108 @@ mod test {
     }
 
     #[test]
-    fn icon_column_width_zero_returns_empty() {
+    fn prefix_column_width_zero_returns_empty() {
         let vp = ViewPort {
-            icon_column_width: 0,
+            prefix_column_width: 0,
             ..Default::default()
         };
         let bl = BufferLine::default();
-        let result = get_icon_column(&vp, &bl, &test_theme());
+        let result = get_prefix_column(&vp, &bl, &test_theme());
         assert_eq!(result.count_chars(), 0, "width 0 should produce no output");
     }
 
     #[test]
-    fn icon_column_no_icon_renders_space() {
+    fn prefix_column_no_prefix_renders_spaces() {
         let vp = ViewPort {
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
         let bl = BufferLine::default();
-        let result = get_icon_column(&vp, &bl, &test_theme());
+        let result = get_prefix_column(&vp, &bl, &test_theme());
         assert_eq!(
             result.count_chars(),
-            1,
-            "width 1 with no icon should render one space"
+            2,
+            "width 2 with no prefix should render two spaces"
         );
         assert_eq!(
             result.to_stripped_string(),
-            " ",
-            "fallback icon should be a space"
+            "  ",
+            "fallback should be spaces"
         );
     }
 
     #[test]
-    fn icon_column_renders_icon_glyph() {
+    fn prefix_column_renders_prefix_right_aligned() {
         let vp = ViewPort {
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
         let bl = BufferLine {
-            icon: Some("\u{f0f6}".to_string()),
+            prefix: Some("\u{f0f6}".to_string()),
             ..Default::default()
         };
-        let result = get_icon_column(&vp, &bl, &test_theme());
+        let result = get_prefix_column(&vp, &bl, &test_theme());
+        let stripped = result.to_stripped_string();
         assert!(
-            result.to_stripped_string().contains('\u{f0f6}'),
-            "icon glyph should appear in rendered output"
+            stripped.starts_with(' '),
+            "single-char prefix in width-2 column should be right-aligned with leading space"
+        );
+        assert!(
+            stripped.contains('\u{f0f6}'),
+            "prefix glyph should appear in rendered output"
         );
     }
 
     #[test]
-    fn icon_column_applies_color_from_icon_string() {
+    fn prefix_column_applies_color_from_prefix_string() {
         let vp = ViewPort {
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
         let bl = BufferLine {
-            icon: Some("\x1b[38;2;255;0;0m\u{f0f6}\x1b[0m".to_string()),
+            prefix: Some("\x1b[38;2;255;0;0m\u{f0f6}\x1b[0m".to_string()),
             ..Default::default()
         };
-        let result = get_icon_column(&vp, &bl, &test_theme());
+        let result = get_prefix_column(&vp, &bl, &test_theme());
         let raw = format!("{}", result);
         assert!(
             raw.contains("\x1b[38;2;255;0;0m"),
-            "ANSI color in icon string should be present in rendered output"
+            "ANSI color in prefix string should be present in rendered output"
         );
     }
 
     #[test]
-    fn icon_column_no_color_still_renders_icon() {
+    fn prefix_column_no_color_still_renders_prefix() {
         let vp = ViewPort {
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
         let bl = BufferLine {
-            icon: Some("\u{f0f6}".to_string()),
+            prefix: Some("\u{f0f6}".to_string()),
             ..Default::default()
         };
-        let result = get_icon_column(&vp, &bl, &test_theme());
+        let result = get_prefix_column(&vp, &bl, &test_theme());
         assert!(
             result.to_stripped_string().contains('\u{f0f6}'),
-            "icon glyph should render even without ANSI color"
+            "prefix glyph should render even without ANSI color"
+        );
+    }
+
+    #[test]
+    fn prefix_column_zero_width_with_prefix_returns_prefix() {
+        let vp = ViewPort {
+            prefix_column_width: 0,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            prefix: Some("X".to_string()),
+            ..Default::default()
+        };
+        let result = get_prefix_column(&vp, &bl, &test_theme());
+        assert_eq!(
+            result.to_stripped_string(),
+            "X",
+            "zero width with prefix should return prefix as-is"
         );
     }
 }

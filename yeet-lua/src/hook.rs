@@ -148,7 +148,6 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 ///     (directory, content); absent/nil for help, quickfix, tasks
 /// - `prefix`: the bufferline prefix (string or nil), mutable
 /// - `content`: the bufferline content as string, mutable
-/// - `icon`: the icon glyph (string or nil), mutable
 ///
 /// After all callbacks run, mutable fields are read back from the
 /// context table and applied to the bufferline. The `buffer` metadata
@@ -194,9 +193,6 @@ fn try_invoke_on_bufferline_mutate(
         ctx.set("prefix", prefix.as_str())?;
     }
     ctx.set("content", bl.content.to_string())?;
-    if let Some(icon) = &bl.icon {
-        ctx.set("icon", icon.as_str())?;
-    }
 
     for i in 1..=len {
         let func: LuaValue = hook_table.raw_get(i)?;
@@ -221,11 +217,6 @@ fn try_invoke_on_bufferline_mutate(
     }
 
     // Read back mutated values
-    match ctx.get::<LuaValue>("icon")? {
-        LuaValue::String(s) => bl.icon = Some(s.to_str()?.to_string()),
-        LuaValue::Nil => bl.icon = None,
-        _ => {}
-    }
     match ctx.get::<LuaValue>("prefix")? {
         LuaValue::String(s) => bl.prefix = Some(s.to_str()?.to_string()),
         LuaValue::Nil => bl.prefix = None,
@@ -590,23 +581,23 @@ mod tests {
     }
 
     #[test]
-    fn icon_column_width_defaults_to_zero() {
+    fn prefix_column_width_defaults_to_zero() {
         let vp = ViewPort::default();
         assert_eq!(
-            vp.icon_column_width, 0,
-            "icon_column_width should default to 0"
+            vp.prefix_column_width, 0,
+            "prefix_column_width should default to 0"
         );
     }
 
     #[test]
-    fn directory_hook_sets_icon_column_width_to_one() {
+    fn directory_hook_sets_prefix_column_width() {
         let lua = create_lua_with_hook(
             r#"
             y.hook.on_window_create:add(function(ctx)
                 if ctx.type == "directory" then
-                    ctx.parent.icon_column_width = 1
-                    ctx.current.icon_column_width = 1
-                    ctx.preview.icon_column_width = 1
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
                 end
             end)
             "#,
@@ -616,9 +607,9 @@ mod tests {
         let mut current = ViewPort::default();
         let mut preview = ViewPort::default();
 
-        assert_eq!(parent.icon_column_width, 0);
-        assert_eq!(current.icon_column_width, 0);
-        assert_eq!(preview.icon_column_width, 0);
+        assert_eq!(parent.prefix_column_width, 0);
+        assert_eq!(current.prefix_column_width, 0);
+        assert_eq!(preview.prefix_column_width, 0);
 
         invoke_on_window_create(
             &lua,
@@ -628,28 +619,28 @@ mod tests {
         );
 
         assert_eq!(
-            parent.icon_column_width, 1,
-            "parent icon_column_width should be 1 after hook"
+            parent.prefix_column_width, 2,
+            "parent prefix_column_width should be 2 after hook"
         );
         assert_eq!(
-            current.icon_column_width, 1,
-            "current icon_column_width should be 1 after hook"
+            current.prefix_column_width, 2,
+            "current prefix_column_width should be 2 after hook"
         );
         assert_eq!(
-            preview.icon_column_width, 1,
-            "preview icon_column_width should be 1 after hook"
+            preview.prefix_column_width, 2,
+            "preview prefix_column_width should be 2 after hook"
         );
     }
 
     #[test]
-    fn icon_column_width_unaffected_for_non_directory_window() {
+    fn prefix_column_width_unaffected_for_non_directory_window() {
         let lua = create_lua_with_hook(
             r#"
             y.hook.on_window_create:add(function(ctx)
                 if ctx.type == "directory" then
-                    ctx.parent.icon_column_width = 1
-                    ctx.current.icon_column_width = 1
-                    ctx.preview.icon_column_width = 1
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
                 end
             end)
             "#,
@@ -659,13 +650,13 @@ mod tests {
         invoke_on_window_create(&lua, "help", None, &mut [&mut vp]);
 
         assert_eq!(
-            vp.icon_column_width, 0,
-            "icon_column_width should remain 0 for non-directory windows"
+            vp.prefix_column_width, 0,
+            "prefix_column_width should remain 0 for non-directory windows"
         );
     }
 
     #[test]
-    fn icon_column_width_preserved_when_no_hooks() {
+    fn prefix_column_width_preserved_when_no_hooks() {
         let lua = create_lua_with_hook("");
 
         let mut parent = ViewPort::default();
@@ -680,30 +671,30 @@ mod tests {
         );
 
         assert_eq!(
-            parent.icon_column_width, 0,
-            "icon_column_width should remain 0 with no hooks"
+            parent.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
         );
         assert_eq!(
-            current.icon_column_width, 0,
-            "icon_column_width should remain 0 with no hooks"
+            current.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
         );
         assert_eq!(
-            preview.icon_column_width, 0,
-            "icon_column_width should remain 0 with no hooks"
+            preview.prefix_column_width, 0,
+            "prefix_column_width should remain 0 with no hooks"
         );
     }
 
     #[test]
-    fn icon_column_width_via_real_init() {
+    fn prefix_column_width_via_real_init() {
         let mut tmp = NamedTempFile::new().unwrap();
         write!(
             tmp,
             r#"
             y.hook.on_window_create:add(function(ctx)
                 if ctx.type == "directory" then
-                    ctx.parent.icon_column_width = 1
-                    ctx.current.icon_column_width = 1
-                    ctx.preview.icon_column_width = 1
+                    ctx.parent.prefix_column_width = 2
+                    ctx.current.prefix_column_width = 2
+                    ctx.preview.prefix_column_width = 2
                 end
             end)
             "#
@@ -724,9 +715,9 @@ mod tests {
             &mut [&mut parent, &mut current, &mut preview],
         );
 
-        assert_eq!(parent.icon_column_width, 1);
-        assert_eq!(current.icon_column_width, 1);
-        assert_eq!(preview.icon_column_width, 1);
+        assert_eq!(parent.prefix_column_width, 2);
+        assert_eq!(current.prefix_column_width, 2);
+        assert_eq!(preview.prefix_column_width, 2);
     }
 
     #[test]

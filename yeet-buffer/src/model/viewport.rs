@@ -16,11 +16,9 @@ pub struct ViewPort {
     pub height: u16,
     pub hidden_sign_ids: HashSet<SignIdentifier>,
     pub horizontal_index: usize,
-    /// Width of the icon column prefix segment. Defaults to `0`; set to `1` by
-    /// the directory-icons plugin via `on_window_create` hook.
-    pub icon_column_width: usize,
     pub line_number: LineNumber,
     pub line_number_width: usize,
+    pub prefix_column_width: usize,
     pub show_border: bool,
     pub sign_column_width: usize,
     pub vertical_index: usize,
@@ -30,8 +28,6 @@ pub struct ViewPort {
     pub y: u16,
 }
 
-// TODO: enable with settings
-// TODO: refactor into functions
 impl ViewPort {
     pub fn get_border_width(&self) -> usize {
         if self.get_prefix_width() > 0 {
@@ -56,17 +52,21 @@ impl ViewPort {
     }
 
     pub fn get_offset_width(&self, line: &BufferLine) -> usize {
-        let custom_prefix_width = if let Some(prefix) = &line.prefix {
+        self.get_prefix_width() + self.get_border_width() + self.get_custom_prefix_width(line)
+    }
+
+    fn get_custom_prefix_width(&self, line: &BufferLine) -> usize {
+        if self.prefix_column_width > 0 {
+            self.prefix_column_width
+        } else if let Some(prefix) = &line.prefix {
             prefix.chars().count()
         } else {
             0
-        };
-
-        self.get_prefix_width() + self.get_border_width() + custom_prefix_width
+        }
     }
 
     fn get_prefix_width(&self) -> usize {
-        self.sign_column_width + self.get_line_number_width() + self.icon_column_width
+        self.sign_column_width + self.get_line_number_width()
     }
 
     pub fn set(&mut self, settings: &WindowSettings) {
@@ -87,82 +87,117 @@ mod tests {
     use super::*;
 
     #[test]
-    fn icon_column_width_defaults_to_zero() {
+    fn prefix_column_width_defaults_to_zero() {
         let vp = ViewPort::default();
-        assert_eq!(vp.icon_column_width, 0);
+        assert_eq!(vp.prefix_column_width, 0);
     }
 
     #[test]
-    fn prefix_width_excludes_icon_column_when_zero() {
+    fn prefix_width_excludes_prefix_column_when_zero() {
         let vp = ViewPort {
             sign_column_width: 2,
             line_number: LineNumber::Absolute,
             line_number_width: 3,
-            icon_column_width: 0,
+            prefix_column_width: 0,
             ..Default::default()
         };
-        // prefix = sign(2) + line_number(3) + icon(0) = 5
+        // prefix = sign(2) + line_number(3) = 5
         assert_eq!(vp.get_prefix_width(), 5);
     }
 
     #[test]
-    fn prefix_width_includes_icon_column_when_set() {
+    fn offset_width_includes_prefix_column_when_set() {
         let vp = ViewPort {
             sign_column_width: 2,
             line_number: LineNumber::Absolute,
             line_number_width: 3,
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
-        // prefix = sign(2) + line_number(3) + icon(1) = 6
-        assert_eq!(vp.get_prefix_width(), 6);
+        let bl = BufferLine::default();
+        // prefix = sign(2) + line_number(3) = 5, border = 1, custom_prefix = 2
+        // offset = 5 + 1 + 2 = 8
+        assert_eq!(vp.get_offset_width(&bl), 8);
     }
 
     #[test]
-    fn offset_width_includes_icon_column() {
+    fn offset_width_includes_prefix_column() {
         let vp = ViewPort {
             sign_column_width: 0,
             line_number: LineNumber::None,
             line_number_width: 0,
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
         let bl = BufferLine::default();
-        // prefix = 0 + 0 + 1 = 1, border = 1 (prefix > 0), custom = 0
-        // offset = 1 + 1 + 0 = 2
+        // prefix = 0, border = 0 (prefix is 0), custom_prefix = 2
+        // offset = 0 + 0 + 2 = 2
         assert_eq!(vp.get_offset_width(&bl), 2);
     }
 
     #[test]
-    fn content_width_reduced_by_icon_column() {
+    fn content_width_reduced_by_prefix_column() {
         let vp = ViewPort {
             width: 80,
             sign_column_width: 0,
             line_number: LineNumber::None,
             line_number_width: 0,
-            icon_column_width: 0,
+            prefix_column_width: 0,
             ..Default::default()
         };
         let bl = BufferLine::default();
-        let width_without_icon = vp.get_content_width(&bl);
+        let width_without_prefix = vp.get_content_width(&bl);
 
-        let vp_with_icon = ViewPort {
+        let vp_with_prefix = ViewPort {
             width: 80,
             sign_column_width: 0,
             line_number: LineNumber::None,
             line_number_width: 0,
-            icon_column_width: 1,
+            prefix_column_width: 2,
             ..Default::default()
         };
-        let width_with_icon = vp_with_icon.get_content_width(&bl);
+        let width_with_prefix = vp_with_prefix.get_content_width(&bl);
 
-        // With icon_column_width=1, prefix becomes non-zero so border(1) appears.
-        // get_content_width subtracts offset (prefix + border) and border again,
-        // so content is reduced by icon(1) + border(1) + border(1) = 3.
+        // With prefix_column_width=2, custom_prefix adds 2.
+        // prefix is 0, border is 0, so offset = 2. Content reduced by 2.
         assert_eq!(
-            width_without_icon - width_with_icon,
+            width_without_prefix - width_with_prefix,
+            2,
+            "prefix column should reduce content width"
+        );
+    }
+
+    #[test]
+    fn custom_prefix_width_uses_column_width_when_set() {
+        let vp = ViewPort {
+            prefix_column_width: 2,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            prefix: Some("X".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_custom_prefix_width(&bl),
+            2,
+            "should use prefix_column_width, not actual prefix length"
+        );
+    }
+
+    #[test]
+    fn custom_prefix_width_falls_back_to_prefix_len() {
+        let vp = ViewPort {
+            prefix_column_width: 0,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            prefix: Some("ABC".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_custom_prefix_width(&bl),
             3,
-            "icon column + border overhead should reduce content width by 3"
+            "should fall back to actual prefix char count"
         );
     }
 }
