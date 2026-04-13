@@ -664,4 +664,37 @@ mod test {
             "cursor should be on the first content character, not on the prefix column"
         );
     }
+
+    #[test]
+    fn prefix_column_icon_not_inheriting_line_number_bold() {
+        use ratatui::style::Modifier;
+
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        vp.line_number = LineNumber::Absolute;
+        let lines = vec![
+            BufferLine {
+                prefix: Some("\u{f0f6}".to_string()),
+                ..BufferLine::from("documents")
+            },
+            BufferLine {
+                prefix: Some("\u{f0f6}".to_string()),
+                ..BufferLine::from("pictures")
+            },
+        ];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(styled.len() >= 2);
+        let non_cursor_line = &styled[1];
+        for span in &non_cursor_line.spans {
+            if span.content.contains('\u{f0f6}') {
+                assert!(
+                    !span.style.add_modifier.contains(Modifier::BOLD),
+                    "prefix icon span should not inherit BOLD from line number, got style: {:?}",
+                    span.style,
+                );
+            }
+        }
+    }
 }

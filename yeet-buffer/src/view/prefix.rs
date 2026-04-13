@@ -29,16 +29,17 @@ pub fn get_prefix_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) ->
             let char_count = ansi.count_chars();
             if char_count < width {
                 Ansi::new(&format!(
-                    "{}{}{}",
+                    "{}{}{}{}",
+                    reset,
                     " ".repeat(width - char_count),
                     prefix,
                     reset
                 ))
             } else {
-                Ansi::new(&format!("{}{}", prefix, reset))
+                Ansi::new(&format!("{}{}{}", reset, prefix, reset))
             }
         }
-        None => Ansi::new(&" ".repeat(width)),
+        None => Ansi::new(&format!("{}{}", reset, " ".repeat(width))),
     }
 }
 
@@ -68,7 +69,10 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
     }
 
     match vp.line_number {
-        LineNumber::Absolute => Ansi::new(&format!("{:>width$}", number)),
+        LineNumber::Absolute => {
+            let line_nr_fg = style::color_to_ansi_fg(theme.line_nr);
+            Ansi::new(&format!("{}{:>width$}{}", line_nr_fg, number, reset))
+        }
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             let relative = cursor.vertical_index.abs_diff(index);
@@ -81,6 +85,10 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
 
 pub fn get_signs(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
     let max_sign_count = vp.sign_column_width;
+    if max_sign_count == 0 {
+        return Ansi::new("");
+    }
+
     let reset = style::ansi_reset_with_bg(theme.buffer_bg);
 
     let mut filtered: Vec<_> = bl
@@ -102,9 +110,10 @@ pub fn get_signs(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {
     let char_count = signs.count_chars();
     if char_count < max_sign_count {
         Ansi::new(&format!(
-            "{}{}",
+            "{}{}{}",
             signs,
-            " ".repeat(max_sign_count - char_count)
+            " ".repeat(max_sign_count - char_count),
+            reset
         ))
     } else {
         signs
@@ -118,12 +127,12 @@ mod test {
     use crate::{
         model::{
             viewport::{LineNumber, ViewPort},
-            BufferLine, Cursor, CursorPosition,
+            BufferLine, Cursor, CursorPosition, Sign,
         },
         BufferTheme,
     };
 
-    use super::{get_line_number, get_prefix_column};
+    use super::{get_line_number, get_prefix_column, get_signs};
 
     fn test_theme() -> BufferTheme {
         BufferTheme {
@@ -302,6 +311,96 @@ mod test {
             "cursor line number ({}) and non-cursor line number ({}) should have the same visible width in relative mode",
             cursor_line.count_chars(),
             non_cursor_line.count_chars(),
+        );
+    }
+
+    #[test]
+    fn signs_output_ends_with_ansi_reset_when_signs_present() {
+        let vp = ViewPort {
+            sign_column_width: 2,
+            ..Default::default()
+        };
+        let bl = BufferLine {
+            signs: vec![Sign {
+                id: "test",
+                content: '▶',
+                priority: 1,
+                style: "\x1b[31m".to_string(),
+            }],
+            ..Default::default()
+        };
+        let theme = test_theme();
+        let result = get_signs(&vp, &bl, &theme);
+        let raw = format!("{}", result);
+        assert!(
+            raw.ends_with("\x1b[0m\x1b[49m"),
+            "get_signs() with signs present should end with ANSI reset, got: {:?}",
+            raw,
+        );
+    }
+
+    #[test]
+    fn signs_output_ends_with_ansi_reset_when_no_signs() {
+        let vp = ViewPort {
+            sign_column_width: 2,
+            ..Default::default()
+        };
+        let bl = BufferLine::default();
+        let theme = test_theme();
+        let result = get_signs(&vp, &bl, &theme);
+        let raw = format!("{}", result);
+        assert!(
+            raw.ends_with("\x1b[0m\x1b[49m"),
+            "get_signs() with no signs should end with ANSI reset, got: {:?}",
+            raw,
+        );
+    }
+
+    #[test]
+    fn absolute_non_cursor_line_number_ends_with_ansi_reset() {
+        let vp = ViewPort {
+            line_number: LineNumber::Absolute,
+            line_number_width: 3,
+            ..Default::default()
+        };
+        let cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let theme = test_theme();
+        let result = get_line_number(&vp, 1, &cursor, &theme);
+        let raw = format!("{}", result);
+        assert!(
+            raw.ends_with("\x1b[0m\x1b[49m"),
+            "non-cursor absolute line number should end with ANSI reset, got: {:?}",
+            raw,
+        );
+    }
+
+    #[test]
+    fn absolute_non_cursor_line_number_contains_ansi_fg() {
+        let vp = ViewPort {
+            line_number: LineNumber::Absolute,
+            line_number_width: 3,
+            ..Default::default()
+        };
+        let cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let theme = test_theme();
+        let result = get_line_number(&vp, 1, &cursor, &theme);
+        let raw = format!("{}", result);
+        assert!(
+            raw.contains("\x1b[38;2;128;128;128m"),
+            "non-cursor absolute line number should contain fg color ANSI code, got: {:?}",
+            raw,
         );
     }
 }
