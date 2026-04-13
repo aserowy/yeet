@@ -1,8 +1,8 @@
 ## ADDED Requirements
 
-### Requirement: on_window_change hook fires once per update cycle
+### Requirement: on_window_change hook fires at the end of each function that changes viewport paths or buffers
 
-The system SHALL invoke `y.hook.on_window_change` once at the end of each update cycle in `update::model()`, after all message processing, window layout finalization, and buffer updates are complete. The hook SHALL fire for Directory windows only and SHALL cover all types of viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, resize, etc.
+The system SHALL invoke `y.hook.on_window_change` at the end of each public function that actually changes viewport paths or buffer assignments. The affected functions are: `navigate::mark`, `navigate::path`, `navigate::path_as_preview`, `navigate::navigate_to_path_with_selection`, `navigate::parent`, `navigate::selected`, `cursor::relocate` (Directory branch), `viewport::relocate` (Directory branch), `enumeration::change`, `enumeration::finish`, `path::add`, `path::remove`, `modify::buffer` (Directory branch). The hook SHALL fire for Directory windows only.
 
 #### Scenario: Preview changes from directory to file
 
@@ -17,12 +17,12 @@ The system SHALL invoke `y.hook.on_window_change` once at the end of each update
 #### Scenario: Navigation changes all viewports
 
 - **WHEN** the user navigates to a parent or child directory (e.g., `navigate::parent`, `navigate::selected`)
-- **THEN** the system SHALL invoke `y.hook.on_window_change` once after all viewport swaps and buffer assignments are complete
+- **THEN** the system SHALL invoke `y.hook.on_window_change` at the end of that function after all viewport swaps and buffer assignments are complete
 
 #### Scenario: Cursor movement triggers hook
 
 - **WHEN** the user moves the cursor to a different entry in the current directory
-- **THEN** the system SHALL invoke `y.hook.on_window_change` once after the preview updates
+- **THEN** the system SHALL invoke `y.hook.on_window_change` at the end of the cursor/viewport relocate function after the preview updates
 
 #### Scenario: Preview changes to empty
 
@@ -64,7 +64,7 @@ Modifications to viewport settings fields in the context table SHALL be read bac
 
 ### Requirement: on_window_change cycle prevention
 
-The `on_window_change` hook SHALL NOT re-fire as a result of viewport setting changes made by hook callbacks. Cycle prevention is achieved architecturally by invoking the hook at the end of `update::model()` after all message processing is complete. Viewport modifications by callbacks do not trigger additional messages or re-invoke the update cycle.
+The `on_window_change` hook SHALL NOT re-fire as a result of viewport setting changes made by hook callbacks. Cycle prevention is achieved by invocation placement: the hook fires at the end of each function, after all mutations within that function are complete. Viewport modifications by callbacks do not trigger additional function calls or re-invoke the hook.
 
 #### Scenario: Hook modifies viewport settings without re-triggering
 
@@ -107,3 +107,12 @@ The system SHALL NOT crash if an `on_window_change` callback raises a Lua error.
 
 - **WHEN** all registered `on_window_change` callbacks raise errors
 - **THEN** the system SHALL log each error and apply default viewport settings
+
+### Requirement: Helper function centralizes invocation logic
+
+The system SHALL provide an `invoke_on_window_change_for_focused` helper function in `yeet-frontend/src/update/hook.rs` that encapsulates the repeated invocation logic: get focused directory buffer IDs, resolve current path, determine `preview_is_directory`, get mutable viewports, and call `yeet_lua::invoke_on_window_change`. Each affected function SHALL call this helper to avoid code duplication.
+
+#### Scenario: Helper resolves buffer IDs and invokes hook
+
+- **WHEN** a public function calls `invoke_on_window_change_for_focused` with the model and lua configuration
+- **THEN** the helper SHALL resolve the focused directory buffer IDs, determine whether the preview is a directory, and invoke the Lua hook with the correct context

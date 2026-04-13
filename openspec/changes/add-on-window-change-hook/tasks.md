@@ -9,27 +9,32 @@
 - [x] 2.2 Export `invoke_on_window_change` in `yeet-lua/src/lib.rs`
 - [x] 2.3 Add unit tests in `yeet-lua/src/hook.rs` for: callback invocation, viewport read-back, preview_is_directory field, error handling, no callbacks registered
 
-## 3. Invoke on_window_change at end of update::model()
+## 3. Add invoke_on_window_change_for_focused helper in hook.rs
 
-- [x] 3.1 In `yeet-frontend/src/update/mod.rs`, add `invoke_on_window_change` call at the end of `update::model()` after `buffers::update` and before `register::finish_scope`. The invocation SHALL get the current directory window's buffer IDs, determine `current_path` and `is_directory` from the buffer contents, then call `yeet_lua::invoke_on_window_change` with the three viewports
-- [x] 3.2 Ensure `preview::set_buffer_id` does NOT invoke the hook (clean separation: preview.rs only sets buffer_id and hide_cursor_line)
-- [x] 3.3 Remove `lua: Option<&LuaConfiguration>` parameter from `preview::set_buffer_id`, `selection::refresh_preview_from_current_selection`, `selection::refresh_preview_from_selection`, `selection::set_preview_buffer_for_selection`
-- [x] 3.4 Remove `lua` parameter threading from `cursor::relocate`, `viewport::relocate`, `navigate::mark`, `navigate::path`, `navigate::path_as_preview`, `navigate::navigate_to_path_with_selection`, `navigate::selected`, and `path::remove`
-- [x] 3.5 Remove `lua` parameter threading from internal `path.rs` functions: `update_directory_buffers_on_remove`, `cleanup_removed_buffers`, `cleanup_removed_buffers_in_window`, `update_viewports_for_buffers`, `update_viewports_for_buffers_in_window`
-- [x] 3.6 Update all call sites in `mod.rs`, `mode.rs`, `enumeration.rs`, `modify.rs` to remove the `lua` argument from the above functions
+- [x] 3.1 In `yeet-frontend/src/update/hook.rs`, add `invoke_on_window_change_for_focused` helper function that encapsulates: get focused directory buffer IDs, resolve current path, determine `preview_is_directory`, get mutable viewports, and call `yeet_lua::invoke_on_window_change`
+- [x] 3.2 Add integration tests in `yeet-frontend/src/update/hook.rs` for `on_window_change` invocation from directory window context
 
-## 4. Update frontend hook.rs tests for on_window_change
+## 4. Invoke hook at end of each public function that changes viewport paths/buffers
 
-- [x] 4.1 Update test helper in `yeet-frontend/src/update/hook.rs` to include `on_window_change` hook object
-- [x] 4.2 Add integration tests in `yeet-frontend/src/update/hook.rs` for `on_window_change` invocation from directory window context
+- [x] 4.1 In `navigate.rs`, add `lua: Option<&LuaConfiguration>` parameter to `mark`, `path`, `path_as_preview`, `navigate_to_path_with_selection`, `parent`, `selected` and invoke `invoke_on_window_change_for_focused` before return
+- [x] 4.2 In `cursor.rs`, add `lua: Option<&LuaConfiguration>` parameter to `relocate` and invoke hook in Directory branch
+- [x] 4.3 In `viewport.rs`, add `lua: Option<&LuaConfiguration>` parameter to `relocate` and invoke hook in Directory branch
+- [x] 4.4 In `enumeration.rs`, invoke hook before return in `change` and `finish` (already had `lua` parameter)
+- [x] 4.5 In `path.rs`, add `lua: Option<&LuaConfiguration>` parameter to `remove` and invoke hook before return in `add` and `remove`
+- [x] 4.6 In `modify.rs`, invoke hook in `buffer` Directory branch (already had `lua` parameter)
 
-## 5. Update directory-icons plugin
+## 5. Update callers to pass lua parameter
 
-- [x] 5.1 In `plugins/directory-icons/init.lua`, remove `ctx.preview.prefix_column_width = 2` from the `on_window_create` callback
-- [x] 5.2 Add an `on_window_change` callback that sets `ctx.preview.prefix_column_width = 2` when `ctx.preview_is_directory == true` and `ctx.preview.prefix_column_width = 0` when `ctx.preview_is_directory == false`
+- [x] 5.1 In `mod.rs`, update all call sites for navigate, cursor, viewport, and path functions to pass `model.lua.as_ref()`
+- [x] 5.2 In `mode.rs`, update `flush_pending_paths` to pass `lua` to `path::remove`
 
-## 6. Validation
+## 6. Update directory-icons plugin
 
-- [x] 6.1 Run `cargo fmt` and `cargo clippy` and fix any warnings or errors
-- [x] 6.2 Run `cargo test` and fix any failures
-- [x] 6.3 Run `git add -A && nix build .` and fix any build errors
+- [x] 6.1 In `plugins/directory-icons/init.lua`, remove `ctx.preview.prefix_column_width = 2` from the `on_window_create` callback
+- [x] 6.2 Add an `on_window_change` callback that sets `ctx.preview.prefix_column_width = 2` when `ctx.preview_is_directory == true` and `ctx.preview.prefix_column_width = 0` when `ctx.preview_is_directory == false`
+
+## 7. Validation
+
+- [x] 7.1 Run `cargo fmt` and `cargo clippy` and fix any warnings or errors
+- [x] 7.2 Run `cargo test` and fix any failures
+- [x] 7.3 Run `git add -A && nix build .` and fix any build errors
