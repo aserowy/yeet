@@ -61,6 +61,39 @@ Each viewport settings subtable contains:
 
 Invalid values (wrong type or unrecognized strings) are ignored and the default is kept. Unknown fields are silently ignored.
 
+## `y.hook.on_window_change`
+
+Called once at the end of each update cycle after all viewport mutations are complete. This hook fires for directory windows only and covers all types of viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, resize, etc. Use this hook to dynamically adjust viewport settings based on current window state.
+
+Register callbacks with `:add()`:
+
+```lua
+y.hook.on_window_change:add(function(ctx)
+  if ctx.preview_is_directory then
+    ctx.preview.prefix_column_width = 2
+  else
+    ctx.preview.prefix_column_width = 0
+  end
+end)
+```
+
+The context table has the same structure as `on_window_create` for directory windows, with one additional field:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `type` | string | Always `"directory"` |
+| `path` | string or nil | Current directory path |
+| `parent` | table | Parent viewport settings (see viewport fields above) |
+| `current` | table | Current viewport settings (see viewport fields above) |
+| `preview` | table | Preview viewport settings (see viewport fields above) |
+| `preview_is_directory` | boolean | `true` if the preview target is a directory, `false` otherwise |
+
+The `preview_is_directory` field allows plugins to determine whether the preview pane shows a directory listing or file content without filesystem access.
+
+Viewport settings modified in the context table are read back and applied to the corresponding viewports, identical to `on_window_create` read-back semantics. Mutations from earlier callbacks are visible to later ones.
+
+The hook fires after all message processing, window layout finalization, and buffer updates are complete. Viewport modifications made by callbacks do not trigger another invocation — cycle prevention is inherent in the end-of-cycle placement.
+
 ## `y.hook.on_bufferline_mutate`
 
 Called for each bufferline during buffer content updates. This hook fires for **all buffer types**: directory, content (file preview), help, quickfix, and tasks. Plugins use this hook to set icons and text colors on buffer entries. The hook fires at the point where buffer content is set, so the plugin processes entries as they arrive.
