@@ -143,11 +143,23 @@ The `yeet-directory-icons` plugin SHALL include a `docs/help/directory-icons.md`
 - **THEN** the plugin's help page is displayed with full token reference and usage examples
 
 ### Requirement: Plugin sets prefix column width to 2
-The `yeet-directory-icons` plugin SHALL set `prefix_column_width` to `2` via the `on_window_create` hook for all directory buffer panes (parent, current, preview). Nerd Font icons typically occupy two terminal cells, so the prefix column must be wide enough to display them.
+The `yeet-directory-icons` plugin SHALL set `prefix_column_width` to `2` via the `on_window_create` hook for parent and current directory buffer panes. The plugin SHALL NOT set `prefix_column_width` on the preview viewport in `on_window_create`. Instead, the plugin SHALL register an `on_window_change` callback that conditionally sets `prefix_column_width` to `2` on the preview viewport when the preview target is a directory, and sets `prefix_column_width` to `0` when the preview target is not a directory.
 
-#### Scenario: Plugin sets prefix width on window create
+#### Scenario: Plugin sets prefix width on parent and current at window create
 - **WHEN** `yeet-directory-icons` runs its `on_window_create` hook for a directory window
-- **THEN** `prefix_column_width` is set to `2` on all three panes (parent, current, preview)
+- **THEN** `prefix_column_width` is set to `2` on parent and current panes only
+
+#### Scenario: Plugin does not set preview prefix width at window create
+- **WHEN** `yeet-directory-icons` runs its `on_window_create` hook for a directory window
+- **THEN** `prefix_column_width` is NOT set on the preview pane by `on_window_create`
+
+#### Scenario: Plugin sets preview prefix width for directory preview via on_window_change
+- **WHEN** the preview target changes to a directory and `on_window_change` fires with `ctx.preview_is_directory == true`
+- **THEN** the plugin sets `ctx.preview.prefix_column_width = 2`
+
+#### Scenario: Plugin clears preview prefix width for file preview via on_window_change
+- **WHEN** the preview target changes to a file and `on_window_change` fires with `ctx.preview_is_directory == false`
+- **THEN** the plugin sets `ctx.preview.prefix_column_width = 0`
 
 #### Scenario: Non-directory windows are not affected
 - **WHEN** `yeet-directory-icons` runs its `on_window_create` hook for a help, quickfix, or tasks window
