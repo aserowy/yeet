@@ -29,8 +29,8 @@ pub struct ViewPort {
 }
 
 impl ViewPort {
-    pub fn get_border_width(&self) -> usize {
-        if self.get_prefix_width() > 0 {
+    pub fn get_precontent_border_width(&self) -> usize {
+        if self.get_precontent_width() > 0 {
             1
         } else {
             0
@@ -40,7 +40,7 @@ impl ViewPort {
     pub fn get_content_width(&self, line: &BufferLine) -> usize {
         usize::from(self.width)
             .saturating_sub(self.get_offset_width(line))
-            .saturating_sub(self.get_border_width())
+            .saturating_sub(self.get_precontent_border_width())
     }
 
     pub fn get_line_number_width(&self) -> usize {
@@ -51,16 +51,12 @@ impl ViewPort {
         }
     }
 
-    pub fn get_offset_width(&self, line: &BufferLine) -> usize {
-        self.get_prefix_width() + self.get_border_width() + self.get_custom_prefix_width(line)
+    pub fn get_offset_width(&self, _line: &BufferLine) -> usize {
+        self.get_precontent_width() + self.get_precontent_border_width()
     }
 
-    fn get_custom_prefix_width(&self, _line: &BufferLine) -> usize {
-        self.prefix_column_width
-    }
-
-    fn get_prefix_width(&self) -> usize {
-        self.sign_column_width + self.get_line_number_width()
+    pub fn get_precontent_width(&self) -> usize {
+        self.sign_column_width + self.get_line_number_width() + self.prefix_column_width
     }
 
     pub fn set(&mut self, settings: &WindowSettings) {
@@ -87,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn prefix_width_excludes_prefix_column_when_zero() {
+    fn precontent_width_includes_all_prefix_columns() {
         let vp = ViewPort {
             sign_column_width: 2,
             line_number: LineNumber::Absolute,
@@ -95,8 +91,7 @@ mod tests {
             prefix_column_width: 0,
             ..Default::default()
         };
-        // prefix = sign(2) + line_number(3) = 5
-        assert_eq!(vp.get_prefix_width(), 5);
+        assert_eq!(vp.get_precontent_width(), 5);
     }
 
     #[test]
@@ -109,8 +104,8 @@ mod tests {
             ..Default::default()
         };
         let bl = BufferLine::default();
-        // prefix = sign(2) + line_number(3) = 5, border = 1, custom_prefix = 2
-        // offset = 5 + 1 + 2 = 8
+        // precontent = sign(2) + line_number(3) + prefix_column(2) = 7, border = 1
+        // offset = 7 + 1 = 8
         assert_eq!(vp.get_offset_width(&bl), 8);
     }
 
@@ -124,9 +119,9 @@ mod tests {
             ..Default::default()
         };
         let bl = BufferLine::default();
-        // prefix = 0, border = 0 (prefix is 0), custom_prefix = 2
-        // offset = 0 + 0 + 2 = 2
-        assert_eq!(vp.get_offset_width(&bl), 2);
+        // precontent = 0 + 0 + 2 = 2, border = 1 (precontent > 0)
+        // offset = 2 + 1 = 3
+        assert_eq!(vp.get_offset_width(&bl), 3);
     }
 
     #[test]
@@ -152,46 +147,71 @@ mod tests {
         };
         let width_with_prefix = vp_with_prefix.get_content_width(&bl);
 
-        // With prefix_column_width=2, custom_prefix adds 2.
-        // prefix is 0, border is 0, so offset = 2. Content reduced by 2.
+        // precontent = 2, border = 1, offset = 3.
+        // get_content_width also subtracts border (for ratatui Borders::RIGHT) = 1.
+        // total reduction = 3 + 1 = 4.
         assert_eq!(
             width_without_prefix - width_with_prefix,
-            2,
-            "prefix column should reduce content width"
+            4,
+            "prefix column should reduce content width by prefix_column + 2*border"
         );
     }
 
     #[test]
-    fn custom_prefix_width_uses_column_width_when_set() {
+    fn precontent_width_includes_prefix_column() {
         let vp = ViewPort {
             prefix_column_width: 2,
             ..Default::default()
         };
-        let bl = BufferLine {
-            prefix: Some("X".to_string()),
-            ..Default::default()
-        };
         assert_eq!(
-            vp.get_custom_prefix_width(&bl),
+            vp.get_precontent_width(),
             2,
-            "should use prefix_column_width, not actual prefix length"
+            "precontent_width should include prefix_column_width"
         );
     }
 
     #[test]
-    fn custom_prefix_width_zero_ignores_prefix_content() {
+    fn precontent_width_zero_when_no_columns() {
         let vp = ViewPort {
             prefix_column_width: 0,
             ..Default::default()
         };
-        let bl = BufferLine {
-            prefix: Some("ABC".to_string()),
+        assert_eq!(
+            vp.get_precontent_width(),
+            0,
+            "should return 0 when all widths are 0"
+        );
+    }
+
+    #[test]
+    fn precontent_border_width_one_when_only_prefix_column_active() {
+        let vp = ViewPort {
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            prefix_column_width: 2,
             ..Default::default()
         };
         assert_eq!(
-            vp.get_custom_prefix_width(&bl),
+            vp.get_precontent_border_width(),
+            1,
+            "border should be 1 when only prefix_column_width > 0"
+        );
+    }
+
+    #[test]
+    fn precontent_border_width_zero_when_all_columns_zero() {
+        let vp = ViewPort {
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            line_number_width: 0,
+            prefix_column_width: 0,
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_precontent_border_width(),
             0,
-            "should return 0 when prefix_column_width is 0, regardless of prefix content"
+            "border should be 0 when all pre-content columns are zero"
         );
     }
 }

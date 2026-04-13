@@ -12,7 +12,7 @@ use crate::{
 use super::style::{self, CUR_LINE_NR_BOLD};
 
 pub fn get_border(vp: &ViewPort) -> Ansi {
-    Ansi::new(&" ".repeat(vp.get_border_width()))
+    Ansi::new(&" ".repeat(vp.get_precontent_border_width()))
 }
 
 pub fn get_prefix_column(vp: &ViewPort, bl: &BufferLine, theme: &BufferTheme) -> Ansi {

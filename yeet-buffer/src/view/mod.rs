@@ -122,7 +122,7 @@ fn get_styled_lines<'a>(
                     .join(&prefix::get_prefix_column(vp, &bl, theme))
                     .join(&prefix::get_border(vp))
             } else {
-                let prefix_width = vp.get_offset_width(&bl) + vp.get_border_width();
+                let prefix_width = vp.get_offset_width(&bl) + vp.get_precontent_border_width();
                 Ansi::new(&" ".repeat(prefix_width))
             };
 
