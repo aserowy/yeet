@@ -8,7 +8,7 @@ use crate::{
     update::app,
 };
 
-use super::{command::qfix::window, command::task, selection};
+use super::{command::qfix::window, command::task, hook, selection};
 
 pub fn buffer(
     app: &mut App,
@@ -38,13 +38,25 @@ pub fn buffer(
             let msg = BufferMessage::Modification(*repeat, modification.clone());
             yeet_buffer::update(Some(vp), mode, &mut it.buffer, std::slice::from_ref(&msg));
 
-            let (window, contents) = app.current_window_and_contents_mut()?;
-            let (_, buffer) = app::get_focused_current_mut(window, contents)?;
-            if matches!(buffer, Buffer::Directory(_)) {
-                selection::refresh_preview_from_current_selection(app, &mut state.history, None)?
-            } else {
-                Vec::new()
+            let actions = {
+                let (window, contents) = app.current_window_and_contents_mut()?;
+                let (_, buffer) = app::get_focused_current_mut(window, contents)?;
+                if matches!(buffer, Buffer::Directory(_)) {
+                    selection::refresh_preview_from_current_selection(
+                        app,
+                        &mut state.history,
+                        None,
+                    )?
+                } else {
+                    Vec::new()
+                }
+            };
+
+            if let Some(lua) = lua {
+                hook::invoke_on_window_change_for_focused(app, lua);
             }
+
+            actions
         }
         Buffer::QuickFix(_) => {
             if !matches!(modification, TextModification::DeleteLine) {

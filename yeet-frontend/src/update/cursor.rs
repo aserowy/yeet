@@ -4,6 +4,7 @@ use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{viewport::ViewPort, BufferResult, Mode, SearchDirection},
 };
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -12,7 +13,7 @@ use crate::{
     update::{history, register},
 };
 
-use super::{search, selection};
+use super::{hook, search, selection};
 
 use crate::update::app;
 
@@ -87,6 +88,7 @@ pub fn relocate(
     state: &mut State,
     rpt: &usize,
     mtn: &CursorDirection,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if matches!(*mtn, CursorDirection::Search(_)) {
         let term = register::get_register(&state.register, &'/');
@@ -139,11 +141,17 @@ pub fn relocate(
                 );
             }
 
-            selection::refresh_preview_from_current_selection(
+            let actions = selection::refresh_preview_from_current_selection(
                 app,
                 &mut state.history,
                 premotion_preview_path,
-            )
+            )?;
+
+            if let Some(lua) = lua {
+                hook::invoke_on_window_change_for_focused(app, lua);
+            }
+
+            Ok(actions)
         }
         Buffer::Tasks(tasks_buf) => {
             let msg = BufferMessage::MoveCursor(*rpt, mtn.clone());

@@ -18,7 +18,7 @@ use crate::{
         App, Buffer, Contents, Window,
     },
     theme::Theme,
-    update::{app, cursor, selection},
+    update::{app, cursor, hook, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
@@ -69,6 +69,10 @@ pub fn add(
         );
     }
 
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
+
     Ok(actions)
 }
 
@@ -81,6 +85,7 @@ pub fn remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if path.starts_with(junk.path.clone()) {
         remove_from_junkyard(junk, path);
@@ -111,6 +116,10 @@ pub fn remove(
         removed_qfix,
         QFIX_SIGN_ID,
     );
+
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
 
     Ok(actions)
 }
@@ -948,6 +957,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -1145,6 +1155,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -1242,6 +1253,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         for tab_id in [1, 2] {
@@ -1400,6 +1412,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1498,6 +1511,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1583,6 +1597,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1687,6 +1702,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let (first_index, second_index) = split_current_indices(&app);

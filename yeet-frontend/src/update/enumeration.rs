@@ -12,7 +12,7 @@ use crate::{
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
     theme::Theme,
     update::{
-        app, cursor, selection,
+        app, cursor, hook, selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
@@ -76,6 +76,10 @@ pub fn change(
             &mut state.history,
             None,
         )?);
+    }
+
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
     }
 
     Ok(actions)
@@ -192,6 +196,10 @@ pub fn finish(
         )?);
     }
     app.current_tab_id = original_tab;
+
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
 
     Ok(actions)
 }

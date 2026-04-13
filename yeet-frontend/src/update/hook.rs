@@ -2,7 +2,49 @@ use std::path::Path;
 
 use yeet_lua::LuaConfiguration;
 
-use crate::model::Window;
+use crate::model::{App, Buffer, Window};
+
+use super::app;
+
+pub fn invoke_on_window_change_for_focused(app: &mut App, lua: &LuaConfiguration) {
+    let window = match app.current_window() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+
+    let (_, current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
+        Some(ids) => ids,
+        None => return,
+    };
+
+    let current_path = app
+        .contents
+        .buffers
+        .get(&current_id)
+        .and_then(|buffer| buffer.resolve_path())
+        .map(|p| p.to_path_buf());
+
+    let is_directory = app
+        .contents
+        .buffers
+        .get(&preview_id)
+        .map(|b| matches!(b, Buffer::Directory(d) if d.path.is_dir()))
+        .unwrap_or(false);
+
+    let window = match app.current_window_mut() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+
+    if let Some((parent, current, preview)) = app::get_focused_directory_viewports_mut(window) {
+        yeet_lua::invoke_on_window_change(
+            lua,
+            current_path.as_deref(),
+            &mut [parent, current, preview],
+            is_directory,
+        );
+    }
+}
 
 pub fn on_window_create(lua: &LuaConfiguration, window: &mut Window, path: Option<&Path>) {
     match window {

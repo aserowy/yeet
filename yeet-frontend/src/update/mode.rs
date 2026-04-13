@@ -176,6 +176,7 @@ fn flush_pending_paths(
                         &state.modes.current,
                         app,
                         &path,
+                        lua,
                     )
                     .unwrap_or_else(|err| {
                         tracing::error!("pending path remove failed: {}", err);
