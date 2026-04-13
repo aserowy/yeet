@@ -4,7 +4,6 @@ use yeet_buffer::{
     message::{BufferMessage, CursorDirection, Search},
     model::{viewport::ViewPort, BufferResult, Mode, SearchDirection},
 };
-use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -88,7 +87,6 @@ pub fn relocate(
     state: &mut State,
     rpt: &usize,
     mtn: &CursorDirection,
-    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if matches!(*mtn, CursorDirection::Search(_)) {
         let term = register::get_register(&state.register, &'/');
@@ -145,7 +143,6 @@ pub fn relocate(
                 app,
                 &mut state.history,
                 premotion_preview_path,
-                lua,
             )
         }
         Buffer::Tasks(tasks_buf) => {

@@ -1,19 +1,19 @@
 ## Context
 
-The hook system currently has two hooks: `on_window_create` (fires once at window creation time) and `on_bufferline_mutate` (fires per-line during buffer population). Neither fires when window meta-information changes during navigation — specifically, when the preview target changes from a directory to a file or vice versa.
+The hook system currently has two hooks: `on_window_create` (fires once at window creation time) and `on_bufferline_mutate` (fires per-line during buffer population). Neither fires when window meta-information changes during navigation — specifically, when the preview target changes from a directory to a file or vice versa, or when navigation changes viewport assignments.
 
 The directory-icons plugin currently sets `prefix_column_width = 2` on all three panes (parent, current, preview) unconditionally in `on_window_create`. This wastes space when the preview shows file content, since file previews have no icons in the prefix column.
 
 The Lua hook bootstrap in `yeet-lua/src/lib.rs` creates hook objects with a shared metatable that provides `:add()`. Hook invocation in `yeet-lua/src/hook.rs` follows a pattern: build context table → iterate callbacks → read back viewport settings.
 
-Preview buffer changes flow through `selection.rs::set_preview_buffer_for_selection` → `preview::set_buffer_id`, which already conditionally sets `hide_cursor_line` based on whether the preview target is a directory.
+The central `update::model()` function in `mod.rs` processes all messages for an update cycle, then finalizes window layout and buffer updates. This is the single entry point for all state mutations.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Add `on_window_change` hook that fires when window meta-information changes (preview target changes during navigation)
+- Add `on_window_change` hook that fires once per update cycle after all viewport mutations are complete
 - Reuse the same context structure as `on_window_create` (type, path, parent/current/preview viewports)
-- Implement cycle prevention so hook-triggered viewport changes do not cause re-invocation
+- Ensure the hook fires for all viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, resize, etc.
 - Enable the directory-icons plugin to conditionally set `prefix_column_width = 2` on preview only when the preview target is a directory
 
 **Non-Goals:**
@@ -23,13 +23,16 @@ Preview buffer changes flow through `selection.rs::set_preview_buffer_for_select
 
 ## Decisions
 
-### Decision 1: Hook fires only for Directory windows after preview buffer assignment
+### Decision 1: Hook fires once at the end of update::model() after all mutations are complete
 
-The `on_window_change` hook fires after `preview::set_buffer_id` completes, which is the point where the preview target changes. This is the sole trigger point. The hook does not fire for Help/QuickFix/Tasks windows since their content does not change dynamically.
+The `on_window_change` hook fires at the end of `update::model()` after all message processing, window layout finalization, and buffer updates are complete. This ensures:
+1. All viewport mutations from the current update cycle are finalized
+2. The hook fires exactly once per update cycle, regardless of how many messages were processed
+3. The hook captures all types of viewport changes (navigation, cursor movement, preview changes, resize, etc.)
 
-**Alternative**: Fire on any viewport field change. Rejected because it creates complexity with no current use case and risks performance overhead.
+**Alternative**: Fire from `preview::set_buffer_id` only when preview changes. Rejected because it misses navigation events like `navigate::parent` (which swaps viewports without going through preview refresh), and requires threading the Lua runtime through many intermediate call chains.
 
-**Alternative**: Fire from cursor movement handlers. Rejected because `selection.rs` already centralizes preview refresh — hooking there covers all navigation paths (cursor movement, enumeration changes, path changes, navigation).
+**Alternative**: Fire on any viewport field change. Rejected because it creates complexity with no current use case and risks performance overhead from multiple invocations per cycle.
 
 ### Decision 2: Reuse `build_context` and `read_back_context` from on_window_create
 
@@ -37,33 +40,28 @@ The `on_window_change` invocation reuses the same `build_context` and `read_back
 
 **Alternative**: Create a separate context builder with "what changed" metadata. Rejected — plugins should inspect current state and decide based on that.
 
-### Decision 3: Cycle prevention via single-shot invocation in set_buffer_id
+### Decision 3: Cycle prevention via end-of-cycle invocation
 
-Cycle prevention is achieved architecturally: the hook is called exactly once inside `preview::set_buffer_id`, after the buffer assignment is complete. The hook can modify viewport settings (like `prefix_column_width`), but viewport setting changes do not trigger `set_buffer_id` again. There is no re-entrancy path because:
-1. `set_buffer_id` is called from `selection.rs` after buffer resolution
-2. The hook fires, callbacks execute, viewport settings are read back
-3. No code path re-invokes `set_buffer_id` based on viewport setting changes
+Cycle prevention is achieved architecturally: the hook fires at the end of `update::model()`, after all message processing is complete. The hook can modify viewport settings (like `prefix_column_width`), but these modifications do not trigger additional messages or re-invoke `update::model()`. There is no re-entrancy path because the hook runs after the message processing loop has completed.
 
 This is inherent cycle prevention — no additional guard flag is needed.
 
-### Decision 4: Hook invocation needs access to Lua runtime and Window
+### Decision 4: No Lua runtime threading through internal call chains
 
-`preview::set_buffer_id` currently takes `(contents, window, buffer_id)`. To invoke the hook, it also needs access to the Lua runtime. The function signature is extended to accept `Option<&LuaConfiguration>`. When `None` (no Lua runtime), the hook is skipped.
-
-The path for the context table is derived from the current viewport's buffer — specifically the path of the directory buffer that the current viewport is displaying.
+Since the hook fires at the end of `update::model()` where `model.lua` is already available, there is no need to thread `Option<&LuaConfiguration>` through intermediate functions like `preview::set_buffer_id`, `selection::*`, `cursor::relocate`, `viewport::relocate`, or `navigate::*`. This keeps the internal function signatures clean.
 
 ### Decision 5: Plugin changes preview prefix_column_width in on_window_change
 
-The directory-icons plugin registers an `on_window_change` callback that checks whether the preview buffer is a directory (by inspecting the preview path — if it ends with `/` or by checking if the path refers to a directory). The plugin sets `ctx.preview.prefix_column_width = 2` when the preview target is a directory, and `ctx.preview.prefix_column_width = 0` when it is not.
+The directory-icons plugin registers an `on_window_change` callback that checks whether the preview buffer is a directory (via `ctx.preview_is_directory`). The plugin sets `ctx.preview.prefix_column_width = 2` when the preview target is a directory, and `ctx.preview.prefix_column_width = 0` when it is not.
 
 The `on_window_create` hook continues to set `prefix_column_width = 2` on parent and current (since those always show directories), but no longer sets it on preview.
 
 ### Decision 6: Context includes preview_is_directory flag
 
-To enable plugins to determine whether the preview is showing a directory without filesystem access from Lua, the context table includes a `preview_is_directory` boolean field. This is derived from the same `is_directory` check already performed in `preview::set_buffer_id`. This avoids the need for Lua-side path inspection or filesystem access.
+To enable plugins to determine whether the preview is showing a directory without filesystem access from Lua, the context table includes a `preview_is_directory` boolean field. This is derived from the preview buffer type in the application state. This avoids the need for Lua-side path inspection or filesystem access.
 
 ## Risks / Trade-offs
 
-- [Performance] Hook fires on every preview change (every cursor movement in a directory). Mitigation: Lua callback execution is lightweight; the context table creation is cheap since it reuses existing functions.
-- [Plugin compatibility] Existing `on_window_create` plugins that set preview `prefix_column_width` will still work — their setting just gets overridden by `on_window_change` on the next navigation. This is the desired behavior.
+- [Performance] Hook fires on every update cycle (every cursor movement, every message). Mitigation: Lua callback execution is lightweight; the context table creation is cheap since it reuses existing functions. The hook fires exactly once per cycle.
+- [Plugin compatibility] Existing `on_window_create` plugins that set preview `prefix_column_width` will still work — their setting just gets overridden by `on_window_change` on the next update cycle. This is the desired behavior.
 - [API surface] Adding a new hook increases the API surface. Mitigation: The hook follows the exact same pattern as `on_window_create`, minimizing cognitive overhead.

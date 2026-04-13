@@ -5,8 +5,9 @@ use crate::{
     action::Action,
     event::Preview,
     model::{App, Buffer, ContentBuffer, Contents, PreviewImageBuffer, Window},
-    update::app,
 };
+
+use super::app;
 
 pub fn update(app: &mut App, lua: Option<&LuaConfiguration>, content: Preview) -> Vec<Action> {
     match content {
@@ -63,12 +64,7 @@ pub fn update(app: &mut App, lua: Option<&LuaConfiguration>, content: Preview) -
     Vec::new()
 }
 
-pub fn set_buffer_id(
-    contents: &mut Contents,
-    window: &mut Window,
-    buffer_id: usize,
-    lua: Option<&LuaConfiguration>,
-) {
+pub fn set_buffer_id(contents: &mut Contents, window: &mut Window, buffer_id: usize) {
     let is_directory = if let Some(Buffer::Directory(it)) = contents.buffers.get(&buffer_id) {
         it.path.is_dir()
     } else {
@@ -78,21 +74,5 @@ pub fn set_buffer_id(
     if let Some((_, _, preview)) = app::get_focused_directory_viewports_mut(window) {
         preview.buffer_id = buffer_id;
         preview.hide_cursor_line = !is_directory;
-    }
-
-    if let Some(lua) = lua {
-        let current_path = app::get_focused_directory_viewports(window)
-            .and_then(|(_, current_vp, _)| contents.buffers.get(&current_vp.buffer_id))
-            .and_then(|buffer| buffer.resolve_path())
-            .map(|p| p.to_path_buf());
-
-        if let Some((parent, current, preview)) = app::get_focused_directory_viewports_mut(window) {
-            yeet_lua::invoke_on_window_change(
-                lua,
-                current_path.as_deref(),
-                &mut [parent, current, preview],
-                is_directory,
-            );
-        }
     }
 }

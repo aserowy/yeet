@@ -2,7 +2,6 @@ use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::Mode,
 };
-use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -18,7 +17,6 @@ pub fn relocate(
     history: &mut History,
     mode: &Mode,
     direction: &ViewPortDirection,
-    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let msg = BufferMessage::MoveViewPort(direction.clone());
 
@@ -33,7 +31,7 @@ pub fn relocate(
                 &mut buffer.buffer,
                 std::slice::from_ref(&msg),
             );
-            selection::refresh_preview_from_current_selection(app, history, None, lua)
+            selection::refresh_preview_from_current_selection(app, history, None)
         }
         Buffer::Tasks(tasks_buf) => {
             yeet_buffer::update(

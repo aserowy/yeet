@@ -72,7 +72,7 @@ pub fn add(
     Ok(actions)
 }
 
-#[tracing::instrument(skip(junk, app, lua))]
+#[tracing::instrument(skip(junk, app))]
 pub fn remove(
     history: &mut History,
     marks: &mut Marks,
@@ -81,7 +81,6 @@ pub fn remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if path.starts_with(junk.path.clone()) {
         remove_from_junkyard(junk, path);
@@ -89,8 +88,8 @@ pub fn remove(
 
     history::remove_entry(history, path);
 
-    let mut actions = update_directory_buffers_on_remove(history, mode, app, path, lua)?;
-    actions.extend(cleanup_removed_buffers(history, mode, app, path, lua));
+    let mut actions = update_directory_buffers_on_remove(history, mode, app, path)?;
+    actions.extend(cleanup_removed_buffers(history, mode, app, path));
     let removed_marks = remove_marks_for_path(marks, path);
     if !removed_marks.is_empty() {
         sign::unset_sign_for_paths(
@@ -229,14 +228,7 @@ fn update_directory_buffers_on_add(
         }
     }
 
-    update_viewports_for_buffers(
-        history,
-        app,
-        mode,
-        &updated_buffers,
-        &selection_by_viewport,
-        lua,
-    )
+    update_viewports_for_buffers(history, app, mode, &updated_buffers, &selection_by_viewport)
 }
 
 fn update_directory_buffers_on_remove(
@@ -244,7 +236,6 @@ fn update_directory_buffers_on_remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let parent_name = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => Some((parent, name.to_string_lossy().to_string())),
@@ -308,14 +299,7 @@ fn update_directory_buffers_on_remove(
             }
         }
 
-        update_viewports_for_buffers(
-            history,
-            app,
-            mode,
-            &updated_buffers,
-            &selection_by_viewport,
-            lua,
-        )
+        update_viewports_for_buffers(history, app, mode, &updated_buffers, &selection_by_viewport)
     } else {
         Vec::new()
     };
@@ -328,13 +312,12 @@ fn cleanup_removed_buffers(
     mode: &Mode,
     app: &mut App,
     removed: &Path,
-    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     let (tabs, contents) = (&mut app.tabs, &mut app.contents);
     for window in tabs.values_mut() {
         actions.extend(cleanup_removed_buffers_in_window(
-            history, mode, window, contents, removed, lua,
+            history, mode, window, contents, removed,
         ));
     }
 
@@ -349,16 +332,15 @@ fn cleanup_removed_buffers_in_window(
     window: &mut Window,
     contents: &mut Contents,
     removed: &Path,
-    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     match window {
         Window::Horizontal { first, second, .. } | Window::Vertical { first, second, .. } => {
             actions.extend(cleanup_removed_buffers_in_window(
-                history, mode, first, contents, removed, lua,
+                history, mode, first, contents, removed,
             ));
             actions.extend(cleanup_removed_buffers_in_window(
-                history, mode, second, contents, removed, lua,
+                history, mode, second, contents, removed,
             ));
         }
         Window::Directory(parent, current, preview) => {
@@ -402,7 +384,7 @@ fn cleanup_removed_buffers_in_window(
                 );
                 if !current_is_directory {
                     actions.extend(selection::set_preview_buffer_for_selection(
-                        window, contents, history, None, lua,
+                        window, contents, history, None,
                     ));
                     return actions;
                 }
@@ -413,7 +395,6 @@ fn cleanup_removed_buffers_in_window(
                         window,
                         contents,
                         old_preview_path,
-                        lua,
                     )
                     .unwrap_or_default(),
                 );
@@ -498,7 +479,6 @@ fn update_viewports_for_buffers(
     mode: &Mode,
     buffer_ids: &[usize],
     selection_by_viewport: &HashMap<*const ViewPort, Option<String>>,
-    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     if buffer_ids.is_empty() {
         return Vec::new();
@@ -518,7 +498,6 @@ fn update_viewports_for_buffers(
             mode,
             &target_ids,
             selection_by_viewport,
-            lua,
         ));
     }
     actions
@@ -531,7 +510,6 @@ fn update_viewports_for_buffers_in_window(
     mode: &Mode,
     buffer_ids: &[usize],
     selection_by_viewport: &HashMap<*const ViewPort, Option<String>>,
-    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     match window {
@@ -543,7 +521,6 @@ fn update_viewports_for_buffers_in_window(
                 mode,
                 buffer_ids,
                 selection_by_viewport,
-                lua,
             ));
             actions.extend(update_viewports_for_buffers_in_window(
                 history,
@@ -552,7 +529,6 @@ fn update_viewports_for_buffers_in_window(
                 mode,
                 buffer_ids,
                 selection_by_viewport,
-                lua,
             ));
         }
         Window::Directory(parent, current, preview) => {
@@ -566,10 +542,8 @@ fn update_viewports_for_buffers_in_window(
                 .and_then(|buffer| buffer.resolve_path().map(|path| path.to_path_buf()));
 
             actions.extend(
-                selection::refresh_preview_from_selection(
-                    history, window, contents, selection, lua,
-                )
-                .unwrap_or_default(),
+                selection::refresh_preview_from_selection(history, window, contents, selection)
+                    .unwrap_or_default(),
             );
         }
         Window::Tasks(viewport) | Window::QuickFix(viewport) | Window::Help(viewport) => {
@@ -974,7 +948,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -1172,7 +1145,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -1270,7 +1242,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         for tab_id in [1, 2] {
@@ -1429,7 +1400,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1528,7 +1498,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1614,7 +1583,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1719,7 +1687,6 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
-            None,
         );
 
         let (first_index, second_index) = split_current_indices(&app);

@@ -41,12 +41,7 @@ pub fn buffer(
             let (window, contents) = app.current_window_and_contents_mut()?;
             let (_, buffer) = app::get_focused_current_mut(window, contents)?;
             if matches!(buffer, Buffer::Directory(_)) {
-                selection::refresh_preview_from_current_selection(
-                    app,
-                    &mut state.history,
-                    None,
-                    lua,
-                )?
+                selection::refresh_preview_from_current_selection(app, &mut state.history, None)?
             } else {
                 Vec::new()
             }
