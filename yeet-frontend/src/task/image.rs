@@ -77,9 +77,7 @@ async fn load_with_chafa(path: &Path, rect: &Rect) -> Preview {
                 Preview::None(path.to_path_buf())
             } else {
                 let content = str::from_utf8(&output.stdout).map_or(vec![], |s| {
-                    s.lines()
-                        .map(strip_non_sgr_escape_sequences)
-                        .collect()
+                    s.lines().map(strip_non_sgr_escape_sequences).collect()
                 });
 
                 Preview::Content(path.to_path_buf(), content)

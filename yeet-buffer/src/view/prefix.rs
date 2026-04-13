@@ -68,7 +68,7 @@ pub fn get_line_number(vp: &ViewPort, index: usize, cursor: &Cursor, theme: &Buf
     }
 
     match vp.line_number {
-        LineNumber::Absolute => Ansi::new(&format!("{:>width$} ", number)),
+        LineNumber::Absolute => Ansi::new(&format!("{:>width$}", number)),
         LineNumber::None => Ansi::new(""),
         LineNumber::Relative => {
             let relative = cursor.vertical_index.abs_diff(index);
@@ -116,11 +116,14 @@ mod test {
     use ratatui::style::Color;
 
     use crate::{
-        model::{viewport::ViewPort, BufferLine},
+        model::{
+            viewport::{LineNumber, ViewPort},
+            BufferLine, Cursor, CursorPosition,
+        },
         BufferTheme,
     };
 
-    use super::get_prefix_column;
+    use super::{get_line_number, get_prefix_column};
 
     fn test_theme() -> BufferTheme {
         BufferTheme {
@@ -238,6 +241,67 @@ mod test {
             result.count_chars(),
             0,
             "zero width with prefix should suppress rendering and return empty"
+        );
+    }
+
+    #[test]
+    fn absolute_line_number_cursor_and_non_cursor_same_width() {
+        let vp = ViewPort {
+            line_number: LineNumber::Absolute,
+            line_number_width: 3,
+            ..Default::default()
+        };
+        let cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let theme = test_theme();
+
+        let cursor_line = get_line_number(&vp, 0, &cursor, &theme);
+        let non_cursor_line = get_line_number(&vp, 1, &cursor, &theme);
+
+        assert_eq!(
+            cursor_line.count_chars(),
+            non_cursor_line.count_chars(),
+            "cursor line number ({}) and non-cursor line number ({}) should have the same visible width",
+            cursor_line.count_chars(),
+            non_cursor_line.count_chars(),
+        );
+        assert_eq!(
+            cursor_line.count_chars(),
+            vp.get_line_number_width(),
+            "line number visible width should equal configured line_number_width",
+        );
+    }
+
+    #[test]
+    fn relative_line_number_cursor_and_non_cursor_same_width() {
+        let vp = ViewPort {
+            line_number: LineNumber::Relative,
+            line_number_width: 3,
+            ..Default::default()
+        };
+        let cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let theme = test_theme();
+
+        let cursor_line = get_line_number(&vp, 0, &cursor, &theme);
+        let non_cursor_line = get_line_number(&vp, 1, &cursor, &theme);
+
+        assert_eq!(
+            cursor_line.count_chars(),
+            non_cursor_line.count_chars(),
+            "cursor line number ({}) and non-cursor line number ({}) should have the same visible width in relative mode",
+            cursor_line.count_chars(),
+            non_cursor_line.count_chars(),
         );
     }
 }
