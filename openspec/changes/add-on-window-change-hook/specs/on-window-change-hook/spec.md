@@ -1,8 +1,8 @@
 ## ADDED Requirements
 
-### Requirement: on_window_change hook fires when preview target changes
+### Requirement: on_window_change hook fires once per update cycle
 
-The system SHALL invoke `y.hook.on_window_change` whenever the preview buffer assignment changes in a Directory window. The hook SHALL fire after the preview buffer ID is updated and after `hide_cursor_line` is set based on whether the preview target is a directory.
+The system SHALL invoke `y.hook.on_window_change` once at the end of each update cycle in `update::model()`, after all message processing, window layout finalization, and buffer updates are complete. The hook SHALL fire for Directory windows only and SHALL cover all types of viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, resize, etc.
 
 #### Scenario: Preview changes from directory to file
 
@@ -14,10 +14,15 @@ The system SHALL invoke `y.hook.on_window_change` whenever the preview buffer as
 - **WHEN** the user navigates in a Directory window and the preview target changes from a file to a directory
 - **THEN** the system SHALL invoke `y.hook.on_window_change` with a context table where `ctx.type == "directory"` and `ctx.preview_is_directory == true`
 
-#### Scenario: Preview changes between two directories
+#### Scenario: Navigation changes all viewports
 
-- **WHEN** the user navigates in a Directory window and the preview target changes from one directory to another directory
-- **THEN** the system SHALL invoke `y.hook.on_window_change` with a context table where `ctx.preview_is_directory == true`
+- **WHEN** the user navigates to a parent or child directory (e.g., `navigate::parent`, `navigate::selected`)
+- **THEN** the system SHALL invoke `y.hook.on_window_change` once after all viewport swaps and buffer assignments are complete
+
+#### Scenario: Cursor movement triggers hook
+
+- **WHEN** the user moves the cursor to a different entry in the current directory
+- **THEN** the system SHALL invoke `y.hook.on_window_change` once after the preview updates
 
 #### Scenario: Preview changes to empty
 
@@ -59,7 +64,7 @@ Modifications to viewport settings fields in the context table SHALL be read bac
 
 ### Requirement: on_window_change cycle prevention
 
-The `on_window_change` hook SHALL NOT re-fire as a result of viewport setting changes made by hook callbacks. The hook SHALL only fire in response to external state changes (preview buffer assignment changes).
+The `on_window_change` hook SHALL NOT re-fire as a result of viewport setting changes made by hook callbacks. Cycle prevention is achieved architecturally by invoking the hook at the end of `update::model()` after all message processing is complete. Viewport modifications by callbacks do not trigger additional messages or re-invoke the update cycle.
 
 #### Scenario: Hook modifies viewport settings without re-triggering
 
