@@ -49,6 +49,7 @@ mod tests {
                 }
             }
             y.hook.on_window_create = setmetatable({}, hook_mt)
+            y.hook.on_window_change = setmetatable({}, hook_mt)
             y.hook.on_window_create:add(function(ctx)
                 if ctx.viewport then
                     ctx.viewport.wrap = true
@@ -98,5 +99,104 @@ mod tests {
         let mut window = Window::Tasks(ViewPort::default());
         on_window_create(&lua, &mut window, None);
         assert!(matches!(window, Window::Tasks(_)));
+    }
+
+    #[test]
+    fn on_window_change_sets_preview_prefix_for_directory() {
+        let lua = yeet_lua::Lua::new();
+        lua.load(
+            r#"
+            y = {}
+            y.theme = {}
+            y.hook = {}
+            local hook_mt = {
+                __index = {
+                    add = function(self, fn_)
+                        if type(fn_) == "function" then
+                            table.insert(self, fn_)
+                        end
+                    end
+                }
+            }
+            y.hook.on_window_create = setmetatable({}, hook_mt)
+            y.hook.on_window_change = setmetatable({}, hook_mt)
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.preview_is_directory then
+                    ctx.preview.prefix_column_width = 2
+                else
+                    ctx.preview.prefix_column_width = 0
+                end
+            end)
+            "#,
+        )
+        .exec()
+        .unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        yeet_lua::invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert_eq!(
+            preview.prefix_column_width, 2,
+            "preview prefix_column_width should be 2 for directory preview"
+        );
+    }
+
+    #[test]
+    fn on_window_change_clears_preview_prefix_for_file() {
+        let lua = yeet_lua::Lua::new();
+        lua.load(
+            r#"
+            y = {}
+            y.theme = {}
+            y.hook = {}
+            local hook_mt = {
+                __index = {
+                    add = function(self, fn_)
+                        if type(fn_) == "function" then
+                            table.insert(self, fn_)
+                        end
+                    end
+                }
+            }
+            y.hook.on_window_create = setmetatable({}, hook_mt)
+            y.hook.on_window_change = setmetatable({}, hook_mt)
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.preview_is_directory then
+                    ctx.preview.prefix_column_width = 2
+                else
+                    ctx.preview.prefix_column_width = 0
+                end
+            end)
+            "#,
+        )
+        .exec()
+        .unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort {
+            prefix_column_width: 2,
+            ..Default::default()
+        };
+
+        yeet_lua::invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            false,
+        );
+
+        assert_eq!(
+            preview.prefix_column_width, 0,
+            "preview prefix_column_width should be 0 for file preview"
+        );
     }
 }

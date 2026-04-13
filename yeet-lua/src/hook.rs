@@ -138,6 +138,58 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
     }
 }
 
+pub fn invoke_on_window_change(
+    lua: &crate::LuaConfiguration,
+    path: Option<&Path>,
+    viewports: &mut [&mut ViewPort],
+    preview_is_directory: bool,
+) {
+    if let Err(err) = try_invoke_on_window_change(lua, path, viewports, preview_is_directory) {
+        tracing::error!("error in y.hook.on_window_change: {:?}", err);
+    }
+}
+
+fn try_invoke_on_window_change(
+    lua: &Lua,
+    path: Option<&Path>,
+    viewports: &mut [&mut ViewPort],
+    preview_is_directory: bool,
+) -> LuaResult<()> {
+    let y: LuaTable = lua.globals().get("y")?;
+    let hook: LuaTable = y.get("hook")?;
+    let hook_table: LuaTable = hook.get("on_window_change")?;
+
+    let len = hook_table.raw_len();
+    if len == 0 {
+        return Ok(());
+    }
+
+    let ctx = build_context(lua, "directory", path, viewports)?;
+    ctx.set("preview_is_directory", preview_is_directory)?;
+
+    for i in 1..=len {
+        let func: LuaValue = hook_table.raw_get(i)?;
+        match func {
+            LuaValue::Function(f) => {
+                if let Err(err) = f.call::<()>(ctx.clone()) {
+                    tracing::error!("error in y.hook.on_window_change callback {}: {:?}", i, err);
+                }
+            }
+            _ => {
+                tracing::warn!(
+                    "y.hook.on_window_change[{}] is not a function, got {:?}",
+                    i,
+                    func.type_name()
+                );
+            }
+        }
+    }
+
+    read_back_context(&ctx, "directory", viewports);
+
+    Ok(())
+}
+
 /// Invokes `y.hook.on_bufferline_mutate` callbacks for a single bufferline.
 ///
 /// Each registered callback receives a context table with:
@@ -254,6 +306,7 @@ mod tests {
                 }}
             }}
             y.hook.on_window_create = setmetatable({{}}, hook_mt)
+            y.hook.on_window_change = setmetatable({{}}, hook_mt)
 
             {}
             "#,
@@ -740,5 +793,213 @@ mod tests {
 
         assert_eq!(vp.line_number, LineNumber::Relative);
         assert!(vp.wrap);
+    }
+
+    #[test]
+    fn on_window_change_callback_invocation() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.type == "directory" then
+                    ctx.preview.wrap = true
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert!(
+            preview.wrap,
+            "preview.wrap should be true after on_window_change"
+        );
+    }
+
+    #[test]
+    fn on_window_change_viewport_read_back() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                ctx.preview.prefix_column_width = 2
+                ctx.parent.line_number = "absolute"
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert_eq!(preview.prefix_column_width, 2);
+        assert_eq!(parent.line_number, LineNumber::Absolute);
+    }
+
+    #[test]
+    fn on_window_change_preview_is_directory_true() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.preview_is_directory then
+                    ctx.preview.prefix_column_width = 2
+                else
+                    ctx.preview.prefix_column_width = 0
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert_eq!(
+            preview.prefix_column_width, 2,
+            "prefix_column_width should be 2 when preview_is_directory is true"
+        );
+    }
+
+    #[test]
+    fn on_window_change_preview_is_directory_false() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.preview_is_directory then
+                    ctx.preview.prefix_column_width = 2
+                else
+                    ctx.preview.prefix_column_width = 0
+                end
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort {
+            prefix_column_width: 2,
+            ..Default::default()
+        };
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            false,
+        );
+
+        assert_eq!(
+            preview.prefix_column_width, 0,
+            "prefix_column_width should be 0 when preview_is_directory is false"
+        );
+    }
+
+    #[test]
+    fn on_window_change_error_handling() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                error("boom")
+            end)
+            y.hook.on_window_change:add(function(ctx)
+                ctx.preview.wrap = true
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert!(
+            preview.wrap,
+            "second callback should still run after first errors"
+        );
+    }
+
+    #[test]
+    fn on_window_change_no_callbacks_is_noop() {
+        let lua = create_lua_with_hook("");
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort {
+            prefix_column_width: 2,
+            ..Default::default()
+        };
+
+        invoke_on_window_change(
+            &lua,
+            None,
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert_eq!(
+            preview.prefix_column_width, 2,
+            "prefix_column_width should remain unchanged with no callbacks"
+        );
+    }
+
+    #[test]
+    fn on_window_change_via_real_init() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        write!(
+            tmp,
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                if ctx.preview_is_directory then
+                    ctx.preview.prefix_column_width = 2
+                else
+                    ctx.preview.prefix_column_width = 0
+                end
+            end)
+            "#
+        )
+        .unwrap();
+
+        let lua = Lua::new();
+        crate::setup_and_execute(&lua, &tmp.path().to_path_buf()).unwrap();
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            Some(Path::new("/test")),
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        assert_eq!(preview.prefix_column_width, 2);
     }
 }

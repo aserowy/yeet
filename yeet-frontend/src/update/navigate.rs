@@ -1,6 +1,7 @@
 use std::{mem, path::Path};
 
 use yeet_buffer::model::{viewport::ViewPort, Cursor, Mode};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -12,7 +13,13 @@ use crate::{
 use super::history;
 
 #[tracing::instrument(skip(app))]
-pub fn mark(app: &mut App, history: &mut History, marks: &Marks, char: &char) -> Vec<Action> {
+pub fn mark(
+    app: &mut App,
+    history: &mut History,
+    marks: &Marks,
+    char: &char,
+    lua: Option<&LuaConfiguration>,
+) -> Vec<Action> {
     let path = match marks.entries.get(char) {
         Some(it) => it.clone(),
         None => return Vec::new(),
@@ -26,11 +33,16 @@ pub fn mark(app: &mut App, history: &mut History, marks: &Marks, char: &char) ->
         None => &path,
     };
 
-    navigate_to_path_with_selection(history, app, path.as_path(), &selection)
+    navigate_to_path_with_selection(history, app, path.as_path(), &selection, lua)
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn path(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
+pub fn path(
+    app: &mut App,
+    history: &mut History,
+    path: &Path,
+    lua: Option<&LuaConfiguration>,
+) -> Vec<Action> {
     let (path, selection) = if path.is_file() {
         tracing::info!("path is a file, not a directory: {:?}", path);
 
@@ -51,10 +63,15 @@ pub fn path(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
         (path, None)
     };
 
-    navigate_to_path_with_selection(history, app, path, &selection)
+    navigate_to_path_with_selection(history, app, path, &selection, lua)
 }
 
-pub fn path_as_preview(app: &mut App, history: &mut History, path: &Path) -> Vec<Action> {
+pub fn path_as_preview(
+    app: &mut App,
+    history: &mut History,
+    path: &Path,
+    lua: Option<&LuaConfiguration>,
+) -> Vec<Action> {
     let selection = path
         .file_name()
         .map(|oss| oss.to_string_lossy().to_string());
@@ -64,7 +81,7 @@ pub fn path_as_preview(app: &mut App, history: &mut History, path: &Path) -> Vec
         None => path,
     };
 
-    navigate_to_path_with_selection(history, app, path, &selection)
+    navigate_to_path_with_selection(history, app, path, &selection, lua)
 }
 
 #[tracing::instrument(skip(app, history))]
@@ -73,6 +90,7 @@ pub fn navigate_to_path_with_selection(
     app: &mut App,
     path: &Path,
     selection: &Option<String>,
+    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     if path.is_file() {
         tracing::warn!("path is a file, not a directory: {:?}", path);
@@ -149,6 +167,7 @@ pub fn navigate_to_path_with_selection(
         contents,
         history,
         preview_path,
+        lua,
     ));
 
     tracing::debug!(
@@ -220,7 +239,11 @@ pub fn parent(app: &mut App) -> Result<Vec<Action>, AppError> {
 }
 
 #[tracing::instrument(skip(app, history))]
-pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, AppError> {
+pub fn selected(
+    app: &mut App,
+    history: &mut History,
+    lua: Option<&LuaConfiguration>,
+) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     let (parent_vp, current_vp, preview_vp) = match app::get_focused_directory_viewports_mut(window)
     {
@@ -239,7 +262,7 @@ pub fn selected(app: &mut App, history: &mut History) -> Result<Vec<Action>, App
 
     current_vp.hide_cursor_line = false;
 
-    selection::refresh_preview_from_current_selection(app, history, None)
+    selection::refresh_preview_from_current_selection(app, history, None, lua)
 }
 
 fn swap_viewport(vp1: &mut ViewPort, vp2: &mut ViewPort) {
@@ -320,7 +343,7 @@ mod test {
     fn selected_noop_when_tasks_focused() {
         let mut app = make_tasks_focused_app();
         let mut history = History::default();
-        let actions = selected(&mut app, &mut history).expect("selected must succeed");
+        let actions = selected(&mut app, &mut history, None).expect("selected must succeed");
         assert!(actions.is_empty());
     }
 
@@ -331,7 +354,7 @@ mod test {
         let target = Path::new("/nonexistent/test/path");
 
         // Should not panic; viewports remain unchanged
-        let _actions = navigate_to_path_with_selection(&mut history, &mut app, target, &None);
+        let _actions = navigate_to_path_with_selection(&mut history, &mut app, target, &None, None);
 
         // Task viewport buffer_id unchanged
         let window = app.current_window().expect("test requires current tab");
@@ -354,7 +377,7 @@ mod test {
             .insert('a', std::path::PathBuf::from("/nonexistent/test/path"));
 
         // Should not panic; viewports remain unchanged
-        let _actions = mark(&mut app, &mut history, &marks, &'a');
+        let _actions = mark(&mut app, &mut history, &marks, &'a', None);
 
         let window = app.current_window().expect("test requires current tab");
         match window {

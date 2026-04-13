@@ -75,6 +75,7 @@ pub fn change(
             app,
             &mut state.history,
             None,
+            lua,
         )?);
     }
 
@@ -189,6 +190,7 @@ pub fn finish(
             app,
             &mut state.history,
             None,
+            lua,
         )?);
     }
     app.current_tab_id = original_tab;

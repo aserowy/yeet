@@ -195,6 +195,7 @@ fn update_with_message(
                     &state.modes.current,
                     app,
                     &path,
+                    lua,
                 ) {
                     Ok(actions) => actions,
                     Err(err) => {
@@ -251,7 +252,7 @@ fn update_with_message(
             Ok((window, contents)) => task::remove(&mut state.tasks, window, contents, id, lua),
             Err(_) => Vec::new(),
         },
-        Message::ZoxideResult(path) => navigate::path(app, &mut state.history, path.as_ref()),
+        Message::ZoxideResult(path) => navigate::path(app, &mut state.history, path.as_ref(), lua),
     }
 }
 
@@ -290,7 +291,7 @@ pub fn update_with_keymap_message(
             commandline::leave(app, &mut state.register, &state.modes)
         }
         KeymapMessage::NavigateToMark(char) => {
-            navigate::mark(app, &mut state.history, &state.marks, char)
+            navigate::mark(app, &mut state.history, &state.marks, char, lua)
         }
         KeymapMessage::NavigateToParent => match navigate::parent(app) {
             Ok(actions) => actions,
@@ -299,17 +300,19 @@ pub fn update_with_keymap_message(
                 Vec::new()
             }
         },
-        KeymapMessage::NavigateToPath(path) => navigate::path(app, &mut state.history, path),
+        KeymapMessage::NavigateToPath(path) => navigate::path(app, &mut state.history, path, lua),
         KeymapMessage::NavigateToPathAsPreview(path) => {
-            navigate::path_as_preview(app, &mut state.history, path)
+            navigate::path_as_preview(app, &mut state.history, path, lua)
         }
-        KeymapMessage::NavigateToSelected => match navigate::selected(app, &mut state.history) {
-            Ok(actions) => actions,
-            Err(err) => {
-                tracing::error!("NavigateToSelected failed: {}", err);
-                Vec::new()
+        KeymapMessage::NavigateToSelected => {
+            match navigate::selected(app, &mut state.history, lua) {
+                Ok(actions) => actions,
+                Err(err) => {
+                    tracing::error!("NavigateToSelected failed: {}", err);
+                    Vec::new()
+                }
             }
-        },
+        }
         KeymapMessage::OpenSelected => {
             match open::selected(settings, &state.modes.current, app, lua, &mut state.qfix) {
                 Ok(actions) => actions,
@@ -439,7 +442,7 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                match cursor::relocate(app, state, rpt, mtn) {
+                match cursor::relocate(app, state, rpt, mtn, lua) {
                     Ok(actions) => actions,
                     Err(err) => {
                         tracing::error!("MoveCursor failed: {}", err);
@@ -453,7 +456,7 @@ pub fn update_with_buffer_message(
                 commandline::update(&mut app.commandline, &state.modes.current, Some(msg))
             }
             Mode::Insert | Mode::Navigation | Mode::Normal => {
-                match viewport::relocate(app, &mut state.history, &state.modes.current, mtn) {
+                match viewport::relocate(app, &mut state.history, &state.modes.current, mtn, lua) {
                     Ok(actions) => actions,
                     Err(err) => {
                         tracing::error!("MoveViewPort failed: {}", err);

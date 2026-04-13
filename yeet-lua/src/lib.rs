@@ -4,6 +4,7 @@ mod plugin;
 mod viewport;
 
 pub use hook::invoke_on_bufferline_mutate;
+pub use hook::invoke_on_window_change;
 pub use hook::invoke_on_window_create;
 pub use hook::BufferType;
 pub use loading::load_plugins;
@@ -50,6 +51,10 @@ fn setup_and_execute(lua: &Lua, config_path: &PathBuf) -> LuaResult<()> {
     let on_window_create = lua.create_table()?;
     let _ = on_window_create.set_metatable(Some(hook_mt.clone()));
     hook_table.set("on_window_create", on_window_create)?;
+
+    let on_window_change = lua.create_table()?;
+    let _ = on_window_change.set_metatable(Some(hook_mt.clone()));
+    hook_table.set("on_window_change", on_window_change)?;
 
     let on_bufferline_mutate = lua.create_table()?;
     let _ = on_bufferline_mutate.set_metatable(Some(hook_mt));

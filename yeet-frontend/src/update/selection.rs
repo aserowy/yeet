@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use yeet_buffer::model::{Cursor, Mode};
+use yeet_lua::LuaConfiguration;
 
 use crate::error::AppError;
 use crate::model;
@@ -18,11 +19,12 @@ pub fn refresh_preview_from_current_selection(
     app: &mut App,
     history: &mut History,
     previous_selection: Option<PathBuf>,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     let current_window = window.focused_window_mut();
 
-    refresh_preview_from_selection(history, current_window, contents, previous_selection)
+    refresh_preview_from_selection(history, current_window, contents, previous_selection, lua)
 }
 
 pub fn refresh_preview_from_selection(
@@ -30,6 +32,7 @@ pub fn refresh_preview_from_selection(
     window: &mut Window,
     contents: &mut Contents,
     previous_selection: Option<PathBuf>,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let Window::Directory(_, current_vp, _) = window else {
         return Ok(Vec::new());
@@ -62,6 +65,7 @@ pub fn refresh_preview_from_selection(
         contents,
         history,
         current_selection,
+        lua,
     ))
 }
 
@@ -98,6 +102,7 @@ pub fn set_preview_buffer_for_selection(
     contents: &mut Contents,
     history: &mut History,
     path_to_preview: Option<PathBuf>,
+    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let mut actions = Vec::new();
     let preview_id = if let Some(path_to_preview) = path_to_preview {
@@ -112,7 +117,7 @@ pub fn set_preview_buffer_for_selection(
         app::get_empty_buffer(contents)
     };
 
-    preview::set_buffer_id(contents, window, preview_id);
+    preview::set_buffer_id(contents, window, preview_id, lua);
 
     if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports_mut(window) {
         preview_vp.cursor = Cursor::default();
