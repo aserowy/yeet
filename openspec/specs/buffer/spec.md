@@ -268,11 +268,15 @@ The prefix column SHALL NOT be part of editable buffer text. Entering Normal or 
 - **THEN** the cursor column maps to the first character of the content text
 
 ### Requirement: No prefix column when width is zero
-When `prefix_column_width` is `0`, no prefix space SHALL be reserved in the viewport layout. The rendering SHALL behave identically to the current behavior when no icon column is configured.
+When `prefix_column_width` is `0`, no prefix space SHALL be reserved in the viewport layout. The rendering SHALL behave identically to the current behavior when no icon column is configured. The border space between pre-content columns and the content area SHALL NOT be rendered when no pre-content column is active (i.e., `sign_column_width == 0` AND `line_number == None` AND `prefix_column_width == 0`).
 
 #### Scenario: Zero width means no prefix overhead
 - **WHEN** `prefix_column_width` is `0` and the bufferline has no prefix
 - **THEN** the content area occupies the full available width after signs, line numbers, and border
+
+#### Scenario: Border not rendered when all prefix columns are zero
+- **WHEN** `sign_column_width == 0` AND `line_number == None` AND `prefix_column_width == 0`
+- **THEN** `get_precontent_border_width()` SHALL return `0`
 
 ### Requirement: All bufferline mutate hooks fire after signs are added
 The `on_bufferline_mutate` hook SHALL fire AFTER all sign operations (mark signs, quickfix signs) have been applied to the bufferline. This ensures plugins see the complete bufferline state including signs when the hook fires.
@@ -310,3 +314,37 @@ The line number column SHALL produce the same number of visible characters for e
 #### Scenario: Content column starts at the same position for all lines
 - **WHEN** a buffer has line numbers enabled in any mode (Absolute or Relative)
 - **THEN** the first character of content (e.g., filename) SHALL start at the same horizontal column for every visible line
+
+### Requirement: Prefix component ANSI styles are isolated
+
+Each prefix component (signs, line numbers, prefix column, border) SHALL render with self-contained ANSI styling so that escape codes from one component do not affect the rendering of subsequent components.
+
+Specifically, when the prefix column renders an icon character, the terminal MUST NOT receive residual ANSI attributes (such as bold, italic, or foreground color) from the preceding sign or line number components.
+
+#### Scenario: Prefix icon renders consistently regardless of line number mode
+
+- **WHEN** a directory viewport has `line_number: Relative` (which emits ANSI color codes) and `prefix_column_width > 0` with a nerdfont icon
+- **THEN** the rendered `Span` containing the prefix icon SHALL NOT inherit bold, foreground color, or other style attributes from the line number spans
+
+#### Scenario: Prefix icon renders consistently on cursor line with bold line number
+
+- **WHEN** the cursor line has a bold line number (`\x1b[1m`) followed by a prefix column containing a PUA icon character
+- **THEN** the `ansi_to_tui` parsed spans for the prefix column SHALL have a clean style (no inherited bold) and the icon SHALL be rendered in a span that does not carry attributes from the line number span
+
+### Requirement: Border rendered when any pre-content column is active
+The 1-cell border space SHALL be rendered whenever any pre-content column is active. This includes when only `prefix_column_width > 0` (with no signs or line numbers). The border condition SHALL check all pre-content column widths: `sign_column_width`, `line_number_width`, and `prefix_column_width`.
+
+#### Scenario: Border with only prefix column active
+- **WHEN** `prefix_column_width > 0` AND `sign_column_width == 0` AND `line_number == None`
+- **THEN** `get_precontent_border_width()` SHALL return `1`
+- **THEN** the layout SHALL be `[border][prefix_column][content]`
+
+#### Scenario: Border with signs and prefix column active
+- **WHEN** `sign_column_width > 0` AND `prefix_column_width > 0`
+- **THEN** `get_precontent_border_width()` SHALL return `1`
+- **THEN** the layout SHALL be `[signs][line_number][border][prefix_column][content]`
+
+#### Scenario: Content width reduced by border when prefix column only
+- **WHEN** `prefix_column_width == 2` AND `sign_column_width == 0` AND `line_number == None` AND `width == 80`
+- **THEN** `get_content_width()` SHALL return `80 - 0 (precontent) - 1 (border) - 2 (prefix_column) - 1 (border from show_border) = 76` for a viewport with `show_border == true`
+- **THEN** `get_content_width()` SHALL return `80 - 0 (precontent) - 1 (border) - 2 (prefix_column) = 77` for a viewport with `show_border == false`
