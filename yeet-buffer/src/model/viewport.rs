@@ -19,6 +19,7 @@ pub struct ViewPort {
     pub line_number: LineNumber,
     pub line_number_width: usize,
     pub prefix_column_width: usize,
+    pub precontent_border_width: Option<usize>,
     pub show_border: bool,
     pub sign_column_width: usize,
     pub vertical_index: usize,
@@ -30,6 +31,9 @@ pub struct ViewPort {
 
 impl ViewPort {
     pub fn get_precontent_border_width(&self) -> usize {
+        if let Some(override_width) = self.precontent_border_width {
+            return override_width;
+        }
         if self.get_precontent_width() > 0 {
             1
         } else {
@@ -212,6 +216,52 @@ mod tests {
             vp.get_precontent_border_width(),
             0,
             "border should be 0 when all pre-content columns are zero"
+        );
+    }
+
+    #[test]
+    fn precontent_border_width_override_zero_suppresses_border() {
+        let vp = ViewPort {
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            prefix_column_width: 2,
+            precontent_border_width: Some(0),
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_precontent_border_width(),
+            0,
+            "override Some(0) should suppress border even with precontent > 0"
+        );
+    }
+
+    #[test]
+    fn precontent_border_width_override_enforces_value() {
+        let vp = ViewPort {
+            sign_column_width: 0,
+            line_number: LineNumber::None,
+            prefix_column_width: 0,
+            precontent_border_width: Some(2),
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_precontent_border_width(),
+            2,
+            "override Some(2) should return 2 regardless of precontent width"
+        );
+    }
+
+    #[test]
+    fn precontent_border_width_none_uses_computed() {
+        let vp = ViewPort {
+            sign_column_width: 2,
+            precontent_border_width: None,
+            ..Default::default()
+        };
+        assert_eq!(
+            vp.get_precontent_border_width(),
+            1,
+            "None should fall back to computed value (1 when precontent > 0)"
         );
     }
 }
