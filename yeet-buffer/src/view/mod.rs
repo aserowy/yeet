@@ -49,7 +49,7 @@ pub fn view(
     };
 
     frame.render_widget(
-        Paragraph::new(styled).style(Style::default().bg(theme.buffer_bg)),
+        Paragraph::new(styled).style(Style::default().fg(theme.buffer_fg).bg(theme.buffer_bg)),
         rect,
     );
 }
@@ -119,10 +119,10 @@ fn get_styled_lines<'a>(
                 Ansi::new("")
                     .join(&prefix::get_signs(vp, &bl, theme))
                     .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
-                    .join(&prefix::get_custom_prefix(&bl))
+                    .join(&prefix::get_prefix_column(vp, &bl, theme))
                     .join(&prefix::get_border(vp))
             } else {
-                let prefix_width = vp.get_offset_width(&bl) + vp.get_border_width();
+                let prefix_width = vp.get_offset_width(&bl);
                 Ansi::new(&" ".repeat(prefix_width))
             };
 
@@ -169,7 +169,7 @@ fn get_styled_lines_nowrap<'a>(
         let content = Ansi::new("")
             .join(&prefix::get_signs(vp, &bl, theme))
             .join(&prefix::get_line_number(vp, corrected_index, cursor, theme))
-            .join(&prefix::get_custom_prefix(&bl))
+            .join(&prefix::get_prefix_column(vp, &bl, theme))
             .join(&prefix::get_border(vp))
             .join(&line::add_line_styles(vp, mode, cursor, &i, &mut bl, theme));
 
@@ -197,6 +197,7 @@ mod test {
         use ratatui::style::Color;
         BufferTheme {
             buffer_bg: Color::Reset,
+            buffer_fg: Color::White,
             cursor_line_bg: Color::Rgb(128, 128, 128),
             search_bg: Color::Red,
             line_nr: Color::Rgb(128, 128, 128),
@@ -290,9 +291,6 @@ mod test {
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
 
-        // For a directory viewport with show_border=true, the Paragraph rect
-        // is reduced by Block::inner() (Borders::RIGHT takes 1 col).
-        // The styled line should fill that inner rect: viewport.width - 1.
         let expected_width = usize::from(vp.width) - 1;
         assert_eq!(
             cursor_line.width(),
@@ -314,7 +312,6 @@ mod test {
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(styled.len() >= 2);
-        // First line is NOT the cursor line (cursor is on index 1)
         let non_cursor_line = &styled[0];
         assert!(
             non_cursor_line.width() <= usize::from(vp.width),
@@ -323,7 +320,6 @@ mod test {
             vp.width,
         );
 
-        // Second line IS the cursor line
         let cursor_line = &styled[1];
         assert_eq!(
             cursor_line.width(),
@@ -335,7 +331,6 @@ mod test {
     #[test]
     fn cursor_line_width_with_cancelled_task_ansi() {
         let vp = tasks_viewport(80, 10);
-        // Cancelled task line with strikethrough + gray ANSI styling
         let lines = vec![BufferLine::from("\x1b[9;90m1    rg foo\x1b[0m")];
 
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
@@ -540,5 +535,181 @@ mod test {
                 row,
             );
         }
+    }
+
+    #[test]
+    fn prefix_column_included_in_directory_viewport_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line width should equal viewport width minus border, including prefix column"
+        );
+    }
+
+    #[test]
+    fn prefix_column_zero_width_does_not_affect_line_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 0;
+        let lines = vec![BufferLine::from("documents")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "prefix_column_width=0 should not change line width"
+        );
+    }
+
+    #[test]
+    fn plugin_ansi_in_content_applied_to_text() {
+        use ratatui::style::Color;
+
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine {
+            content: crate::model::ansi::Ansi::new("\x1b[38;2;255;100;0mmyfile.rs"),
+            ..Default::default()
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let has_fg_color = styled[0]
+            .spans
+            .iter()
+            .any(|span| span.style.fg.is_some() && span.style.fg != Some(Color::Reset));
+        assert!(
+            has_fg_color,
+            "plugin ANSI in content should color the text (some span should have a non-default fg)"
+        );
+    }
+
+    #[test]
+    fn plain_content_uses_default_styling() {
+        let vp = tasks_viewport(80, 10);
+        let lines = vec![BufferLine::from("myfile.rs")];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        assert_eq!(
+            cursor_line.width(),
+            usize::from(vp.width),
+            "line without ANSI content should still fill viewport width"
+        );
+    }
+
+    #[test]
+    fn cursor_at_filename_start_with_prefix_column() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        vp.cursor = Cursor {
+            vertical_index: 0,
+            horizontal_index: CursorPosition::Absolute {
+                current: 0,
+                expanded: 0,
+            },
+        };
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from("documents")
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Normal, &vp.cursor, lines, &test_theme());
+
+        assert!(!styled.is_empty());
+        let cursor_line = &styled[0];
+        let expected_width = usize::from(vp.width) - 1;
+        assert_eq!(
+            cursor_line.width(),
+            expected_width,
+            "cursor line with prefix column should fill expected width"
+        );
+        let has_cursor_style = cursor_line
+            .spans
+            .iter()
+            .any(|span| span.content.contains('d') && span.style.bg.is_some());
+        assert!(
+            has_cursor_style,
+            "cursor should be on the first content character, not on the prefix column"
+        );
+    }
+
+    #[test]
+    fn prefix_column_icon_not_inheriting_line_number_bold() {
+        use ratatui::style::Modifier;
+
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        vp.line_number = LineNumber::Absolute;
+        let lines = vec![
+            BufferLine {
+                prefix: Some("\u{f0f6}".to_string()),
+                ..BufferLine::from("documents")
+            },
+            BufferLine {
+                prefix: Some("\u{f0f6}".to_string()),
+                ..BufferLine::from("pictures")
+            },
+        ];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(styled.len() >= 2);
+        let non_cursor_line = &styled[1];
+        for span in &non_cursor_line.spans {
+            if span.content.contains('\u{f0f6}') {
+                assert!(
+                    !span.style.add_modifier.contains(Modifier::BOLD),
+                    "prefix icon span should not inherit BOLD from line number, got style: {:?}",
+                    span.style,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn wrap_continuation_indent_matches_first_line_prefix_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        vp.wrap = true;
+
+        let long_content = "a]".repeat(40);
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from(&*long_content)
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(
+            styled.len() >= 2,
+            "line should wrap into at least 2 visual lines, got {}",
+            styled.len()
+        );
+
+        let first_line_width = styled[0].width();
+        let continuation_width = styled[1].width();
+        assert_eq!(
+            first_line_width, continuation_width,
+            "continuation line width ({}) should equal first line width ({})",
+            continuation_width, first_line_width,
+        );
     }
 }

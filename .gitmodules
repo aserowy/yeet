@@ -1,3 +1,6 @@
 [submodule "plugins/bluloco-theme"]
 	path = plugins/bluloco-theme
 	url = git@github.com:aserowy/yeet-bluloco-theme.git
+[submodule "plugins/directory-icons"]
+	path = plugins/directory-icons
+	url = git@github.com:aserowy/yeet-directory-icons.git

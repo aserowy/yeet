@@ -290,7 +290,6 @@ mod test {
     #[test]
     fn left_moves_focus_on_vertical() {
         let mut app = make_vertical_app();
-        // First move right to second, then left back to first
         change(&mut app, &FocusDirection::Right);
         change(&mut app, &FocusDirection::Left);
         match current_window(&app) {
@@ -331,15 +330,12 @@ mod test {
     /// ```
     fn make_vertical_inside_horizontal_app() -> App {
         let mut buffers = HashMap::new();
-        // Dir_A viewports: 10, 11, 12
         buffers.insert(10, Buffer::Empty);
         buffers.insert(11, Buffer::Empty);
         buffers.insert(12, Buffer::Empty);
-        // Dir_B viewports: 20, 21, 22
         buffers.insert(20, Buffer::Empty);
         buffers.insert(21, Buffer::Empty);
         buffers.insert(22, Buffer::Empty);
-        // Tasks viewport: 30
         buffers.insert(30, Buffer::Tasks(TasksBuffer::default()));
 
         let mut tabs = HashMap::new();
@@ -399,7 +395,6 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_right_moves_within_vertical() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Focus on Dir_A, press Right → Dir_B
         change(&mut app, &FocusDirection::Right);
 
         match current_window(&app) {
@@ -419,7 +414,6 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_down_crosses_to_tasks() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Focus on Dir_A, press Down → Tasks
         change(&mut app, &FocusDirection::Down);
 
         match current_window(&app) {
@@ -434,9 +428,7 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_down_from_dir_b_crosses_to_tasks() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Move to Dir_B first
         change(&mut app, &FocusDirection::Right);
-        // Now press Down → Tasks
         change(&mut app, &FocusDirection::Down);
 
         match current_window(&app) {
@@ -451,12 +443,9 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_up_from_tasks_enters_vertical_first() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Move to Tasks
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 30);
 
-        // Press Up → enters Vertical from Up → focuses second (right/bottom)
-        // because enter_from with Up on Vertical picks SplitFocus::Second
         change(&mut app, &FocusDirection::Up);
 
         match current_window(&app) {
@@ -480,7 +469,6 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_left_noop_on_dir_a() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Focus on Dir_A, press Left → no-op (already leftmost)
         change(&mut app, &FocusDirection::Left);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 11);
     }
@@ -488,7 +476,6 @@ mod test {
     #[test]
     fn nested_vert_in_horiz_up_noop_on_dir_a() {
         let mut app = make_vertical_inside_horizontal_app();
-        // Focus on Dir_A, press Up → no-op (already topmost)
         change(&mut app, &FocusDirection::Up);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 11);
     }
@@ -510,13 +497,10 @@ mod test {
     /// ```
     fn make_horizontal_inside_vertical_app() -> App {
         let mut buffers = HashMap::new();
-        // Dir_A viewports: 10, 11, 12
         buffers.insert(10, Buffer::Empty);
         buffers.insert(11, Buffer::Empty);
         buffers.insert(12, Buffer::Empty);
-        // Tasks viewport: 20
         buffers.insert(20, Buffer::Tasks(TasksBuffer::default()));
-        // Dir_B viewports: 30, 31, 32
         buffers.insert(30, Buffer::Empty);
         buffers.insert(31, Buffer::Empty);
         buffers.insert(32, Buffer::Empty);
@@ -578,7 +562,6 @@ mod test {
     #[test]
     fn nested_horiz_in_vert_right_crosses_to_dir_b() {
         let mut app = make_horizontal_inside_vertical_app();
-        // Focus on Dir_A, press Right → Dir_B (crosses Vertical boundary)
         change(&mut app, &FocusDirection::Right);
 
         match current_window(&app) {
@@ -593,7 +576,6 @@ mod test {
     #[test]
     fn nested_horiz_in_vert_down_moves_within_horizontal() {
         let mut app = make_horizontal_inside_vertical_app();
-        // Focus on Dir_A, press Down → Tasks (within the Horizontal)
         change(&mut app, &FocusDirection::Down);
 
         match current_window(&app) {
@@ -614,11 +596,9 @@ mod test {
     #[test]
     fn nested_horiz_in_vert_left_from_dir_b_enters_horizontal_from_right() {
         let mut app = make_horizontal_inside_vertical_app();
-        // Move to Dir_B
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 31);
 
-        // Press Left → enters Horizontal from right → focuses second (Tasks)
         change(&mut app, &FocusDirection::Left);
 
         match current_window(&app) {
@@ -643,11 +623,9 @@ mod test {
     #[test]
     fn nested_horiz_in_vert_right_from_tasks_crosses_to_dir_b() {
         let mut app = make_horizontal_inside_vertical_app();
-        // Move to Tasks
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 20);
 
-        // Press Right → crosses Vertical boundary to Dir_B
         change(&mut app, &FocusDirection::Right);
 
         match current_window(&app) {
@@ -677,19 +655,15 @@ mod test {
     /// ```
     fn make_deep_nested_app() -> App {
         let mut buffers = HashMap::new();
-        // Dir_A: 10, 11, 12
         buffers.insert(10, Buffer::Empty);
         buffers.insert(11, Buffer::Empty);
         buffers.insert(12, Buffer::Empty);
-        // Dir_B: 20, 21, 22
         buffers.insert(20, Buffer::Empty);
         buffers.insert(21, Buffer::Empty);
         buffers.insert(22, Buffer::Empty);
-        // Dir_C: 30, 31, 32
         buffers.insert(30, Buffer::Empty);
         buffers.insert(31, Buffer::Empty);
         buffers.insert(32, Buffer::Empty);
-        // Tasks: 40
         buffers.insert(40, Buffer::Tasks(TasksBuffer::default()));
 
         let mut tabs = HashMap::new();
@@ -766,7 +740,6 @@ mod test {
     #[test]
     fn deep_nested_right_from_dir_a_to_dir_b() {
         let mut app = make_deep_nested_app();
-        // Dir_A, press Right → enters inner Vertical second → inner Horizontal → Dir_B (first/top)
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 21);
     }
@@ -774,7 +747,6 @@ mod test {
     #[test]
     fn deep_nested_down_from_dir_a_to_tasks() {
         let mut app = make_deep_nested_app();
-        // Dir_A, press Down → crosses outer Horizontal to Tasks
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 40);
     }
@@ -782,11 +754,9 @@ mod test {
     #[test]
     fn deep_nested_down_from_dir_b_to_dir_c() {
         let mut app = make_deep_nested_app();
-        // Navigate to Dir_B
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 21);
 
-        // Dir_B, press Down → Dir_C (within inner Horizontal)
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 31);
     }
@@ -794,11 +764,9 @@ mod test {
     #[test]
     fn deep_nested_left_from_dir_b_to_dir_a() {
         let mut app = make_deep_nested_app();
-        // Navigate to Dir_B
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 21);
 
-        // Dir_B, press Left → Dir_A (Vertical second → first)
         change(&mut app, &FocusDirection::Left);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 11);
     }
@@ -806,12 +774,10 @@ mod test {
     #[test]
     fn deep_nested_left_from_dir_c_to_dir_a() {
         let mut app = make_deep_nested_app();
-        // Navigate to Dir_B then Dir_C
         change(&mut app, &FocusDirection::Right);
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 31);
 
-        // Dir_C, press Left → Dir_A (inner Horizontal can't handle Left, bubbles to Vertical → first)
         change(&mut app, &FocusDirection::Left);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 11);
     }
@@ -819,13 +785,10 @@ mod test {
     #[test]
     fn deep_nested_down_from_dir_c_to_tasks() {
         let mut app = make_deep_nested_app();
-        // Navigate to Dir_C
         change(&mut app, &FocusDirection::Right);
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 31);
 
-        // Dir_C, press Down → inner Horizontal can't handle (already second),
-        // bubbles to Vertical (not relevant for Down), bubbles to outer Horizontal → Tasks
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 40);
     }
@@ -833,11 +796,9 @@ mod test {
     #[test]
     fn deep_nested_right_noop_from_dir_b() {
         let mut app = make_deep_nested_app();
-        // Navigate to Dir_B
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 21);
 
-        // Dir_B, press Right → no Vertical ancestor to the right → no-op
         change(&mut app, &FocusDirection::Right);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 21);
     }
@@ -845,13 +806,9 @@ mod test {
     #[test]
     fn deep_nested_up_from_tasks_enters_vertical_first() {
         let mut app = make_deep_nested_app();
-        // Navigate to Tasks
         change(&mut app, &FocusDirection::Down);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 40);
 
-        // Tasks, press Up → outer Horizontal second→first → enters Vertical from Up
-        // enter_from with Up on Vertical → SplitFocus::Second → enters inner Horizontal from Up
-        // enter_from with Up on Horizontal → SplitFocus::Second → Dir_C (current vp = 31)
         change(&mut app, &FocusDirection::Up);
         assert_eq!(current_window(&app).focused_viewport().buffer_id, 31);
     }

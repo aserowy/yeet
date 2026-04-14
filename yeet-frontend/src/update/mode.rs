@@ -4,6 +4,8 @@ use yeet_buffer::{
 };
 use yeet_keymap::message::PrintContent;
 
+use yeet_lua::LuaConfiguration;
+
 use crate::{
     action::Action,
     error::AppError,
@@ -22,6 +24,7 @@ pub fn change(
     from: &Mode,
     to: &Mode,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     match (from, to) {
         (Mode::Command(_), Mode::Command(_))
@@ -126,13 +129,18 @@ pub fn change(
     });
 
     if matches!(from, Mode::Insert) {
-        actions.extend(flush_pending_paths(state, app, theme));
+        actions.extend(flush_pending_paths(state, app, theme, lua));
     }
 
     Ok(actions)
 }
 
-fn flush_pending_paths(state: &mut State, app: &mut App, theme: &Theme) -> Vec<Action> {
+fn flush_pending_paths(
+    state: &mut State,
+    app: &mut App,
+    theme: &Theme,
+    lua: Option<&LuaConfiguration>,
+) -> Vec<Action> {
     let mut actions = Vec::new();
     for event in state.pending_path_events.drain(..) {
         match event {
@@ -146,6 +154,7 @@ fn flush_pending_paths(state: &mut State, app: &mut App, theme: &Theme) -> Vec<A
                         app,
                         &paths,
                         theme,
+                        lua,
                     )
                     .unwrap_or_else(|err| {
                         tracing::error!("pending path add failed: {}", err);
@@ -167,6 +176,7 @@ fn flush_pending_paths(state: &mut State, app: &mut App, theme: &Theme) -> Vec<A
                         &state.modes.current,
                         app,
                         &path,
+                        lua,
                     )
                     .unwrap_or_else(|err| {
                         tracing::error!("pending path remove failed: {}", err);
@@ -310,8 +320,15 @@ mod test {
 
         state.modes.current = Mode::Insert;
         let theme = Theme::default();
-        let actions = mode::change(&mut app, &mut state, &Mode::Insert, &Mode::Normal, &theme)
-            .expect("mode change must succeed");
+        let actions = mode::change(
+            &mut app,
+            &mut state,
+            &Mode::Insert,
+            &Mode::Normal,
+            &theme,
+            None,
+        )
+        .expect("mode change must succeed");
 
         assert!(actions
             .iter()
@@ -333,25 +350,25 @@ mod test {
 
         let theme = Theme::default();
 
-        // Navigation → Normal should be blocked on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
             &Mode::Navigation,
             &Mode::Normal,
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
 
-        // Navigation → Insert should also be blocked
         let actions = mode::change(
             &mut app,
             &mut state,
             &Mode::Navigation,
             &Mode::Insert,
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions.is_empty());
@@ -376,6 +393,7 @@ mod test {
             &Mode::Navigation,
             &Mode::Normal,
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions.is_empty());
@@ -387,6 +405,7 @@ mod test {
             &Mode::Navigation,
             &Mode::Insert,
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions.is_empty());
@@ -409,13 +428,13 @@ mod test {
 
         let theme = Theme::default();
 
-        // Navigation → Command should be allowed on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
             &Mode::Navigation,
             &Mode::Command(CommandMode::Command),
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions
@@ -423,13 +442,13 @@ mod test {
             .any(|a| matches!(a, crate::action::Action::ModeChanged)));
         assert_eq!(state.modes.current, Mode::Command(CommandMode::Command));
 
-        // Command → Navigation should also be allowed on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
             &Mode::Command(CommandMode::Command),
             &Mode::Navigation,
             &theme,
+            None,
         )
         .expect("mode change must succeed");
         assert!(actions

@@ -208,11 +208,15 @@ fn take_snapshot(lua: &Lua) -> LuaResult<PluginSnapshot> {
     let on_window_create: LuaTable = hook.get("on_window_create")?;
     let hook_on_window_create = shallow_clone_table(lua, &on_window_create)?;
 
+    let on_bufferline_mutate: LuaTable = hook.get("on_bufferline_mutate")?;
+    let hook_on_bufferline_mutate = shallow_clone_table(lua, &on_bufferline_mutate)?;
+
     let theme: LuaTable = y.get("theme")?;
     let theme_clone = shallow_clone_table(lua, &theme)?;
 
     Ok(PluginSnapshot {
         hook_on_window_create,
+        hook_on_bufferline_mutate,
         theme: theme_clone,
     })
 }
@@ -224,6 +228,9 @@ fn restore_snapshot(lua: &Lua, snapshot: PluginSnapshot) -> LuaResult<()> {
     let on_window_create: LuaTable = hook.get("on_window_create")?;
     restore_table_from_clone(&on_window_create, &snapshot.hook_on_window_create)?;
 
+    let on_bufferline_mutate: LuaTable = hook.get("on_bufferline_mutate")?;
+    restore_table_from_clone(&on_bufferline_mutate, &snapshot.hook_on_bufferline_mutate)?;
+
     let theme: LuaTable = y.get("theme")?;
     restore_table_from_clone(&theme, &snapshot.theme)?;
 
@@ -232,6 +239,7 @@ fn restore_snapshot(lua: &Lua, snapshot: PluginSnapshot) -> LuaResult<()> {
 
 struct PluginSnapshot {
     hook_on_window_create: LuaTable,
+    hook_on_bufferline_mutate: LuaTable,
     theme: LuaTable,
 }
 

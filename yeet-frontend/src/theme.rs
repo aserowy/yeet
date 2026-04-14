@@ -30,8 +30,7 @@ pub mod tokens {
     pub const LINE_NR: &str = "LineNr";
     pub const CUR_LINE_NR: &str = "CurLineNr";
     pub const BUFFER_BG: &str = "BufferBg";
-    pub const BUFFER_FILE_FG: &str = "BufferFileFg";
-    pub const BUFFER_DIRECTORY_FG: &str = "BufferDirectoryFg";
+    pub const BUFFER_FG: &str = "BufferFg";
 
     // Directory window borders
     pub const DIRECTORY_BORDER_FG: &str = "DirectoryBorderFg";
@@ -68,27 +67,19 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         let mut colors = HashMap::new();
-
-        // Tabbar defaults (match current hardcoded values)
         colors.insert(tokens::TABBAR_ACTIVE_BG.to_string(), Color::LightBlue);
         colors.insert(tokens::TABBAR_ACTIVE_FG.to_string(), Color::Black);
         colors.insert(tokens::TABBAR_INACTIVE_BG.to_string(), Color::DarkGray);
         colors.insert(tokens::TABBAR_INACTIVE_FG.to_string(), Color::White);
         colors.insert(tokens::TABBAR_BG.to_string(), Color::Black);
-
-        // Statusline defaults
         colors.insert(tokens::STATUSLINE_FOCUSED_FG.to_string(), Color::White);
         colors.insert(tokens::STATUSLINE_UNFOCUSED_FG.to_string(), Color::Gray);
         colors.insert(tokens::STATUSLINE_BG.to_string(), Color::Black);
         colors.insert(tokens::STATUSLINE_POSITION_FG.to_string(), Color::Gray);
         colors.insert(tokens::STATUSLINE_BORDER_FG.to_string(), Color::Black);
-
-        // Diff defaults
         colors.insert(tokens::DIFF_ADDED.to_string(), Color::Green);
         colors.insert(tokens::DIFF_MODIFIED.to_string(), Color::Yellow);
         colors.insert(tokens::DIFF_REMOVED.to_string(), Color::Red);
-
-        // Buffer defaults
         colors.insert(tokens::BUFFER_BG.to_string(), Color::Reset);
         colors.insert(
             tokens::CURSOR_LINE_BG.to_string(),
@@ -97,20 +88,15 @@ impl Default for Theme {
         colors.insert(tokens::SEARCH_BG.to_string(), Color::Red);
         colors.insert(tokens::LINE_NR.to_string(), Color::Rgb(128, 128, 128));
         colors.insert(tokens::CUR_LINE_NR.to_string(), Color::White);
-        colors.insert(tokens::BUFFER_FILE_FG.to_string(), Color::White);
-        colors.insert(tokens::BUFFER_DIRECTORY_FG.to_string(), Color::LightBlue);
+        colors.insert(tokens::BUFFER_FG.to_string(), Color::White);
         colors.insert(tokens::STATUSLINE_PERMISSIONS_FG.to_string(), Color::Gray);
         colors.insert(tokens::STATUSLINE_BORDER_BG.to_string(), Color::Black);
         colors.insert(tokens::DIRECTORY_BORDER_FG.to_string(), Color::Black);
         colors.insert(tokens::DIRECTORY_BORDER_BG.to_string(), Color::Reset);
         colors.insert(tokens::SPLIT_BORDER_FG.to_string(), Color::Black);
         colors.insert(tokens::SPLIT_BORDER_BG.to_string(), Color::Reset);
-
-        // Signs defaults
         colors.insert(tokens::SIGN_QFIX.to_string(), Color::Rgb(255, 85, 255));
         colors.insert(tokens::SIGN_MARK.to_string(), Color::Rgb(85, 255, 255));
-
-        // Semantic status defaults
         colors.insert(tokens::ERROR_FG.to_string(), Color::Rgb(255, 85, 85));
         colors.insert(tokens::WARNING_FG.to_string(), Color::Rgb(241, 250, 140));
         colors.insert(tokens::SUCCESS_FG.to_string(), Color::Rgb(80, 250, 123));
@@ -227,6 +213,7 @@ impl Theme {
     ) -> yeet_buffer::BufferTheme {
         yeet_buffer::BufferTheme {
             buffer_bg: self.color(tokens::BUFFER_BG),
+            buffer_fg: self.color(tokens::BUFFER_FG),
             cursor_line_bg: self.color(tokens::CURSOR_LINE_BG),
             search_bg: self.color(tokens::SEARCH_BG),
             line_nr: self.color(tokens::LINE_NR),
@@ -355,59 +342,37 @@ mod tests {
     fn new_token_defaults_match_current_hardcoded_appearance() {
         let theme = Theme::default();
 
-        // BufferFileFg default is White
-        assert_eq!(theme.color(tokens::BUFFER_FILE_FG), Color::White);
+        assert_eq!(theme.color(tokens::BUFFER_FG), Color::White);
 
-        // BufferDirectoryFg default is LightBlue (matches hardcoded \x1b[94m])
-        assert_eq!(theme.color(tokens::BUFFER_DIRECTORY_FG), Color::LightBlue);
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
-
-        // StatusLinePermissionsFg default is Gray
         assert_eq!(theme.color(tokens::STATUSLINE_PERMISSIONS_FG), Color::Gray);
 
-        // StatusLineBorderBg default is Black
         assert_eq!(theme.color(tokens::STATUSLINE_BORDER_BG), Color::Black);
 
-        // DirectoryBorderFg/Bg defaults
         assert_eq!(theme.color(tokens::DIRECTORY_BORDER_FG), Color::Black);
         assert_eq!(theme.color(tokens::DIRECTORY_BORDER_BG), Color::Reset);
 
-        // SplitBorderFg/Bg defaults (SplitBorderFg replaces old BorderFg=Black)
         assert_eq!(theme.color(tokens::SPLIT_BORDER_FG), Color::Black);
         assert_eq!(theme.color(tokens::SPLIT_BORDER_BG), Color::Reset);
     }
 
     #[test]
-    fn buffer_entry_foreground_color_application() {
+    fn buffer_fg_color_application() {
         let theme = Theme::default();
 
-        // File foreground ANSI code should be White (\x1b[37m])
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_FILE_FG), "\x1b[37m");
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_FG), "\x1b[37m");
 
-        // Directory foreground ANSI code should be LightBlue (\x1b[94m])
-        assert_eq!(theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG), "\x1b[94m");
-
-        // Custom override should produce correct ANSI
         let mut custom = Theme::default();
-        custom.set_color(
-            tokens::BUFFER_DIRECTORY_FG.to_string(),
-            Color::Rgb(0, 255, 0),
-        );
-        assert_eq!(
-            custom.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
-            "\x1b[38;2;0;255;0m"
-        );
+        custom.set_color(tokens::BUFFER_FG.to_string(), Color::Rgb(0, 255, 0));
+        assert_eq!(custom.ansi_fg(tokens::BUFFER_FG), "\x1b[38;2;0;255;0m");
     }
 
     #[test]
     fn statusline_permissions_and_border_background_styling() {
         let theme = Theme::default();
 
-        // Permissions fg style
         let perm_style = theme.style_fg(tokens::STATUSLINE_PERMISSIONS_FG);
         assert_eq!(perm_style, Style::default().fg(Color::Gray));
 
-        // Statusline border combined fg+bg style
         let border_style =
             theme.style_fg_bg(tokens::STATUSLINE_BORDER_FG, tokens::STATUSLINE_BORDER_BG);
         assert_eq!(
@@ -437,7 +402,63 @@ mod tests {
     #[test]
     fn old_border_fg_token_does_not_exist() {
         let theme = Theme::default();
-        // The old "BorderFg" token is removed — looking it up returns the fallback
         assert_eq!(theme.color("BorderFg"), Color::Reset);
+    }
+
+    #[test]
+    fn buffer_fg_default_color() {
+        let theme = Theme::default();
+        assert_eq!(
+            theme.color(tokens::BUFFER_FG),
+            Color::White,
+            "BufferFg default should be White"
+        );
+    }
+
+    #[test]
+    fn buffer_fg_override_via_set_color() {
+        let mut theme = Theme::default();
+        let custom_color = Color::Rgb(255, 128, 0);
+        theme.set_color(tokens::BUFFER_FG.to_string(), custom_color);
+
+        assert_eq!(
+            theme.color(tokens::BUFFER_FG),
+            custom_color,
+            "BufferFg token should reflect the override"
+        );
+    }
+
+    #[test]
+    fn unknown_icon_class_token_falls_back_to_reset() {
+        let theme = Theme::default();
+        assert_eq!(
+            theme.color("IconUnknownClass"),
+            Color::Reset,
+            "unmapped icon class token should return Color::Reset"
+        );
+    }
+
+    #[test]
+    fn plugin_defined_token_round_trip() {
+        let mut theme = Theme::default();
+        let rust_orange = Color::Rgb(222, 165, 132);
+        theme.set_color("IconRust".to_string(), rust_orange);
+
+        assert_eq!(
+            theme.color("IconRust"),
+            rust_orange,
+            "plugin-defined token should be retrievable"
+        );
+        assert_eq!(
+            theme.ansi_fg("IconRust"),
+            "\x1b[38;2;222;165;132m",
+            "plugin-defined token should produce correct ANSI"
+        );
+    }
+
+    #[test]
+    fn ansi_fg_for_buffer_fg_default() {
+        let theme = Theme::default();
+        assert_eq!(theme.ansi_fg(tokens::BUFFER_FG), "\x1b[37m");
     }
 }

@@ -169,7 +169,12 @@ pub fn execute(
                         Vec::new()
                     }
                 };
-            qfix::window::refresh_quickfix_buffer(&mut app.tabs, &mut app.contents, &state.qfix);
+            qfix::window::refresh_quickfix_buffer(
+                &mut app.tabs,
+                &mut app.contents,
+                &state.qfix,
+                lua,
+            );
             add_change_mode(mode_before, mode, actions)
         }
         ("junk", "") => print::junkyard(&state.junk),
@@ -626,7 +631,6 @@ mod test {
 
     fn make_app_with_unsaved_changes() -> App {
         let mut app = App::default();
-        // Create a directory buffer with unsaved changes
         let mut dir_buffer = DirectoryBuffer::default();
         mark_directory_buffer_dirty(&mut dir_buffer, 50);
         app.contents
@@ -845,7 +849,6 @@ mod test {
     #[test]
     fn q_on_horizontal_focus_first_closes_directory_keeps_tasks() {
         let mut app = make_app_with_horizontal_split();
-        // Switch focus to First (directory)
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
@@ -880,7 +883,6 @@ mod test {
     #[test]
     fn q_with_unsaved_changes_prints_error() {
         let mut app = make_app_with_unsaved_changes();
-        // Point the focused viewport (current/middle) at the dirty buffer (id 50)
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Directory(_, current_vp, _) = window {
             current_vp.buffer_id = 50;
@@ -891,23 +893,17 @@ mod test {
         let actions = execute(&mut app, &mut state, &settings, None, "q");
 
         assert!(contains_error_message(&actions));
-        // Window should remain unchanged
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
     fn q_on_split_focused_on_dirty_buffer_prints_error() {
-        // Unsaved changes in buffer 50 (directory in first child).
-        // Focus is switched to First (directory) so :q checks that buffer.
         let mut app = make_app_with_unsaved_changes_and_split();
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Horizontal { focus, .. } = window {
             *focus = SplitFocus::First;
         }
-        // The focused directory viewport points at buffer_id 1 (from App::default),
-        // but the dirty buffer is at id 50. We need to make the focused viewport
-        // point at the dirty buffer to trigger the check.
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Horizontal { first, .. } = window {
             if let Window::Directory(_, current_vp, _) = first.as_mut() {
@@ -920,7 +916,6 @@ mod test {
         let actions = execute(&mut app, &mut state, &settings, None, "q");
 
         assert!(contains_error_message(&actions));
-        // Window should remain a Horizontal split
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Horizontal { .. }));
     }
@@ -934,7 +929,6 @@ mod test {
         let actions = execute(&mut app, &mut state, &settings, None, "q!");
 
         assert!(!contains_error_message(&actions));
-        // Should have collapsed the split
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Directory(_, _, _)));
     }
@@ -1007,7 +1001,6 @@ mod test {
         let mut state = make_state_with_command_mode();
         let settings = Settings::default();
 
-        // Collect buffer ids from the first child (directory) before closing
         let window = app.current_window().expect("test requires current tab");
         let dir_buffer_ids: Vec<usize> = match window {
             Window::Horizontal { first, .. } => first.buffer_ids().into_iter().collect(),
@@ -1016,7 +1009,6 @@ mod test {
 
         execute(&mut app, &mut state, &settings, None, "q");
 
-        // All directory buffer ids should still exist
         for id in &dir_buffer_ids {
             assert!(
                 app.contents.buffers.contains_key(id),
@@ -1086,11 +1078,8 @@ mod test {
             latest_buffer_id: 2,
         };
 
-        // Checking buffer 1 (clean) should return false
         assert!(!super::buffer_has_unsaved_changes(&contents, Some(1)));
-        // Checking buffer 2 (dirty) should return true
         assert!(super::buffer_has_unsaved_changes(&contents, Some(2)));
-        // Checking all (None) should return true
         assert!(super::buffer_has_unsaved_changes(&contents, None));
     }
 
@@ -1315,8 +1304,6 @@ mod test {
 
     #[test]
     fn q_on_split_with_unsaved_in_other_window_closes() {
-        // Unsaved changes are in buffer 50 (directory), but focus is on buffer 100 (tasks).
-        // :q should only check the focused buffer, so it should close the split.
         let mut app = make_app_with_unsaved_changes_and_split();
         let mut state = make_state_with_command_mode();
         let settings = Settings::default();
@@ -1330,15 +1317,10 @@ mod test {
 
     #[test]
     fn q_bang_on_split_resets_dropped_pane_undo() {
-        // Setup: split with focus on First (Directory that has dirty buffer 50).
-        // :q! drops the focused First pane. The dirty buffer's undo should be reset
-        // so that the subsequent ChangeMode → Navigation → save::all doesn't persist
-        // the discarded changes.
         let mut app = make_app_with_unsaved_changes_and_split();
         let window = app.current_window_mut().expect("test requires current tab");
         if let Window::Horizontal { focus, first, .. } = window {
             *focus = SplitFocus::First;
-            // Point the focused directory viewport at the dirty buffer
             if let Window::Directory(_, current_vp, _) = first.as_mut() {
                 current_vp.buffer_id = 50;
             }
@@ -1346,7 +1328,6 @@ mod test {
         let mut state = make_state_with_command_mode();
         let settings = Settings::default();
 
-        // Verify the buffer is dirty before :q!
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
                 dir.buffer.has_unsaved_changes(),
@@ -1358,36 +1339,28 @@ mod test {
 
         let _actions = execute(&mut app, &mut state, &settings, None, "q!");
 
-        // After :q!, the dropped pane's buffer undo should be reset
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
                 !dir.buffer.has_unsaved_changes(),
                 "buffer 50 undo should be reset after :q! drops its pane"
             );
         }
-        // The window should have collapsed to the kept pane (Tasks)
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Tasks(_)));
     }
 
     #[test]
     fn q_bang_on_split_preserves_kept_pane_undo() {
-        // Setup: split where both panes have dirty buffers.
-        // Focus is on Second (Tasks), so Second is dropped and First (Directory) is kept.
-        // The kept pane's directory buffer (id 50) should retain its unsaved changes.
         let mut app = make_app_with_unsaved_changes_and_split();
-        // Focus is already SplitFocus::Second (from make_app_with_unsaved_changes_and_split)
         let mut state = make_state_with_command_mode();
         let settings = Settings::default();
 
-        // Verify the buffer is dirty before :q!
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(dir.buffer.has_unsaved_changes());
         }
 
         let _actions = execute(&mut app, &mut state, &settings, None, "q!");
 
-        // Buffer 50 is in the KEPT pane (First/Directory) — its changes should be preserved
         if let Some(Buffer::Directory(dir)) = app.contents.buffers.get(&50) {
             assert!(
                 dir.buffer.has_unsaved_changes(),
@@ -1396,17 +1369,12 @@ mod test {
         } else {
             panic!("buffer 50 should still exist and be a Directory");
         }
-        // Window should have collapsed to Directory (the first/kept pane)
         let window = app.current_window().expect("test requires current tab");
         assert!(matches!(window, Window::Directory(_, _, _)));
     }
 
     #[test]
     fn wq_on_horizontal_from_normal_emits_change_mode_to_navigation() {
-        // When the user was in Normal mode (e.g. after editing a buffer line and pressing Esc),
-        // then enters command mode with ":" and runs ":wq", the mode after closing the split
-        // must be Navigation -- not Normal. Transitioning to Navigation triggers save::all,
-        // which commits all directory buffer changes to filesystem tasks.
         let mut app = make_app_with_horizontal_split();
         let mut state = State::default();
         let settings = Settings::default();

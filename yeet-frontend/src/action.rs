@@ -7,6 +7,8 @@ use ratatui::layout::Rect;
 use tokio::fs;
 use yeet_keymap::message::{KeymapMessage, QuitMode};
 
+use yeet_buffer::model::BufferLine;
+
 use crate::{
     error::AppError,
     event::{Emitter, Message},
@@ -123,12 +125,7 @@ async fn execute(
                     emitter.run(Task::EnumerateDirectory(path, selection.clone()));
                 } else if let Ok(window) = model.app.current_window() {
                     if let Some((_, _, preview_vp)) = app::get_focused_directory_viewports(window) {
-                        let rect = Rect {
-                            x: 0,
-                            y: 0,
-                            width: preview_vp.width,
-                            height: preview_vp.height,
-                        };
+                        let rect = preview_content_rect(preview_vp);
                         emitter.run(Task::LoadPreview(path.clone(), rect));
                     }
                 }
@@ -185,10 +182,6 @@ async fn execute(
                     preview_id.and_then(|id| model.app.contents.buffers.get(&id))
                 {
                     // TODO: add rect to load preview after layout concept is implemented
-                    // emitter.run(Task::LoadPreview(
-                    //     path.to_path_buf(),
-                    //     model.app.layout.preview,
-                    // ));
                 }
             }
             Action::Task(task) => emitter.run(task),
@@ -240,4 +233,89 @@ fn contains_quit(actions: &[Action]) -> Option<QuitMode> {
             None
         }
     })
+}
+
+pub fn preview_content_rect(viewport: &yeet_buffer::model::viewport::ViewPort) -> Rect {
+    let content_width = viewport.get_content_width(&BufferLine::default()) as u16;
+    let border_offset = if viewport.show_border { 1 } else { 0 };
+    Rect {
+        x: 0,
+        y: 0,
+        width: content_width.saturating_sub(border_offset),
+        height: viewport.height,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use yeet_buffer::model::viewport::{LineNumber, ViewPort};
+
+    use super::*;
+
+    #[test]
+    fn preview_rect_equals_viewport_without_offsets() {
+        let vp = ViewPort {
+            width: 80,
+            height: 24,
+            show_border: false,
+            ..Default::default()
+        };
+
+        let rect = preview_content_rect(&vp);
+
+        assert_eq!(rect.width, 80);
+        assert_eq!(rect.height, 24);
+    }
+
+    #[test]
+    fn preview_rect_reduced_by_border() {
+        let vp = ViewPort {
+            width: 80,
+            height: 24,
+            show_border: true,
+            ..Default::default()
+        };
+
+        let rect = preview_content_rect(&vp);
+
+        assert!(rect.width < vp.width);
+        assert_eq!(rect.width, 79);
+        assert_eq!(rect.height, 24);
+    }
+
+    #[test]
+    fn preview_rect_reduced_by_sign_and_line_number_columns() {
+        let vp = ViewPort {
+            width: 80,
+            height: 24,
+            sign_column_width: 2,
+            line_number: LineNumber::Relative,
+            line_number_width: 3,
+            show_border: false,
+            ..Default::default()
+        };
+
+        let rect = preview_content_rect(&vp);
+
+        assert!(rect.width < vp.width);
+        assert_eq!(rect.width, 80 - 2 - 3 - 1 - 1);
+    }
+
+    #[test]
+    fn preview_rect_reduced_by_all_offsets_and_border() {
+        let vp = ViewPort {
+            width: 80,
+            height: 24,
+            sign_column_width: 2,
+            line_number: LineNumber::Relative,
+            line_number_width: 3,
+            prefix_column_width: 2,
+            show_border: true,
+            ..Default::default()
+        };
+
+        let rect = preview_content_rect(&vp);
+
+        assert!(rect.width < vp.width);
+    }
 }

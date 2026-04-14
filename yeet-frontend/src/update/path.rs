@@ -5,6 +5,7 @@ use std::{
 };
 
 use yeet_buffer::{message::BufferMessage, model::viewport::ViewPort, model::Mode};
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
@@ -17,12 +18,12 @@ use crate::{
         App, Buffer, Contents, Window,
     },
     theme::Theme,
-    update::{app, cursor, selection},
+    update::{app, cursor, hook, selection},
 };
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
 
-#[tracing::instrument(skip(app, theme))]
+#[tracing::instrument(skip(app, theme, lua))]
 pub fn add(
     history: &mut History,
     marks: &Marks,
@@ -31,11 +32,12 @@ pub fn add(
     app: &mut App,
     paths: &[PathBuf],
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let mut actions = Vec::new();
     for path in paths {
         actions.extend(update_directory_buffers_on_add(
-            history, mode, app, path, theme,
+            history, mode, app, path, lua,
         ));
     }
 
@@ -67,6 +69,10 @@ pub fn add(
         );
     }
 
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
+
     Ok(actions)
 }
 
@@ -79,6 +85,7 @@ pub fn remove(
     mode: &Mode,
     app: &mut App,
     path: &Path,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if path.starts_with(junk.path.clone()) {
         remove_from_junkyard(junk, path);
@@ -110,6 +117,10 @@ pub fn remove(
         QFIX_SIGN_ID,
     );
 
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
+
     Ok(actions)
 }
 
@@ -133,7 +144,7 @@ fn update_directory_buffers_on_add(
     mode: &Mode,
     app: &mut App,
     path: &Path,
-    theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Vec<Action> {
     let (parent, name) = match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) => (parent, name.to_string_lossy().to_string()),
@@ -165,12 +176,12 @@ fn update_directory_buffers_on_add(
             }
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            if dir
-                .buffer
-                .lines
-                .iter()
-                .any(|line| line.content.to_stripped_string() == name)
-            {
+
+            let name_slash = format!("{name}/");
+            if dir.buffer.lines.iter().any(|line| {
+                let s = line.content.to_stripped_string();
+                s == name || s == name_slash
+            }) {
                 yeet_buffer::update(
                     viewport,
                     mode,
@@ -184,18 +195,24 @@ fn update_directory_buffers_on_add(
             }
 
             let added_existing_directory = dir.buffer.lines.iter().position(|line| {
-                line.content
-                    .to_stripped_string()
-                    .starts_with(&format!("{name}/"))
+                let s = line.content.to_stripped_string();
+                s == name_slash || s.starts_with(&format!("{name}/"))
             });
 
-            let kind = if path.is_dir() {
-                crate::event::ContentKind::Directory
-            } else {
-                crate::event::ContentKind::File
-            };
+            let mut name_with_slash = name.clone();
+            if path.is_dir() && !name_with_slash.ends_with('/') {
+                name_with_slash.push('/');
+            }
 
-            let bufferline = enumeration::from_enumeration(&name, &kind, theme);
+            let mut bufferline = enumeration::from_enumeration(&name_with_slash);
+            if let Some(lua) = lua {
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut bufferline,
+                    yeet_lua::BufferType::Directory,
+                    Some(path),
+                );
+            }
             if let Some(index) = added_existing_directory {
                 if let Some(line) = dir.buffer.lines.get_mut(index) {
                     *line = bufferline;
@@ -939,6 +956,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -964,7 +982,6 @@ mod test {
     fn add_refreshes_preview_when_buffer_not_loaded_for_selection() {
         use yeet_buffer::model::Cursor;
 
-        // Create a real temp directory so that path.exists() returns true.
         let base = unique_temp_dir();
         fs::create_dir_all(&base).expect("create base dir");
 
@@ -977,13 +994,10 @@ mod test {
         let current_id = app::get_next_buffer_id(&mut app.contents);
         let preview_id = app::get_next_buffer_id(&mut app.contents);
 
-        // Parent buffer: empty directory buffer (not important for this test).
         app.contents
             .buffers
             .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
 
-        // Current buffer: the base directory, containing "newfolder/" at cursor index 0.
-        // The trailing slash simulates user-typed content from insert mode.
         app.contents.buffers.insert(
             current_id,
             Buffer::Directory(DirectoryBuffer {
@@ -996,9 +1010,6 @@ mod test {
             }),
         );
 
-        // Preview buffer: Empty — simulates that the preview was never loaded for
-        // the newly-created folder (it didn't exist on disk when the cursor first
-        // landed on it).
         app.contents.buffers.insert(preview_id, Buffer::Empty);
 
         let window = app.current_window_mut().expect("test requires current tab");
@@ -1025,8 +1036,6 @@ mod test {
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
-        // Simulate PathsAdded for the new folder (path without trailing slash,
-        // as the filesystem watcher reports it).
         let theme = Theme::default();
         let actions = add(
             &mut history,
@@ -1036,17 +1045,14 @@ mod test {
             &mut app,
             std::slice::from_ref(&newfolder),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
-        // The preview viewport must now point at a buffer for "newfolder", not
-        // at the old Empty buffer. The buffer should be a PathReference (triggering
-        // a Load action) or a Directory if already resolved.
         let window = app.current_window().expect("test requires current tab");
         let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(window).unwrap();
         let preview_buffer = app.contents.buffers.get(&new_preview_id);
 
-        // The preview buffer should no longer be Empty.
         assert!(
             !matches!(preview_buffer, Some(Buffer::Empty)),
             "preview buffer should have been refreshed for the newly-created folder, \
@@ -1054,7 +1060,6 @@ mod test {
             new_preview_id,
         );
 
-        // There should be a Load action for the new folder.
         assert!(
             actions
                 .iter()
@@ -1135,6 +1140,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("test requires current tab");
@@ -1178,6 +1184,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1231,6 +1238,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         for tab_id in [1, 2] {
@@ -1305,6 +1313,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1388,6 +1397,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1486,6 +1496,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1571,6 +1582,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let window = app.current_window().expect("current window");
@@ -1621,6 +1633,7 @@ mod test {
             &mut app,
             std::slice::from_ref(&added),
             &theme,
+            None,
         )
         .expect("path add must succeed");
 
@@ -1674,6 +1687,7 @@ mod test {
             &Mode::Normal,
             &mut app,
             &removed,
+            None,
         );
 
         let (first_index, second_index) = split_current_indices(&app);

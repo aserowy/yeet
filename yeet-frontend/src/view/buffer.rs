@@ -322,30 +322,23 @@ mod test {
 
     #[test]
     fn vertical_split_directory_preview_uses_split_border_context() {
-        // When a directory window is the first child of a vertical split,
-        // the preview pane's border (the split separator) should use split
-        // border colors, not directory border colors.
         let theme = Theme::default();
 
-        // Simulate what render_window does for Window::Vertical containing a Directory
         let context = RenderContext {
             draw_borders: Some(true),
             is_focused: true,
             is_directory_pane: false,
         };
 
-        // This is the dir_context created in Window::Directory for parent/current
         let dir_context = RenderContext {
             is_directory_pane: true,
             draw_borders: None,
             ..context.clone()
         };
 
-        // Parent and current: directory border colors, no forced draw_borders
         assert!(dir_context.is_directory_pane);
         assert_eq!(dir_context.draw_borders, None);
 
-        // Preview: when parent context has draw_borders, use split border colors
         let preview_context = if context.draw_borders == Some(true) {
             RenderContext {
                 is_directory_pane: false,
@@ -359,17 +352,14 @@ mod test {
         assert!(!preview_context.is_directory_pane);
         assert_eq!(preview_context.draw_borders, Some(true));
 
-        // Verify the theme produces the right border colors
         let dir_bt = theme
             .to_buffer_theme_with_border(tokens::DIRECTORY_BORDER_FG, tokens::DIRECTORY_BORDER_BG);
         let split_bt =
             theme.to_buffer_theme_with_border(tokens::SPLIT_BORDER_FG, tokens::SPLIT_BORDER_BG);
 
-        // Directory panes should use DIRECTORY_BORDER colors
         assert_eq!(dir_bt.border_fg, theme.color(tokens::DIRECTORY_BORDER_FG));
         assert_eq!(dir_bt.border_bg, theme.color(tokens::DIRECTORY_BORDER_BG));
 
-        // Split separator (preview in split) should use SPLIT_BORDER colors
         assert_eq!(split_bt.border_fg, theme.color(tokens::SPLIT_BORDER_FG));
         assert_eq!(split_bt.border_bg, theme.color(tokens::SPLIT_BORDER_BG));
     }

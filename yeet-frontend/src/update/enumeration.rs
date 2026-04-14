@@ -4,27 +4,28 @@ use yeet_buffer::{
     message::{BufferMessage, ViewPortDirection},
     model::{ansi::Ansi, viewport::ViewPort, BufferLine, Mode},
 };
+use yeet_lua::LuaConfiguration;
 
 use crate::{
     action::Action,
     error::AppError,
-    event::ContentKind,
     model::{App, Buffer, DirectoryBuffer, DirectoryBufferState, State},
-    theme::{tokens, Theme},
+    theme::Theme,
     update::{
-        app, cursor, selection,
+        app, cursor, hook, selection,
         sign::{set_sign_if_marked, set_sign_if_qfix},
     },
 };
 
-#[tracing::instrument(skip(state, app, content, theme))]
+#[tracing::instrument(skip(state, app, content, theme, lua))]
 pub fn change(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    content: &[(ContentKind, String)],
+    content: &[String],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     let (window, contents) = app.current_window_and_contents_mut()?;
     for (buffer_id, buffer) in contents.buffers.iter_mut() {
@@ -43,7 +44,9 @@ pub fn change(
             }
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
-            set_directory_content(state, viewport, buffer, path, content, selection, theme);
+            set_directory_content(
+                state, viewport, buffer, path, content, selection, theme, lua,
+            );
         }
     }
 
@@ -75,17 +78,22 @@ pub fn change(
         )?);
     }
 
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
+
     Ok(actions)
 }
 
-#[tracing::instrument(skip(state, app, content, theme))]
+#[tracing::instrument(skip(state, app, content, theme, lua))]
 pub fn finish(
     state: &mut State,
     app: &mut App,
     path: &PathBuf,
-    content: &[(ContentKind, String)],
+    content: &[String],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
     if state.modes.current != Mode::Navigation {
         return Ok(Vec::new());
@@ -122,6 +130,7 @@ pub fn finish(
                 content,
                 selection,
                 theme,
+                lua,
             );
 
             yeet_buffer::update(
@@ -188,6 +197,10 @@ pub fn finish(
     }
     app.current_tab_id = original_tab;
 
+    if let Some(lua) = lua {
+        hook::invoke_on_window_change_for_focused(app, lua);
+    }
+
     Ok(actions)
 }
 
@@ -196,19 +209,29 @@ fn set_directory_content(
     mut viewport: Option<&mut ViewPort>,
     buffer: &mut DirectoryBuffer,
     path: &PathBuf,
-    contents: &[(ContentKind, String)],
+    contents: &[String],
     selection: &Option<String>,
     theme: &Theme,
+    lua: Option<&LuaConfiguration>,
 ) {
     tracing::trace!("enumeration changed for buffer: {:?}", path);
 
     let is_first_changed_event = buffer.buffer.lines.is_empty();
     let content: Vec<BufferLine> = contents
         .iter()
-        .map(|(knd, cntnt)| {
-            let mut line = from_enumeration(cntnt, knd, theme);
-            set_sign_if_marked(&state.marks, &mut line, &path.join(cntnt), theme);
-            set_sign_if_qfix(&state.qfix, &mut line, &path.join(cntnt), theme);
+        .map(|cntnt| {
+            let mut line = from_enumeration(cntnt);
+            let bare_name = cntnt.strip_suffix('/').unwrap_or(cntnt);
+            set_sign_if_marked(&state.marks, &mut line, &path.join(bare_name), theme);
+            set_sign_if_qfix(&state.qfix, &mut line, &path.join(bare_name), theme);
+            if let Some(lua) = lua {
+                yeet_lua::invoke_on_bufferline_mutate(
+                    lua,
+                    &mut line,
+                    yeet_lua::BufferType::Directory,
+                    Some(&path.join(bare_name)),
+                );
+            }
 
             line
         })
@@ -244,15 +267,9 @@ fn set_directory_content(
     );
 }
 
-pub fn from_enumeration(content: &String, kind: &ContentKind, theme: &Theme) -> BufferLine {
-    let fg_ansi = match kind {
-        ContentKind::Directory => theme.ansi_fg(tokens::BUFFER_DIRECTORY_FG),
-        _ => theme.ansi_fg(tokens::BUFFER_FILE_FG),
-    };
-    let content = format!("{}{}\x1b[39m", fg_ansi, content);
-
+pub fn from_enumeration(content: &str) -> BufferLine {
     BufferLine {
-        content: Ansi::new(&content),
+        content: Ansi::new(content),
         ..Default::default()
     }
 }
@@ -320,9 +337,10 @@ mod test {
             &mut state,
             &mut app,
             &current_path,
-            &[(crate::event::ContentKind::File, "Cargo.toml".to_string())],
+            &["Cargo.toml".to_string()],
             &None,
             &theme,
+            None,
         )
         .expect("change must succeed");
 
@@ -405,9 +423,10 @@ mod test {
             &mut state,
             &mut app,
             &base,
-            &[(crate::event::ContentKind::File, file_name.to_string())],
+            &[file_name.to_string()],
             &None,
             &theme,
+            None,
         )
         .expect("finish must succeed");
 

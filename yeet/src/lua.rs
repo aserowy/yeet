@@ -146,4 +146,30 @@ mod tests {
             default_theme.color(yeet_frontend::theme::tokens::TABBAR_ACTIVE_BG)
         );
     }
+
+    #[test]
+    fn lua_overrides_buffer_fg_token() {
+        use ratatui::style::Color;
+        let theme = load_theme_from_script("y.theme.BufferFg = '#00ff00'");
+        assert_eq!(
+            theme.color(yeet_frontend::theme::tokens::BUFFER_FG),
+            Color::Rgb(0, 255, 0)
+        );
+    }
+
+    #[test]
+    fn lua_plugin_defined_icon_token() {
+        use ratatui::style::Color;
+        let theme = load_theme_from_script("y.theme.IconRust = '#dea584'");
+        assert_eq!(theme.color("IconRust"), Color::Rgb(222, 165, 132));
+    }
+
+    #[test]
+    fn lua_unknown_icon_token_uses_reset_fallback() {
+        let theme = load_theme_from_script("");
+        assert_eq!(
+            theme.color("IconUnmappedClass"),
+            ratatui::style::Color::Reset
+        );
+    }
 }
