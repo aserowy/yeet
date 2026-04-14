@@ -405,6 +405,19 @@ pub enum Buffer {
 }
 
 impl Buffer {
+    pub fn buffer_type_for_lua(&self) -> &'static str {
+        match self {
+            Buffer::Directory(_) => "directory",
+            Buffer::Content(_) => "content",
+            Buffer::Image(_) => "image",
+            Buffer::Help(_) => "help",
+            Buffer::QuickFix(_) => "quickfix",
+            Buffer::Tasks(_) => "tasks",
+            Buffer::PathReference(_) => "content",
+            Buffer::Empty => "empty",
+        }
+    }
+
     pub fn resolve_path(&self) -> Option<&Path> {
         match self {
             Buffer::Directory(it) => it.resolve_path(),

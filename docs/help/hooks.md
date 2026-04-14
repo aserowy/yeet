@@ -69,7 +69,7 @@ Register callbacks with `:add()`:
 
 ```lua
 y.hook.on_window_change:add(function(ctx)
-  if ctx.preview_is_directory then
+  if ctx.preview.buffer_type == "directory" then
     ctx.preview.prefix_column_width = 2
   else
     ctx.preview.prefix_column_width = 0
@@ -77,25 +77,25 @@ y.hook.on_window_change:add(function(ctx)
 end)
 ```
 
-The context table contains per-viewport subtables, each with a `path` property and viewport settings:
+The context table contains per-viewport subtables, each with `path`, `buffer_type`, and viewport settings:
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `type` | string | Always `"directory"` |
-| `parent` | table | Parent viewport settings with `path` (see below) |
-| `current` | table | Current viewport settings with `path` (see below) |
-| `preview` | table | Preview viewport settings with `path` (see below) |
-| `preview_is_directory` | boolean | `true` if the preview target is a directory, `false` otherwise |
+| `parent` | table | Parent viewport settings with `path` and `buffer_type` (see below) |
+| `current` | table | Current viewport settings with `path` and `buffer_type` (see below) |
+| `preview` | table | Preview viewport settings with `path` and `buffer_type` (see below) |
 
 Each viewport subtable contains all the viewport settings fields (see `on_window_create` above) plus:
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `path` | string or nil | Resolved path for this viewport's buffer |
+| `buffer_type` | string or nil | Buffer type of the underlying buffer: `"directory"`, `"content"`, `"image"`, `"empty"`, `"help"`, `"quickfix"`, or `"tasks"`. Nil if no buffer is assigned. |
 
-The `parent.path` is the parent directory path, `current.path` is the current directory path, and `preview.path` is the preview target path (directory or file). The `path` property is read-only — modifications are not read back.
+The `parent.path` is the parent directory path, `current.path` is the current directory path, and `preview.path` is the preview target path (directory or file). The `path` and `buffer_type` properties are read-only — modifications are not read back.
 
-The `preview_is_directory` field allows plugins to determine whether the preview pane shows a directory listing or file content without filesystem access.
+The `buffer_type` field allows plugins to determine the type of buffer in each viewport without filesystem access. For example, checking `ctx.preview.buffer_type == "directory"` replaces the former `preview_is_directory` boolean.
 
 Viewport settings modified in the context table are read back and applied to the corresponding viewports, identical to `on_window_create` read-back semantics. Mutations from earlier callbacks are visible to later ones.
 
