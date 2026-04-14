@@ -140,18 +140,20 @@ fn read_back_context(ctx: &LuaTable, window_type: &str, viewports: &mut [&mut Vi
 
 pub fn invoke_on_window_change(
     lua: &crate::LuaConfiguration,
-    path: Option<&Path>,
+    viewport_paths: [Option<&Path>; 3],
     viewports: &mut [&mut ViewPort],
     preview_is_directory: bool,
 ) {
-    if let Err(err) = try_invoke_on_window_change(lua, path, viewports, preview_is_directory) {
+    if let Err(err) =
+        try_invoke_on_window_change(lua, viewport_paths, viewports, preview_is_directory)
+    {
         tracing::error!("error in y.hook.on_window_change: {:?}", err);
     }
 }
 
 fn try_invoke_on_window_change(
     lua: &Lua,
-    path: Option<&Path>,
+    viewport_paths: [Option<&Path>; 3],
     viewports: &mut [&mut ViewPort],
     preview_is_directory: bool,
 ) -> LuaResult<()> {
@@ -164,8 +166,17 @@ fn try_invoke_on_window_change(
         return Ok(());
     }
 
-    let ctx = build_context(lua, "directory", path, viewports)?;
+    let ctx = build_context(lua, "directory", None, viewports)?;
     ctx.set("preview_is_directory", preview_is_directory)?;
+
+    let viewport_keys = ["parent", "current", "preview"];
+    for (key, path) in viewport_keys.iter().zip(viewport_paths.iter()) {
+        if let Some(p) = path {
+            if let Ok(subtable) = ctx.get::<LuaTable>(*key) {
+                subtable.set("path", p.to_string_lossy().to_string())?;
+            }
+        }
+    }
 
     for i in 1..=len {
         let func: LuaValue = hook_table.raw_get(i)?;
@@ -813,7 +824,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -841,7 +852,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -870,7 +881,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -904,7 +915,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             false,
         );
@@ -934,7 +945,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -958,7 +969,7 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -967,6 +978,50 @@ mod tests {
             preview.prefix_column_width, 2,
             "prefix_column_width should remain unchanged with no callbacks"
         );
+    }
+
+    #[test]
+    fn on_window_change_per_viewport_paths() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                _G.test_parent_path = ctx.parent.path
+                _G.test_current_path = ctx.current.path
+                _G.test_preview_path = ctx.preview.path
+                _G.test_top_level_path = ctx.path
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            [
+                Some(Path::new("/parent")),
+                Some(Path::new("/current")),
+                Some(Path::new("/preview")),
+            ],
+            &mut [&mut parent, &mut current, &mut preview],
+            true,
+        );
+
+        let globals = lua.globals();
+        assert_eq!(
+            globals.get::<String>("test_parent_path").unwrap(),
+            "/parent"
+        );
+        assert_eq!(
+            globals.get::<String>("test_current_path").unwrap(),
+            "/current"
+        );
+        assert_eq!(
+            globals.get::<String>("test_preview_path").unwrap(),
+            "/preview"
+        );
+        assert!(globals.get::<LuaValue>("test_top_level_path").unwrap() == LuaValue::Nil);
     }
 
     #[test]
@@ -995,7 +1050,11 @@ mod tests {
 
         invoke_on_window_change(
             &lua,
-            Some(Path::new("/test")),
+            [
+                Some(Path::new("/parent")),
+                Some(Path::new("/current")),
+                Some(Path::new("/preview")),
+            ],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );

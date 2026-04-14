@@ -63,7 +63,7 @@ Invalid values (wrong type or unrecognized strings) are ignored and the default 
 
 ## `y.hook.on_window_change`
 
-Called once at the end of each update cycle after all viewport mutations are complete. This hook fires for directory windows only and covers all types of viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, resize, etc. Use this hook to dynamically adjust viewport settings based on current window state.
+Called at the end of each function that changes viewport paths or buffer assignments. This hook fires for directory windows only and covers all types of viewport changes: navigation, cursor movement, preview changes, enumeration, path add/remove, etc. Use this hook to dynamically adjust viewport settings based on current window state.
 
 Register callbacks with `:add()`:
 
@@ -77,22 +77,29 @@ y.hook.on_window_change:add(function(ctx)
 end)
 ```
 
-The context table has the same structure as `on_window_create` for directory windows, with one additional field:
+The context table contains per-viewport subtables, each with a `path` property and viewport settings:
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `type` | string | Always `"directory"` |
-| `path` | string or nil | Current directory path |
-| `parent` | table | Parent viewport settings (see viewport fields above) |
-| `current` | table | Current viewport settings (see viewport fields above) |
-| `preview` | table | Preview viewport settings (see viewport fields above) |
+| `parent` | table | Parent viewport settings with `path` (see below) |
+| `current` | table | Current viewport settings with `path` (see below) |
+| `preview` | table | Preview viewport settings with `path` (see below) |
 | `preview_is_directory` | boolean | `true` if the preview target is a directory, `false` otherwise |
+
+Each viewport subtable contains all the viewport settings fields (see `on_window_create` above) plus:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `path` | string or nil | Resolved path for this viewport's buffer |
+
+The `parent.path` is the parent directory path, `current.path` is the current directory path, and `preview.path` is the preview target path (directory or file). The `path` property is read-only — modifications are not read back.
 
 The `preview_is_directory` field allows plugins to determine whether the preview pane shows a directory listing or file content without filesystem access.
 
 Viewport settings modified in the context table are read back and applied to the corresponding viewports, identical to `on_window_create` read-back semantics. Mutations from earlier callbacks are visible to later ones.
 
-The hook fires after all message processing, window layout finalization, and buffer updates are complete. Viewport modifications made by callbacks do not trigger another invocation — cycle prevention is inherent in the end-of-cycle placement.
+Viewport modifications made by callbacks do not trigger another invocation — cycle prevention is inherent in the end-of-function placement.
 
 ## `y.hook.on_bufferline_mutate`
 

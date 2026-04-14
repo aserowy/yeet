@@ -12,15 +12,29 @@ pub fn invoke_on_window_change_for_focused(app: &mut App, lua: &LuaConfiguration
         Err(_) => return,
     };
 
-    let (_, current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
+    let (parent_id, current_id, preview_id) = match app::get_focused_directory_buffer_ids(window) {
         Some(ids) => ids,
         None => return,
     };
+
+    let parent_path = app
+        .contents
+        .buffers
+        .get(&parent_id)
+        .and_then(|buffer| buffer.resolve_path())
+        .map(|p| p.to_path_buf());
 
     let current_path = app
         .contents
         .buffers
         .get(&current_id)
+        .and_then(|buffer| buffer.resolve_path())
+        .map(|p| p.to_path_buf());
+
+    let preview_path = app
+        .contents
+        .buffers
+        .get(&preview_id)
         .and_then(|buffer| buffer.resolve_path())
         .map(|p| p.to_path_buf());
 
@@ -39,7 +53,11 @@ pub fn invoke_on_window_change_for_focused(app: &mut App, lua: &LuaConfiguration
     if let Some((parent, current, preview)) = app::get_focused_directory_viewports_mut(window) {
         yeet_lua::invoke_on_window_change(
             lua,
-            current_path.as_deref(),
+            [
+                parent_path.as_deref(),
+                current_path.as_deref(),
+                preview_path.as_deref(),
+            ],
             &mut [parent, current, preview],
             is_directory,
         );
@@ -180,7 +198,7 @@ mod tests {
 
         yeet_lua::invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             true,
         );
@@ -231,7 +249,7 @@ mod tests {
 
         yeet_lua::invoke_on_window_change(
             &lua,
-            None,
+            [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
             false,
         );
