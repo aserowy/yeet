@@ -160,12 +160,10 @@ fn find_heading_match(content: &str, topic: &str) -> Option<usize> {
 }
 
 fn resolve_topic(topic: &str, plugin_pages: &[PluginHelpPage]) -> Option<TopicMatch> {
-    // Core pages take priority
     if let Some(m) = resolve_core_topic(topic) {
         return Some(m);
     }
 
-    // Fall back to plugin pages
     resolve_plugin_topic(topic, plugin_pages)
 }
 
@@ -601,7 +599,6 @@ mod test {
         }];
         let result = resolve_topic("theme", &pages);
         assert!(result.is_some());
-        // Should match the core theme page, not the plugin one
         assert!(result.unwrap().content().contains("y.theme"));
     }
 
@@ -652,7 +649,6 @@ mod test {
     fn discover_pages_ignores_missing_help_dir() {
         let dir = tempfile::TempDir::new().unwrap();
         std::fs::create_dir_all(dir.path().join("docs")).unwrap();
-        // No help/ subdirectory
         let pages = discover_plugin_help_pages_from_paths(&[dir.path().to_path_buf()]);
         assert!(pages.is_empty());
     }

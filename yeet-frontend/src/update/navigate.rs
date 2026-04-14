@@ -366,10 +366,8 @@ mod test {
         let mut history = History::default();
         let target = Path::new("/nonexistent/test/path");
 
-        // Should not panic; viewports remain unchanged
         let _actions = navigate_to_path_with_selection(&mut history, &mut app, target, &None, None);
 
-        // Task viewport buffer_id unchanged
         let window = app.current_window().expect("test requires current tab");
         match window {
             Window::Horizontal { second, .. } => match second.as_ref() {
@@ -389,7 +387,6 @@ mod test {
             .entries
             .insert('a', std::path::PathBuf::from("/nonexistent/test/path"));
 
-        // Should not panic; viewports remain unchanged
         let _actions = mark(&mut app, &mut history, &marks, &'a', None);
 
         let window = app.current_window().expect("test requires current tab");

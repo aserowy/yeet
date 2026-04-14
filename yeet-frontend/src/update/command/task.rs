@@ -234,7 +234,6 @@ mod test {
         };
 
         assert_eq!(lines.len(), 2);
-        // Sorted by id: 1 first, then 12.
         assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
         assert_eq!(lines[1].content.to_stripped_string(), "12   fd bar");
     }
@@ -326,8 +325,6 @@ mod test {
 
     #[test]
     fn open_idempotent_focuses_tasks_in_nested_second_child() {
-        // Tree: Horizontal { first: Horizontal { first: Dir, second: Tasks }, second: Dir }
-        // Both focus fields start at First (pointing away from Tasks).
         use yeet_buffer::model::viewport::ViewPort;
 
         let mut app = App::default();
@@ -370,7 +367,6 @@ mod test {
 
     #[test]
     fn open_idempotent_focuses_tasks_in_first_child_of_root() {
-        // Tree: Horizontal { first: Tasks, second: Dir, focus: Second }
         use yeet_buffer::model::viewport::ViewPort;
 
         let mut app = App::default();
@@ -399,8 +395,6 @@ mod test {
 
     #[test]
     fn open_idempotent_focuses_through_three_levels() {
-        // Tree: H { first: H { first: H { first: Dir, second: Tasks }, second: Dir }, second: Dir }
-        // All focus fields start at Second or First (away from Tasks path).
         use yeet_buffer::model::viewport::ViewPort;
 
         let dir = || {
@@ -457,7 +451,6 @@ mod test {
         let mut app = App::default();
         open(&mut app, None, &tasks);
 
-        // Cancel the first task (id=1)
         tasks.running.get("rg-1").unwrap().token.cancel();
 
         let (window, contents) = app
@@ -480,10 +473,8 @@ mod test {
         };
 
         assert_eq!(lines.len(), 2);
-        // First line (id=1) is cancelled — has ANSI escapes
         assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
         assert!(lines[0].content.to_string().contains("\x1b[9;90m"));
-        // Second line (id=12) is not cancelled — plain text
         assert_eq!(lines[1].content.to_stripped_string(), "12   fd bar");
         assert!(!lines[1].content.to_string().contains("\x1b["));
     }
@@ -492,7 +483,6 @@ mod test {
     fn refresh_tasks_buffer_noop_without_tasks_window() {
         let tasks = Tasks::default();
         let mut app = App::default();
-        // No :topen — current tab is a plain Directory
         let (window, contents) = app
             .current_window_and_contents_mut()
             .expect("test requires current tab");

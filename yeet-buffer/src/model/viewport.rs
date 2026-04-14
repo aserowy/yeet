@@ -108,8 +108,6 @@ mod tests {
             ..Default::default()
         };
         let bl = BufferLine::default();
-        // precontent = sign(2) + line_number(3) + prefix_column(2) = 7, border = 1
-        // offset = 7 + 1 = 8
         assert_eq!(vp.get_offset_width(&bl), 8);
     }
 
@@ -123,8 +121,6 @@ mod tests {
             ..Default::default()
         };
         let bl = BufferLine::default();
-        // precontent = 0 + 0 + 2 = 2, border = 1 (precontent > 0)
-        // offset = 2 + 1 = 3
         assert_eq!(vp.get_offset_width(&bl), 3);
     }
 
@@ -151,9 +147,6 @@ mod tests {
         };
         let width_with_prefix = vp_with_prefix.get_content_width(&bl);
 
-        // precontent = 2, border = 1, offset = 3.
-        // get_content_width also subtracts border (for ratatui Borders::RIGHT) = 1.
-        // total reduction = 3 + 1 = 4.
         assert_eq!(
             width_without_prefix - width_with_prefix,
             4,

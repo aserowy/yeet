@@ -160,7 +160,6 @@ mod tests {
     #[test]
     fn lua_plugin_defined_icon_token() {
         use ratatui::style::Color;
-        // Simulates a plugin setting a custom icon class token
         let theme = load_theme_from_script("y.theme.IconRust = '#dea584'");
         assert_eq!(theme.color("IconRust"), Color::Rgb(222, 165, 132));
     }

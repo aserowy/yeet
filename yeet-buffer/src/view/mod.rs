@@ -291,9 +291,6 @@ mod test {
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
 
-        // For a directory viewport with show_border=true, the Paragraph rect
-        // is reduced by Block::inner() (Borders::RIGHT takes 1 col).
-        // The styled line should fill that inner rect: viewport.width - 1.
         let expected_width = usize::from(vp.width) - 1;
         assert_eq!(
             cursor_line.width(),
@@ -315,7 +312,6 @@ mod test {
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(styled.len() >= 2);
-        // First line is NOT the cursor line (cursor is on index 1)
         let non_cursor_line = &styled[0];
         assert!(
             non_cursor_line.width() <= usize::from(vp.width),
@@ -324,7 +320,6 @@ mod test {
             vp.width,
         );
 
-        // Second line IS the cursor line
         let cursor_line = &styled[1];
         assert_eq!(
             cursor_line.width(),
@@ -336,7 +331,6 @@ mod test {
     #[test]
     fn cursor_line_width_with_cancelled_task_ansi() {
         let vp = tasks_viewport(80, 10);
-        // Cancelled task line with strikethrough + gray ANSI styling
         let lines = vec![BufferLine::from("\x1b[9;90m1    rg foo\x1b[0m")];
 
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
@@ -556,7 +550,6 @@ mod test {
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
-        // With show_border=true, the inner rect is viewport.width - 1
         let expected_width = usize::from(vp.width) - 1;
         assert_eq!(
             cursor_line.width(),
@@ -596,7 +589,6 @@ mod test {
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
-        // The plugin-prepended ANSI code should be visible in the rendered spans
         let has_fg_color = styled[0]
             .spans
             .iter()
@@ -615,7 +607,6 @@ mod test {
         let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
 
         assert!(!styled.is_empty());
-        // Without any ANSI in content, the text should not have a custom fg color
         let cursor_line = &styled[0];
         assert_eq!(
             cursor_line.width(),
@@ -628,7 +619,6 @@ mod test {
     fn cursor_at_filename_start_with_prefix_column() {
         let mut vp = directory_current_viewport(40, 10);
         vp.prefix_column_width = 2;
-        // Cursor at horizontal index 0 (first char of filename)
         vp.cursor = Cursor {
             vertical_index: 0,
             horizontal_index: CursorPosition::Absolute {
@@ -645,16 +635,12 @@ mod test {
 
         assert!(!styled.is_empty());
         let cursor_line = &styled[0];
-        // The line should still fill the expected width (viewport - border)
         let expected_width = usize::from(vp.width) - 1;
         assert_eq!(
             cursor_line.width(),
             expected_width,
             "cursor line with prefix column should fill expected width"
         );
-        // Cursor at position 0 should highlight the 'd' in "documents",
-        // not the prefix glyph (prefix is in the prefix column, not in content).
-        // We verify by checking the cursor styling appears in the spans.
         let has_cursor_style = cursor_line
             .spans
             .iter()

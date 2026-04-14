@@ -350,7 +350,6 @@ mod test {
 
         let theme = Theme::default();
 
-        // Navigation → Normal should be blocked on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
@@ -363,7 +362,6 @@ mod test {
         assert!(actions.is_empty());
         assert_eq!(state.modes.current, Mode::Navigation);
 
-        // Navigation → Insert should also be blocked
         let actions = mode::change(
             &mut app,
             &mut state,
@@ -430,7 +428,6 @@ mod test {
 
         let theme = Theme::default();
 
-        // Navigation → Command should be allowed on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,
@@ -445,7 +442,6 @@ mod test {
             .any(|a| matches!(a, crate::action::Action::ModeChanged)));
         assert_eq!(state.modes.current, Mode::Command(CommandMode::Command));
 
-        // Command → Navigation should also be allowed on Tasks
         let actions = mode::change(
             &mut app,
             &mut state,

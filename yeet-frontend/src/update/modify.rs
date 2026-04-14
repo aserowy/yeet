@@ -155,7 +155,6 @@ mod test {
             &TextModification::DeleteLine,
         );
 
-        // Task at index 1 (id=5, "fd-2") should be cancelled
         assert!(token_fd.is_cancelled());
         assert!(state
             .tasks
@@ -165,7 +164,6 @@ mod test {
             .token
             .is_cancelled());
 
-        // Other tasks should NOT be cancelled
         assert!(!state
             .tasks
             .running
@@ -190,7 +188,6 @@ mod test {
             tasks,
             ..Default::default()
         };
-        // mode::change blocks Navigation→Normal on Tasks, so mode stays Navigation.
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
         let actions = buffer(
@@ -202,9 +199,7 @@ mod test {
         )
         .expect("buffer modification must succeed");
 
-        // Mode should remain Navigation — no mode change occurred.
         assert_eq!(state.modes.current, yeet_buffer::model::Mode::Navigation);
-        // No ModeChanged action needed — mode never changed.
         assert!(actions.is_empty());
     }
 
@@ -218,7 +213,6 @@ mod test {
         };
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        // Cancel task at index 0 (id=1)
         vp_set_cursor(&mut app, 0);
         let _ = buffer(
             &mut app,
@@ -228,13 +222,10 @@ mod test {
             &TextModification::DeleteLine,
         );
 
-        // The buffer should be refreshed — cancelled line has ANSI codes
         let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
         assert_eq!(lines.len(), 3);
-        // Cancelled line: stripped content is the same, but raw content has ANSI
         assert_eq!(lines[0].content.to_stripped_string(), "1    rg foo");
         assert!(lines[0].content.to_string().contains("\x1b[9;90m"));
-        // Non-cancelled lines are plain
         assert!(!lines[1].content.to_string().contains("\x1b["));
         assert!(!lines[2].content.to_string().contains("\x1b["));
     }
@@ -253,7 +244,6 @@ mod test {
             &1,
             &TextModification::DeleteLine,
         );
-        // No panic — test passes if we reach here
     }
 
     #[test]
@@ -266,7 +256,6 @@ mod test {
         };
         state.modes.current = yeet_buffer::model::Mode::Navigation;
 
-        // Try inserting text — should be blocked
         buffer(
             &mut app,
             &mut state,
@@ -276,12 +265,10 @@ mod test {
         )
         .expect("buffer modification must succeed");
 
-        // No task should be cancelled
         for task in state.tasks.running.values() {
             assert!(!task.token.is_cancelled());
         }
 
-        // Buffer content should be unchanged (3 plain lines)
         let lines = get_tasks_buffer_lines(&app).expect("tasks buffer lines");
         assert_eq!(lines.len(), 3);
         for line in &lines {

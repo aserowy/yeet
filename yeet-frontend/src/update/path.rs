@@ -177,7 +177,6 @@ fn update_directory_buffers_on_add(
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
 
-            // Check if entry already exists (with or without trailing slash)
             let name_slash = format!("{name}/");
             if dir.buffer.lines.iter().any(|line| {
                 let s = line.content.to_stripped_string();
@@ -983,7 +982,6 @@ mod test {
     fn add_refreshes_preview_when_buffer_not_loaded_for_selection() {
         use yeet_buffer::model::Cursor;
 
-        // Create a real temp directory so that path.exists() returns true.
         let base = unique_temp_dir();
         fs::create_dir_all(&base).expect("create base dir");
 
@@ -996,13 +994,10 @@ mod test {
         let current_id = app::get_next_buffer_id(&mut app.contents);
         let preview_id = app::get_next_buffer_id(&mut app.contents);
 
-        // Parent buffer: empty directory buffer (not important for this test).
         app.contents
             .buffers
             .insert(parent_id, Buffer::Directory(DirectoryBuffer::default()));
 
-        // Current buffer: the base directory, containing "newfolder/" at cursor index 0.
-        // The trailing slash simulates user-typed content from insert mode.
         app.contents.buffers.insert(
             current_id,
             Buffer::Directory(DirectoryBuffer {
@@ -1015,9 +1010,6 @@ mod test {
             }),
         );
 
-        // Preview buffer: Empty — simulates that the preview was never loaded for
-        // the newly-created folder (it didn't exist on disk when the cursor first
-        // landed on it).
         app.contents.buffers.insert(preview_id, Buffer::Empty);
 
         let window = app.current_window_mut().expect("test requires current tab");
@@ -1044,8 +1036,6 @@ mod test {
         let marks = Marks::default();
         let qfix = QuickFix::default();
 
-        // Simulate PathsAdded for the new folder (path without trailing slash,
-        // as the filesystem watcher reports it).
         let theme = Theme::default();
         let actions = add(
             &mut history,
@@ -1059,14 +1049,10 @@ mod test {
         )
         .expect("path add must succeed");
 
-        // The preview viewport must now point at a buffer for "newfolder", not
-        // at the old Empty buffer. The buffer should be a PathReference (triggering
-        // a Load action) or a Directory if already resolved.
         let window = app.current_window().expect("test requires current tab");
         let (_, _, new_preview_id) = app::get_focused_directory_buffer_ids(window).unwrap();
         let preview_buffer = app.contents.buffers.get(&new_preview_id);
 
-        // The preview buffer should no longer be Empty.
         assert!(
             !matches!(preview_buffer, Some(Buffer::Empty)),
             "preview buffer should have been refreshed for the newly-created folder, \
@@ -1074,7 +1060,6 @@ mod test {
             new_preview_id,
         );
 
-        // There should be a Load action for the new folder.
         assert!(
             actions
                 .iter()

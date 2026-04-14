@@ -243,7 +243,6 @@ fn try_invoke_on_bufferline_mutate(
 
     let ctx = lua.create_table()?;
 
-    // Build read-only buffer metadata object
     let buffer_meta = lua.create_table()?;
     buffer_meta.set("type", buffer_type.as_str())?;
     if let Some(p) = path {
@@ -251,7 +250,6 @@ fn try_invoke_on_bufferline_mutate(
     }
     ctx.set("buffer", buffer_meta)?;
 
-    // Expose full bufferline fields (mutable)
     if let Some(prefix) = &bl.prefix {
         ctx.set("prefix", prefix.as_str())?;
     }
@@ -279,7 +277,6 @@ fn try_invoke_on_bufferline_mutate(
         }
     }
 
-    // Read back mutated values
     match ctx.get::<LuaValue>("prefix")? {
         LuaValue::String(s) => bl.prefix = Some(s.to_str()?.to_string()),
         LuaValue::Nil => bl.prefix = None,

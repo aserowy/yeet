@@ -350,16 +350,12 @@ mod test {
         use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
-
-        // Add and save some initial changes
         undo.add(
             &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(0, Ansi::new("saved"))],
         );
         let saved = undo.save();
         assert_eq!(saved, vec![BufferChanged::LineAdded(0, Ansi::new("saved"))]);
-
-        // Add uncommitted changes
         undo.add(
             &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(1, Ansi::new("unsaved"))],
@@ -368,12 +364,9 @@ mod test {
             undo.get_uncommited_changes(),
             vec![BufferChanged::LineAdded(1, Ansi::new("unsaved"))]
         );
-
-        // Reset should discard uncommitted changes
         undo.reset_to_last_save();
         assert_eq!(undo.get_uncommited_changes(), Vec::<BufferChanged>::new());
 
-        // save() after reset should return empty
         let changes = undo.save();
         assert_eq!(changes, Vec::<BufferChanged>::new());
     }
@@ -384,15 +377,11 @@ mod test {
         use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
-
-        // Add changes without ever saving
         undo.add(
             &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(0, Ansi::new("unsaved"))],
         );
         assert!(!undo.get_uncommited_changes().is_empty());
-
-        // Reset should discard everything
         undo.reset_to_last_save();
         assert_eq!(undo.get_uncommited_changes(), Vec::<BufferChanged>::new());
 
@@ -406,25 +395,19 @@ mod test {
         use crate::model::undo::BufferChanged;
 
         let mut undo = super::Undo::default();
-
-        // Save some initial state
         undo.add(
             &crate::model::Mode::Normal,
             vec![BufferChanged::LineAdded(0, Ansi::new("saved"))],
         );
         undo.save();
 
-        // Add Insert-mode changes (buffered, not yet in a transaction)
         undo.add(
             &crate::model::Mode::Insert,
             vec![BufferChanged::LineAdded(1, Ansi::new("insert_unsaved"))],
         );
-
-        // Reset should clear pending insert changes too
         undo.reset_to_last_save();
         assert_eq!(undo.get_uncommited_changes(), Vec::<BufferChanged>::new());
 
-        // Even after close_transaction, nothing should appear
         undo.close_transaction();
         assert_eq!(undo.get_uncommited_changes(), Vec::<BufferChanged>::new());
 

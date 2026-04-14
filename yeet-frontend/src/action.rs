@@ -182,10 +182,6 @@ async fn execute(
                     preview_id.and_then(|id| model.app.contents.buffers.get(&id))
                 {
                     // TODO: add rect to load preview after layout concept is implemented
-                    // emitter.run(Task::LoadPreview(
-                    //     path.to_path_buf(),
-                    //     model.app.layout.preview,
-                    // ));
                 }
             }
             Action::Task(task) => emitter.run(task),

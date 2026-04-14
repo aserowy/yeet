@@ -131,7 +131,6 @@ mod test {
 
         match &tree {
             Window::Horizontal { first, second, .. } => {
-                // first child should start at y=0
                 match first.as_ref() {
                     Window::Directory(parent, current, preview) => {
                         assert_eq!(parent.y, 0);
@@ -142,7 +141,6 @@ mod test {
                     }
                     _ => panic!("expected Directory"),
                 }
-                // second child should start below first
                 match second.as_ref() {
                     Window::Tasks(vp) => {
                         assert!(vp.y > 0, "tasks viewport y should be > 0");
@@ -324,21 +322,17 @@ mod test {
         set_buffer_vp(&mut tree, area).unwrap();
 
         match &tree {
-            Window::Vertical { first, second, .. } => {
-                match (first.as_ref(), second.as_ref()) {
-                    (Window::Directory(lp, lc, lprev), Window::Directory(rp, rc, rprev)) => {
-                        // Both directories should be at the same y
-                        assert_eq!(lc.y, rc.y, "both directories should start at same y");
-                        // Right directory panes should have x > left panes
-                        assert!(rp.x > lprev.x, "right parent x should be > left preview x");
-                        // All viewports should have non-zero dimensions
-                        for vp in &[lp, lc, lprev, rp, rc, rprev] {
-                            assert!(vp.width > 0 && vp.height > 0);
-                        }
+            Window::Vertical { first, second, .. } => match (first.as_ref(), second.as_ref()) {
+                (Window::Directory(lp, lc, lprev), Window::Directory(rp, rc, rprev)) => {
+                    assert_eq!(lc.y, rc.y, "both directories should start at same y");
+                    assert!(rp.x > lprev.x, "right parent x should be > left preview x");
+
+                    for vp in &[lp, lc, lprev, rp, rc, rprev] {
+                        assert!(vp.width > 0 && vp.height > 0);
                     }
-                    _ => panic!("expected Directory"),
                 }
-            }
+                _ => panic!("expected Directory"),
+            },
             _ => panic!("expected Vertical"),
         }
     }

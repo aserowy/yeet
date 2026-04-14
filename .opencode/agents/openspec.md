@@ -59,9 +59,9 @@ Ask the user what command to run, or what additional information the user wants 
 
 ### E\[Commit changes\]
 
-Descibe the changes being commited in the commit message. Check which `openspec` was used to make the changes and include that in the commit message. For example, if `openspec apply` was used, the commit message could be "apply: <message which describes the changes>".
+Descibe the changes being commited in the commit message. Check which `openspec` was used to make the changes and include that in the commit message. For example, if `openspec apply` was used, the commit message could be "apply: \<message which describes the changes\>".
 
-If the user answered with free-form text input in step A, use the last command used in the previous loops to define the commit message. For example, if the last command used was `ff`, the commit message could be "ff: <message which describes the changes>". If no command was used in previous loops, use "update: <message which describes the changes>" as the commit message.
+If the user answered with free-form text input in step A, use the last command used in the previous loops to define the commit message. For example, if the last command used was `ff`, the commit message could be "ff: \<message which describes the changes\>". If no command was used in previous loops, use "update: \<message which describes the changes\>" as the commit message.
 
 ### C\[Call command\]
 
