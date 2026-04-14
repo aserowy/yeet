@@ -38,6 +38,7 @@ use crate::{
 
 mod command;
 mod image;
+mod sanitize;
 mod syntax;
 
 pub enum Task {
@@ -488,7 +489,7 @@ async fn run_task(
                         &theme_set.themes["base16-eighties.dark"]
                     });
 
-                    syntax::highlight(syntaxes, theme, &path).await
+                    syntax::highlight(syntaxes, theme, &path, rect.width).await
                 }
             };
 
