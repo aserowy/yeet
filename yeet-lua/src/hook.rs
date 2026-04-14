@@ -142,11 +142,9 @@ pub fn invoke_on_window_change(
     lua: &crate::LuaConfiguration,
     viewport_paths: [Option<&Path>; 3],
     viewports: &mut [&mut ViewPort],
-    preview_is_directory: bool,
+    buffer_types: [Option<&str>; 3],
 ) {
-    if let Err(err) =
-        try_invoke_on_window_change(lua, viewport_paths, viewports, preview_is_directory)
-    {
+    if let Err(err) = try_invoke_on_window_change(lua, viewport_paths, viewports, buffer_types) {
         tracing::error!("error in y.hook.on_window_change: {:?}", err);
     }
 }
@@ -155,7 +153,7 @@ fn try_invoke_on_window_change(
     lua: &Lua,
     viewport_paths: [Option<&Path>; 3],
     viewports: &mut [&mut ViewPort],
-    preview_is_directory: bool,
+    buffer_types: [Option<&str>; 3],
 ) -> LuaResult<()> {
     let y: LuaTable = lua.globals().get("y")?;
     let hook: LuaTable = y.get("hook")?;
@@ -167,13 +165,15 @@ fn try_invoke_on_window_change(
     }
 
     let ctx = build_context(lua, "directory", None, viewports)?;
-    ctx.set("preview_is_directory", preview_is_directory)?;
 
     let viewport_keys = ["parent", "current", "preview"];
-    for (key, path) in viewport_keys.iter().zip(viewport_paths.iter()) {
-        if let Some(p) = path {
-            if let Ok(subtable) = ctx.get::<LuaTable>(*key) {
+    for (i, (key, path)) in viewport_keys.iter().zip(viewport_paths.iter()).enumerate() {
+        if let Ok(subtable) = ctx.get::<LuaTable>(*key) {
+            if let Some(p) = path {
                 subtable.set("path", p.to_string_lossy().to_string())?;
+            }
+            if let Some(bt) = buffer_types[i] {
+                subtable.set("buffer_type", bt)?;
             }
         }
     }
@@ -823,7 +823,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert!(
@@ -851,7 +851,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert_eq!(preview.prefix_column_width, 2);
@@ -859,11 +859,11 @@ mod tests {
     }
 
     #[test]
-    fn on_window_change_preview_is_directory_true() {
+    fn on_window_change_preview_buffer_type_directory() {
         let lua = create_lua_with_hook(
             r#"
             y.hook.on_window_change:add(function(ctx)
-                if ctx.preview_is_directory then
+                if ctx.preview.buffer_type == "directory" then
                     ctx.preview.prefix_column_width = 2
                 else
                     ctx.preview.prefix_column_width = 0
@@ -880,21 +880,21 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert_eq!(
             preview.prefix_column_width, 2,
-            "prefix_column_width should be 2 when preview_is_directory is true"
+            "prefix_column_width should be 2 when preview buffer_type is directory"
         );
     }
 
     #[test]
-    fn on_window_change_preview_is_directory_false() {
+    fn on_window_change_preview_buffer_type_content() {
         let lua = create_lua_with_hook(
             r#"
             y.hook.on_window_change:add(function(ctx)
-                if ctx.preview_is_directory then
+                if ctx.preview.buffer_type == "directory" then
                     ctx.preview.prefix_column_width = 2
                 else
                     ctx.preview.prefix_column_width = 0
@@ -914,12 +914,12 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            false,
+            [Some("directory"), Some("directory"), Some("content")],
         );
 
         assert_eq!(
             preview.prefix_column_width, 0,
-            "prefix_column_width should be 0 when preview_is_directory is false"
+            "prefix_column_width should be 0 when preview buffer_type is content"
         );
     }
 
@@ -944,7 +944,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert!(
@@ -968,7 +968,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert_eq!(
@@ -1002,7 +1002,7 @@ mod tests {
                 Some(Path::new("/preview")),
             ],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         let globals = lua.globals();
@@ -1022,13 +1022,48 @@ mod tests {
     }
 
     #[test]
+    fn on_window_change_buffer_type_on_subtables() {
+        let lua = create_lua_with_hook(
+            r#"
+            y.hook.on_window_change:add(function(ctx)
+                _G.test_parent_bt = ctx.parent.buffer_type
+                _G.test_current_bt = ctx.current.buffer_type
+                _G.test_preview_bt = ctx.preview.buffer_type
+            end)
+            "#,
+        );
+
+        let mut parent = ViewPort::default();
+        let mut current = ViewPort::default();
+        let mut preview = ViewPort::default();
+
+        invoke_on_window_change(
+            &lua,
+            [None, None, None],
+            &mut [&mut parent, &mut current, &mut preview],
+            [Some("directory"), Some("directory"), Some("content")],
+        );
+
+        let globals = lua.globals();
+        assert_eq!(
+            globals.get::<String>("test_parent_bt").unwrap(),
+            "directory"
+        );
+        assert_eq!(
+            globals.get::<String>("test_current_bt").unwrap(),
+            "directory"
+        );
+        assert_eq!(globals.get::<String>("test_preview_bt").unwrap(), "content");
+    }
+
+    #[test]
     fn on_window_change_via_real_init() {
         let mut tmp = NamedTempFile::new().unwrap();
         write!(
             tmp,
             r#"
             y.hook.on_window_change:add(function(ctx)
-                if ctx.preview_is_directory then
+                if ctx.preview.buffer_type == "directory" then
                     ctx.preview.prefix_column_width = 2
                 else
                     ctx.preview.prefix_column_width = 0
@@ -1053,7 +1088,7 @@ mod tests {
                 Some(Path::new("/preview")),
             ],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert_eq!(preview.prefix_column_width, 2);

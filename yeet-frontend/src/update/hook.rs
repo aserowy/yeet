@@ -2,7 +2,7 @@ use std::path::Path;
 
 use yeet_lua::LuaConfiguration;
 
-use crate::model::{App, Buffer, Window};
+use crate::model::{App, Window};
 
 use super::app;
 
@@ -38,12 +38,23 @@ pub fn invoke_on_window_change_for_focused(app: &mut App, lua: &LuaConfiguration
         .and_then(|buffer| buffer.resolve_path())
         .map(|p| p.to_path_buf());
 
-    let is_directory = app
+    let parent_buffer_type = app
+        .contents
+        .buffers
+        .get(&parent_id)
+        .map(|b| b.buffer_type_for_lua());
+
+    let current_buffer_type = app
+        .contents
+        .buffers
+        .get(&current_id)
+        .map(|b| b.buffer_type_for_lua());
+
+    let preview_buffer_type = app
         .contents
         .buffers
         .get(&preview_id)
-        .map(|b| matches!(b, Buffer::Directory(d) if d.path.is_dir()))
-        .unwrap_or(false);
+        .map(|b| b.buffer_type_for_lua());
 
     let window = match app.current_window_mut() {
         Ok(w) => w,
@@ -59,7 +70,7 @@ pub fn invoke_on_window_change_for_focused(app: &mut App, lua: &LuaConfiguration
                 preview_path.as_deref(),
             ],
             &mut [parent, current, preview],
-            is_directory,
+            [parent_buffer_type, current_buffer_type, preview_buffer_type],
         );
     }
 }
@@ -181,7 +192,7 @@ mod tests {
             y.hook.on_window_create = setmetatable({}, hook_mt)
             y.hook.on_window_change = setmetatable({}, hook_mt)
             y.hook.on_window_change:add(function(ctx)
-                if ctx.preview_is_directory then
+                if ctx.preview.buffer_type == "directory" then
                     ctx.preview.prefix_column_width = 2
                 else
                     ctx.preview.prefix_column_width = 0
@@ -200,7 +211,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            true,
+            [Some("directory"), Some("directory"), Some("directory")],
         );
 
         assert_eq!(
@@ -229,7 +240,7 @@ mod tests {
             y.hook.on_window_create = setmetatable({}, hook_mt)
             y.hook.on_window_change = setmetatable({}, hook_mt)
             y.hook.on_window_change:add(function(ctx)
-                if ctx.preview_is_directory then
+                if ctx.preview.buffer_type == "directory" then
                     ctx.preview.prefix_column_width = 2
                 else
                     ctx.preview.prefix_column_width = 0
@@ -251,7 +262,7 @@ mod tests {
             &lua,
             [None, None, None],
             &mut [&mut parent, &mut current, &mut preview],
-            false,
+            [Some("directory"), Some("directory"), Some("content")],
         );
 
         assert_eq!(
