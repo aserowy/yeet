@@ -25,7 +25,7 @@ clap = "4.6.0"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 csv = "1.4.0"
 dirs = "6.0.0"
-gix = { version = "0.72.0", default-features = false, features = ["blocking-network-client", "blocking-http-transport-reqwest-rust-tls", "worktree-mutation", "revision"] }
+gix = { version = "0.81.0", default-features = false, features = ["blocking-network-client", "blocking-http-transport-reqwest-rust-tls", "worktree-mutation", "revision"] }
 flate2 = "1.1.9"
 futures = "0.3.32"
 image = "0.25.10"
