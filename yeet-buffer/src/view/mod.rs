@@ -122,7 +122,7 @@ fn get_styled_lines<'a>(
                     .join(&prefix::get_prefix_column(vp, &bl, theme))
                     .join(&prefix::get_border(vp))
             } else {
-                let prefix_width = vp.get_offset_width(&bl) + vp.get_precontent_border_width();
+                let prefix_width = vp.get_offset_width(&bl);
                 Ansi::new(&" ".repeat(prefix_width))
             };
 
@@ -696,5 +696,34 @@ mod test {
                 );
             }
         }
+    }
+
+    #[test]
+    fn wrap_continuation_indent_matches_first_line_prefix_width() {
+        let mut vp = directory_current_viewport(40, 10);
+        vp.prefix_column_width = 2;
+        vp.wrap = true;
+
+        let long_content = "a]".repeat(40);
+        let lines = vec![BufferLine {
+            prefix: Some("\u{f0f6}".to_string()),
+            ..BufferLine::from(&*long_content)
+        }];
+
+        let styled = get_styled_lines(&vp, &Mode::Navigation, &vp.cursor, lines, &test_theme());
+
+        assert!(
+            styled.len() >= 2,
+            "line should wrap into at least 2 visual lines, got {}",
+            styled.len()
+        );
+
+        let first_line_width = styled[0].width();
+        let continuation_width = styled[1].width();
+        assert_eq!(
+            first_line_width, continuation_width,
+            "continuation line width ({}) should equal first line width ({})",
+            continuation_width, first_line_width,
+        );
     }
 }
