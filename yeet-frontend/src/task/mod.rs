@@ -489,7 +489,7 @@ async fn run_task(
                         &theme_set.themes["base16-eighties.dark"]
                     });
 
-                    syntax::highlight(syntaxes, theme, &path, rect.width).await
+                    syntax::highlight(syntaxes, theme, &path).await
                 }
             };
 
