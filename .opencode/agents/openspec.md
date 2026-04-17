@@ -55,7 +55,7 @@ You are the coordinator for the new openspec workflow. You will be responsible f
 ```mermaid
 flowchart TD
     A[opsx-new] -->|new initialized| B[opsx-continue]
-    B -->|artifact created| C[Ask open questions]
+    B -->|Artifact created| C[Ask open questions]
     C -->|Questions answered and artifacts refined| D[Commit changes]
     D -->|Changes commited| E[User input]
 ```
@@ -76,15 +76,18 @@ flowchart TD
     A[opsx-ff] -->|ff created artifacts| B[Ask open questions]
     B -->|Questions answered and artifacts refined| C[Commit changes]
     C -->|Changes commited| D[opsx-apply]
-    D -->|implementation applied| E[Commit changes]
-    E -->|Changes commited| F[User input]
+    D -->|Implementation applied| E[Commit changes]
+    E -->|Changes commited| F[opsx-archive]
+    F -->|Change archived| G[opsx-sync]
+    G -->|Changes synced| H[Commit changes]
+    H -->|Changes commited| I[User input]
 ```
 
 ### Workflow for command opsx-apply
 
 ```mermaid
 flowchart TD
-    A[opsx-apply] -->|implementation applied| B[Commit changes]
+    A[opsx-apply] -->|Implementation applied| B[Commit changes]
     B -->|Changes commited| C[User input]
 ```
 
@@ -92,7 +95,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[opsx-archive] -->|change archived| B[opsx-sync]
+    A[opsx-archive] -->|Change archived| B[opsx-sync]
     B -->|Changes synced| C[Commit changes]
     C -->|Changes commited| D[User input]
 ```
@@ -101,7 +104,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[opsx-bulk-archive] -->|changes archived| B[opsx-sync]
+    A[opsx-bulk-archive] -->|Changes archived| B[opsx-sync]
     B -->|Changes synced| C[Commit changes]
     C -->|Changes commited| D[User input]
 ```
