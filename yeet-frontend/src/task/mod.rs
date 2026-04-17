@@ -38,6 +38,7 @@ use crate::{
 
 mod command;
 mod image;
+mod sanitize;
 mod syntax;
 
 pub enum Task {
