@@ -38,7 +38,7 @@ semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 ratatui-image = { version = "10.0.6", features = ["crossterm", "serde"] }
 regex = "1.12.3"
-sha2 = "0.10"
+sha2 = "0.11"
 syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"]}
 tar = "0.4.45"
 thiserror = "2.0.18"
