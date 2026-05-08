@@ -1003,7 +1003,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1179,7 +1185,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1269,7 +1281,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1420,7 +1438,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1515,7 +1539,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1597,7 +1627,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1694,7 +1730,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            remove_state(&mut history, &mut marks, &mut qfix, &mut junk, &Mode::Normal),
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
