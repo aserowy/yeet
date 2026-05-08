@@ -45,7 +45,16 @@ pub fn change(
 
             let viewport = app::get_viewport_by_buffer_id_mut(window, *buffer_id);
             set_directory_content(
-                state, viewport, buffer, path, content, selection, theme, lua,
+                state,
+                viewport,
+                buffer,
+                DirectoryContentUpdate {
+                    path,
+                    contents: content,
+                    selection,
+                    theme,
+                    lua,
+                },
             );
         }
     }
@@ -126,11 +135,13 @@ pub fn finish(
                 state,
                 viewport.as_deref_mut(),
                 buffer,
-                path,
-                content,
-                selection,
-                theme,
-                lua,
+                DirectoryContentUpdate {
+                    path,
+                    contents: content,
+                    selection,
+                    theme,
+                    lua,
+                },
             );
 
             yeet_buffer::update(
@@ -208,12 +219,15 @@ fn set_directory_content(
     state: &mut State,
     mut viewport: Option<&mut ViewPort>,
     buffer: &mut DirectoryBuffer,
-    path: &PathBuf,
-    contents: &[String],
-    selection: &Option<String>,
-    theme: &Theme,
-    lua: Option<&LuaConfiguration>,
+    update: DirectoryContentUpdate<'_>,
 ) {
+    let DirectoryContentUpdate {
+        path,
+        contents,
+        selection,
+        theme,
+        lua,
+    } = update;
     tracing::trace!("enumeration changed for buffer: {:?}", path);
 
     let is_first_changed_event = buffer.buffer.lines.is_empty();
@@ -265,6 +279,14 @@ fn set_directory_content(
         path,
         buffer.state,
     );
+}
+
+struct DirectoryContentUpdate<'a> {
+    path: &'a PathBuf,
+    contents: &'a [String],
+    selection: &'a Option<String>,
+    theme: &'a Theme,
+    lua: Option<&'a LuaConfiguration>,
 }
 
 pub fn from_enumeration(content: &str) -> BufferLine {
