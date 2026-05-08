@@ -147,13 +147,15 @@ fn flush_pending_paths(
             PendingPathEvent::Added(paths) => {
                 actions.extend(
                     path::add(
-                        &mut state.history,
-                        &state.marks,
-                        &state.qfix,
-                        &state.modes.current,
+                        path::PathAddState {
+                            history: &mut state.history,
+                            marks: &state.marks,
+                            qfix: &state.qfix,
+                            mode: &state.modes.current,
+                            theme,
+                        },
                         app,
                         &paths,
-                        theme,
                         lua,
                     )
                     .unwrap_or_else(|err| {
@@ -169,11 +171,13 @@ fn flush_pending_paths(
             PendingPathEvent::Removed(path) => {
                 actions.extend(
                     path::remove(
-                        &mut state.history,
-                        &mut state.marks,
-                        &mut state.qfix,
-                        &mut state.junk,
-                        &state.modes.current,
+                        path::PathRemoveState {
+                            history: &mut state.history,
+                            marks: &mut state.marks,
+                            qfix: &mut state.qfix,
+                            junk: &mut state.junk,
+                            mode: &state.modes.current,
+                        },
                         app,
                         &path,
                         lua,

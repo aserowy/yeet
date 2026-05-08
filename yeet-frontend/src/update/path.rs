@@ -23,17 +23,20 @@ use crate::{
 
 use super::{enumeration, history, junkyard::remove_from_junkyard, sign};
 
-#[tracing::instrument(skip(app, theme, lua))]
+#[tracing::instrument(skip(state, app, lua))]
 pub fn add(
-    history: &mut History,
-    marks: &Marks,
-    qfix: &QuickFix,
-    mode: &Mode,
+    state: PathAddState<'_>,
     app: &mut App,
     paths: &[PathBuf],
-    theme: &Theme,
     lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
+    let PathAddState {
+        history,
+        marks,
+        qfix,
+        mode,
+        theme,
+    } = state;
     let mut actions = Vec::new();
     for path in paths {
         actions.extend(update_directory_buffers_on_add(
@@ -76,17 +79,20 @@ pub fn add(
     Ok(actions)
 }
 
-#[tracing::instrument(skip(junk, app))]
+#[tracing::instrument(skip(state, app))]
 pub fn remove(
-    history: &mut History,
-    marks: &mut Marks,
-    qfix: &mut QuickFix,
-    junk: &mut JunkYard,
-    mode: &Mode,
+    state: PathRemoveState<'_>,
     app: &mut App,
     path: &Path,
     lua: Option<&LuaConfiguration>,
 ) -> Result<Vec<Action>, AppError> {
+    let PathRemoveState {
+        history,
+        marks,
+        qfix,
+        junk,
+        mode,
+    } = state;
     if path.starts_with(junk.path.clone()) {
         remove_from_junkyard(junk, path);
     }
@@ -122,6 +128,22 @@ pub fn remove(
     }
 
     Ok(actions)
+}
+
+pub struct PathAddState<'a> {
+    pub history: &'a mut History,
+    pub marks: &'a Marks,
+    pub qfix: &'a QuickFix,
+    pub mode: &'a Mode,
+    pub theme: &'a Theme,
+}
+
+pub struct PathRemoveState<'a> {
+    pub history: &'a mut History,
+    pub marks: &'a mut Marks,
+    pub qfix: &'a mut QuickFix,
+    pub junk: &'a mut JunkYard,
+    pub mode: &'a Mode,
 }
 
 fn remove_marks_for_path(marks: &mut Marks, path: &Path) -> Vec<PathBuf> {
@@ -709,6 +731,38 @@ mod test {
 
     use super::*;
 
+    fn add_state<'a>(
+        history: &'a mut History,
+        marks: &'a Marks,
+        qfix: &'a QuickFix,
+        mode: &'a Mode,
+        theme: &'a Theme,
+    ) -> PathAddState<'a> {
+        PathAddState {
+            history,
+            marks,
+            qfix,
+            mode,
+            theme,
+        }
+    }
+
+    fn remove_state<'a>(
+        history: &'a mut History,
+        marks: &'a mut Marks,
+        qfix: &'a mut QuickFix,
+        junk: &'a mut JunkYard,
+        mode: &'a Mode,
+    ) -> PathRemoveState<'a> {
+        PathRemoveState {
+            history,
+            marks,
+            qfix,
+            junk,
+            mode,
+        }
+    }
+
     fn unique_temp_dir() -> PathBuf {
         let nanos = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -949,11 +1003,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1038,13 +1094,9 @@ mod test {
 
         let theme = Theme::default();
         let actions = add(
-            &mut history,
-            &marks,
-            &qfix,
-            &Mode::Navigation,
+            add_state(&mut history, &marks, &qfix, &Mode::Navigation, &theme),
             &mut app,
             std::slice::from_ref(&newfolder),
-            &theme,
             None,
         )
         .expect("path add must succeed");
@@ -1133,11 +1185,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1177,13 +1231,9 @@ mod test {
         let theme = Theme::default();
 
         let _ = add(
-            &mut history,
-            &marks,
-            &qfix,
-            &Mode::Navigation,
+            add_state(&mut history, &marks, &qfix, &Mode::Navigation, &theme),
             &mut app,
             std::slice::from_ref(&added),
-            &theme,
             None,
         )
         .expect("path add must succeed");
@@ -1231,11 +1281,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1306,13 +1358,9 @@ mod test {
         let theme = Theme::default();
 
         let _ = add(
-            &mut history,
-            &marks,
-            &qfix,
-            &Mode::Navigation,
+            add_state(&mut history, &marks, &qfix, &Mode::Navigation, &theme),
             &mut app,
             std::slice::from_ref(&added),
-            &theme,
             None,
         )
         .expect("path add must succeed");
@@ -1390,11 +1438,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1489,11 +1539,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1575,11 +1627,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
@@ -1626,13 +1680,9 @@ mod test {
         let theme = Theme::default();
 
         let _ = add(
-            &mut history,
-            &marks,
-            &qfix,
-            &Mode::Navigation,
+            add_state(&mut history, &marks, &qfix, &Mode::Navigation, &theme),
             &mut app,
             std::slice::from_ref(&added),
-            &theme,
             None,
         )
         .expect("path add must succeed");
@@ -1680,11 +1730,13 @@ mod test {
         let mut junk = JunkYard::default();
 
         let _ = remove(
-            &mut history,
-            &mut marks,
-            &mut qfix,
-            &mut junk,
-            &Mode::Normal,
+            remove_state(
+                &mut history,
+                &mut marks,
+                &mut qfix,
+                &mut junk,
+                &Mode::Normal,
+            ),
             &mut app,
             &removed,
             None,
