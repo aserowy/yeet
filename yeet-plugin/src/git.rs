@@ -144,7 +144,11 @@ pub fn resolve_remote_head(repo_path: &Path, url: &str) -> Result<String, GitErr
 pub fn compute_tree_sha256(repo_path: &Path) -> Result<String, GitError> {
     let mut hasher = Sha256::new();
     hash_directory(&mut hasher, repo_path, repo_path)?;
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 fn hash_directory(hasher: &mut Sha256, base: &Path, dir: &Path) -> Result<(), GitError> {
