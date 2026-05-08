@@ -1,9 +1,5 @@
-# Dependency Update Compatibility Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define compatibility expectations for automated dependency updates so accepted updates preserve the project's buildability, testability, and runnability.
-## Requirements
 ### Requirement: Dependency updates preserve buildability
 The project SHALL compile successfully after automated package updates are accepted, using the repository's supported build tooling and current lock/configuration files, and compatibility fixes for the current Renovate upgrade SHALL restore any broken build or dependency resolution paths.
 
@@ -36,4 +32,3 @@ The project SHALL remain runnable through its supported development or applicati
 #### Scenario: Existing behavior is preserved
 - **WHEN** compatibility fixes are made for dependency updates
 - **THEN** existing user-facing behavior covered by current capabilities SHALL remain unchanged unless an intentional spec update documents the change
-
