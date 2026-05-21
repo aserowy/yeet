@@ -36,7 +36,7 @@ pathdiff = "0.2.2"
 ratatui = "0.30.0"
 semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-ratatui-image = { version = "10.0.8", features = ["crossterm", "serde"] }
+ratatui-image = { version = "11.0.2", features = ["crossterm", "serde"] }
 regex = "1.12.3"
 sha2 = "0.11"
 syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"]}
