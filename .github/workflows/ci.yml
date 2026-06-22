@@ -13,7 +13,7 @@ jobs:
       - name: setup
         run: sudo apt update && sudo apt -y install pkg-config libchafa-dev libglib2.0-dev
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: format
         run: cargo fmt --check --verbose
