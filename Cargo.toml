@@ -29,7 +29,7 @@ gix = { version = "0.85.0", default-features = false, features = ["blocking-netw
 flate2 = "1.1.9"
 futures = "0.3.32"
 image = "0.25.10"
-infer = "0.19.0"
+infer = "0.22.0"
 mlua = { version = "0.12", features = ["lua54", "vendored"] }
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 pathdiff = "0.2.2"
